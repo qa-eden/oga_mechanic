@@ -12,8 +12,9 @@ import {
 } from "react-native";
 
 import { InputFieldProps } from "@/types/type";
+import { icons } from "@/constants";
 
-const InputField = ({
+const InputFieldPassword = ({
   label,
   icon,
   secureTextEntry = false,
@@ -22,11 +23,11 @@ const InputField = ({
   inputStyle,
   iconStyle,
   placeholder,
-  keyboardType,
+  isPasswordVisible,
+  setIsPasswordVisible,
   ...props
 }: InputFieldProps) => {
   const [isFocused, setIsFocused] = useState(false);
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -34,7 +35,7 @@ const InputField = ({
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="my-2 w-full">
           <Text
-            className={`text-[1.1rem] text-text-400 font-JakartaSemiBold mb-2 ${labelStyle}`}
+            className={`text-[1.1rem] font-JakartaSemiBold text-text-400 mb-2 ${labelStyle}`}
           >
             {label}
           </Text>
@@ -43,18 +44,25 @@ const InputField = ({
               isFocused ? "border-primary-500" : "border-input-border"
             } ${containerStyle}`}
           >
-            {icon && (
-              <Image source={icon} className={`w-6 h-6 ml-4 ${iconStyle}`} />
-            )}
             <TextInput
               className={`rounded-[.8rem] p-4 font-JakartaSemiBold text-[15px] flex-1 ${inputStyle} text-left`}
               secureTextEntry={secureTextEntry}
-              keyboardType={keyboardType}
               placeholder={placeholder}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
+              
               {...props}
             />
+
+            <TouchableOpacity
+              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              className="mr-4"
+            >
+              <Image
+                source={isPasswordVisible ? icons?.eyeOpen : icons?.eyeClosed}
+                className={`w-6 h-6 ml-4 ${iconStyle}`}
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -62,4 +70,4 @@ const InputField = ({
   );
 };
 
-export default InputField;
+export default InputFieldPassword;

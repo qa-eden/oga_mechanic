@@ -5,6 +5,15 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      fontFamily: {
+        Nunito: ["Nunito-Regular", "sans-serif"],
+        NunitoBold: ["Nunito-Bold", "sans-serif"],
+        NunitoExtraBold: ["Nunito-ExtraBold", "sans-serif"],
+        NunitoExtraLight: ["Nunito-ExtraLight", "sans-serif"],
+        NunitoLight: ["Nunito-Light", "sans-serif"],
+        NunitoMedium: ["Nunito-Medium", "sans-serif"],
+        NunitoSemiBold: ["Nunito-SemiBold", "sans-serif"],
+      },
       colors: {
         primary: {
           100: "#FFE5E7",
@@ -16,6 +25,18 @@ module.exports = {
           700: "#7E0205",
           800: "#540103",
           900: "#2A0102",
+        },
+        text: {
+          100: "#475467",
+          200: "#F1F1F1",
+          300: "#D9D9D9",
+          400: "#36394A",
+          500: "#0D0D12",
+          600: "#141414",
+        },
+        input: {
+          background: "#F6F8FA",
+          border: "#ECEFF3",
         },
         secondary: {
           100: "#F8F8F8",
@@ -71,6 +92,10 @@ module.exports = {
           700: "#EBEBEB",
           800: "#ADADAD",
         },
+      },
+      spacing: {
+        4: "1rem",
+        5: "1.25rem",
       },
     },
   },

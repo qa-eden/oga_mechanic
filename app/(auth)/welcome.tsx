@@ -1,10 +1,8 @@
-import { View, Text, ImageBackground, StatusBar, Image } from "react-native";
+import { View, Text, ImageBackground, StatusBar } from "react-native";
 import React, { useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { images, onboarding } from "@/constants";
+import { images, onboarding, icons } from "@/constants";
 import Swiper from "react-native-swiper";
-import Logo from "@/assets/icons/logo.svg";
-import { SvgUri } from "react-native-svg";
 import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
 
@@ -26,7 +24,7 @@ const Welcome = () => {
       >
         <SafeAreaView className="flex-1">
           <View className="flex justify-left p-4">
-            <Logo />
+            <icons.logo />
           </View>
           <Swiper
             ref={swiperRef}
@@ -72,10 +70,10 @@ const Welcome = () => {
             <CustomButton
               title="Sign up"
               className="py-4 my-4"
-              onPress={() => router?.replace("/(auth)/sign_up")}
+              onPress={() => router?.replace("/(auth)/(register)/sign_up")}
             />
             <CustomButton
-              onPress={() => router?.replace("/(auth)/sign_in")}
+              onPress={() => router?.replace("/(auth)/(login)/sign_in")}
               title="Sign in"
               bgVariant="outline"
               className="py-4 my-4"

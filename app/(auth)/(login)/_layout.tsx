@@ -1,0 +1,26 @@
+import { View, ImageBackground, Text } from "react-native";
+import React from "react";
+import { images } from "@/constants";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Slot } from "expo-router";
+
+const LoginLayout = () => {
+  return (
+    <View className="flex-1 bg-white">
+      <SafeAreaView className="flex-1">
+        {/* Background Image */}
+        <ImageBackground
+          source={images?.loginBackground}
+          className="h-[25vh]"
+          resizeMode="cover"
+        />
+
+        <SafeAreaView className="absolute top-0 left-0 right-0 bottom-0">
+          <Slot />
+        </SafeAreaView>
+      </SafeAreaView>
+    </View>
+  );
+};
+
+export default LoginLayout;

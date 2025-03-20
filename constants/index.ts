@@ -2,43 +2,27 @@ import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import onboarding2 from "@/assets/images/auth/onboarding2.svg";
 import background1 from "@/assets/images/auth/background1.png";
 import background2 from "@/assets/images/auth/background2.png";
-import logo from "@/assets/icons/logo.png";
+import loginBackground from "@/assets/images/auth/loginBackground.png";
+
+import logo from "@/assets/icons/logo.svg";
+import eyeClosed from '@/assets/icons/EyeClosed.png';
+import eyeOpen from '@/assets/icons/eyeOpen.png';
+import tick1 from '@/assets/icons/tick1.svg';
 
 export const images = {
   onboarding1,
   onboarding2,
   background1,
   background2,
-  logo,
+  loginBackground,
 };
 
-// export const icons = {
-//   arrowDown,
-//   arrowUp,
-//   backArrow,
-//   chat,
-//   checkmark,
-//   close,
-//   dollar,
-//   email,
-//   eyecross,
-//   google,
-//   home,
-//   list,
-//   lock,
-//   map,
-//   marker,
-//   out,
-//   person,
-//   pin,
-//   point,
-//   profile,
-//   search,
-//   selectedMarker,
-//   star,
-//   target,
-//   to,
-// };
+export const icons = {
+  logo,
+  eyeClosed,
+  eyeOpen,
+  tick1,
+};
 
 export const onboarding = [
   {
@@ -60,8 +44,3 @@ export const onboarding = [
 export const data = {
   onboarding,
 };
-
- // "packagerOpts": {
-    //   "sourceExts": ["js", "jsx", "tsx", "ts", "svgx"],
-    //   "transformer": "node_modules/react-native-svg-transformer/index.js"
-    // },

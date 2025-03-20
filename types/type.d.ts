@@ -1,4 +1,8 @@
-import { TextInputProps, TouchableOpacityProps } from "react-native";
+import {
+  KeyboardType,
+  TextInputProps,
+  TouchableOpacityProps,
+} from "react-native";
 
 declare interface Driver {
   id: number;
@@ -25,12 +29,25 @@ declare interface MarkerData {
   price?: string;
 }
 
+declare interface AuthNavigateLinkProps {
+  text?: string;
+  textLink?: string;
+  containerClassName?: string;
+  onPress?: () => void;
+}
+
 declare interface MapProps {
   destinationLatitude?: number;
   destinationLongitude?: number;
   onDriverTimesCalculated?: (driversWithTimes: MarkerData[]) => void;
   selectedDriver?: number | null;
   onMapReady?: () => void;
+}
+
+declare interface OTPInputProps {
+  numberOfDigits?: number;
+  countdown?: number;
+  onComplete?: (otp: string | number) => void | undefined;
 }
 
 declare interface Ride {
@@ -87,6 +104,10 @@ declare interface InputFieldProps extends TextInputProps {
   inputStyle?: string;
   iconStyle?: string;
   className?: string;
+  placeholder?: string;
+  isPasswordVisible?: boolean;
+  setIsPasswordVisible?: any;
+  keyboardType?: KeyboardType;
 }
 
 declare interface PaymentProps {
@@ -136,4 +157,11 @@ declare interface DriverCardProps {
   item: MarkerData;
   selected: number;
   setSelected: () => void;
+}
+
+declare interface HeaderAndDescTextCenterProps {
+  header?: string;
+  text1?: string;
+  text2?: string;
+  text3?: string;
 }
