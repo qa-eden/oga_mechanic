@@ -19,7 +19,7 @@ const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
         focusStickBlinkingDuration={500}
         // onFocus={() => console.log("Focused")}
         // onBlur={() => console.log("Blurred")}
-        onTextChange={(text) => console.log(text)}
+        // onTextChange={(text) => console.log(text)}
         onFilled={(text) => onComplete?.(text)}
         textInputProps={{
           accessibilityLabel: "One-Time Password",

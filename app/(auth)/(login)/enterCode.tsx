@@ -12,6 +12,7 @@ import { icons } from "@/constants";
 import { maskEmail } from "@/utils/emailUtils";
 import OTPInput from "@/components/OTPInput";
 import { useRouter } from "expo-router";
+import BackArrowBtn from "@/components/BackArrowBtn";
 
 const EnterCode = () => {
   const router = useRouter();
@@ -31,7 +32,6 @@ const EnterCode = () => {
 
   const handleOtpComplete = (otp: string | number) => {
     setLoading(true); // Start loader
-    // console.log("Entered OTP:", String(otp));
 
     setTimeout(() => {
       router.push("/(auth)/(login)/resetPassword");
@@ -46,10 +46,23 @@ const EnterCode = () => {
   return (
     <ScrollView>
       <View className="pt-[1.5rem]">
-        <HeaderAndDescTextCenter
-          header="Enter Code"
-          text1="A six-digit OTP code has been sent to your email"
-        />
+        <View className="flex flex-row justify-between w-full py-4">
+          <View className="w-fit py-4 ps-2">
+            <BackArrowBtn />
+          </View>
+
+          <View className="flex-1 flex items-center">
+            <HeaderAndDescTextCenter
+              header="Enter Code"
+              text1="A six-digit OTP code has been sent to your email"
+              containerStyle="px-[1rem]"
+            />
+          </View>
+
+          <View className="w-fit flex items-end ">
+            <Text className="text-transparent">GG</Text>
+          </View>
+        </View>
 
         <View className="px-5 pt-6">
           <icons.tick1 />

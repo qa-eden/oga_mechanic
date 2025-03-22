@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Pressable, ScrollView } from "react-native";
 import React, { useState } from "react";
 import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
@@ -11,7 +11,7 @@ import AuthNavigateLink from "@/components/AuthNavigateLink";
 const SignIn = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(true);
   return (
-    <View>
+    <ScrollView className="flex-1">
       <View className="pt-[3rem]">
         <HeaderAndDescTextCenter header="Sign in" text1="Hi, Welcome back." />
       </View>
@@ -40,7 +40,7 @@ const SignIn = () => {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.replace("/(auth)/(login)/forgetPassword")}
+            onPress={() => router.push("/(auth)/(login)/forgetPassword")}
           >
             <Text className="font-NunitoSemiBold text-primary-500 text-[1rem]">
               Forgot Password ?
@@ -50,18 +50,22 @@ const SignIn = () => {
 
         <CustomButton
           title="Sign In"
-          onPress={() => router.replace("/(auth)/(login)/forgetPassword")}
+          onPress={() => {
+            console.log("ehbdhebh");
+
+            router.push("/(auth)/(login)/forgetPassword");
+          }}
           className="mb-4 mt-[2.5rem]"
         />
 
         <AuthNavigateLink
-          onPress={() => router?.replace("/(auth)/(register)/sign_up")}
-          text="Didn’t have an account?"
+          onPress={() => router?.push("/(auth)/(register)/sign_up")}
+          text="Didn't have an account?"
           textLink="Sign Up"
           containerClassName="mt-[1rem]"
         />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 

@@ -1,10 +1,11 @@
-import { View, Text, ImageBackground, StatusBar } from "react-native";
+import { View, Text, ImageBackground } from "react-native";
 import React, { useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images, onboarding, icons } from "@/constants";
 import Swiper from "react-native-swiper";
 import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
 const Welcome = () => {
   const swiperRef = useRef<Swiper>(null);
@@ -14,7 +15,7 @@ const Welcome = () => {
 
   return (
     <View className="flex-1 bg-black">
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar style="light" />
 
       <ImageBackground
         source={images?.background1}
@@ -55,12 +56,12 @@ const Welcome = () => {
 
                 <View className="flex flex-row items-center justify-center w-full px-4">
                   <Text className="text-white text-3xl font-bold mx-10 text-center">
-                    {item?.title}
+                    {String(item?.title)}
                   </Text>
                 </View>
 
                 <Text className="text-lg font-JakartaSemiBold text-center text-[#858585] mx-10 my-3">
-                  {item?.description}
+                  {String(item?.description)}
                 </Text>
               </View>
             ))}
@@ -69,7 +70,7 @@ const Welcome = () => {
           <View className="p-4">
             <CustomButton
               title="Sign up"
-              className="py-4 my-4"
+              className="py-4 mb-2 mt-4"
               onPress={() => router?.replace("/(auth)/(register)/sign_up")}
             />
             <CustomButton
