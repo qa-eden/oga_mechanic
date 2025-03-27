@@ -1,17 +1,32 @@
+//images
 import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import onboarding2 from "@/assets/images/auth/onboarding2.svg";
 import background1 from "@/assets/images/auth/background1.png";
 import background2 from "@/assets/images/auth/background2.png";
 import loginBackground from "@/assets/images/auth/loginBackground.png";
 import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar.svg";
+import success from "@/assets/images/success.png";
+import dummyProfile from "@/assets/images/propics.jpeg";
+import adsbackground from "@/assets/images/adsbackground.png";
 
+//icons
+import bell from "@/assets/icons/bell.svg";
 import logo from "@/assets/icons/logo.svg";
 import splash from "@/assets/icons/logo2.svg";
+import backBtn from "@/assets/icons/backBtn.svg";
+import tick1 from "@/assets/icons/tick1.svg";
+import explore from "@/assets/icons/explore.svg";
 import eyeClosed from "@/assets/icons/EyeClosed.png";
 import eyeOpen from "@/assets/icons/eyeOpen.png";
-import tick1 from "@/assets/icons/tick1.svg";
-import backBtn from "@/assets/icons/backBtn.svg";
-import success from "@/assets/images/success.png";
+
+//tabs icons
+import home from "@/assets/icons/home.svg";
+import activeHome from "@/assets/icons/activeHome.svg";
+import activeServices from "@/assets/icons/activeServices.svg";
+import activeProfile from "@/assets/icons/activeProfile.svg";
+import car from "@/assets/icons/car.svg";
+import services from "@/assets/icons/services.svg";
+import profile from "@/assets/icons/profile.svg";
 
 //roles images
 import user from "@/assets/icons/user.svg";
@@ -26,6 +41,8 @@ export const images = {
   background2,
   loginBackground,
   splashBackgroundCar,
+  dummyProfile,
+  adsbackground,
 };
 
 export const icons = {
@@ -40,6 +57,15 @@ export const icons = {
   merchant,
   mechanic,
   driver,
+  home,
+  activeHome,
+  activeServices,
+  activeProfile,
+  car,
+  services,
+  profile,
+  bell,
+  explore,
 };
 
 export const onboarding = [
@@ -91,6 +117,27 @@ export const Roles = [
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",
+  },
+];
+
+export const Ads = [
+  {
+    id: 1,
+    title: "Smooth Rides Ahead",
+    description: "Expert Maintenance, Instant Booking",
+    image: images.adsbackground,
+  },
+  {
+    id: 2,
+    title: "Your Car, Our Passion",
+    description: "Repair, Upgrade, Drive with Confidence",
+    image: images.adsbackground,
+  },
+  {
+    id: 3,
+    title: "Automotive Solutions Hub",
+    description: "From Diagnostics to Delivery - We've Got You Covered",
+    image: images.adsbackground,
   },
 ];
 

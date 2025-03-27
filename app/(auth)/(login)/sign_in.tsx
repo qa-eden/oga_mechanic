@@ -51,9 +51,9 @@ const SignIn = () => {
         <CustomButton
           title="Sign In"
           onPress={() => {
-            console.log("ehbdhebh");
+            // console.log("ehbdhebh");
 
-            router.push("/(auth)/(login)/forgetPassword");
+            router.push("/(root)/(tabs)/home");
           }}
           className="mb-4 mt-[2.5rem]"
         />

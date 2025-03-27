@@ -46,9 +46,9 @@ const SignUp = () => {
             shadowRadius: 12, // Increase blur effect
             elevation: 8, // Android shadow
           }}
-          className="absolute bottom-0 bg-white rounded-r-[1.2rem] rounded-l-[1.2rem] w-full"
+          className="absolute bottom-0 bg-white rounded-r-[1rem] rounded-l-[1rem] w-full"
         >
-          <View className="flex-1 flex-row justify-between  px-4 absolute top-[-8%]">
+          <View className="flex-1 flex-row justify-between  px-5 absolute top-[-8%]">
             <FlatList
               data={Roles}
               keyExtractor={(item) => item.id.toString()}
@@ -102,7 +102,7 @@ const SignUp = () => {
             />
           </View>
 
-          <View className="absolute bottom-[11%] px-4 flex flex-row justify-between w-full">
+          <View className="absolute bottom-[11%] px-5 flex flex-row justify-between w-full">
             <TouchableOpacity onPress={() => router?.push("/(auth)/welcome")}>
               <Text className="font-NunitoBold text-[#575C76]">GO BACK</Text>
             </TouchableOpacity>

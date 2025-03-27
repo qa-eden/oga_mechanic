@@ -6,7 +6,7 @@ import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 
-const ResetPasswordSucessful = () => {
+const AccountCreatedSucessful = () => {
   const handleSign = () => {
     Toast.error("hello");
   };
@@ -19,11 +19,11 @@ const ResetPasswordSucessful = () => {
         <Image source={icons.success} className="w-[70px] h-[70px] my-[2rem]" />
 
         <HeaderAndDescTextCenter
-          header="Password reset successful"
-          text1="You have successfully reset your password and can now proceed to sign in."
+          header="Account created successfully"
+          text1="Your account have been created successfully and you can now proceed sign in to your dashboard to see your details"
           containerStyle="px-0"
-          headerStyle="font-NunitoExtraBold"
-          textStyle="text-[14px]"
+          headerStyle="font-NunitoExtraBold text-[24px]"
+          textStyle="text-[16px]"
         />
       </View>
 
@@ -38,4 +38,4 @@ const ResetPasswordSucessful = () => {
   );
 };
 
-export default ResetPasswordSucessful;
+export default AccountCreatedSucessful;

@@ -1,4 +1,6 @@
+import { Ads } from "./../constants/index";
 import {
+  ImageSourcePropType,
   KeyboardType,
   TextInputProps,
   TouchableOpacityProps,
@@ -164,5 +166,14 @@ declare interface HeaderAndDescTextCenterProps {
   text1?: string;
   text2?: string;
   text3?: string;
+  containerStyle?: string;
+  headerStyle?: string;
+  textStyle?: string;
+}
+
+declare interface AdsProps {
+  image: ImageSourcePropType;
+  title?: string;
+  description?: string;
   containerStyle?: string;
 }

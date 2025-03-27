@@ -6,13 +6,21 @@ const HeaderAndDescTextCenter = ({
   header,
   text1,
   containerStyle,
+  headerStyle,
+  textStyle,
 }: HeaderAndDescTextCenterProps) => {
   return (
-    <View className={`flex items-center justify-center py-4 px-[4rem] ${containerStyle}`}>
-      <Text className="text-center text-[27px] font-NunitoSemiBold ">
+    <View
+      className={`flex items-center justify-center py-4 px-[4rem] ${containerStyle}`}
+    >
+      <Text
+        className={`text-center text-[27px] font-NunitoSemiBold ${headerStyle}`}
+      >
         {header}
       </Text>
-      <Text className="text-center text-[15px] py-3 text-text-100">
+      <Text
+        className={`text-center text-[15px] py-3 text-text-100 ${textStyle}`}
+      >
         {text1}
       </Text>
     </View>
