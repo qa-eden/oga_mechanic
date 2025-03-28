@@ -8,6 +8,9 @@ import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar.svg";
 import success from "@/assets/images/success.png";
 import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
+import mechanic1 from "@/assets/images/mechanic1.svg";
+import car1 from "@/assets/images/car.svg";
+import search from "@/assets/icons/search.svg";
 
 //icons
 import bell from "@/assets/icons/bell.svg";
@@ -18,6 +21,10 @@ import tick1 from "@/assets/icons/tick1.svg";
 import explore from "@/assets/icons/explore.svg";
 import eyeClosed from "@/assets/icons/EyeClosed.png";
 import eyeOpen from "@/assets/icons/eyeOpen.png";
+import filledStar from "@/assets/icons/filledStar.svg";
+import unfillStar from "@/assets/icons/unfillStar.svg";
+import love from "@/assets/icons/love.svg";
+import calender from "@/assets/icons/calender.svg";
 
 //tabs icons
 import home from "@/assets/icons/home.svg";
@@ -66,6 +73,11 @@ export const icons = {
   profile,
   bell,
   explore,
+  filledStar,
+  unfillStar,
+  love,
+  search,
+  calender,
 };
 
 export const onboarding = [
@@ -123,7 +135,7 @@ export const Roles = [
 export const Ads = [
   {
     id: 1,
-    title: "Smooth Rides Ahead",
+    title: "Smooth Rides",
     description: "Expert Maintenance, Instant Booking",
     image: images.adsbackground,
   },
@@ -135,9 +147,115 @@ export const Ads = [
   },
   {
     id: 3,
-    title: "Automotive Solutions Hub",
-    description: "From Diagnostics to Delivery - We've Got You Covered",
+    title: "Automotive Solutions",
+    description: "From Diagnostics to Delivery",
     image: images.adsbackground,
+  },
+];
+
+export const MechanicsList = [
+  {
+    id: 1,
+    name: "Mechanic 1",
+    rating: 1,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: mechanic1,
+    reviewCount: 20,
+  },
+  {
+    id: 2,
+    name: "Mechanic 2",
+    rating: 2,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: mechanic1,
+    reviewCount: 20,
+  },
+  {
+    id: 3,
+    name: "Mechanic 3",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: mechanic1,
+    reviewCount: 20,
+  },
+  {
+    id: 4,
+    name: "Mechanic 4",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: mechanic1,
+    reviewCount: 20,
+  },
+  {
+    id: 5,
+    name: "Mechanic 5",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: mechanic1,
+    reviewCount: 20,
+  },
+];
+
+export const CarsList = [
+  {
+    id: 1,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: car1,
+    reviewCount: 20,
+  },
+  {
+    id: 2,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: car1,
+    reviewCount: 20,
+  },
+  {
+    id: 3,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: car1,
+    reviewCount: 20,
+  },
+  {
+    id: 4,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: car1,
+    reviewCount: 20,
+  },
+  {
+    id: 5,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: car1,
+    reviewCount: 20,
   },
 ];
 
