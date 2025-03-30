@@ -177,3 +177,11 @@ declare interface AdsProps {
   description?: string;
   containerStyle?: string;
 }
+declare interface ServicesProps {
+  id: number;
+  name: string;
+  description: string;
+  image: React.FC<SvgProps>;
+  bgColor: string;
+  border: string;
+}

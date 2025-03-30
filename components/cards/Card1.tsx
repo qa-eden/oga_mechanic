@@ -67,22 +67,22 @@ const Card1 = ({
           <Text className="text-xs font-Nunito text-black-100">{address}</Text>
         )}
 
-        {price && (
-          <View className="flex flex-row items-center justify-between">
-            <NairaCurrency
-              value={price ?? 0}
-              prefix="NGN"
-              className="text-lg font-NunitoBold text-[#101828]"
-            />
-          </View>
-        )}
-
         {rating && (
           <View className="flex flex-row items-center my-2">
             <Rating rating={rating ?? 0} />
             <Text className="text-md font-NunitoSemiBold pl-2 text-text-100">
               {rating} ({reviewCount})
             </Text>
+          </View>
+        )}
+
+        {price && (
+          <View className="flex flex-row items-center justify-between pb-2">
+            <NairaCurrency
+              value={price ?? 0}
+              prefix="NGN"
+              className="text-lg font-NunitoBold text-[#101828]"
+            />
           </View>
         )}
       </View>

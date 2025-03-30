@@ -1,12 +1,19 @@
-import { FlatList, View, ScrollView, Text } from "react-native";
+import {
+  FlatList,
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import React, { useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Navbar from "@/components/Navbar";
 import AdsComponents from "@/components/AdsComponents";
 import Swiper from "react-native-swiper";
-import { Ads, CarsList, MechanicsList, icons } from "@/constants";
+import { Ads, CarsList, MechanicsList, SpareParts, icons } from "@/constants";
 import Card1 from "@/components/cards/Card1";
 import SectionHeader from "@/components/SectionHeader";
+import { router } from "expo-router";
 
 const HomePage = () => {
   const swiperRef = useRef<Swiper>(null);
@@ -87,10 +94,13 @@ const HomePage = () => {
         </View>
 
         <View className="flex-row justify-between items-center my-4 border border-primary-200 px-4 py-1 rounded-[.6rem]">
-          <View className="flex-row items-center gap-5 py-3 border-r pr-[2rem] border-primary-200">
+          <TouchableOpacity
+            onPress={() => router.push("/enterAddressForRide")}
+            className="flex-row items-center gap-5 py-3 border-r pr-[2rem] border-primary-200"
+          >
             <icons.search className="w-6 h-6" />
             <Text>Where are you going today ?</Text>
-          </View>
+          </TouchableOpacity>
           <View className="flex-row bg-primary-100 rounded-[.6rem] p-2 ">
             <icons.calender className="w-10 h-10" />
             <Text className="text-primary-500 pl-1">Later</Text>
@@ -131,7 +141,34 @@ const HomePage = () => {
                 Images={item.image}
                 rating={item?.rating}
                 name={item?.name}
+                price={item?.price}
                 reviewCount={item?.reviewCount}
+                showLove={true}
+              />
+            )}
+            keyExtractor={(item) => String(item.id)}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            snapToAlignment="start"
+            snapToInterval={CARD_WIDTH + CARD_GAP}
+            decelerationRate="fast"
+            contentContainerStyle={{
+              gap: 10,
+            }}
+          />
+        </View>
+
+        <View className="my-4">
+          <SectionHeader name="Best Selling Spare Parts" />
+          <FlatList
+            data={SpareParts}
+            renderItem={({ item }) => (
+              <Card1
+                Images={item.image}
+                rating={item?.rating}
+                name={item?.name}
+                reviewCount={item?.reviewCount}
+                price={item?.price}
                 showLove={true}
               />
             )}

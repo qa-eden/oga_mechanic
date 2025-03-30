@@ -39,6 +39,8 @@ const Navbar = () => {
           <Image
             source={images.dummyProfile}
             className="w-[40px] h-[40px] rounded-full"
+            resizeMode="cover"
+            alt="Profile"
           />
         </View>
 

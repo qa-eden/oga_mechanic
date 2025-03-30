@@ -80,7 +80,10 @@ export default function Layout() {
           title: "My Cars",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={icons.car} focused={focused} />
+            <TabIcon
+              Icon={focused ? icons.activeCar : icons.car}
+              focused={focused}
+            />
           ),
         }}
       />

@@ -17,20 +17,20 @@ const AdsComponents = ({ image, title, description }: AdsProps) => {
           colors={["black", "rgba(0,0,0,0.03)"]} // Black to Transparent
           className="absolute top-0 bottom-0 rounded-[1rem] self-start ml-4"
           style={{
-            width: "50%", // Adjust width for better effect
+            width: "55%", // Adjust width for better effect
             borderRadius: 8,
           }}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
         >
           <View className="justify-center h-full pl-3">
-            <Text className="text-white text-[1.3rem] font-NunitoBold">
+            <Text className="text-white text-[1.2rem] font-NunitoBold">
               {title}
             </Text>
-            <Text className="text-white text-[13px] py-3">{description}</Text>
+            <Text className="text-white text-[12px] py-2">{description}</Text>
 
-            <TouchableOpacity className="bg-white w-[100px] justify-center flex flex-row items-center gap-2 px-2 py-2 rounded-[.7rem] mt-2">
-              <icons.explore />
+            <TouchableOpacity className="bg-white w-[100px] justify-center flex flex-row items-center gap-2 px-2 py-[.4rem] rounded-[.7rem] mt-2">
+              <icons.explore width={17} height={17}/>
               <Text className="font-NunitoBold">Explore </Text>
             </TouchableOpacity>
           </View>

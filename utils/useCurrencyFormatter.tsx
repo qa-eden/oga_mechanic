@@ -27,7 +27,7 @@ export const formatCurrency = (
 
   // Determine final output based on prefix
   if (prefix === 'NGN') {
-    return showCode ? `NGN ${formattedValue}` : `NGN${formattedValue}`;
+    return showCode ? `NGN ${formattedValue}` : `NGN ${formattedValue}`;
   }
   return `₦${formattedValue}`;
 };
@@ -41,7 +41,7 @@ export const NairaCurrency: React.FC<CurrencyFormatterProps> = ({
 }) => {
   return (
     <Text 
-      className={className}
+      className={`${className}`}
       style={style}
     >
       {formatCurrency(value, prefix)}

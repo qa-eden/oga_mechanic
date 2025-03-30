@@ -1,3 +1,5 @@
+import { ServicesProps } from "@/types/type";
+
 //images
 import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import onboarding2 from "@/assets/images/auth/onboarding2.svg";
@@ -10,7 +12,7 @@ import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
 import mechanic1 from "@/assets/images/mechanic1.svg";
 import car1 from "@/assets/images/car.svg";
-import search from "@/assets/icons/search.svg";
+import sparePart from "@/assets/images/sparePart.svg";
 
 //icons
 import bell from "@/assets/icons/bell.svg";
@@ -25,12 +27,39 @@ import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import love from "@/assets/icons/love.svg";
 import calender from "@/assets/icons/calender.svg";
+import search from "@/assets/icons/search.svg";
+import courage from "@/assets/icons/courage.svg";
+import pickUp from "@/assets/icons/pickUp.svg";
+import time from "@/assets/icons/time.svg";
+import rightArrow from "@/assets/icons/rightArrow.svg";
+
+//profile icons
+import location from "@/assets/icons/location.svg";
+import redPhone from "@/assets/icons/redPhone.svg";
+import UserCircle from "@/assets/icons/profile/UserCircle.svg";
+import padlock from "@/assets/icons/profile/padlock.svg";
+import switch1 from "@/assets/icons/profile/switch.svg";
+import sub from "@/assets/icons/profile/sub.svg";
+import faceId from "@/assets/icons/profile/faceId.svg";
+import enablePass from "@/assets/icons/profile/enablePass.svg";
+import phone1 from "@/assets/icons/profile/phone1.svg";
+import x from "@/assets/icons/profile/x.svg";
+import linkedIn from "@/assets/icons/profile/linkedIn.svg";
+import email from "@/assets/icons/profile/email.svg";
+
+
+//services icons
+import orderRide from "@/assets/icons/orderRide.svg";
+import sparePartIcon from "@/assets/icons/sparePart.svg";
+import buycar from "@/assets/icons/buycar.svg";
+import carTow from "@/assets/icons/carTow.svg";
 
 //tabs icons
 import home from "@/assets/icons/home.svg";
 import activeHome from "@/assets/icons/activeHome.svg";
 import activeServices from "@/assets/icons/activeServices.svg";
 import activeProfile from "@/assets/icons/activeProfile.svg";
+import activeCar from "@/assets/icons/activeCar.svg";
 import car from "@/assets/icons/car.svg";
 import services from "@/assets/icons/services.svg";
 import profile from "@/assets/icons/profile.svg";
@@ -40,6 +69,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.svg";
 import mechanic from "@/assets/icons/mechanic.svg";
 import driver from "@/assets/icons/driver.svg";
+
 
 export const images = {
   onboarding1,
@@ -68,6 +98,7 @@ export const icons = {
   activeHome,
   activeServices,
   activeProfile,
+  activeCar,
   car,
   services,
   profile,
@@ -78,6 +109,13 @@ export const icons = {
   love,
   search,
   calender,
+  time,
+  rightArrow,
+  redPhone,
+  location,
+  UserCircle,
+  enablePass,
+  faceId
 };
 
 export const onboarding = [
@@ -258,6 +296,202 @@ export const CarsList = [
     reviewCount: 20,
   },
 ];
+
+export const SpareParts = [
+  {
+    id: 1,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100000,
+    love: true,
+    image: sparePart,
+    reviewCount: 20,
+  },
+  {
+    id: 2,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 3976600,
+    love: true,
+    image: sparePart,
+    reviewCount: 20,
+  },
+  {
+    id: 3,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 3873820,
+    love: true,
+    image: sparePart,
+    reviewCount: 20,
+  },
+  {
+    id: 4,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: sparePart,
+    reviewCount: 20,
+  },
+  {
+    id: 5,
+    name: "Toyota Camry 2019",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 100,
+    love: true,
+    image: sparePart,
+    reviewCount: 20,
+  },
+];
+
+export const Services: ServicesProps[] = [
+  {
+    id: 1,
+    name: "Order a Ride",
+    description: "Book a ride to your destination",
+    image: orderRide,
+    bgColor: "#F3F2FE",
+    border: "#ACA6FF",
+  },
+  {
+    id: 2,
+    name: "Buy spare parts",
+    description: "Find the right spare parts",
+    image: sparePartIcon,
+    bgColor: "#FFF8F5",
+    border: " #5A4F49",
+  },
+  {
+    id: 3,
+    name: "Buy a Car",
+    description: "Find your dream car",
+    image: buycar,
+    bgColor: "#F8FFD8",
+    border: "#F6B80D",
+  },
+
+  {
+    id: 4,
+    name: "Tow your car",
+    description: "Get your car towed",
+    image: carTow,
+    bgColor: "#F3FFF1",
+    border: "#189804",
+  },
+  {
+    id: 5,
+    name: "Rent a car",
+    description: "Rent a car for a day or more",
+    image: orderRide,
+    bgColor: "#F3FFF1",
+    border: "#189804",
+  },
+  {
+    id: 6,
+    name: "Chat a Specialist",
+    description: "Get expert advice on your car",
+    image: user,
+    bgColor: "#F8FFD8",
+    border: "#F6B80D",
+  },
+];
+
+export const OrderRideOptions = [
+  {
+    id: 1,
+    name: "Ride",
+    image: orderRide,
+  },
+  {
+    id: 2,
+    name: "Courier",
+    image: courage,
+  },
+  {
+    id: 3,
+    name: "Pick Up",
+    image: pickUp,
+  },
+];
+
+export const userInfo = {
+  id: 1,
+  name: "Okorie Emmanuel",
+  location: "Lagos, Nigeria",
+  phone: "07084844214",
+};
+
+export const ProfileSettings = {
+  name: "Profile settings",
+  options: [
+    {
+      id: 1,
+      name: "My Profile",
+      image: UserCircle,
+      route: "editProfile",
+    },
+    {
+      id: 2,
+      name: "Change Password",
+      image: padlock,
+      route: "notifications",
+    },
+    {
+      id: 3,
+      name: "Switch user",
+      image: switch1,
+      route: "editProfile",
+    },
+    {
+      id: 4,
+      name: "Subscription",
+      image: sub,
+      route: "notifications",
+    },
+  ],
+};
+
+export const ProfileSopprt = {
+  name: "SuPPORT",
+  options: [
+    {
+      id: 1,
+      name: "+234 70564733811",
+      image: phone1,
+      route: "editProfile",
+    },
+    {
+      id: 2,
+      name: "+234 70564733811",
+      image: phone1,
+      route: "notifications",
+    },
+    {
+      id: 3,
+      name: "@ogamechanic",
+      image: x,
+      route: "editProfile",
+    },
+    {
+      id: 4,
+      name: "Oga mechanic",
+      image: linkedIn,
+      route: "notifications",
+    },
+    {
+      id: 5,
+      name: "help@ogamechanic.com",
+      image: email,
+      route: "notifications",
+    },
+  ],
+};
 
 export const data = {
   onboarding,
