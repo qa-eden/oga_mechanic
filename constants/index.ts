@@ -63,6 +63,7 @@ import activeCar from "@/assets/icons/activeCar.svg";
 import car from "@/assets/icons/car.svg";
 import services from "@/assets/icons/services.svg";
 import profile from "@/assets/icons/profile.svg";
+import shopTab from "@/assets/icons/shopTab.svg";
 
 //roles images
 import user from "@/assets/icons/user.svg";
@@ -115,7 +116,8 @@ export const icons = {
   location,
   UserCircle,
   enablePass,
-  faceId
+  faceId,
+  shopTab
 };
 
 export const onboarding = [

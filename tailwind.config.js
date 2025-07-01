@@ -1,7 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   // NOTE: Update this to include the paths to all of your component files.
-  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}", "*.{js,ts,jsx,tsx,mdx}"],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
@@ -15,7 +16,14 @@ module.exports = {
         NunitoSemiBold: ["Nunito-SemiBold", "sans-serif"],
       },
       colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
           50: "#FFFDFD",
           100: "#FFECED",
           200: "#FFD0D2",
@@ -27,19 +35,9 @@ module.exports = {
           800: "#5F2A2A",
           900: "#2A0102",
         },
-        text: {
-          100: "#475467",
-          200: "#F1F1F1",
-          300: "#D9D9D9",
-          400: "#36394A",
-          500: "#0D0D12",
-          600: "#141414",
-        },
-        input: {
-          background: "#F6F8FA",
-          border: "#ECEFF3",
-        },
         secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
           100: "#F8F8F8",
           200: "#F1F1F1",
           300: "#D9D9D9",
@@ -49,6 +47,34 @@ module.exports = {
           700: "#666666",
           800: "#4D4D4D",
           900: "#333333",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        text: {
+          100: "#475467",
+          200: "#F1F1F1",
+          300: "#D9D9D9",
+          400: "#36394A",
+          500: "#0D0D12",
+          600: "#141414",
         },
         success: {
           100: "#F0FFF4",
@@ -94,11 +120,16 @@ module.exports = {
           800: "#ADADAD",
         },
       },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
       spacing: {
         4: "1rem",
         5: "1.25rem",
       },
     },
   },
-  plugins: [],
-};
+  plugins: [require("tailwindcss-animate")],
+}
