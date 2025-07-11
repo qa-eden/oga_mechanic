@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   TextInput,
   View,
@@ -9,12 +11,14 @@ import {
   Keyboard,
   Platform,
   TouchableOpacity,
+  Animated,
 } from "react-native";
-
-import { InputFieldProps } from "@/types/type";
+import type { InputFieldProps } from "@/types/type";
+import { icons } from "@/constants";
 
 const InputField = ({
   label,
+  leftIcon,
   icon,
   secureTextEntry = false,
   labelStyle,
@@ -22,40 +26,216 @@ const InputField = ({
   inputStyle,
   iconStyle,
   placeholder,
-  keyboardType,
+  keyboardType = "default",
+  error,
+  touched,
+  isPasswordVisible,
+  setIsPasswordVisible,
+  required,
+  helperText,
+  onBlur,
+  onFocus,
+  autoCapitalize = "sentences",
+  autoCorrect = true,
   ...props
-}: InputFieldProps) => {
+}: InputFieldProps & {
+  error?: string;
+  touched?: boolean;
+  isPasswordVisible?: boolean;
+  setIsPasswordVisible?: (value: boolean) => void;
+  leftIcon?: any;
+  required?: boolean;
+  helperText?: string;
+}) => {
   const [isFocused, setIsFocused] = useState(false);
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Determine if there's an error to show
+  const hasError = touched && error;
+
+  // Memoized border colors to prevent recalculation
+  const borderColors = useMemo(
+    () => ({
+      default: hasError ? "#EF4444" : "#D1D5DB",
+      focused: hasError ? "#EF4444" : "#F59E42",
+    }),
+    [hasError]
+  );
+
+  const handleFocus = useCallback(
+    (e: any) => {
+      if (!isFocused) {
+        setIsFocused(true);
+
+        // Cancel any existing animation
+        if (animationRef.current) {
+          animationRef.current.stop();
+        }
+
+        animationRef.current = Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: false,
+        });
+
+        animationRef.current.start();
+      }
+
+      // Call the original onFocus if provided
+      if (onFocus) {
+        onFocus(e);
+      }
+    },
+    [isFocused, animatedValue, onFocus]
+  );
+
+  const handleBlur = useCallback(
+    (e: any) => {
+      if (isFocused) {
+        setIsFocused(false);
+
+        // Cancel any existing animation
+        if (animationRef.current) {
+          animationRef.current.stop();
+        }
+
+        animationRef.current = Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: false,
+        });
+
+        animationRef.current.start();
+      }
+
+      // Call the original onBlur if provided
+      if (onBlur) {
+        onBlur(e);
+      }
+    },
+    [isFocused, animatedValue, onBlur]
+  );
+
+  // Stable border color interpolation
+  const borderColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [borderColors.default, borderColors.focused],
+    extrapolate: "clamp",
+  });
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="my-2 w-full">
-          <Text
-            className={`text-[1.1rem] text-text-400 font-JakartaSemiBold mb-2 ${labelStyle}`}
+        <View className="mb-4 w-full">
+          {/* Label */}
+          {label && (
+            <Text
+              className={`text-base font-NunitoSemiBold text-gray-700 mb-2 ${labelStyle}`}
+            >
+              {label}
+              {required && <Text className="text-red-500 ml-1">*</Text>}
+            </Text>
+          )}
+
+          {/* Input Container */}
+          <Animated.View
+            className={`flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1 ${containerStyle}`}
+            style={{
+              borderWidth: 1.5,
+              borderColor: borderColor,
+              ...Platform.select({
+                ios: {
+                  shadowColor: hasError
+                    ? "#EF4444"
+                    : isFocused
+                    ? "#F59E42"
+                    : "transparent",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                },
+                android: {
+                  elevation: isFocused ? 2 : 0,
+                },
+              }),
+            }}
           >
-            {label}
-          </Text>
-          <View
-            className={`flex flex-row justify-start items-center relative bg-input-background rounded-[.8rem] border ${
-              isFocused ? "border-primary-500" : "border-input-border"
-            } ${containerStyle}`}
-          >
-            {icon && (
-              <Image source={icon} className={`w-6 h-6 ml-4 ${iconStyle}`} />
+            {/* Left Icon */}
+            {leftIcon && !secureTextEntry && (
+              <View className="mr-3">
+                <Image
+                  source={leftIcon}
+                  className={`w-5 h-5 ${iconStyle}`}
+                  resizeMode="contain"
+                />
+              </View>
             )}
+
+            {/* Text Input */}
             <TextInput
-              className={`rounded-[.8rem] p-4 font-JakartaSemiBold text-[15px] flex-1 ${inputStyle} text-left`}
-              secureTextEntry={secureTextEntry}
+              className={`flex-1 py-3 text-[1.2rem] font-NunitoMedium text-gray-900 ${inputStyle}`}
+              secureTextEntry={secureTextEntry && isPasswordVisible}
               keyboardType={keyboardType}
               placeholder={placeholder}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              placeholderTextColor="#9CA3AF"
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              autoCapitalize={autoCapitalize}
+              autoCorrect={autoCorrect}
+              textContentType={
+                keyboardType === "email-address" ? "emailAddress" : undefined
+              }
               {...props}
             />
-          </View>
+
+            {/* Right Icon (Password Toggle) */}
+            {secureTextEntry &&
+              typeof isPasswordVisible === "boolean" &&
+              typeof setIsPasswordVisible === "function" && (
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="ml-3 p-1"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Image
+                    source={isPasswordVisible ? icons.eyeOpen : icons.eyeClosed}
+                    className={`w-5 h-5 ${iconStyle}`}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              )}
+
+            {/* Custom Right Icon */}
+            {icon && !secureTextEntry && (
+              <View className="ml-3">
+                <Image
+                  source={icon}
+                  className={`w-5 h-5 ${iconStyle}`}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </Animated.View>
+
+          {/* Error Message */}
+          {hasError && (
+            <View className="flex-row items-center">
+              <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
+              <Text className="text-md font-NunitoMedium text-red-500 flex-1">
+                {error}
+              </Text>
+            </View>
+          )}
+
+          {/* Helper Text */}
+          {!hasError && helperText && (
+            <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
+              {helperText}
+            </Text>
+          )}
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

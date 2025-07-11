@@ -1,80 +1,98 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
-import CustomButton from "@/components/CustomButton";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React from "react";
+import { Formik } from "formik";
 import { useRouter } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { SafeAreaView } from "react-native-safe-area-context";
-import InputFieldPassword from "@/components/InputFieldPassword";
 import { Toast } from "toastify-react-native";
+import { routes } from "@/constants/routes";
+import FormikInput from "@/components/forms/FormikInput";
+import FormikButton from "@/components/forms/FormikButton";
+import * as Yup from "yup";
+
+// Validation schema for reset password
+const resetPasswordSchema = Yup.object().shape({
+  password: Yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
+    .required("Password is required"),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref("password")], "Passwords must match")
+    .required("Please confirm your password"),
+});
 
 const ResetPassword = () => {
-  const [isPasswordVisible1, setIsPasswordVisible1] = useState(true);
-  const [isPasswordVisible2, setIsPasswordVisible2] = useState(true);
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    password: "",
-    confirmPassword: "",
-  });
+  const handleProceed = (values: any, { setSubmitting }: any) => {
+    console.log("Reset password values:", values);
 
-  const handleProceed = () => {
-    console.log(formData);
-
-    if (formData.password !== formData?.confirmPassword) {
+    if (values.password !== values.confirmPassword) {
       Toast?.error("Password does not match");
+      setSubmitting(false);
     } else {
-      router.push("/(auth)/resetPasswordSucessful");
+      // Simulate API call
+      setTimeout(() => {
+        setSubmitting(false);
+      router.push(routes?.resetPasswordSuccess);
+      }, 1000);
     }
   };
 
   return (
-    <SafeAreaView>
-      <View className="pt-[3rem]">
+    <SafeAreaView className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="pt-[2rem]">
         <HeaderAndDescTextCenter
           header="Reset Password"
           text1="Please create a new password"
         />
       </View>
 
+        <Formik
+          initialValues={{
+            password: "",
+            confirmPassword: "",
+          }}
+          validationSchema={resetPasswordSchema}
+          onSubmit={handleProceed}
+        >
       <View className="px-5 pt-[1rem]">
-        <InputFieldPassword
+            <FormikInput
+              name="password"
           label="Password"
           placeholder="*********"
-          containerStyle="mb-[1rem]"
-          isPasswordVisible={isPasswordVisible1}
-          setIsPasswordVisible={setIsPasswordVisible1}
-          secureTextEntry={isPasswordVisible1}
-          onChangeText={(value) =>
-            setFormData({ ...formData, password: value })
-          }
+              containerStyle="mb-4"
+              type="password"
+              autoCapitalize="none"
+              autoCorrect={false}
         />
 
-        <InputFieldPassword
+            <FormikInput
+              name="confirmPassword"
           label="Confirm password"
           placeholder="*********"
-          containerStyle="mb-[1rem]"
-          isPasswordVisible={isPasswordVisible2}
-          setIsPasswordVisible={setIsPasswordVisible2}
-          secureTextEntry={isPasswordVisible2}
-          onChangeText={(value) =>
-            setFormData({ ...formData, confirmPassword: value })
-          }
+              containerStyle="mb-6"
+              type="password"
+              autoCapitalize="none"
+              autoCorrect={false}
         />
 
-        <CustomButton
-          title="Reset password"
-          onPress={() => handleProceed()}
-          className="mb-4 mt-[1.5rem]"
-        />
+            <FormikButton title="Reset password" className="mb-6" />
 
         <AuthNavigateLink
-          onPress={() => router?.replace("/(auth)/(login)/sign_in")}
-          text="Didn’t Forget Password?"
+          onPress={() => router?.replace(routes?.signIn)}
+              text="Didn't Forget Password?"
           textLink="Sign In"
-          containerClassName="mt-[1rem]"
+              containerClassName="mb-4"
         />
       </View>
+        </Formik>
+      </ScrollView>
     </SafeAreaView>
   );
 };

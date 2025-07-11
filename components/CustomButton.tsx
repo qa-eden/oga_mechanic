@@ -1,6 +1,14 @@
-import { TouchableOpacity, Text } from "react-native";
+"use client";
 
-import { ButtonProps } from "@/types/type";
+import {
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  View,
+  Animated,
+} from "react-native";
+import { useEffect, useState, useRef } from "react";
+import type { ButtonProps } from "@/types/type";
 
 const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
   switch (variant) {
@@ -34,6 +42,127 @@ const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
   }
 };
 
+const getLoadingColor = (
+  variant: ButtonProps["bgVariant"],
+  textVariant: ButtonProps["textVariant"]
+) => {
+  // If it's an outline button, use the text color
+  if (variant === "outline") {
+    return "#6B7280"; // gray-500
+  }
+
+  // For other variants, use the text color
+  switch (textVariant) {
+    case "primary":
+      return "#000000"; // black
+    case "secondary":
+      return "#141414";
+    case "danger":
+      return "#FEE2E2"; // red-100
+    case "success":
+      return "#DCFCE7"; // green-100
+    default:
+      return "#FFFFFF"; // white
+  }
+};
+
+// Animated Dots Component
+const AnimatedDots = ({ textColor }: { textColor: string }) => {
+  const [dots, setDots] = useState(".");
+  const fadeAnim1 = useRef(new Animated.Value(0.3)).current;
+  const fadeAnim2 = useRef(new Animated.Value(0.3)).current;
+  const fadeAnim3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length < 3 ? prev + "." : "."));
+    }, 400);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const animateDots = () => {
+      // Reset all dots to low opacity
+      Animated.parallel([
+        Animated.timing(fadeAnim1, {
+          toValue: 0.3,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim2, {
+          toValue: 0.3,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim3, {
+          toValue: 0.3,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Animate dots sequentially
+        const sequence = Animated.sequence([
+          Animated.timing(fadeAnim1, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim2, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim3, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]);
+
+        Animated.loop(sequence).start();
+      });
+    };
+
+    animateDots();
+  }, [fadeAnim1, fadeAnim2, fadeAnim3]);
+
+  return (
+    <View className="flex-row items-center ml-1">
+      <Animated.Text
+        style={{
+          opacity: fadeAnim1,
+          color: textColor,
+          fontSize: 16,
+          fontWeight: "bold",
+        }}
+      >
+        .
+      </Animated.Text>
+      <Animated.Text
+        style={{
+          opacity: fadeAnim2,
+          color: textColor,
+          fontSize: 16,
+          fontWeight: "bold",
+        }}
+      >
+        .
+      </Animated.Text>
+      <Animated.Text
+        style={{
+          opacity: fadeAnim3,
+          color: textColor,
+          fontSize: 16,
+          fontWeight: "bold",
+        }}
+      >
+        .
+      </Animated.Text>
+    </View>
+  );
+};
+
 const CustomButton = ({
   onPress,
   title,
@@ -42,21 +171,77 @@ const CustomButton = ({
   IconLeft,
   IconRight,
   className,
+  loading = false,
+  disabled = false,
+  loadingText = "Loading",
   ...props
-}: ButtonProps) => {
+}: ButtonProps & {
+  loading?: boolean;
+  loadingText?: string;
+}) => {
+  const isDisabled = disabled || loading;
+
+  // Get text color for dots animation
+  const textColorClass = getTextVariantStyle(textVariant);
+  const textColor = textColorClass.includes("text-white")
+    ? "#FFFFFF"
+    : textColorClass.includes("text-black")
+    ? "#000000"
+    : textColorClass.includes("text-[#141414]")
+    ? "#141414"
+    : textColorClass.includes("text-red-100")
+    ? "#FEE2E2"
+    : textColorClass.includes("text-green-100")
+    ? "#DCFCE7"
+    : "#FFFFFF";
+
   return (
     <TouchableOpacity
-      onPress={onPress}
-      className={`w-full rounded-full p-3 flex flex-row justify-center items-center ${getBgVariantStyle(
+      onPress={isDisabled ? undefined : onPress}
+      className={`w-full rounded-full py-5 px-2 flex flex-row justify-center items-center ${getBgVariantStyle(
         bgVariant
-      )} ${className}`}
+      )} ${isDisabled ? "opacity-70" : ""} ${className}`}
+      disabled={isDisabled}
       {...props}
     >
-      {IconLeft && <IconLeft />}
-      <Text className={`text-lg font-bold ${getTextVariantStyle(textVariant)}`}>
-        {title}
-      </Text>
-      {IconRight && <IconRight />}
+      {loading ? (
+        <View className="flex-row items-center">
+          {/* Loading Spinner */}
+          <ActivityIndicator
+            size="small"
+            color={getLoadingColor(bgVariant, textVariant)}
+          />
+
+          {/* Loading Text with Animated Dots */}
+          <View className="flex-row items-center ml-2">
+            <Text
+              className={`text-lg font-bold ${getTextVariantStyle(
+                textVariant
+              )}`}
+            >
+              {loadingText}
+            </Text>
+            <AnimatedDots textColor={textColor} />
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Left Icon */}
+          {IconLeft && <IconLeft />}
+
+          {/* Button Text */}
+          <Text
+            className={`text-[1.1rem] font-bold ${getTextVariantStyle(
+              textVariant
+            )}`}
+          >
+            {title}
+          </Text>
+
+          {/* Right Icon */}
+          {IconRight && <IconRight />}
+        </>
+      )}
     </TouchableOpacity>
   );
 };

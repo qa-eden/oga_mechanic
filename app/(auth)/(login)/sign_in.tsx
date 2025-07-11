@@ -1,70 +1,107 @@
-import { View, Text, TouchableOpacity, Pressable, ScrollView } from "react-native";
-import React, { useState } from "react";
-import CustomButton from "@/components/CustomButton";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { Formik } from "formik";
 import { router } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
-import InputField from "@/components/InputField";
-import InputFieldPassword from "@/components/InputFieldPassword";
-import Checkbox from "@/components/Checkbox";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
+import { loginSchema } from "@/utils/validationSchemas";
+import { routes } from "@/constants/routes";
+import FormikInput from "@/components/forms/FormikInput";
+import FormikButton from "@/components/forms/FormikButton";
+import FormikCheckbox from "@/components/forms/FormikCheckbox";
 
 const SignIn = () => {
-  const [isPasswordVisible, setIsPasswordVisible] = useState(true);
+  const handleSignIn = (values: any, { setSubmitting, setFieldError }: any) => {
+    console.log("Sign in values:", values);
+
+    // Additional client-side validation (optional)
+    if (!values.email || !values.email.includes("@")) {
+      setFieldError("email", "Please enter a valid email address");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!values.password || values.password.length < 6) {
+      setFieldError("password", "Password must be at least 6 characters");
+      setSubmitting(false);
+      return;
+    }
+
+    // Simulate API call
+    setTimeout(() => {
+      setSubmitting(false);
+      router.push(routes?.home);
+    }, 1000);
+  };
+
   return (
-    <ScrollView className="flex-1">
-      <View className="pt-[3rem]">
+    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <View className="pt-[2rem]">
         <HeaderAndDescTextCenter header="Sign in" text1="Hi, Welcome back." />
       </View>
 
-      <View className="px-5">
-        <InputField
-          label="Email address"
-          placeholder="johndoe@gmail.com"
-          containerStyle="mb-[1rem]"
-          keyboardType="email-address"
-        />
+      <Formik
+        initialValues={{
+          email: "",
+          password: "",
+          rememberMe: false,
+        }}
+        validationSchema={loginSchema}
+        onSubmit={handleSignIn}
+      >
+        <View className="px-5">
+          <FormikInput
+            name="email"
+            label="Email address"
+            placeholder="johndoe@gmail.com"
+            containerStyle="mb-4"
+            type="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-        <InputFieldPassword
-          label="Password"
-          placeholder="*********"
-          containerStyle="mb-[1rem]"
-          isPasswordVisible={isPasswordVisible}
-          setIsPasswordVisible={setIsPasswordVisible}
-          secureTextEntry={isPasswordVisible}
-        />
+          <FormikInput
+            name="password"
+            label="Password"
+            placeholder="*********"
+            type="password"
+            containerStyle="mb-4"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-        <View className="flex flex-row justify-between items-center">
-          <View className="flex flex-row items-center">
-            <Checkbox />
-            <Text className="text-text-100">Remember me</Text>
+          <View className="flex flex-row justify-between items-center mb-6">
+            {/* Left side - Checkbox with constrained width */}
+            <View className="flex-1 mr-4">
+              <FormikCheckbox
+                name="rememberMe"
+                label="Remember me"
+                labelStyle=""
+                containerStyle="flex-shrink"
+              />
+            </View>
+
+            {/* Right side - Forgot Password */}
+            <View className="flex-shrink-0">
+              <TouchableOpacity
+                onPress={() => router.push(routes?.forgotPassword)}
+              >
+                <Text className="font-NunitoSemiBold text-primary-500 text-[1.2rem]">
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.push("/(auth)/(login)/forgetPassword")}
-          >
-            <Text className="font-NunitoSemiBold text-primary-500 text-[1rem]">
-              Forgot Password ?
-            </Text>
-          </TouchableOpacity>
+          <FormikButton title="Sign In" className="mb-6" />
+
+          <AuthNavigateLink
+            onPress={() => router?.push(routes?.signUp)}
+            text="Didn't have an account?"
+            textLink="Sign Up"
+            containerClassName="mb-4"
+          />
         </View>
-
-        <CustomButton
-          title="Sign In"
-          onPress={() => {
-            // console.log("ehbdhebh");
-
-            router.push("/(root)/(tabs)/home");
-          }}
-          className="mb-4 mt-[2.5rem]"
-        />
-
-        <AuthNavigateLink
-          onPress={() => router?.push("/(auth)/(register)/sign_up")}
-          text="Didn't have an account?"
-          textLink="Sign Up"
-          containerClassName="mt-[1rem]"
-        />
-      </View>
+      </Formik>
     </ScrollView>
   );
 };

@@ -8,9 +8,13 @@ import ToastManager from "toastify-react-native";
 import "../global.css";
 import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { CartProvider } from "@/contexts/CartContext";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
+  const [loaded, error] = useFonts({
     "Nunito-Bold": require("../assets/fonts/nunito/Nunito-Bold.ttf"),
     "Nunito-ExtraBold": require("../assets/fonts/nunito/Nunito-ExtraBold.ttf"),
     "Nunito-ExtraLight": require("../assets/fonts/nunito/Nunito-ExtraLight.ttf"),
@@ -21,11 +25,17 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    if (error) {
+      console.error('Font loading error:', error);
     }
-  }, [loaded]);
+    
+    if (loaded) {
+      // Hide the splash screen after fonts are loaded
+      SplashScreen.hideAsync().catch(console.error);
+    }
+  }, [loaded, error]);
 
+  // Show a loading state while fonts are loading
   if (!loaded) {
     return null;
   }
@@ -36,20 +46,22 @@ export default function RootLayout() {
   const toastWidth = screenWidth * 0.9;
 
   return (
-    <View className="flex-1">
-      <StatusBar style="light" />
-      <ToastManager
-        position="top"
-        width={toastWidth}
-        duration={5000}
-        animationIn="slideInRight"
-        animationOut="slideOutLeft"
-        // hideProgressBar={true} // Removes the progress bar
-      />
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(root)" options={{ headerShown: false }} />
-      </Stack>
-    </View>
+    <CartProvider>
+      <View className="flex-1">
+        <StatusBar style="light" />
+        <ToastManager
+          position="top"
+          width={toastWidth}
+          duration={2000}
+          animationIn="slideInRight"
+          animationOut="slideOutLeft"
+          showProgressBar={false}
+        />
+        <Stack>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(root)" options={{ headerShown: false }} />
+        </Stack>
+      </View>
+    </CartProvider>
   );
 }

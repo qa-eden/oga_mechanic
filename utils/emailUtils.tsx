@@ -8,3 +8,10 @@ export const maskEmail = (email: string): string => {
   
     return `${maskedPart}${visiblePart}@${domain}`;
   };
+
+export const maskPhoneNumber = (phone: string): string => {
+  if (!phone || phone.length < 4) return phone;
+  const visiblePart = phone.slice(-4);
+  const maskedPart = "*".repeat(phone.length - 4);
+  return `${maskedPart}${visiblePart}`;
+}; 

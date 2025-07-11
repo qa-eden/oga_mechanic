@@ -1,104 +1,115 @@
-import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
-} from "react-native";
-import React, { useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import UserAuthHeader from "@/components/UserAuthHeader";
-import { StatusBar } from "expo-status-bar";
-import ProgressBar from "@/components/ProgressBar";
-import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
-import CustomButton from "@/components/CustomButton";
-import { useRouter } from "expo-router";
-import AuthNavigateLink from "@/components/AuthNavigateLink";
-import InputFieldPassword from "@/components/InputFieldPassword";
+"use client"
+
+import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { Formik } from "formik"
+import UserAuthHeader from "@/components/UserAuthHeader"
+import { StatusBar } from "expo-status-bar"
+import ProgressBar from "@/components/ProgressBar"
+import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter"
+import FormikInput from "@/components/forms/FormikInput"
+import FormikButton from "@/components/forms/FormikButton"
+import { useRouter } from "expo-router"
+import AuthNavigateLink from "@/components/AuthNavigateLink"
+import { resetPasswordSchema } from "@/utils/validationSchemas"
+import { routes } from "@/constants/routes"
 
 const Step3 = () => {
-  const [isPasswordVisible1, setIsPasswordVisible1] = useState(true);
-  const [isPasswordVisible2, setIsPasswordVisible2] = useState(true);
-  const router = useRouter();
+  const router = useRouter()
 
-  const [formData, setFormData] = useState({
-    password: "",
-    confirmPassword: "",
-  });
+  const handleStep3Submit = (values: any, { setSubmitting }: any) => {
+    console.log("Step 3 values:", values)
+    setSubmitting(false)
+    router.push("/(auth)/accountCreatedSucessful")
+  }
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="px-5 flex-1">
-          <StatusBar style="dark" />
-          <UserAuthHeader />
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      <StatusBar style="dark" />
 
-          {/* ScrollView inside KeyboardAvoidingView to fix scrolling issues */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingBottom: 200,
+            }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
+            bounces={true}
+            automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           >
-            <View className="py-4">
-              <ProgressBar step={3} totalSteps={3} />
-            </View>
+            <View className="px-5">
+              <UserAuthHeader />
 
-            <View>
+              <View className="py-4">
+                <ProgressBar step={3} totalSteps={3} />
+              </View>
+
               <HeaderAndDescTextCenter
                 header="Password"
-                text1="Kindly set up your password "
-                containerStyle="px-0"
-              />
-            </View>
-
-            <View>
-              <InputFieldPassword
-                label="Password"
-                placeholder="*********"
-                containerStyle="mb-[1rem]"
-                isPasswordVisible={isPasswordVisible1}
-                setIsPasswordVisible={setIsPasswordVisible1}
-                secureTextEntry={isPasswordVisible1}
-                onChangeText={(value) =>
-                  setFormData({ ...formData, password: value })
-                }
+                text1="Kindly set up your password"
+                containerStyle="px-0 py-2"
               />
 
-              <InputFieldPassword
-                label="Confirm password"
-                placeholder="*********"
-                containerStyle="mb-[1rem]"
-                isPasswordVisible={isPasswordVisible2}
-                setIsPasswordVisible={setIsPasswordVisible2}
-                secureTextEntry={isPasswordVisible2}
-                onChangeText={(value) =>
-                  setFormData({ ...formData, confirmPassword: value })
-                }
-              />
+              <Formik
+                initialValues={{
+                  password: "",
+                  confirmPassword: "",
+                }}
+                validationSchema={resetPasswordSchema}
+                onSubmit={handleStep3Submit}
+              >
+                {() => (
+                  <View>
+                    <FormikInput
+                      name="password"
+                      label="Password"
+                      placeholder="*********"
+                      type="password"
+                      labelStyle="mt-2"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
 
-              <CustomButton
-                title="Create account"
-                className="py-4 mb-2 mt-4"
-                onPress={() => router.push("/(auth)/accountCreatedSucessful")}
-              />
+                    <FormikInput
+                      name="confirmPassword"
+                      label="Confirm password"
+                      placeholder="*********"
+                      type="password"
+                      labelStyle="mt-2"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
 
-              <AuthNavigateLink
-                onPress={() => router.push("/(auth)/(login)/sign_in")}
-                text="Already have an account?"
-                textLink="Sign In"
-                containerClassName="mt-[1rem]"
-              />
+                    {/* Spacing before buttons */}
+                    <View style={{ height: 40 }} />
+
+                    <FormikButton title="Create account" className="py-4 mb-2" />
+
+                    <AuthNavigateLink
+                      onPress={() => router.push(routes.signIn)}
+                      text="Already have an account?"
+                      textLink="Sign In"
+                      containerClassName="mt-4"
+                    />
+
+                    {/* Extra bottom spacing */}
+                    <View style={{ height: 100 }} />
+                  </View>
+                )}
+              </Formik>
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  );
-};
+    </SafeAreaView>
+  )
+}
 
-export default Step3;
+export default Step3

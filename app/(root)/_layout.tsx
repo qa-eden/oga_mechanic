@@ -5,8 +5,6 @@ const Layout = () => {
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(screens)" options={{ headerShown: false }} />
-      <Stack.Screen name="(orderRide)" options={{ headerShown: false }} />
-     
     </Stack>
   );
 };

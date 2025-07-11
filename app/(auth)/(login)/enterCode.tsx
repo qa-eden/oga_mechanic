@@ -13,6 +13,7 @@ import { maskEmail } from "@/utils/emailUtils";
 import OTPInput from "@/components/OTPInput";
 import { useRouter } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
+import { routes } from "@/constants/routes";
 
 const EnterCode = () => {
   const router = useRouter();
@@ -34,7 +35,7 @@ const EnterCode = () => {
     setLoading(true); // Start loader
 
     setTimeout(() => {
-      router.push("/(auth)/(login)/resetPassword");
+      router.push(routes?.resetPassword);
       setLoading(false); // Stop loader after navigation
     }, 1500); // Simulating API call delay
   };
@@ -67,11 +68,11 @@ const EnterCode = () => {
         <View className="px-5 pt-6">
           <icons.tick1 />
 
-          <Text className="font-NunitoSemiBold text-[16px] pt-5 pb-2">
+          <Text className="font-NunitoSemiBold text-[19px] pt-5 pb-2">
             Enter the 6-digit code we texted to your linked email{" "}
             {maskEmail("emmzzyvibes@gmail.com")}
           </Text>
-          <Text className="text-text-100 text-[14px]">
+          <Text className="text-text-100 text-[16px]">
             This helps keep your account safe by verifying it's you
           </Text>
 
@@ -85,16 +86,16 @@ const EnterCode = () => {
             <ActivityIndicator size="large" color="#D30309" className="pt-4" />
           ) : (
             <>
-              <Text className="pt-2 pb-4">Didn't receive OTP?</Text>
+              <Text className="pt-2 pb-4 text-[15px]">Didn't receive OTP?</Text>
               {countdown > 0 ? (
                 <TouchableOpacity>
-                  <Text className="text-primary-500 font-NunitoSemiBold">
+                  <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
                     {`Resend Code (${countdown}s)`}
                   </Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity onPress={handleResendCode}>
-                  <Text className="text-primary-500 font-NunitoSemiBold">
+                  <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
                     {"Resend Code"}
                   </Text>
                 </TouchableOpacity>

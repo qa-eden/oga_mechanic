@@ -1,9 +1,13 @@
-import { View, Text, Image, TouchableOpacity, Platform } from "react-native";
-import { SvgProps } from "react-native-svg";
-import { FC } from "react";
+"use client";
+
+import { View, Text, TouchableOpacity, Platform, Animated } from "react-native";
+import type { SvgProps } from "react-native-svg";
+import { type FC, useRef } from "react";
 import Rating from "../Rating";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { icons } from "@/constants";
+import { router } from "expo-router";
+import { routes } from "@/constants/routes";
 
 interface Props {
   Images: string | FC<SvgProps>;
@@ -15,6 +19,10 @@ interface Props {
   love?: boolean;
   showLove?: boolean;
   onPress?: () => void;
+  onLovePress?: () => void;
+  isLoading?: boolean;
+  containerStyle?: string;
+  productId?: number;
 }
 
 const Card1 = ({
@@ -24,69 +32,175 @@ const Card1 = ({
   address,
   price,
   reviewCount,
-  showLove,
+  showLove = false,
+  love = false,
   onPress,
+  onLovePress,
+  isLoading = false,
+  containerStyle,
+  productId,
 }: Props) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const heartAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+
+  const handleLovePress = () => {
+    Animated.sequence([
+      Animated.timing(heartAnim, {
+        toValue: 1.2,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(heartAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    onLovePress?.();
+  };
+
+  const handleCardPress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      // Navigate to product detail page
+      router.push({
+        pathname: routes?.ProductDetail,
+        params: {
+          productId: productId || 1,
+          name: name || "Product",
+          price: price || 0,
+        },
+      });
+    }
+  };
+
   return (
-    <TouchableOpacity
-      className="flex-1 w-full mt-4 overflow-hidden border border-gray-300 rounded-lg bg-white relative"
-      onPress={onPress}
-      activeOpacity={0.7} // Adds a visual feedback on press
-      touchSoundDisabled={false} // Enables default touch sound
-      style={{
-        // Adds shadow for better depth on iOS and Android
-        ...Platform.select({
-          ios: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-          },
-          android: {
-            elevation: 3,
-          },
-        }),
-      }}
-    >
-      {showLove && (
-        <TouchableOpacity className="flex flex-row  items-center absolute top-3 right-3 p-1 rounded-full z-50">
-          <icons.love width={18} height={18} />
-        </TouchableOpacity>
-      )}
-
-      <Images />
-
-      <View className="flex flex-col p-2">
-        <Text
-          className="text-base font-NunitoBold text-[#101828] "
-          numberOfLines={1}
-        >
-          {name}
-        </Text>
-        {address && (
-          <Text className="text-xs font-Nunito text-black-100">{address}</Text>
-        )}
-
-        {rating && (
-          <View className="flex flex-row items-center my-2">
-            <Rating rating={rating ?? 0} />
-            <Text className="text-md font-NunitoSemiBold pl-2 text-text-100">
-              {rating} ({reviewCount})
-            </Text>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        className={`w-full bg-white rounded-2xl overflow-hidden border border-gray-300 mt-4 ${containerStyle}`}
+        onPress={handleCardPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        disabled={isLoading}
+        style={{
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+            },
+            android: {
+              elevation: 3,
+            },
+          }),
+        }}
+      >
+        {/* Image Container */}
+        <View className="relative">
+          <View className="w-full h-[140px] bg-black rounded-t-2xl justify-center items-center overflow-hidden">
+            {isLoading ? (
+              <View className="w-full h-full bg-gray-300 animate-pulse" />
+            ) : (
+              <Images />
+            )}
           </View>
-        )}
 
-        {price && (
-          <View className="flex flex-row items-center justify-between pb-2">
-            <NairaCurrency
-              value={price ?? 0}
-              prefix="NGN"
-              className="text-lg font-NunitoBold text-[#101828]"
-            />
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+          {/* Love/Favorite Button */}
+          {showLove && (
+            <Animated.View
+              style={{ transform: [{ scale: heartAnim }] }}
+              className="absolute top-3 right-3"
+            >
+              <TouchableOpacity
+                onPress={handleLovePress}
+                className="w-8 h-8 rounded-full items-center justify-center"
+                style={{
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                    },
+                    android: {
+                      elevation: 2,
+                    },
+                  }),
+                }}
+              >
+                <icons.love
+                  width={16}
+                  height={16}
+                  color={love ? "#EF4444" : "#9CA3AF"}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </View>
+
+        {/* Content */}
+        <View className="p-3 space-y-2">
+          {/* Title */}
+          <Text
+            className="text-base font-NunitoBold text-gray-900 leading-tight"
+            numberOfLines={1}
+          >
+            {name || "Loading..."}
+          </Text>
+
+          {/* Rating */}
+          {rating && rating > 0 && (
+            <View className="flex-row items-center space-x-1">
+              <Rating rating={rating} size={12} />
+              <Text className="text-sm font-NunitoMedium text-gray-700 ml-1">
+                {rating.toFixed(1)} ({reviewCount || 0})
+              </Text>
+            </View>
+          )}
+
+          {/* Price */}
+          {price && price > 0 && (
+            <View className="pt-1">
+              <NairaCurrency
+                value={price}
+                className="text-lg font-NunitoBold text-gray-900"
+              />
+            </View>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <View className="space-y-2">
+              <View className="h-4 bg-gray-200 rounded animate-pulse" />
+              <View className="h-3 bg-gray-200 rounded animate-pulse w-3/4" />
+              <View className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 

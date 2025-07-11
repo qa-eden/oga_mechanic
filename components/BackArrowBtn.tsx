@@ -9,6 +9,7 @@ const BackArrowBtn = ({ onPress }: { onPress?: () => void }) => {
       onPress={() => {
         onPress || router?.back();
       }}
+      className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm"
     >
       <icons.backBtn />
     </TouchableOpacity>

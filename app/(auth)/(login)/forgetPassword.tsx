@@ -1,48 +1,74 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
-import CustomButton from "@/components/CustomButton";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React from "react";
+import { Formik } from "formik";
 import { useRouter } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
-import InputField from "@/components/InputField";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { routes } from "@/constants/routes";
+import FormikInput from "@/components/forms/FormikInput";
+import FormikButton from "@/components/forms/FormikButton";
+import * as Yup from "yup";
+
+// Validation schema for forgot password
+const forgotPasswordSchema = Yup.object().shape({
+  email: Yup.string()
+    .email("Please enter a valid email address")
+    .required("Email is required"),
+});
 
 const forgetPassword = () => {
   const router = useRouter();
 
-  const handleProceed = () => {
-    router.push("/(auth)/(login)/enterCode");
+  const handleProceed = (values: any, { setSubmitting }: any) => {
+    console.log("Forgot password values:", values);
+
+    // Simulate API call
+    setTimeout(() => {
+      setSubmitting(false);
+      router.push(routes?.enterCode);
+    }, 1000);
   };
+
   return (
-    <SafeAreaView>
-      <View className="pt-[3rem]">
-        <HeaderAndDescTextCenter
-          header="Forgot Password?"
-          text1="Please enter your email, an OTP will be sent"
-        />
-      </View>
+    <SafeAreaView className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="pt-[2rem]">
+          <HeaderAndDescTextCenter
+            header="Forgot Password?"
+            text1="Please enter your email, an OTP will be sent"
+          />
+        </View>
 
-      <View className="px-5 pt-[1rem]">
-        <InputField
-          label="Email address"
-          placeholder="johndoe@gmail.com"
-          containerStyle=""
-          keyboardType="email-address"
-        />
+        <Formik
+          initialValues={{
+            email: "",
+          }}
+          validationSchema={forgotPasswordSchema}
+          onSubmit={handleProceed}
+        >
+          <View className="px-5 pt-[1rem]">
+            <FormikInput
+              name="email"
+              label="Email address"
+              placeholder="johndoe@gmail.com"
+              containerStyle="mb-6"
+              type="email"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-        <CustomButton
-          title="Proceed"
-          onPress={() => handleProceed()}
-          className="mb-4 mt-[1.5rem]"
-        />
+            <FormikButton title="Proceed" className="mb-6" />
 
-        <AuthNavigateLink
-          onPress={() => router?.replace("/(auth)/(login)/sign_in")}
-          text="Didn't have an account?"
-          textLink="Sign In"
-          containerClassName="mt-[1rem]"
-        />
-      </View>
+            <AuthNavigateLink
+              onPress={() => router?.replace(routes?.signIn)}
+              text="Didn't have an account?"
+              textLink="Sign In"
+              containerClassName="mb-4"
+            />
+          </View>
+        </Formik>
+      </ScrollView>
     </SafeAreaView>
   );
 };

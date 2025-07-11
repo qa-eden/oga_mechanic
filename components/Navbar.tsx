@@ -33,7 +33,7 @@ const Navbar = () => {
   const { label, icon } = getTimeOfDay();
 
   return (
-    <View className="flex-row justify-between items-center">
+    <View className="flex-row justify-between items-center pt-3">
       <View className="flex flex-row items-center gap-2">
         <View className="w-[45px] h-[45px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
           <Image

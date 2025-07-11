@@ -10,11 +10,11 @@ const AuthNavigateLink = ({
 }: AuthNavigateLinkProps) => {
   return (
     <View
-      className={`flex justify-center items-center flex-row gap-1 ${containerClassName}`}
+      className={`flex justify-center items-center flex-row gap-2 ${containerClassName}`}
     >
-      <Text className="text-text-100">{text}</Text>
+      <Text className="text-text-100 text-[1.15rem]">{text}</Text>
       <TouchableOpacity onPress={onPress}>
-        <Text className="text-primary-500 font-NunitoBold text-[1.1rem]">
+        <Text className="text-primary-500 font-NunitoBold text-[1.2rem]">
           {textLink}
         </Text>
       </TouchableOpacity>

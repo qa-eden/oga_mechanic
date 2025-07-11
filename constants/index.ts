@@ -7,12 +7,14 @@ import background1 from "@/assets/images/auth/background1.png";
 import background2 from "@/assets/images/auth/background2.png";
 import loginBackground from "@/assets/images/auth/loginBackground.png";
 import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar.svg";
-import success from "@/assets/images/success.png";
+import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
 import mechanic1 from "@/assets/images/mechanic1.svg";
 import car1 from "@/assets/images/car.svg";
 import sparePart from "@/assets/images/sparePart.svg";
+import ProductImg from "@/assets/images/productImg.svg";
+import brabus from "@/assets/images/brabus.svg";
 
 //icons
 import bell from "@/assets/icons/bell.svg";
@@ -32,6 +34,10 @@ import courage from "@/assets/icons/courage.svg";
 import pickUp from "@/assets/icons/pickUp.svg";
 import time from "@/assets/icons/time.svg";
 import rightArrow from "@/assets/icons/rightArrow.svg";
+import carticon from "@/assets/icons/carticon.svg";
+import bankIcon from "@/assets/icons/bank.svg";
+import mechanic2 from "@/assets/icons/mechanic1.svg";
+import rent from "@/assets/icons/rent.svg";
 
 //profile icons
 import location from "@/assets/icons/location.svg";
@@ -46,7 +52,6 @@ import phone1 from "@/assets/icons/profile/phone1.svg";
 import x from "@/assets/icons/profile/x.svg";
 import linkedIn from "@/assets/icons/profile/linkedIn.svg";
 import email from "@/assets/icons/profile/email.svg";
-
 
 //services icons
 import orderRide from "@/assets/icons/orderRide.svg";
@@ -70,7 +75,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.svg";
 import mechanic from "@/assets/icons/mechanic.svg";
 import driver from "@/assets/icons/driver.svg";
-
+import { routes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -81,6 +86,8 @@ export const images = {
   splashBackgroundCar,
   dummyProfile,
   adsbackground,
+  ProductImg,
+  brabus
 };
 
 export const icons = {
@@ -117,7 +124,9 @@ export const icons = {
   UserCircle,
   enablePass,
   faceId,
-  shopTab
+  shopTab,
+  carticon,
+  bankIcon,
 };
 
 export const onboarding = [
@@ -145,6 +154,7 @@ export const Roles = [
     image: icons.user,
     border: "#7DA0FF",
     backgroundColor: "#D6E1FF",
+    route: routes?.userStep1
   },
   {
     id: 2,
@@ -153,6 +163,7 @@ export const Roles = [
     image: icons.merchant,
     border: "#FFC38D",
     backgroundColor: "#FFEAD8",
+    route: routes?.merchantStep1
   },
   {
     id: 3,
@@ -161,6 +172,7 @@ export const Roles = [
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
+    route: routes?.mechanicStep1
   },
   {
     id: 4,
@@ -169,6 +181,7 @@ export const Roles = [
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",
+    route: routes?.driverStep1
   },
 ];
 
@@ -390,7 +403,7 @@ export const Services: ServicesProps[] = [
     id: 5,
     name: "Rent a car",
     description: "Rent a car for a day or more",
-    image: orderRide,
+    image: rent,
     bgColor: "#F3FFF1",
     border: "#189804",
   },
@@ -398,7 +411,7 @@ export const Services: ServicesProps[] = [
     id: 6,
     name: "Chat a Specialist",
     description: "Get expert advice on your car",
-    image: user,
+    image: mechanic2,
     bgColor: "#F8FFD8",
     border: "#F6B80D",
   },

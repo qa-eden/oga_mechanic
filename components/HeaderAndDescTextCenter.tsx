@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import React from "react";
 import { HeaderAndDescTextCenterProps } from "@/types/type";
+import clsx from "clsx";
 
 const HeaderAndDescTextCenter = ({
   header,
@@ -11,15 +12,24 @@ const HeaderAndDescTextCenter = ({
 }: HeaderAndDescTextCenterProps) => {
   return (
     <View
-      className={`flex items-center justify-center py-4 px-[4rem] ${containerStyle}`}
+      className={clsx(
+        "flex items-center justify-center py-4 px-[4rem]",
+        containerStyle
+      )}
     >
       <Text
-        className={`text-center text-[27px] font-NunitoSemiBold ${headerStyle}`}
+        className={clsx(
+          "text-center text-[30px] font-NunitoSemiBold",
+          headerStyle
+        )}
       >
         {header}
       </Text>
       <Text
-        className={`text-center text-[15px] py-3 text-text-100 ${textStyle}`}
+        className={clsx(
+          "text-center text-[17px] py-3 text-text-100",
+          textStyle
+        )}
       >
         {text1}
       </Text>

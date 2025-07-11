@@ -1,4 +1,5 @@
 import ProfileTabs from "@/components/templates/ProfileTabs";
+import ProfileHeader from "@/components/ProfileHeader";
 import {
   images,
   userInfo,
@@ -60,9 +61,7 @@ const Profile = () => {
         }}
       >
         <View className="flex-col justify-center items-center">
-          <Text className="text-center text-[1.5rem] font-NunitoBold py-3 mb-2">
-            Profile
-          </Text>
+          <ProfileHeader title="Profile" />
 
           <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
             <Image

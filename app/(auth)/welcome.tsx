@@ -1,85 +1,159 @@
-import { View, Text, ImageBackground } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, ImageBackground, FlatList, Dimensions, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images, onboarding, icons } from "@/constants";
-import Swiper from "react-native-swiper";
 import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { routes } from "@/constants/routes";
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const Welcome = () => {
-  const swiperRef = useRef<Swiper>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const isLastSlde = activeIndex === onboarding.length - 1;
-  // console.log(onboarding);
+  const flatListRef = useRef<FlatList>(null);
+
+  // Animation refs
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const imageAnim = useRef(new Animated.Value(0)).current;
+  const textAnim = useRef(new Animated.Value(0)).current;
+  const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Staggered animation
+    Animated.sequence([
+      Animated.timing(logoAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(imageAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(textAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(buttonAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const renderOnboardingItem = ({ item }: { item: any }) => (
+    <Animated.View
+      style={{
+        width: screenWidth,
+        alignItems: "center",
+        opacity: imageAnim,
+        transform: [{ scale: imageAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+      }}
+    >
+      <View style={{ width: 300, height: 300, marginBottom: 24, justifyContent: "center", alignItems: "center" }}>
+        <item.image width={300} height={300} />
+      </View>
+      <Animated.Text
+        style={{
+          color: "#fff",
+          fontSize: 28,
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: 12,
+          opacity: textAnim,
+          transform: [{ translateY: textAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+        }}
+      >
+        {item.title}
+      </Animated.Text>
+      <Animated.Text
+        style={{
+          color: "#E2E8F0",
+          fontSize: 18,
+          textAlign: "center",
+          opacity: textAnim,
+        }}
+      >
+        {item.description}
+      </Animated.Text>
+    </Animated.View>
+  );
+
+  const renderDotIndicator = () => (
+    <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 24, marginBottom: 12 }}>
+      {onboarding.map((_, index) => (
+        <Animated.View
+          key={index}
+          style={{
+            width: activeIndex === index ? 12 : 8,
+            height: activeIndex === index ? 12 : 8,
+            borderRadius: 6,
+            backgroundColor: activeIndex === index ? "#fff" : "rgba(255,255,255,0.5)",
+            marginHorizontal: 4,
+            opacity: buttonAnim,
+            transform: [
+              { scale: activeIndex === index ? 1.2 : 1 }
+            ]
+          }}
+        />
+      ))}
+    </View>
+  );
+
+  const handleMomentumScrollEnd = (event: any) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+    setActiveIndex(index % onboarding.length);
+  };
 
   return (
-    <View className="flex-1 bg-black">
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
       <StatusBar style="light" />
-
       <ImageBackground
         source={images?.background1}
-        // source={isLastSlde ? images?.background2 : images?.background1}
-        className="flex-1 justify-center items-center"
+        style={{ flex: 1, justifyContent: "center" }}
         resizeMode="cover"
       >
-        <SafeAreaView className="flex-1">
-          <View className="flex justify-left p-4">
-            <icons.logo />
-          </View>
-          <Swiper
-            ref={swiperRef}
-            loop={false}
-            dot={
-              <View className="w-[8px] h-[8px] mx-1 bg-[#E2E8F0] rounded-full" />
-            }
-            activeDot={
-              <View className="w-[10px] h-[10px] mx-1 bg-primary-500 rounded-full" />
-            }
-            onIndexChanged={(index) => setActiveIndex(index)}
+        <SafeAreaView style={{ flex: 1 }}>
+          {/* Animated Logo */}
+          <Animated.View
+            style={{
+              alignItems: "flex-start",
+              padding: 24,
+              opacity: logoAnim,
+              transform: [{ translateY: logoAnim.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) }],
+            }}
           >
-            {onboarding?.map((item, index) => (
-              <View key={index} className="flex items-center justify-center">
-                <View className="w-full h-[360px]">
-                  <item.image
-                    width={350}
-                    height={400}
-                    preserveAspectRatio="xMinYMin meet"
-                  />
-                  {/* <Image
-                    source={item.image}
-                    // className="w-full h-full"
-                    resizeMode="cover"
-                  /> */}
-                  {/* transform="rotate(45 200 200)" */}
-                </View>
+            <icons.logo width={120} height={40} />
+          </Animated.View>
 
-                <View className="flex flex-row items-center justify-center w-full px-4">
-                  <Text className="text-white text-3xl font-bold mx-10 text-center">
-                    {String(item?.title)}
-                  </Text>
-                </View>
+          {/* Animated Onboarding Content */}
+          <FlatList
+            ref={flatListRef}
+            data={onboarding}
+            renderItem={renderOnboardingItem}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            contentContainerStyle={{ alignItems: "center" }}
+            getItemLayout={(_, index) => ({
+              length: screenWidth,
+              offset: screenWidth * index,
+              index,
+            })}
+          />
 
-                <Text className="text-lg font-JakartaSemiBold text-center text-[#858585] mx-10 my-3">
-                  {String(item?.description)}
-                </Text>
-              </View>
-            ))}
-          </Swiper>
+          {renderDotIndicator()}
 
-          <View className="p-4">
+          {/* Animated Buttons */}
+          <Animated.View
+            style={{
+              padding: 24,
+              opacity: buttonAnim,
+              transform: [{ translateY: buttonAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
+            }}
+          >
             <CustomButton
               title="Sign up"
-              className="py-4 mb-2 mt-4"
-              onPress={() => router?.replace("/(auth)/(register)/sign_up")}
+              className="py-5 mb-3 mt-2 shadow-lg"
+              onPress={() => router?.replace(routes?.signUp as any)}
             />
             <CustomButton
-              onPress={() => router?.replace("/(auth)/(login)/sign_in")}
+              onPress={() => router?.replace(routes?.signIn as any)}
               title="Sign in"
               bgVariant="outline"
-              className="py-4 my-4"
+              className="py-5 my-2 shadow-lg"
             />
-          </View>
+          </Animated.View>
         </SafeAreaView>
       </ImageBackground>
     </View>

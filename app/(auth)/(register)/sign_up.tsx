@@ -1,3 +1,5 @@
+"use client";
+
 import {
   View,
   Text,
@@ -6,16 +8,106 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from "react-native";
-import React from "react";
-import { images, Roles } from "@/constants"; // Ensure images.splashBackgroundCar is an SVG component
+import { useEffect, useRef } from "react";
+import { images, Roles } from "@/constants";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { routes } from "@/constants/routes";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
-const { height } = Dimensions.get("window"); // Get full screen height
+const { height } = Dimensions.get("window");
 
 const SignUp = () => {
+  const router = useRouter();
+
+  // Animation values
+  const backgroundScale = useRef(new Animated.Value(1.1)).current;
+  const backgroundOpacity = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(30)).current;
+  const cardTranslateY = useRef(new Animated.Value(height * 0.4)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const roleCardsOpacity = useRef(new Animated.Value(0)).current;
+  const roleCardsScale = useRef(new Animated.Value(0.8)).current;
+  const bottomButtonsOpacity = useRef(new Animated.Value(0)).current;
+  const bottomButtonsTranslateY = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    // Smooth and fast animation sequence
+    const animationSequence = Animated.parallel([
+      // 1. Background entrance (smooth)
+      Animated.timing(backgroundOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backgroundScale, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+
+      // 2. Header text entrance (smooth)
+      Animated.timing(headerOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerTranslateY, {
+        toValue: 0,
+        tension: 120,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+
+      // 3. Card slide up (smooth)
+        Animated.spring(cardTranslateY, {
+          toValue: 0,
+        tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+
+      // 4. Role cards entrance (smooth)
+      Animated.spring(roleCardsScale, {
+        toValue: 1,
+        tension: 150,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(roleCardsOpacity, {
+        toValue: 1,
+        duration: 150,
+          useNativeDriver: true,
+        }),
+
+      // 5. Bottom buttons (smooth)
+      Animated.timing(bottomButtonsOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.spring(bottomButtonsTranslateY, {
+        toValue: 0,
+        tension: 120,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    // Start animation with minimal delay
+    setTimeout(() => {
+      animationSequence.start();
+    }, 100);
+  }, []);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -24,9 +116,14 @@ const SignUp = () => {
       <View style={{ height, overflow: "hidden" }} className="w-full flex-1">
         <StatusBar style="light" />
 
-        {/* 65% SVG Background */}
-        <View
-          style={{ height: height * 0.65, width: "100%" }}
+        {/* 65% SVG Background with Animation */}
+        <Animated.View
+          style={{
+            height: height * 0.65,
+            width: "100%",
+            transform: [{ scale: backgroundScale }],
+            opacity: backgroundOpacity,
+          }}
           className="absolute top-0"
         >
           <images.splashBackgroundCar
@@ -34,21 +131,55 @@ const SignUp = () => {
             height="100%"
             preserveAspectRatio="xMidYMid slice"
           />
-        </View>
 
-        {/* 45% Foreground Content */}
-        <View
+          {/* Gradient Overlay for better text readability */}
+            <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.4)"]}
+              className="absolute inset-0"
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            />
+        </Animated.View>
+
+            {/* Header Text */}
+        <Animated.View
+          className="absolute top-1/2 left-0 right-0 items-center px-6"
           style={{
-            height: height * 0.4, // 45% height
-            shadowColor: "rgba(0, 0, 0, 0.3)", // Darker shadow for visibility
-            shadowOffset: { width: 0, height: -6 }, // Move shadow up a bit more
-            shadowOpacity: 0.3, // Increase opacity for better visibility
-            shadowRadius: 12, // Increase blur effect
-            elevation: 8, // Android shadow
+            marginTop: -60,
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          }}
+        >
+          <Text className="text-4xl font-NunitoExtraBold text-white text-center mb-3">
+            Create Account
+          </Text>
+              <Text className="text-lg font-NunitoMedium text-white/90 text-center leading-6">
+                Choose the account type{"\n"}that suits you
+              </Text>
+        </Animated.View>
+
+        {/* 45% Foreground Content with Animation */}
+        <Animated.View
+          style={{
+            height: height * 0.4,
+            shadowColor: "rgba(0, 0, 0, 0.3)",
+            shadowOffset: { width: 0, height: -6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 8,
+            transform: [{ translateY: cardTranslateY }],
+            opacity: cardOpacity,
           }}
           className="absolute bottom-0 bg-white rounded-r-[1rem] rounded-l-[1rem] w-full"
         >
-          <View className="flex-1 flex-row justify-between  px-5 absolute top-[-8%]">
+          {/* Role Cards */}
+          <Animated.View
+            className="flex-1 flex-row justify-between px-5 absolute top-[-8%]"
+            style={{
+              opacity: roleCardsOpacity,
+              transform: [{ scale: roleCardsScale }],
+            }}
+          >
             <FlatList
               data={Roles}
               keyExtractor={(item) => item.id.toString()}
@@ -64,55 +195,46 @@ const SignUp = () => {
                 <TouchableOpacity
                   style={{
                     backgroundColor: item?.backgroundColor,
-                    borderWidth: 1, // Correct way to set the border width
+                    borderWidth: 2,
                     borderColor: item?.border,
                   }}
-                  className={`w-[48%] h-[140px] p-4 rounded-lg items-center`}
-                  onPress={() =>
-                    router?.push(
-                      item?.id === 1
-                        ? "/(auth)/(register)/user/step1"
-                        : "/(auth)/(register)/user/step2"
-                    )
-                  }
+                  className="w-[48%] h-[137px] p-4 rounded-2xl items-center"
+                  onPress={() => router?.push(item?.route as any)}
+                  activeOpacity={0.8}
                 >
-                  <View
-                    className={` w-full flex flex-row ${
-                      item?.id === 1 || item?.id === 2
-                        ? "justify-center"
-                        : "justify-end"
-                    }`}
-                  >
-                    <item.image />
+                  <View className="w-full flex flex-row justify-end">
+                    <item.image width={40} height={40} />
                   </View>
-                  <Text
-                    className={`text-lg font-NunitoSemiBold w-full ${
-                      item?.id === 3 || item?.id === 4
-                        ? "text-start pt-2"
-                        : "text-center"
-                    }`}
-                  >
+                  <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
                     {item.title}
-                  </Text>
-                  <Text className="text-gray-500 text-center">
-                    {item.description}
                   </Text>
                 </TouchableOpacity>
               )}
             />
-          </View>
+          </Animated.View>
 
-          <View className="absolute bottom-[11%] px-5 flex flex-row justify-between w-full">
-            <TouchableOpacity onPress={() => router?.push("/(auth)/welcome")}>
-              <Text className="font-NunitoBold text-[#575C76]">GO BACK</Text>
-            </TouchableOpacity>
+          {/* Bottom Navigation with Animation */}
+          <Animated.View
+            className="absolute bottom-[11%] px-5 flex flex-row justify-between w-full"
+            style={{
+              opacity: bottomButtonsOpacity,
+              transform: [{ translateY: bottomButtonsTranslateY }],
+            }}
+          >
             <TouchableOpacity
-              onPress={() => router?.push("/(auth)/(login)/sign_in")}
+              onPress={() => router?.push(routes?.welcome)}
+              activeOpacity={0.7}
+            >
+              <Text className="font-NunitoBold text-[#575C76]">GO BACK</Text>
+              </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router?.push(routes?.signIn)}
+              activeOpacity={0.8}
             >
               <Text className="font-NunitoBold text-primary-500">SIGN IN</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   );
