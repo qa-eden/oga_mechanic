@@ -1,69 +1,30 @@
-"use client"
+"use client";
 
-import { View, Text, TouchableOpacity, FlatList, TextInput, Modal, Animated } from "react-native"
-import { useState, useRef, useEffect } from "react"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { icons, images } from "@/constants"
-import { PlusIcon } from "react-native-heroicons/outline"
-import { router } from "expo-router"
-import { routes } from "@/constants/routes"
-
-interface Car {
-  id: number
-  name: string
-  year: number
-  vin: string
-  status: "Active" | "Inactive"
-  image: any
-  color: string
-}
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  Modal,
+  Animated,
+} from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { icons, myCars } from "@/constants";
+import { PlusIcon } from "react-native-heroicons/outline";
+import { router } from "expo-router";
+import { routes } from "@/constants/routes";
 
 const Cars = () => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showFilterModal, setShowFilterModal] = useState(false)
-  const [selectedFilter, setSelectedFilter] = useState("All")
-  const [cars, setCars] = useState<Car[]>([
-    {
-      id: 1,
-      name: "Escalade",
-      year: 2024,
-      vin: "267189391",
-      status: "Active",
-      image: images?.brabus,
-      color: "#1F2937",
-    },
-    {
-      id: 2,
-      name: "Toyota Corolla",
-      year: 2023,
-      vin: "345189391",
-      status: "Active",
-      image: images?.brabus,
-      color: "#1E40AF",
-    },
-    {
-      id: 3,
-      name: "Hyundai Elatra",
-      year: 2010,
-      vin: "059943452",
-      status: "Inactive",
-      image: images?.brabus,
-      color: "#DC2626",
-    },
-    {
-      id: 4,
-      name: "Brabus G63",
-      year: 2022,
-      vin: "229974531",
-      status: "Active",
-      image: images?.brabus,
-      color: "#374151",
-    },
-  ])
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [cars, setCars] = useState(myCars);
 
   // Animation values for modal
-  const slideAnim = useRef(new Animated.Value(-300)).current
-  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(-300)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (showFilterModal) {
@@ -78,7 +39,7 @@ const Cars = () => {
           duration: 250,
           useNativeDriver: true,
         }),
-      ]).start()
+      ]).start();
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -91,33 +52,40 @@ const Cars = () => {
           duration: 150,
           useNativeDriver: true,
         }),
-      ]).start()
+      ]).start();
     }
-  }, [showFilterModal])
+  }, [showFilterModal]);
 
   const filterOptions = [
     { id: "all", label: "All", description: "Show all cars" },
     { id: "active", label: "Active", description: "Active vehicles only" },
-    { id: "inactive", label: "Inactive", description: "Inactive vehicles only" },
-  ]
+    {
+      id: "inactive",
+      label: "Inactive",
+      description: "Inactive vehicles only",
+    },
+  ];
 
   const filteredCars = cars.filter((car) => {
-    const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase()) || car.vin.includes(searchQuery)
-    const matchesFilter = selectedFilter === "All" || car.status === selectedFilter
-    return matchesSearch && matchesFilter
-  })
+    const matchesSearch =
+      car.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      car.vin.includes(searchQuery);
+    const matchesFilter =
+      selectedFilter === "All" || car.status === selectedFilter;
+    return matchesSearch && matchesFilter;
+  });
 
   const handleAddCar = () => {
-    console.log("Add new car")
+    console.log("Add new car");
     // Navigate to add car screen
-  }
+  };
 
   const handleFilterSelect = (filter: string) => {
-    setSelectedFilter(filter)
-    setShowFilterModal(false)
-  }
+    setSelectedFilter(filter);
+    setShowFilterModal(false);
+  };
 
-  const handleCarPress = (car: Car) => {
+  const handleCarPress = (car: any) => {
     // Navigate to car detail screen
     router.push({
       pathname: routes?.carDetails,
@@ -126,12 +94,12 @@ const Cars = () => {
         carName: car.name,
         carYear: car.year,
       },
-    })
-  }
+    });
+  };
 
-  const renderCarCard = ({ item }: { item: Car }) => (
+  const renderCarCard = ({ item }: { item: any }) => (
     <TouchableOpacity
-      className="w-[48%] bg-white rounded-2xl p-4 mb-4 border border-gray-100"
+      className="w-[48%] bg-white rounded-2xl p-2 mb-4 border border-gray-100"
       style={{
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -143,8 +111,8 @@ const Cars = () => {
       onPress={() => handleCarPress(item)}
     >
       {/* Car Image */}
-      <View className="w-full h-32 bg-gray-100 pl-10 rounded-xl mb-3 items-center justify-center overflow-hidden">
-        <item.image width={170} height={100} />
+      <View className="w-full h-32 bg-gray-100 pl-3 rounded-xl mb-3 items-center justify-center overflow-hidden">
+        <item.image width={160} height={100} />
       </View>
 
       {/* Car Details */}
@@ -157,20 +125,26 @@ const Cars = () => {
 
         <View className="flex-row items-center">
           <Text className="text-sm text-gray-600 mr-1">Status:</Text>
-          <Text className={`text-sm font-NunitoBold ${item.status === "Active" ? "text-green-600" : "text-red-600"}`}>
+          <Text
+            className={`text-sm font-NunitoBold ${
+              item.status === "Active" ? "text-green-600" : "text-red-600"
+            }`}
+          >
             {item.status}
           </Text>
         </View>
       </View>
     </TouchableOpacity>
-  )
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white">
         <View>
-          <Text className="text-2xl font-NunitoExtraBold text-gray-900">My Cars</Text>
+          <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+            My Cars
+          </Text>
           <Text className="text-base text-gray-500">{cars.length} cars</Text>
         </View>
 
@@ -233,9 +207,13 @@ const Cars = () => {
             <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
               <icons.car width={40} height={40} color="#9CA3AF" />
             </View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2">No cars found</Text>
+            <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
+              No cars found
+            </Text>
             <Text className="text-gray-500 text-center">
-              {searchQuery ? "Try adjusting your search" : "Add your first car to get started"}
+              {searchQuery
+                ? "Try adjusting your search"
+                : "Add your first car to get started"}
             </Text>
           </View>
         )}
@@ -263,8 +241,12 @@ const Cars = () => {
             >
               {/* Header */}
               <View className="px-4 py-3 border-b border-gray-100">
-                <Text className="text-lg font-NunitoExtraBold text-gray-900 text-center">Filter Cars</Text>
-                <Text className="text-sm text-gray-500 text-center mt-1">Choose your filter</Text>
+                <Text className="text-lg font-NunitoExtraBold text-gray-900 text-center">
+                  Filter Cars
+                </Text>
+                <Text className="text-sm text-gray-500 text-center mt-1">
+                  Choose your filter
+                </Text>
               </View>
 
               {/* Filter Options */}
@@ -274,24 +256,32 @@ const Cars = () => {
                     key={option.id}
                     onPress={() => handleFilterSelect(option.label)}
                     className={`flex-row items-center justify-between py-4 px-4 mx-2 rounded-xl mb-1 ${
-                      selectedFilter === option.label ? "bg-primary-50 border border-primary-200" : "bg-transparent"
+                      selectedFilter === option.label
+                        ? "bg-primary-50 border border-primary-200"
+                        : "bg-transparent"
                     }`}
                     activeOpacity={0.7}
                   >
                     <View className="flex-1">
                       <Text
                         className={`font-NunitoBold text-base ${
-                          selectedFilter === option.label ? "text-primary-600" : "text-gray-800"
+                          selectedFilter === option.label
+                            ? "text-primary-600"
+                            : "text-gray-800"
                         }`}
                       >
                         {option.label}
                       </Text>
-                      <Text className="text-xs text-gray-500 mt-0.5">{option.description}</Text>
+                      <Text className="text-xs text-gray-500 mt-0.5">
+                        {option.description}
+                      </Text>
                     </View>
 
                     {selectedFilter === option.label && (
                       <View className="w-6 h-6 bg-primary-500 rounded-full items-center justify-center">
-                        <Text className="text-white text-xs font-NunitoBold">✓</Text>
+                        <Text className="text-white text-xs font-NunitoBold">
+                          ✓
+                        </Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -305,7 +295,9 @@ const Cars = () => {
                   className="py-3 px-4 bg-gray-100 rounded-xl"
                   activeOpacity={0.7}
                 >
-                  <Text className="text-center font-NunitoBold text-gray-600">Close</Text>
+                  <Text className="text-center font-NunitoBold text-gray-600">
+                    Close
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -313,7 +305,7 @@ const Cars = () => {
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default Cars
+export default Cars;

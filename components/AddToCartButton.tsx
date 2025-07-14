@@ -125,8 +125,8 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
             disabled={disabled}
             className={`
               flex-1 mr-2
-              bg-red-500 border-red-500
-              border rounded-lg flex-row items-center justify-center py-3
+              bg-red-500
+               rounded-[.6rem] flex-row items-center justify-center py-3
               ${disabled ? "opacity-50" : ""}
             `}
           >
@@ -176,14 +176,14 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           className={`
             ${getSizeClasses()}
             ${getVariantClasses()}
-            border rounded-lg items-center justify-center
+            border rounded-full items-center justify-center
             ${disabled ? "opacity-50" : ""}
             ${className}
           `}
         >
           <Text
             className={`
-              font-NunitoBold text-sm
+              font-NunitoBold text-md
               ${getTextClasses()}
             `}
           >

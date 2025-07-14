@@ -44,6 +44,15 @@ export const routes = {
   cart: "/(root)/(screens)/(user)/cart",
   chatSeller: "/(root)/(screens)/(user)/chat-seller",
   carDetails: "/(root)/(screens)/(user)/car-detail",
+  AllMechanic: "/(root)/(screens)/(mechanicScreens)/all-mechanic",
+  mechanicProfile: "/(root)/(screens)/(mechanicScreens)/mechanic-profile",
+  chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
+  
+
+  //calls
+  videoCall: "/(root)/(screens)/(calls)/video-call",
+  voiceCall: "/(root)/(screens)/(calls)/voice-call",
+
  
 
   // Order ride

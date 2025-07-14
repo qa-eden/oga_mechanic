@@ -5,8 +5,9 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
+  Animated,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Navbar from "@/components/Navbar";
 import AdsComponents from "@/components/AdsComponents";
@@ -15,12 +16,17 @@ import Card1 from "@/components/cards/Card1";
 import SectionHeader from "@/components/SectionHeader";
 import { router } from "expo-router";
 import { LAYOUT } from "@/constants/units";
+import { routes } from "@/constants/routes";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 const HomePage = () => {
-  const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
+  const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } =
+    LAYOUT;
+  const flatListRef = useRef<FlatList>(null);
   const [activeAdIndex, setActiveAdIndex] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   // Calculate card width to show 2 full cards + 1 partial card (20-30% visible)
   const CARD_WIDTH = Math.floor((screenWidth - 35 - 32) / 2.15); // 40px padding, 32px gap, 2.3 cards visible
@@ -28,18 +34,42 @@ const HomePage = () => {
   // Create infinite loop data
   const infiniteAds = [...Ads, ...Ads, ...Ads];
 
+  // Auto-scroll effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveAdIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % Ads.length;
+        flatListRef.current?.scrollToIndex({
+          index: nextIndex,
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 8000); // 8 seconds per ad
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reset navigation loading state after a short delay
+  useEffect(() => {
+    if (isNavigating) {
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigating]);
+
   const renderAdItem = ({ item, index }: { item: any; index: number }) => (
-    <View style={{ width: screenWidth, paddingHorizontal: 20 }}>
+    <View style={{ width: screenWidth, paddingRight: 20 }}>
       <AdsComponents
         image={item.image}
         title={item.title}
         description={item.description}
-        adWidth={screenWidth - 50} // Full width minus padding
-        animationDelay={index * 100}
         onPress={() => console.log(`Ad ${index + 1} pressed`)}
       />
     </View>
-  )
+  );
 
   const renderAdDotIndicator = () => (
     <View
@@ -86,8 +116,9 @@ const HomePage = () => {
         <Navbar />
 
         {/* Enhanced Ads Section */}
-        <View className="h-64 pt-6 mb-6">
+        <View className="h-64 pt-6 mb-4">
           <FlatList
+            ref={flatListRef}
             data={infiniteAds}
             renderItem={renderAdItem}
             keyExtractor={(item, index) => `${item.id}-${index}`}
@@ -103,12 +134,16 @@ const HomePage = () => {
               offset: screenWidth * index,
               index,
             })}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: false }
+            )}
           />
           {renderAdDotIndicator()}
         </View>
 
         {/* Enhanced Search Section */}
-        <View className="flex-row justify-between items-center mb-8 bg-white border border-gray-200 px-5 py-2 rounded-[1.2rem] shadow-sm">
+        <View className="flex-row justify-between items-center mb-6 bg-white border border-gray-200 px-5 py-2 rounded-[1.2rem] shadow-sm">
           <TouchableOpacity
             onPress={() => router.push("/enterAddressForRide")}
             className="flex-row items-center gap-4 py-2 border-r pr-6 border-gray-200 flex-1"
@@ -126,7 +161,14 @@ const HomePage = () => {
 
         {/* Enhanced Mechanics Section */}
         <View className="mb-8">
-          <SectionHeader name="Top Mechanics" />
+          <SectionHeader
+            name="Top Mechanics"
+            onPress={() => {
+              setIsNavigating(true);
+              router?.push(routes?.AllMechanic);
+            }}
+            isLoading={isNavigating}
+          />
           <FlatList
             data={MechanicsList}
             renderItem={({ item }) => (
@@ -136,6 +178,16 @@ const HomePage = () => {
                   rating={item?.rating}
                   name={item?.name}
                   reviewCount={item?.reviewCount}
+                  onPress={() => {
+                    router.push({
+                      pathname: routes.mechanicProfile,
+                      params: {
+                        mechanicId: item.id,
+                        mechanicName: item.name,
+                        mechanicRating: item.rating,
+                      },
+                    });
+                  }}
                 />
               </View>
             )}
@@ -154,7 +206,14 @@ const HomePage = () => {
 
         {/* Enhanced Cars Section */}
         <View className="mb-8">
-          <SectionHeader name="Best Selling Cars" />
+          <SectionHeader
+            name="Best Selling Cars"
+            onPress={() => {
+              setIsNavigating(true);
+              router?.push(routes?.shop);
+            }}
+            isLoading={isNavigating}
+          />
           <FlatList
             data={CarsList}
             renderItem={({ item }) => (
@@ -184,7 +243,14 @@ const HomePage = () => {
 
         {/* Enhanced Spare Parts Section */}
         <View className="mb-8">
-          <SectionHeader name="Best Selling Spare Parts" />
+          <SectionHeader
+            name="Best Selling Spare Parts"
+            onPress={() => {
+              setIsNavigating(true);
+              router?.push(routes?.shop);
+            }}
+            isLoading={isNavigating}
+          />
           <FlatList
             data={SpareParts}
             renderItem={({ item }) => (

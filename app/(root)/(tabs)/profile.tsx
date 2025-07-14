@@ -16,18 +16,35 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
+  Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const toggleSwitch = (
     setState: React.Dispatch<React.SetStateAction<boolean>>,
     value: boolean
   ) => {
     setState(value);
+  };
+
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
+    // Add your logout logic here
+    Alert.alert("Logged Out", "You have been successfully logged out.");
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   const ProfilePref = {
@@ -57,7 +74,7 @@ const Profile = () => {
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: 100,
+          paddingBottom: 115,
         }}
       >
         <View className="flex-col justify-center items-center">
@@ -144,13 +161,63 @@ const Profile = () => {
 
         <View className="py-3">
           <TouchableOpacity
-            onPress={() => {}}
+            onPress={handleLogout}
             className="flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5"
           >
-            <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">Logout</Text>
+            <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
+              Logout
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Logout Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-5">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            {/* Header */}
+            <View className="items-center mb-6">
+              <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
+                <Text className="text-3xl">🚪</Text>
+              </View>
+              <Text className="text-xl font-NunitoBold text-gray-900 text-center">
+                Logout
+              </Text>
+              <Text className="text-gray-600 text-center mt-2 font-NunitoMedium">
+                Are you sure you want to logout from your account?
+              </Text>
+            </View>
+
+            {/* Buttons */}
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={confirmLogout}
+                className="bg-red-500 py-4 rounded-xl items-center"
+                activeOpacity={0.8}
+              >
+                <Text className="text-white font-NunitoBold text-base">
+                  Yes, Logout
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={cancelLogout}
+                className="bg-gray-100 py-4 mt-4 border border-gray-300 rounded-xl items-center"
+                activeOpacity={0.8}
+              >
+                <Text className="text-gray-700 font-NunitoBold text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

@@ -71,16 +71,16 @@ const Cart = () => {
       stock: 5,
       image: "/placeholder.svg?height=80&width=80",
     },
-    {
-      id: 4,
-      name: "Mercedes Spark Plugs",
-      price: 15000,
-      originalPrice: 18000,
-      discount: 17,
-      quantity: 1,
-      stock: 15,
-      image: "/placeholder.svg?height=80&width=80",
-    },
+    // {
+    //   id: 4,
+    //   name: "Mercedes Spark Plugs",
+    //   price: 15000,
+    //   originalPrice: 18000,
+    //   discount: 17,
+    //   quantity: 1,
+    //   stock: 15,
+    //   image: "/placeholder.svg?height=80&width=80",
+    // },
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -313,11 +313,11 @@ const Cart = () => {
             </TouchableOpacity>
 
             {/* Product Image */}
-            <View className="w-[70px] h-[90px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden flex items-center justify-center mr-3">
-              <images.ProductImg
+            <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3">
+              <images.cartImg
                 width={70}
-                height={110}
-                style={{}}
+                height={80}
+                style={{ height: '100%', width: '100%' }}
                 className="object-cover"
               />
             </View>

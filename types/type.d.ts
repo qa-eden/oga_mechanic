@@ -179,6 +179,7 @@ declare interface AdsProps {
   title?: string
   description?: string
   containerStyle?: string
+  onPress?: () => void
 }
 
 declare interface ServicesProps {
@@ -188,4 +189,14 @@ declare interface ServicesProps {
   image: React.FC<SvgProps>
   bgColor: string
   border: string
+}
+
+declare interface myCar {
+  id: number;
+  name: string;
+  year: number;
+  vin: string;
+  status: "Active" | "Inactive";
+  image: any;
+  color: string;
 }

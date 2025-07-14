@@ -10,11 +10,28 @@ import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar.svg";
 import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
-import mechanic1 from "@/assets/images/mechanic1.svg";
+
 import car1 from "@/assets/images/car.svg";
 import sparePart from "@/assets/images/sparePart.svg";
 import ProductImg from "@/assets/images/productImg.svg";
 import brabus from "@/assets/images/brabus.svg";
+
+//mechanics
+import mechanic1 from "@/assets/images/mechanic1.svg";
+import lookman from "@/assets/images/dummy/lookman.svg";
+import salisu from "@/assets/images/dummy/salisu.svg";
+import otunba from "@/assets/images/dummy/otunba.svg";
+
+import brabus2 from "@/assets/images/dummy/brabus.svg";
+import benz from "@/assets/images/dummy/benz.svg";
+import carEngine from "@/assets/images/dummy/carEngine.svg";
+import driverWheel from "@/assets/images/dummy/driverWheel.svg";
+import engineoil from "@/assets/images/dummy/engineoil.svg";
+import hundia from "@/assets/images/dummy/hundia.svg";
+import mechanic3 from "@/assets/images/dummy/mechanic2.svg";
+import toyota from "@/assets/images/dummy/toyota.svg";
+import gcm from "@/assets/images/dummy/gcm.svg";
+import cartImg from "@/assets/images/dummy/cartImg.svg";
 
 //icons
 import bell from "@/assets/icons/bell.svg";
@@ -87,7 +104,15 @@ export const images = {
   dummyProfile,
   adsbackground,
   ProductImg,
-  brabus
+  brabus,
+  cartImg,
+  mechanic3,
+  mechanic1,
+
+  //mechanics
+  lookman,
+  salisu,
+  otunba,
 };
 
 export const icons = {
@@ -154,7 +179,7 @@ export const Roles = [
     image: icons.user,
     border: "#7DA0FF",
     backgroundColor: "#D6E1FF",
-    route: routes?.userStep1
+    route: routes?.userStep1,
   },
   {
     id: 2,
@@ -163,7 +188,7 @@ export const Roles = [
     image: icons.merchant,
     border: "#FFC38D",
     backgroundColor: "#FFEAD8",
-    route: routes?.merchantStep1
+    route: routes?.merchantStep1,
   },
   {
     id: 3,
@@ -172,7 +197,7 @@ export const Roles = [
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
-    route: routes?.mechanicStep1
+    route: routes?.mechanicStep1,
   },
   {
     id: 4,
@@ -181,7 +206,7 @@ export const Roles = [
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",
-    route: routes?.driverStep1
+    route: routes?.driverStep1,
   },
 ];
 
@@ -209,7 +234,7 @@ export const Ads = [
 export const MechanicsList = [
   {
     id: 1,
-    name: "Mechanic 1",
+    name: "Fatai Sule",
     rating: 1,
     address: "No 1, Mechanic Street, Lagos",
     price: 100,
@@ -219,13 +244,13 @@ export const MechanicsList = [
   },
   {
     id: 2,
-    name: "Mechanic 2",
+    name: "Easther Emeka",
     rating: 2,
     address: "No 1, Mechanic Street, Lagos",
     price: 100,
     love: true,
-    image: mechanic1,
-    reviewCount: 20,
+    image: mechanic3,
+    reviewCount: 200,
   },
   {
     id: 3,
@@ -234,8 +259,8 @@ export const MechanicsList = [
     address: "No 1, Mechanic Street, Lagos",
     price: 100,
     love: true,
-    image: mechanic1,
-    reviewCount: 20,
+    image: mechanic2,
+    reviewCount: 19,
   },
   {
     id: 4,
@@ -245,7 +270,7 @@ export const MechanicsList = [
     price: 100,
     love: true,
     image: mechanic1,
-    reviewCount: 20,
+    reviewCount: 60,
   },
   {
     id: 5,
@@ -254,30 +279,30 @@ export const MechanicsList = [
     address: "No 1, Mechanic Street, Lagos",
     price: 100,
     love: true,
-    image: mechanic1,
-    reviewCount: 20,
+    image: mechanic3,
+    reviewCount: 24,
   },
 ];
 
 export const CarsList = [
   {
     id: 1,
-    name: "Toyota Camry 2019",
+    name: "Escalade (2024)",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 85000000,
     love: true,
     image: car1,
     reviewCount: 20,
   },
   {
     id: 2,
-    name: "Toyota Camry 2019",
+    name: "Benz (2020)",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 45000000,
     love: true,
-    image: car1,
+    image: benz,
     reviewCount: 20,
   },
   {
@@ -285,28 +310,38 @@ export const CarsList = [
     name: "Toyota Camry 2019",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 28000000,
     love: true,
-    image: car1,
+    image: toyota,
     reviewCount: 20,
   },
   {
     id: 4,
-    name: "Toyota Camry 2019",
+    name: "Brabus G63 2022",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 180000000,
     love: true,
-    image: car1,
+    image: brabus2,
     reviewCount: 20,
   },
   {
     id: 5,
-    name: "Toyota Camry 2019",
+    name: "GMC (2022)",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 65000000,
     love: true,
+    image: gcm,
+    reviewCount: 20,
+  },
+  {
+    id: 6,
+    name: "Hyundai Elantra 2010",
+    rating: 4.5,
+    address: "No 1, Mechanic Street, Lagos",
+    price: 8500000,
+    love: hundia,
     image: car1,
     reviewCount: 20,
   },
@@ -314,54 +349,83 @@ export const CarsList = [
 
 export const SpareParts = [
   {
-    id: 1,
-    name: "Toyota Camry 2019",
+    id: 11,
+    name: "Car Wheel",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100000,
+    price: 35000,
     love: true,
     image: sparePart,
     reviewCount: 20,
   },
   {
-    id: 2,
-    name: "Toyota Camry 2019",
+    id: 12,
+    name: "Engine Oil",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 3976600,
+    price: 5500,
     love: true,
-    image: sparePart,
+    image: engineoil,
     reviewCount: 20,
   },
   {
-    id: 3,
-    name: "Toyota Camry 2019",
+    id: 13,
+    name: "Driving Wheel",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 3873820,
+    price: 25000,
     love: true,
-    image: sparePart,
+    image: driverWheel,
     reviewCount: 20,
   },
   {
-    id: 4,
-    name: "Toyota Camry 2019",
+    id: 14,
+    name: "Car Engine",
     rating: 4.5,
     address: "No 1, Mechanic Street, Lagos",
-    price: 100,
+    price: 1500000,
     love: true,
-    image: sparePart,
+    image: carEngine,
     reviewCount: 20,
   },
+];
+
+export const myCars = [
   {
-    id: 5,
-    name: "Toyota Camry 2019",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: sparePart,
-    reviewCount: 20,
+    id: 101,
+    name: "Escalade",
+    year: 2024,
+    vin: "267189391",
+    status: "Active",
+    image: brabus,
+    color: "#1F2937",
+  },
+  {
+    id: 102,
+    name: "Toyota Corolla",
+    year: 2023,
+    vin: "345189391",
+    status: "Active",
+    image: brabus,
+    color: "#1E40AF",
+  },
+  {
+    id: 103,
+    name: "Hyundai Elatra",
+    year: 2010,
+    vin: "059943452",
+    status: "Inactive",
+    image: brabus2,
+    color: "#DC2626",
+  },
+  {
+    id: 104,
+    name: "Brabus G63",
+    year: 2022,
+    vin: "229974531",
+    status: "Active",
+    image: brabus2,
+    color: "#374151",
   },
 ];
 
