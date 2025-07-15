@@ -167,7 +167,7 @@ export const onboarding = [
     title: "Your Car, Your Control",
     description:
       "Stay connected, drive with ease, and manage everything on the go—all in one powerful app",
-    image: images.onboarding2,
+    image: images.onboarding1,
   },
 ];
 
