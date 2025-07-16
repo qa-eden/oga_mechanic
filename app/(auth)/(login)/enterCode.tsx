@@ -6,7 +6,6 @@ import {
   ScrollView,
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import { icons } from "@/constants";
 import { maskEmail } from "@/utils/emailUtils";

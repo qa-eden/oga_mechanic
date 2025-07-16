@@ -1,27 +1,34 @@
-"use client"
+"use client";
 
-import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { Formik } from "formik"
-import UserAuthHeader from "@/components/UserAuthHeader"
-import { StatusBar } from "expo-status-bar"
-import ProgressBar from "@/components/ProgressBar"
-import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter"
-import FormikInput from "@/components/forms/FormikInput"
-import FormikButton from "@/components/forms/FormikButton"
-import { useRouter } from "expo-router"
-import AuthNavigateLink from "@/components/AuthNavigateLink"
-import { resetPasswordSchema } from "@/utils/validationSchemas"
-import { routes } from "@/constants/routes"
+import {
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Formik } from "formik";
+import UserAuthHeader from "@/components/UserAuthHeader";
+import { StatusBar } from "expo-status-bar";
+import ProgressBar from "@/components/ProgressBar";
+import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
+import FormikInput from "@/components/forms/FormikInput";
+import FormikButton from "@/components/forms/FormikButton";
+import { useRouter } from "expo-router";
+import AuthNavigateLink from "@/components/AuthNavigateLink";
+import { resetPasswordSchema } from "@/utils/validationSchemas";
+import { routes } from "@/constants/routes";
 
 const Step3 = () => {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleStep3Submit = (values: any, { setSubmitting }: any) => {
-    console.log("Step 3 values:", values)
-    setSubmitting(false)
-    router.push("/(auth)/accountCreatedSucessful")
-  }
+    console.log("Step 3 values:", values);
+    setSubmitting(false);
+    router.push(routes?.accountCreated);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -90,7 +97,10 @@ const Step3 = () => {
                     {/* Spacing before buttons */}
                     <View style={{ height: 40 }} />
 
-                    <FormikButton title="Create account" className="py-4 mb-2" />
+                    <FormikButton
+                      title="Create account"
+                      className="py-4 mb-2"
+                    />
 
                     <AuthNavigateLink
                       onPress={() => router.push(routes.signIn)}
@@ -109,7 +119,7 @@ const Step3 = () => {
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default Step3
+export default Step3;

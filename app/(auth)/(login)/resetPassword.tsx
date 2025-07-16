@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import React from "react";
 import { Formik } from "formik";
 import { useRouter } from "expo-router";
@@ -9,21 +9,7 @@ import { Toast } from "toastify-react-native";
 import { routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
-import * as Yup from "yup";
-
-// Validation schema for reset password
-const resetPasswordSchema = Yup.object().shape({
-  password: Yup.string()
-    .min(8, "Password must be at least 8 characters")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    )
-    .required("Password is required"),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref("password")], "Passwords must match")
-    .required("Please confirm your password"),
-});
+import { resetPasswordSchema } from "@/utils/validationSchemas";
 
 const ResetPassword = () => {
   const router = useRouter();

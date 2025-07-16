@@ -1,6 +1,6 @@
 "use client";
 
-import { View, ScrollView, Animated, Dimensions } from "react-native";
+import { View, ScrollView, Animated } from "react-native";
 import { useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { icons } from "@/constants";
@@ -9,7 +9,7 @@ import { router } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import { routes } from "@/constants/routes";
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+// const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 const ResetPasswordSucessful = () => {
   // Animation values

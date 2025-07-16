@@ -17,16 +17,16 @@ import ProductImg from "@/assets/images/productImg.svg";
 import brabus from "@/assets/images/brabus.svg";
 
 //mechanics
-import mechanic1 from "@/assets/images/mechanic1.svg";
+import mechanic1 from "@/assets/images/dummy/lookman.svg";
 import lookman from "@/assets/images/dummy/lookman.svg";
 import salisu from "@/assets/images/dummy/salisu.svg";
-import otunba from "@/assets/images/dummy/otunba.svg";
+import otunba from "@/assets/images/dummy/salisu.svg";
 
 import brabus2 from "@/assets/images/dummy/brabus.svg";
 import benz from "@/assets/images/dummy/benz.svg";
-import carEngine from "@/assets/images/dummy/carEngine.svg";
+import carEngine from "@/assets/images/dummy/driverWheel.svg";
 import driverWheel from "@/assets/images/dummy/driverWheel.svg";
-import engineoil from "@/assets/images/dummy/engineoil.svg";
+// import engineoil from "@/assets/images/dummy/engineoil.svg";
 import hundia from "@/assets/images/dummy/hundia.svg";
 import mechanic3 from "@/assets/images/dummy/mechanic2.svg";
 import toyota from "@/assets/images/dummy/toyota.svg";
@@ -53,7 +53,7 @@ import time from "@/assets/icons/time.svg";
 import rightArrow from "@/assets/icons/rightArrow.svg";
 import carticon from "@/assets/icons/carticon.svg";
 import bankIcon from "@/assets/icons/bank.svg";
-import mechanic2 from "@/assets/icons/mechanic1.svg";
+import mechanic2 from "@/assets/icons/mechanic2.svg";
 import rent from "@/assets/icons/rent.svg";
 
 //profile icons
@@ -358,16 +358,16 @@ export const SpareParts = [
     image: sparePart,
     reviewCount: 20,
   },
-  {
-    id: 12,
-    name: "Engine Oil",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 5500,
-    love: true,
-    image: engineoil,
-    reviewCount: 20,
-  },
+  // {
+  //   id: 12,
+  //   name: "Engine Oil",
+  //   rating: 4.5,
+  //   address: "No 1, Mechanic Street, Lagos",
+  //   price: 5500,
+  //   love: true,
+  //   image: engineoil,
+  //   reviewCount: 20,
+  // },
   {
     id: 13,
     name: "Driving Wheel",

@@ -23,9 +23,7 @@
         "jsEngine": "hermes"
       },
       "package": "com.ogamechanic.app",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "bundler": "metro",
@@ -43,9 +41,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      "expo-speech-recognition",
-      "expo-web-browser"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, ImageBackground, FlatList, Dimensions, Animated } from "react-native";
+import { View, ImageBackground, FlatList, Dimensions, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { images, onboarding, icons } from "@/constants";
 import CustomButton from "@/components/CustomButton";

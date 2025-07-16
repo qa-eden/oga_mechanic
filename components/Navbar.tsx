@@ -4,8 +4,7 @@ import { icons, images } from "@/constants";
 import { 
   SunIcon, 
   MoonIcon, 
-  CloudIcon, 
-  // WeatherSunnyIcon
+  CloudIcon
 } from "react-native-heroicons/outline";
 
 const getTimeOfDay = () => {

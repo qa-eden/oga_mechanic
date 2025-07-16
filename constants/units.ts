@@ -6,9 +6,9 @@
 //     CONTAINER_PADDING: "px-3",
 //   } as const;
 
-  import { Dimensions } from "react-native"
+import { Dimensions } from "react-native";
 
-const { width, height } = Dimensions.get("window")
+const { width, height } = Dimensions.get("window");
 
 export const LAYOUT = {
   SCREEN_WIDTH: width,
@@ -29,4 +29,4 @@ export const LAYOUT = {
     TENSION: 300,
     FRICTION: 10,
   },
-}
+};

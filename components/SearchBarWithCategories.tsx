@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Dimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
   Modal,
@@ -19,7 +18,7 @@ import { icons } from "@/constants";
 import { LAYOUT } from "@/constants/units";
 import { useRef, useEffect, useState } from "react";
 
-const { width: screenWidth } = Dimensions.get("window");
+// const { width: screenWidth } = Dimensions.get("window");
 
 interface SearchBarWithCategoriesProps {
   searchQuery: string;

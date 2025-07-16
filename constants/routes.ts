@@ -53,8 +53,6 @@ export const routes = {
   videoCall: "/(root)/(screens)/(calls)/video-call",
   voiceCall: "/(root)/(screens)/(calls)/voice-call",
 
- 
-
   // Order ride
   enterAddressForRide: "/(root)/(screens)/(orderRide)/enterAddressForRide",
 

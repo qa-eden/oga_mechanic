@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, Animated, View } from "react-native";
 import { useCart } from "@/contexts/CartContext";
 import { useCartAnimation } from "@/hooks/useCartAnimation";
 import { CartItem } from "@/contexts/CartContext";
-import { PlusIcon, MinusIcon, TrashIcon } from "react-native-heroicons/outline";
+import { PlusIcon, MinusIcon } from "react-native-heroicons/outline";
 
 interface AddToCartButtonProps {
   item: Omit<CartItem, "quantity">;

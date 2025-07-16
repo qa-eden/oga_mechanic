@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import React from "react";
 import { Formik } from "formik";
 import { useRouter } from "expo-router";
@@ -8,14 +8,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
-import * as Yup from "yup";
+import { forgotPasswordSchema } from "@/utils/validationSchemas";
 
-// Validation schema for forgot password
-const forgotPasswordSchema = Yup.object().shape({
-  email: Yup.string()
-    .email("Please enter a valid email address")
-    .required("Email is required"),
-});
 
 const forgetPassword = () => {
   const router = useRouter();

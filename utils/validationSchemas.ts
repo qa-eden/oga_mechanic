@@ -67,18 +67,17 @@ export const forgotPasswordSchema = Yup.object().shape({
     .required('Email is required'),
 });
 
-// Reset password validation schema
 export const resetPasswordSchema = Yup.object().shape({
   password: Yup.string()
-    .min(8, 'Password must be at least 8 characters')
+    .min(8, "Password must be at least 8 characters")
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     )
-    .required('Password is required'),
+    .required("Password is required"),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password')], 'Passwords must match')
-    .required('Please confirm your password'),
+    .oneOf([Yup.ref("password")], "Passwords must match")
+    .required("Please confirm your password"),
 });
 
 // Profile update validation schema

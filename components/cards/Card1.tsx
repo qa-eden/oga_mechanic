@@ -1,6 +1,6 @@
 "use client";
 
-import { View, Text, TouchableOpacity, Platform, Animated } from "react-native";
+import { View, Text, TouchableOpacity, Platform, Animated, Image } from "react-native";
 import type { SvgProps } from "react-native-svg";
 import { type FC, useRef } from "react";
 import Rating from "../Rating";
@@ -10,7 +10,7 @@ import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 
 interface Props {
-  Images: string | FC<SvgProps>;
+  Images: FC<SvgProps> | number | { uri: string };
   rating?: number;
   name?: string;
   address?: string;
@@ -123,7 +123,11 @@ const Card1 = ({
             {isLoading ? (
               <View className="w-full h-full bg-gray-300 animate-pulse" />
             ) : (
-              <Images />
+              typeof Images === "function" ? (
+                <Images />
+              ) : (
+                <Image source={Images} style={{ width: 100, height: 100 }} resizeMode="contain" />
+              )
             )}
           </View>
 

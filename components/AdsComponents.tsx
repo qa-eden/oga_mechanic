@@ -1,7 +1,7 @@
 import { View, Text, ImageBackground, TouchableOpacity } from "react-native";
 import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { images, icons } from "@/constants"; // Assuming you have an `images` constant
+import { icons } from "@/constants"; // Assuming you have an `images` constant
 import { AdsProps } from "@/types/type";
 
 const AdsComponents = ({ image, title, description, onPress }: AdsProps) => {
