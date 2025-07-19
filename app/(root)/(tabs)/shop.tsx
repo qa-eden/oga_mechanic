@@ -1,6 +1,6 @@
 "use client"
 
-import { View, Text, FlatList, TouchableOpacity, TextInput } from "react-native"
+import { View, FlatList } from "react-native"
 import { useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { CarsList, SpareParts, icons } from "@/constants"
@@ -83,6 +83,10 @@ const Shop = () => {
           paddingHorizontal: CARD_PADDING,
           paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={true}
       />
     </SafeAreaView>
   )

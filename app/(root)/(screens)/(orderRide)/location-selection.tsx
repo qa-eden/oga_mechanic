@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { View, Text, FlatList, TouchableOpacity } from "react-native"
-import { useState } from "react"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { router, useLocalSearchParams } from "expo-router"
-import { icons } from "@/constants"
-import BackArrowBtn from "@/components/BackArrowBtn"
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router";
+import BackArrowBtn from "@/components/BackArrowBtn";
+import { ChevronDownIcon, MapPinIcon } from "react-native-heroicons/solid";
 
 interface LocationItem {
-  id: string
-  name: string
-  address: string
-  type: "current_route" | "suggestion"
+  id: string;
+  name: string;
+  address: string;
+  type: "current_route" | "suggestion";
 }
 
 const LocationSelection = () => {
-  const params = useLocalSearchParams()
-  const { type } = params // 'from' or 'to'
+  const params = useLocalSearchParams();
+  const { type } = params; // 'from' or 'to'
 
   // Mock location data
   const [locations] = useState<LocationItem[]>([
@@ -92,17 +92,17 @@ const LocationSelection = () => {
       address: "102273 Lagos Island, Lagos",
       type: "suggestion",
     },
-  ])
+  ]);
 
-  const currentRoute = locations.filter((loc) => loc.type === "current_route")
-  const suggestions = locations.filter((loc) => loc.type === "suggestion")
+  const currentRoute = locations.filter((loc) => loc.type === "current_route");
+  const suggestions = locations.filter((loc) => loc.type === "suggestion");
 
   const handleLocationSelect = (location: LocationItem) => {
     // Navigate back with selected location
-    router.back()
+    router.back();
     // In a real app, you would pass the selected location back to the previous screen
-    console.log("Selected location:", location)
-  }
+    console.log("Selected location:", location);
+  };
 
   const renderLocationItem = ({ item }: { item: LocationItem }) => (
     <TouchableOpacity
@@ -111,14 +111,18 @@ const LocationSelection = () => {
       activeOpacity={0.7}
     >
       <View className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center mr-4">
-        <icons.location width={16} height={16} color="#6B7280" />
+        <MapPinIcon size={16} color={"#D30309"} />
       </View>
       <View className="flex-1">
-        <Text className="text-lg font-NunitoBold text-gray-900">{item.name}</Text>
-        <Text className="text-sm text-gray-500 font-NunitoMedium mt-1">{item.address}</Text>
+        <Text className="text-lg font-NunitoBold text-gray-900">
+          {item.name}
+        </Text>
+        <Text className="text-sm text-gray-500 font-NunitoMedium mt-1">
+          {item.address}
+        </Text>
       </View>
     </TouchableOpacity>
-  )
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -141,36 +145,44 @@ const LocationSelection = () => {
               {/* From Location */}
               <View className="flex-row items-center mb-3">
                 <View className="w-6 h-6 bg-gray-800 rounded-full items-center justify-center mr-3">
-                  <icons.location width={12} height={12} color="#FFFFFF" />
+                  <MapPinIcon size={12} color={"white"} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900">{currentRoute[0]?.name}</Text>
-                  <Text className="text-sm text-gray-600 font-NunitoMedium">{currentRoute[0]?.address}</Text>
+                  <Text className="text-lg font-NunitoBold text-gray-900">
+                    {currentRoute[0]?.name}
+                  </Text>
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">
+                    {currentRoute[0]?.address}
+                  </Text>
                 </View>
               </View>
 
               {/* Arrow */}
               <View className="flex-row justify-start ml-3 mb-3">
-                <View className="transform rotate-90">
-                  <icons.rightArrow width={16} height={16} color="#EF4444" />
-                </View>
+                <ChevronDownIcon size={17} />
               </View>
 
               {/* To Location */}
               <View className="flex-row items-center">
                 <View className="w-6 h-6 bg-gray-800 rounded-full items-center justify-center mr-3">
-                  <icons.location width={12} height={12} color="#FFFFFF" />
+                  <MapPinIcon size={12} color={"white"} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900">{currentRoute[1]?.name}</Text>
-                  <Text className="text-sm text-gray-600 font-NunitoMedium">{currentRoute[1]?.address}</Text>
+                  <Text className="text-lg font-NunitoBold text-gray-900">
+                    {currentRoute[1]?.name}
+                  </Text>
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">
+                    {currentRoute[1]?.address}
+                  </Text>
                 </View>
               </View>
             </View>
 
             {/* Suggestions Header */}
             <View className="px-5 py-2">
-              <Text className="text-base font-NunitoBold text-gray-700">Recent Locations</Text>
+              <Text className="text-base font-NunitoBold text-gray-700">
+                Recent Locations
+              </Text>
             </View>
           </View>
         )}
@@ -179,7 +191,7 @@ const LocationSelection = () => {
         }}
       />
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default LocationSelection
+export default LocationSelection;

@@ -12,9 +12,10 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { icons, myCars } from "@/constants";
-import { PlusIcon } from "react-native-heroicons/outline";
+import { MagnifyingGlassIcon, PlusIcon } from "react-native-heroicons/outline";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
+import CarCard from "@/components/cards/CarCard";
 
 const Cars = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,43 +99,7 @@ const Cars = () => {
   };
 
   const renderCarCard = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      className="w-[48%] bg-white rounded-2xl p-2 mb-4 border border-gray-100"
-      style={{
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
-      }}
-      activeOpacity={0.7}
-      onPress={() => handleCarPress(item)}
-    >
-      {/* Car Image */}
-      <View className="w-full h-32 bg-gray-100 pl-3 rounded-xl mb-3 items-center justify-center overflow-hidden">
-        <item.image width={160} height={100} />
-      </View>
-
-      {/* Car Details */}
-      <View>
-        <Text className="text-base font-NunitoBold text-gray-900 mb-1">
-          {item.name} {item.year}
-        </Text>
-
-        <Text className="text-sm text-gray-600 mb-2">VIN: {item.vin}</Text>
-
-        <View className="flex-row items-center">
-          <Text className="text-sm text-gray-600 mr-1">Status:</Text>
-          <Text
-            className={`text-sm font-NunitoBold ${
-              item.status === "Active" ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {item.status}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+    <CarCard item={item} onPress={handleCarPress} />
   );
 
   return (
@@ -161,7 +126,7 @@ const Cars = () => {
         <View className="flex-row items-center">
           {/* Search Bar */}
           <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mr-3">
-            <icons.search width={20} height={20} color="#6B7280" />
+            <MagnifyingGlassIcon/>
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -201,6 +166,10 @@ const Cars = () => {
             contentContainerStyle={{
               paddingBottom: 100,
             }}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         ) : (
           <View className="flex-1 justify-center items-center">

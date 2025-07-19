@@ -1,23 +1,25 @@
-"use client"
+"use client";
 
-import { View, Text, FlatList, TouchableOpacity } from "react-native"
-import { useState } from "react"
-import { SafeAreaView } from "react-native-safe-area-context"
-import UserAuthHeader from "@/components/UserAuthHeader"
-import { icons, OrderRideOptions } from "@/constants"
-import InputField from "@/components/InputField"
-import CustomButton from "@/components/CustomButton"
-import { router } from "expo-router"
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import UserAuthHeader from "@/components/UserAuthHeader";
+import { OrderRideOptions } from "@/constants";
+import InputField from "@/components/InputField";
+import CustomButton from "@/components/CustomButton";
+import { router } from "expo-router";
+import { CalendarIcon, ChevronRightIcon, ClockIcon } from "react-native-heroicons/solid";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 
 const EnterAddressForRide = () => {
-  const [currentOption, setCurrentOption] = useState(OrderRideOptions[0])
+  const [currentOption, setCurrentOption] = useState(OrderRideOptions[0]);
 
   const handleLocationInputPress = (type: "from" | "to") => {
     router.push({
       pathname: "/(root)/(screens)/(orderRide)/location-selection",
       params: { type },
-    })
-  }
+    });
+  };
 
   return (
     <SafeAreaView className="px-5 pt-2" edges={["top"]}>
@@ -29,11 +31,11 @@ const EnterAddressForRide = () => {
             onPress={() => handleLocationInputPress("to")}
             className="flex-row items-center gap-5 py-3 border-r pr-[2rem] border-primary-200"
           >
-            <icons.search className="w-6 h-6" />
+            <MagnifyingGlassIcon/>
             <Text>Where are you going today ?</Text>
           </TouchableOpacity>
-          <View className="flex-row bg-primary-100 rounded-[.6rem] p-2 ">
-            <icons.calender className="w-10 h-10" />
+          <View className="flex-row items-center bg-primary-100 rounded-[.6rem] p-2 ">
+            <CalendarIcon size={16} color={"#A80207"} />
             <Text className="text-primary-500 pl-1">Later</Text>
           </View>
         </View>
@@ -62,7 +64,9 @@ const EnterAddressForRide = () => {
 
                 <Text
                   className={` font-semibold text-center pt-2 ${
-                    currentOption.id === item.id ? "text-primary-500" : "text-gray-500"
+                    currentOption.id === item.id
+                      ? "text-primary-500"
+                      : "text-gray-500"
                   }`}
                 >
                   {item.name}
@@ -79,6 +83,10 @@ const EnterAddressForRide = () => {
               paddingVertical: 7,
             }}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         </View>
 
@@ -91,14 +99,18 @@ const EnterAddressForRide = () => {
           >
             <View className="flex-row items-center gap-2">
               <View className="bg-primary-50 border border-primary-200 rounded-[.4rem] p-2">
-                <icons.time width={20} height={20} />
+                <ClockIcon color={"#D30309"} size={20}/>
               </View>
               <View>
-                <Text className="font-NunitoBold text-[1.06rem]">Campus Mini Stadium</Text>
-                <Text className="text-text-100 text-[.9rem]">102273 Lagos Island, Lagos</Text>
+                <Text className="font-NunitoBold text-[1.06rem]">
+                  Campus Mini Stadium
+                </Text>
+                <Text className="text-text-100 text-[.9rem]">
+                  102273 Lagos Island, Lagos
+                </Text>
               </View>
             </View>
-            <icons.rightArrow width={20} height={20} />
+            <ChevronRightIcon size={20} />
           </TouchableOpacity>
         </View>
 
@@ -111,19 +123,27 @@ const EnterAddressForRide = () => {
           >
             <View className="flex-row items-center gap-2">
               <View className="bg-primary-50 border border-primary-200 rounded-[.4rem] p-2">
-                <icons.time width={20} height={20} />
+              <ClockIcon color={"#D30309"} size={20}/>
               </View>
               <View>
-                <Text className="font-NunitoBold text-[1.06rem]">Viva Cinema</Text>
-                <Text className="text-text-100 text-[.9rem]">22 Simbiat Abiola Way, Lagos</Text>
+                <Text className="font-NunitoBold text-[1.06rem]">
+                  Viva Cinema
+                </Text>
+                <Text className="text-text-100 text-[.9rem]">
+                  22 Simbiat Abiola Way, Lagos
+                </Text>
               </View>
             </View>
-            <icons.rightArrow width={20} height={20} />
+            <ChevronRightIcon size={20} />
           </TouchableOpacity>
         </View>
 
         <View>
-          <InputField label="Offer your fare" placeholder="Enter amount" keyboardType="numeric" />
+          <InputField
+            label="Offer your fare"
+            placeholder="Enter amount"
+            keyboardType="numeric"
+          />
         </View>
 
         <View className="mt-8">
@@ -131,7 +151,7 @@ const EnterAddressForRide = () => {
         </View>
       </View>
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default EnterAddressForRide
+export default EnterAddressForRide;

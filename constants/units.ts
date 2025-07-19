@@ -6,7 +6,7 @@
 //     CONTAINER_PADDING: "px-3",
 //   } as const;
 
-import { Dimensions } from "react-native";
+import { Dimensions, Platform } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
@@ -16,7 +16,7 @@ export const LAYOUT = {
   CONTAINER_PADDING: "px-3",
   CARD_PADDING: 5, // Numeric value for React Native styles
   CARD_GAP: 12,
-  SCROLL_PADDING_BOTTOM: 100,
+  SCROLL_PADDING_BOTTOM: Platform.OS === "android" ? 120 : 100,
 
   // Animation constants
   ANIMATION_DURATION: {

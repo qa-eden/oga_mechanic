@@ -1,29 +1,30 @@
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import React from "react";
-import { icons, images } from "@/constants";
-import { 
-  SunIcon, 
-  MoonIcon, 
-  CloudIcon
+import { images } from "@/constants";
+import {
+  SunIcon,
+  MoonIcon,
+  CloudIcon,
+  BellIcon,
 } from "react-native-heroicons/outline";
 
 const getTimeOfDay = () => {
   const hour = new Date().getHours();
 
   if (hour >= 5 && hour < 12) {
-    return { 
-      label: "Morning", 
-      icon: <SunIcon size={24} color="#FF6B35" /> 
+    return {
+      label: "Morning",
+      icon: <SunIcon size={24} color="#FF6B35" />,
     };
   } else if (hour >= 12 && hour < 18) {
-    return { 
-      label: "Afternoon", 
-      icon: <CloudIcon size={24} color="#4ECDC4" /> 
+    return {
+      label: "Afternoon",
+      icon: <CloudIcon size={24} color="#4ECDC4" />,
     };
   } else {
-    return { 
-      label: "Evening", 
-      icon: <MoonIcon size={24} color="#545677" /> 
+    return {
+      label: "Evening",
+      icon: <MoonIcon size={24} color="#545677" />,
     };
   }
 };
@@ -55,7 +56,7 @@ const Navbar = () => {
       </View>
 
       <TouchableOpacity className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full">
-        <icons.bell />
+        <BellIcon />
       </TouchableOpacity>
     </View>
   );

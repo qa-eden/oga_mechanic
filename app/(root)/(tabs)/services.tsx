@@ -1,26 +1,27 @@
-import { View, Text, FlatList, TouchableOpacity, Dimensions, ScrollView, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Image,
+} from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Services as ServicesData } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
-import { 
-  MagnifyingGlassIcon, 
-  StarIcon, 
-  ClockIcon,
-  MapPinIcon,
-  PhoneIcon
-} from "react-native-heroicons/outline";
-import { StarIcon as StarIconSolid } from "react-native-heroicons/solid";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import { LAYOUT } from "@/constants/units";
 
 const Services = () => {
-  const { width: screenWidth } = Dimensions.get("window");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Enhanced services data with additional information
-  const enhancedServices = ServicesData.map(service => ({
+  const enhancedServices = ServicesData.map((service) => ({
     ...service,
     rating: Math.floor(Math.random() * 2) + 4, // Random rating between 4-5
     reviewCount: Math.floor(Math.random() * 100) + 20, // Random review count
@@ -30,10 +31,19 @@ const Services = () => {
 
   const categories = ["All", "Transport", "Maintenance", "Purchase", "Support"];
 
+  const { SCROLL_PADDING_BOTTOM } = LAYOUT;
+
   const getServiceCategory = (serviceName: string) => {
-    if (serviceName.includes("Ride") || serviceName.includes("Tow") || serviceName.includes("Rent")) {
+    if (
+      serviceName.includes("Ride") ||
+      serviceName.includes("Tow") ||
+      serviceName.includes("Rent")
+    ) {
       return "Transport";
-    } else if (serviceName.includes("parts") || serviceName.includes("Specialist")) {
+    } else if (
+      serviceName.includes("parts") ||
+      serviceName.includes("Specialist")
+    ) {
       return "Maintenance";
     } else if (serviceName.includes("Buy")) {
       return "Purchase";
@@ -42,10 +52,13 @@ const Services = () => {
     }
   };
 
-  const filteredServices = enhancedServices.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || getServiceCategory(service.name) === selectedCategory;
+  const filteredServices = enhancedServices.filter((service) => {
+    const matchesSearch =
+      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" ||
+      getServiceCategory(service.name) === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -110,7 +123,18 @@ const Services = () => {
             marginBottom: 8,
           }}
         >
-          <IconComponent color="#555" width={90} height={90} />
+          {typeof item.image === "function" ? (
+            <item.image width={90} height={90} color="#555" />
+          ) : (
+            <Image
+              source={
+                typeof item.image === "string"
+                  ? { uri: item.image }
+                  : item.image
+              }
+              style={{ width: 90, height: 90, resizeMode: "contain" }}
+            />
+          )}
         </View>
         <Text
           style={{
@@ -137,11 +161,17 @@ const Services = () => {
         <View className="px-5 py-4">
           <View className="flex-row items-center justify-between mb-4">
             <View>
-              <Text className="text-2xl font-NunitoExtraBold text-gray-900">Services</Text>
-              <Text className="text-base text-gray-500 font-NunitoMedium">Explore all auto services</Text>
+              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                Services
+              </Text>
+              <Text className="text-base text-gray-500 font-NunitoMedium">
+                Explore all auto services
+              </Text>
             </View>
             <View className="w-10 h-10 bg-primary-100 rounded-full items-center justify-center">
-              <Text className="text-primary-600 text-lg font-NunitoBold">🚗</Text>
+              <Text className="text-primary-600 text-lg font-NunitoBold">
+                🚗
+              </Text>
             </View>
           </View>
 
@@ -161,8 +191,8 @@ const Services = () => {
 
       {/* Categories */}
       <View className="px-5 py-4 bg-white border-b border-gray-100">
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingRight: 20 }}
         >
@@ -179,9 +209,7 @@ const Services = () => {
             >
               <Text
                 className={`font-NunitoBold text-sm ${
-                  selectedCategory === category
-                    ? "text-white"
-                    : "text-gray-700"
+                  selectedCategory === category ? "text-white" : "text-gray-700"
                 }`}
               >
                 {category}
@@ -204,17 +232,25 @@ const Services = () => {
             }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingBottom: 100,
+              paddingBottom: SCROLL_PADDING_BOTTOM,
             }}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         ) : (
           <View className="flex-1 justify-center items-center">
             <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
               <MagnifyingGlassIcon size={40} color="#9CA3AF" />
             </View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2">No services found</Text>
+            <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
+              No services found
+            </Text>
             <Text className="text-gray-500 text-center">
-              {searchQuery ? "Try adjusting your search" : "No services available in this category"}
+              {searchQuery
+                ? "Try adjusting your search"
+                : "No services available in this category"}
             </Text>
           </View>
         )}

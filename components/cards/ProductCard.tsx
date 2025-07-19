@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Image } from 'react-native';
 import Card1 from './Card1';
 import AddToCartButton from '../AddToCartButton';
 import { CartItem } from '@/contexts/CartContext';

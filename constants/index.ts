@@ -3,10 +3,13 @@ import { ServicesProps } from "@/types/type";
 //images
 import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import onboarding2 from "@/assets/images/auth/onboarding2.svg";
+import welcomeImg1 from "@/assets/images/auth/welcomeImg1.svg";
+import welcomeImg2 from "@/assets/images/auth/welcomeImg2.svg";
+import welcomeBG from "@/assets/images/auth/welcomeBG.svg";
 import background1 from "@/assets/images/auth/background1.png";
 import background2 from "@/assets/images/auth/background2.png";
 import loginBackground from "@/assets/images/auth/loginBackground.png";
-import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar.svg";
+import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar1.svg";
 import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
@@ -27,15 +30,14 @@ import benz from "@/assets/images/dummy/benz.svg";
 import carEngine from "@/assets/images/dummy/driverWheel.svg";
 import driverWheel from "@/assets/images/dummy/driverWheel.svg";
 // import engineoil from "@/assets/images/dummy/engineoil.svg";
-import hundia from "@/assets/images/dummy/hundia.svg";
 import mechanic3 from "@/assets/images/dummy/mechanic2.svg";
-import toyota from "@/assets/images/dummy/toyota.svg";
+import toyota from "@/assets/images/dummy/toyota.png";
 import gcm from "@/assets/images/dummy/gcm.svg";
 import cartImg from "@/assets/images/dummy/cartImg.svg";
 
 //icons
-import bell from "@/assets/icons/bell.svg";
 import logo from "@/assets/icons/logo.svg";
+import logoBlack from "@/assets/icons/logo_black.svg";
 import splash from "@/assets/icons/logo2.svg";
 import backBtn from "@/assets/icons/backBtn.svg";
 import tick1 from "@/assets/icons/tick1.svg";
@@ -44,20 +46,14 @@ import eyeClosed from "@/assets/icons/EyeClosed.png";
 import eyeOpen from "@/assets/icons/eyeOpen.png";
 import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
-import love from "@/assets/icons/love.svg";
-import calender from "@/assets/icons/calender.svg";
-import search from "@/assets/icons/search.svg";
 import courage from "@/assets/icons/courage.svg";
 import pickUp from "@/assets/icons/pickUp.svg";
-import time from "@/assets/icons/time.svg";
-import rightArrow from "@/assets/icons/rightArrow.svg";
 import carticon from "@/assets/icons/carticon.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
 import rent from "@/assets/icons/rent.svg";
 
 //profile icons
-import location from "@/assets/icons/location.svg";
 import redPhone from "@/assets/icons/redPhone.svg";
 import UserCircle from "@/assets/icons/profile/UserCircle.svg";
 import padlock from "@/assets/icons/profile/padlock.svg";
@@ -89,14 +85,17 @@ import shopTab from "@/assets/icons/shopTab.svg";
 
 //roles images
 import user from "@/assets/icons/user.svg";
-import merchant from "@/assets/icons/merchant.svg";
-import mechanic from "@/assets/icons/mechanic.svg";
+import merchant from "@/assets/icons/merchant.png";
+import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
 import { routes } from "./routes";
 
 export const images = {
   onboarding1,
   onboarding2,
+  welcomeImg1,
+  welcomeImg2,
+  welcomeBG,
   background1,
   background2,
   loginBackground,
@@ -117,6 +116,7 @@ export const images = {
 
 export const icons = {
   logo,
+  logoBlack,
   eyeClosed,
   eyeOpen,
   tick1,
@@ -135,17 +135,10 @@ export const icons = {
   car,
   services,
   profile,
-  bell,
   explore,
   filledStar,
   unfillStar,
-  love,
-  search,
-  calender,
-  time,
-  rightArrow,
   redPhone,
-  location,
   UserCircle,
   enablePass,
   faceId,
@@ -335,16 +328,7 @@ export const CarsList = [
     image: gcm,
     reviewCount: 20,
   },
-  {
-    id: 6,
-    name: "Hyundai Elantra 2010",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 8500000,
-    love: hundia,
-    image: car1,
-    reviewCount: 20,
-  },
+
 ];
 
 export const SpareParts = [

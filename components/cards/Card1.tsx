@@ -8,6 +8,7 @@ import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { icons } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
+import { HeartIcon } from "react-native-heroicons/outline";
 
 interface Props {
   Images: FC<SvgProps> | number | { uri: string };
@@ -124,9 +125,13 @@ const Card1 = ({
               <View className="w-full h-full bg-gray-300 animate-pulse" />
             ) : (
               typeof Images === "function" ? (
-                <Images />
+                <Images className="w-full h-full object-cover" />
               ) : (
-                <Image source={Images} style={{ width: 100, height: 100 }} resizeMode="contain" />
+                <Image
+                  source={typeof Images === "string" ? { uri: Images } : Images}
+                  // style={{ width: 100, height: 100, resizeMode: "contain" }}
+                  className="w-full h-full object-cover"
+                />
               )
             )}
           </View>
@@ -149,16 +154,12 @@ const Card1 = ({
                       shadowRadius: 2,
                     },
                     android: {
-                      elevation: 2,
+                      elevation: 4,
                     },
                   }),
                 }}
               >
-                <icons.love
-                  width={16}
-                  height={16}
-                  color={love ? "#EF4444" : "#9CA3AF"}
-                />
+                <HeartIcon color={"white"} size={20} />
               </TouchableOpacity>
             </Animated.View>
           )}

@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import React from "react";
-import { icons } from "@/constants";
+import { ChevronRightIcon } from "react-native-heroicons/outline";
 
 interface Props {
   containerStyles?: string;
@@ -36,7 +36,7 @@ const ProfileTabs = ({
         {iconRight ? (
           iconRight
         ) : (
-          <icons.rightArrow width={25} height={25} />
+          <ChevronRightIcon size={20} />
         )}
       </View>
     </TouchableOpacity>

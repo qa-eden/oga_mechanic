@@ -11,12 +11,13 @@ import React, { useRef, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Navbar from "@/components/Navbar";
 import AdsComponents from "@/components/AdsComponents";
-import { Ads, CarsList, MechanicsList, SpareParts, icons } from "@/constants";
+import { Ads, CarsList, MechanicsList, SpareParts } from "@/constants";
 import Card1 from "@/components/cards/Card1";
 import SectionHeader from "@/components/SectionHeader";
 import { router } from "expo-router";
 import { LAYOUT } from "@/constants/units";
 import { routes } from "@/constants/routes";
+import { CalendarIcon, MagnifyingGlassIcon } from "react-native-heroicons/outline";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -138,6 +139,10 @@ const HomePage = () => {
               [{ nativeEvent: { contentOffset: { x: scrollX } } }],
               { useNativeDriver: false }
             )}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
           {renderAdDotIndicator()}
         </View>
@@ -148,14 +153,14 @@ const HomePage = () => {
             onPress={() => router.push("/enterAddressForRide")}
             className="flex-row items-center gap-4 py-2 border-r pr-6 border-gray-200 flex-1"
           >
-            <icons.search className="w-6 h-6 text-gray-600" />
+            <MagnifyingGlassIcon/>
             <Text className="text-gray-700 font-NunitoMedium">
               Where are you going today?
             </Text>
           </TouchableOpacity>
-          <View className="flex-row bg-primary-100 rounded-[1rem] p-3 ml-4">
-            <icons.calender className="w-8 h-8 text-primary-600" />
-            <Text className="text-primary-600 pl-2 font-NunitoBold">Later</Text>
+          <View className="flex-row items-center bg-primary-100 rounded-[1rem] p-3 ml-4">
+            <CalendarIcon size={16} color={"#A80207"} />
+            <Text className="text-primary-600 pl-1 font-NunitoBold">Later</Text>
           </View>
         </View>
 
@@ -201,6 +206,10 @@ const HomePage = () => {
               paddingHorizontal: CARD_PADDING,
               gap: CARD_GAP,
             }}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         </View>
 

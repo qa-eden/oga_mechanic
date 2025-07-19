@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import ToastManager from "toastify-react-native";
 
 // Import your global CSS file
@@ -9,6 +9,7 @@ import "../global.css";
 import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
+import AnimatedSplash from "../components/AnimatedSplash"; // <-- Add this
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -24,6 +25,8 @@ export default function RootLayout() {
     "Nunito-SemiBold": require("../assets/fonts/nunito/Nunito-SemiBold.ttf"),
   });
 
+  const [splashDone, setSplashDone] = useState(false);
+
   useEffect(() => {
     if (error) {
       console.error('Font loading error:', error);
@@ -35,9 +38,11 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  // Show a loading state while fonts are loading
-  if (!loaded) {
-    return null;
+  // Show animated splash until both fonts are loaded and animation is done
+  if (!loaded || !splashDone) {
+    return (
+      <AnimatedSplash onAnimationEnd={() => setSplashDone(true)} />
+    );
   }
 
   const screenWidth = Dimensions.get("window").width;

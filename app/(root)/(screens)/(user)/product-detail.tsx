@@ -72,7 +72,7 @@ const ProductDetail = () => {
   const handleChatSeller = () => {
     // Chat seller logic
     console.log("Chat seller");
-    router.push(routes?.chatSeller)
+    router.push(routes?.chatSeller);
   };
 
   const renderImageThumbnail = ({
@@ -115,12 +115,20 @@ const ProductDetail = () => {
         {/* Main Product Image */}
         <View className="px-5 pt-4">
           <View className="w-full h-fit bg-gray-100 rounded-2xl overflow-hidden items-center justify-center">
-            <images.ProductImg
-              width="100%"
-              height={180}
-              style={{ flex: 1 }}
-              className="rounded-lg"
-            />
+            {typeof images.ProductImg === "function" ? (
+              <images.ProductImg
+                className="object-cover h-full w-full"
+              />
+            ) : (
+              <Image
+                source={
+                  typeof images.ProductImg === "string"
+                    ? { uri: images.ProductImg }
+                    : images.ProductImg
+                }
+                className="object-cover h-full w-full"
+              />
+            )}
           </View>
 
           {/* Image Thumbnails */}

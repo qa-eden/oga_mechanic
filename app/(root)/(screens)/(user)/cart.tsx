@@ -5,7 +5,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  // Image,
+  Image,
   FlatList,
   Animated,
   Dimensions,
@@ -27,6 +27,7 @@ import CustomButton from "@/components/CustomButton";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import PaymentMethodModal from "@/components/modals/PaymentMethodModal";
 import { routes } from "@/constants/routes";
+import CartItemCard from "@/components/cards/CartItemCard";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -36,7 +37,7 @@ interface CartItem {
   price: number;
   quantity: number;
   stock: number;
-  image: string;
+  image: any; // <-- change from string to any
   originalPrice?: number;
   discount?: number;
 }
@@ -51,7 +52,7 @@ const Cart = () => {
       discount: 18,
       quantity: 1,
       stock: 12,
-      image: "/placeholder.svg?height=80&width=80",
+      image: images.cartImg,
     },
     {
       id: 2,
@@ -61,7 +62,7 @@ const Cart = () => {
       discount: 12,
       quantity: 2,
       stock: 8,
-      image: "/placeholder.svg?height=80&width=80",
+      image: images.cartImg,
     },
     {
       id: 3,
@@ -69,7 +70,7 @@ const Cart = () => {
       price: 12000,
       quantity: 1,
       stock: 5,
-      image: "/placeholder.svg?height=80&width=80",
+      image: images.cartImg,
     },
     // {
     //   id: 4,
@@ -261,140 +262,23 @@ const Cart = () => {
     }, 1500);
   };
 
-  const renderCartItem = ({
-    item,
-    index,
-  }: {
-    item: CartItem;
-    index: number;
-  }) => {
-    const isSelected = selectedItems.includes(item.id);
-    return (
-      <Animated.View
-        style={{
-          opacity: fadeAnims[item.id],
-          transform: [{ translateX: slideAnims[item.id] }],
-        }}
-        className="mx-5 mb-2 border border-gray-200 rounded-xl"
-      >
-        <View
-          className="bg-white rounded-xl overflow-hidden"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 8,
-          }}
-        >
-          <View className="flex-row items-center p-2">
-            {/* Select Button */}
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedItems((prev) =>
-                  isSelected
-                    ? prev.filter((id) => id !== item.id)
-                    : [...prev, item.id]
-                );
-              }}
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: isSelected ? "#111" : "#fff",
-                borderWidth: 2,
-                borderColor: "#111",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 8,
-              }}
-            >
-              {isSelected && <CheckIcon size={14} color="#fff" />}
-            </TouchableOpacity>
-
-            {/* Product Image */}
-            <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3">
-              <images.cartImg
-                width={70}
-                height={80}
-                style={{ height: '100%', width: '100%' }}
-                className="object-cover"
-              />
-            </View>
-
-            {/* Product Info */}
-            <View className="flex-1 mr-2">
-              <Text
-                className="text-sm font-NunitoBold text-gray-900 mb-1"
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.name}
-              </Text>
-              <Text className="text-xs text-green-600 font-NunitoMedium">
-                ✓ {item.stock} in stock
-              </Text>
-
-              {/* Price */}
-              <View className="flex-row items-center mt-1">
-                <NairaCurrency
-                  value={item.price}
-                  className="text-sm font-NunitoBold text-gray-900"
-                />
-                {item.originalPrice && (
-                  <Text className="text-xs text-gray-400 line-through ml-2">
-                    ₦{item.originalPrice.toLocaleString()}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            {/* Controls */}
-            <View className="items-end">
-              {/* Remove Button */}
-              <TouchableOpacity
-                onPress={() => removeItem(item.id)}
-                className="w-8 h-8 bg-red-50 rounded-full items-center justify-center mb-5"
-              >
-                <TrashIcon size={18} color="#EF4444" />
-              </TouchableOpacity>
-
-              {/* Quantity Controls */}
-              <Animated.View
-                style={{ transform: [{ scale: bounceAnims[item.id] }] }}
-              >
-                <View className="flex-row items-center bg-gray-100 rounded-full">
-                  <TouchableOpacity
-                    onPress={() => updateQuantity(item.id, -1)}
-                    className="w-8 h-8 bg-gray-400 rounded-full items-center justify-center"
-                    disabled={item.quantity <= 1}
-                    style={{ opacity: item.quantity <= 1 ? 0.5 : 1 }}
-                  >
-                    <Text className="text-lg font-NunitoBold text-gray-600">
-                      <MinusIcon color={"#fff"} />
-                    </Text>
-                  </TouchableOpacity>
-                  <Text className="mx-2 text-sm font-NunitoBold text-gray-900 min-w-[16px] text-center">
-                    {item.quantity}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => updateQuantity(item.id, 1)}
-                    className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center"
-                    disabled={item.quantity >= item.stock}
-                    style={{ opacity: item.quantity >= item.stock ? 0.5 : 1 }}
-                  >
-                    <Text className="text-lg font-NunitoBold text-white">
-                      <PlusIcon color={"#fff"} />
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            </View>
-          </View>
-        </View>
-      </Animated.View>
-    );
-  };
+  const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => (
+    <CartItemCard
+      item={item}
+      index={index}
+      isSelected={selectedItems.includes(item.id)}
+      fadeAnim={fadeAnims[item.id]}
+      slideAnim={slideAnims[item.id]}
+      bounceAnim={bounceAnims[item.id]}
+      onSelect={(id) => {
+        setSelectedItems((prev) =>
+          prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+        );
+      }}
+      onRemove={removeItem}
+      onUpdateQuantity={updateQuantity}
+    />
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -486,6 +370,10 @@ const Cart = () => {
             keyExtractor={(item) => item.id.toString()}
             scrollEnabled={false}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         </View>
 

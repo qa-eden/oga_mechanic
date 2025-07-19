@@ -139,7 +139,7 @@ const InputFieldPassword = ({
 
           {/* Input Container */}
           <Animated.View
-            className={`flex flex-row justify-start items-center relative bg-input-background rounded-[.8rem] ${containerStyle}`}
+            className={`flex bg-white flex-row justify-start items-center relative bg-input-background rounded-[.8rem] ${containerStyle}`}
             style={{
               borderWidth: 1.5,
               borderColor: borderColor,
@@ -167,6 +167,7 @@ const InputFieldPassword = ({
               placeholderTextColor="#9CA3AF"
               onFocus={handleFocus}
               onBlur={handleBlur}
+              style={{ color: '#000' }}
               {...props}
             />
 

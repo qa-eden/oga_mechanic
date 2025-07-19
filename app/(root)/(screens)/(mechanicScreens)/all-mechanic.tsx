@@ -1,21 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   FlatList,
   TextInput,
-  Image,
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { icons, images } from "@/constants";
+import { images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
-import Rating from "@/components/Rating";
 import { routes } from "@/constants/routes";
+import { useCallback } from "react";
+import MechanicCard from "@/components/cards/MechanicCard";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -119,75 +120,14 @@ const AllMechanic = () => {
     });
   };
 
-  const renderMechanicCard = ({ item }: { item: Mechanic }) => {
-    const cardWidth = (screenWidth - 60) / 2; // Account for padding and gap
+  const cardWidth = (screenWidth - 60) / 2;
 
-    return (
-      <TouchableOpacity
-        onPress={() => handleMechanicPress(item)}
-        className="bg-white rounded-2xl overflow-hidden border border-gray-200 mb-4"
-        style={{
-          width: cardWidth,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 3,
-        }}
-        activeOpacity={0.8}
-      >
-        {/* Image Container */}
-        <View className="relative">
-          <View className="w-full h-32 bg-gray-100 overflow-hidden flex items-center justify-center">
-            <item.image width={160} height={150} />
-          </View>
-
-          {/* Online Status Indicator */}
-          {item.isOnline && (
-            <View className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-          )}
-        </View>
-
-        {/* Content */}
-        <View className="p-3">
-          {/* Name with VIP badge */}
-          <View className="flex-row items-center justify-between mb-2">
-            <Text
-              className="text-base font-NunitoBold text-gray-900 flex-1"
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
-            {item.isVip && (
-              <View className="ml-2">
-                <Text className="text-xs font-NunitoBold text-primary-500">
-                  (VIP)
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Rating */}
-          <View className="flex-row items-center mb-1">
-            <Rating rating={item.rating} size={12} />
-            <Text className="text-sm font-NunitoMedium text-gray-700 ml-2">
-              {item.rating.toFixed(1)} ({item.reviewCount})
-            </Text>
-          </View>
-
-          {/* Specialization */}
-          {item.specialization && (
-            <Text
-              className="text-xs text-gray-500 font-NunitoMedium"
-              numberOfLines={1}
-            >
-              {item.specialization}
-            </Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderMechanicCard = useCallback(
+    ({ item }: { item: Mechanic }) => (
+      <MechanicCard item={item} onPress={handleMechanicPress} cardWidth={cardWidth} />
+    ),
+    [handleMechanicPress, cardWidth]
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -238,7 +178,8 @@ const AllMechanic = () => {
       {/* Search and Filter */}
       <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
         <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mr-3">
-          <icons.search width={20} height={20} color="#6B7280" />
+          
+          <MagnifyingGlassIcon/>
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -270,8 +211,12 @@ const AllMechanic = () => {
           <FlatList
             data={filteredMechanics}
             renderItem={renderMechanicCard}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={item => item.id.toString()}
             numColumns={2}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
             columnWrapperStyle={{
               justifyContent: "space-between",
               paddingHorizontal: 20,

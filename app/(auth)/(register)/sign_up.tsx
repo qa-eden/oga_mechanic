@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Image,
 } from "react-native";
 import { useEffect, useRef } from "react";
 import { images, Roles } from "@/constants";
@@ -35,77 +36,75 @@ const SignUp = () => {
   const bottomButtonsTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    // Smooth and fast animation sequence
-    const animationSequence = Animated.parallel([
-      // 1. Background entrance (smooth)
+    // Animate background and card together
+    Animated.parallel([
       Animated.timing(backgroundOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backgroundScale, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }),
-
-      // 2. Header text entrance (smooth)
-      Animated.timing(headerOpacity, {
+      Animated.timing(backgroundScale, {
         toValue: 1,
-        duration: 150,
+        duration: 400,
         useNativeDriver: true,
       }),
-      Animated.spring(headerTranslateY, {
+      Animated.spring(cardTranslateY, {
         toValue: 0,
-        tension: 120,
-        friction: 8,
+        tension: 80,
+        friction: 10,
         useNativeDriver: true,
       }),
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-      // 3. Card slide up (smooth)
-        Animated.spring(cardTranslateY, {
-          toValue: 0,
-        tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
+    // Then animate header, role cards, and buttons
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(headerOpacity, {
           toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-
-      // 4. Role cards entrance (smooth)
-      Animated.spring(roleCardsScale, {
-        toValue: 1,
-        tension: 150,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.timing(roleCardsOpacity, {
-        toValue: 1,
-        duration: 150,
+          duration: 250,
           useNativeDriver: true,
         }),
-
-      // 5. Bottom buttons (smooth)
-      Animated.timing(bottomButtonsOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(bottomButtonsTranslateY, {
-        toValue: 0,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    // Start animation with minimal delay
-    setTimeout(() => {
-      animationSequence.start();
-    }, 100);
+        Animated.spring(headerTranslateY, {
+          toValue: 0,
+          tension: 80,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.stagger(120, [
+        Animated.parallel([
+          Animated.spring(roleCardsScale, {
+            toValue: 1,
+            tension: 80,
+            friction: 10,
+            useNativeDriver: true,
+          }),
+          Animated.timing(roleCardsOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(bottomButtonsOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.spring(bottomButtonsTranslateY, {
+            toValue: 0,
+            tension: 80,
+            friction: 10,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    ]).start();
   }, []);
 
   return (
@@ -126,36 +125,49 @@ const SignUp = () => {
           }}
           className="absolute top-0"
         >
-          <images.splashBackgroundCar
-            width="100%"
-            height="100%"
-            preserveAspectRatio="xMidYMid slice"
-          />
-
-          {/* Gradient Overlay for better text readability */}
-            <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.4)"]}
-              className="absolute inset-0"
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
+          {typeof images.splashBackgroundCar === "function" ? (
+            <images.splashBackgroundCar
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid slice"
             />
+          ) : (
+            <Image
+              source={images.splashBackgroundCar}
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+              }}
+              resizeMode="cover"
+            />
+          )}
+          {/* Gradient Overlay for better text readability */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.2)", "rgba(0,0,0,0.4)"]}
+            className="absolute inset-0"
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
         </Animated.View>
 
-            {/* Header Text */}
+        {/* Header Text */}
         <Animated.View
           className="absolute top-1/2 left-0 right-0 items-center px-6"
           style={{
-            marginTop: -60,
+            marginTop: -35,
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslateY }],
           }}
         >
-          <Text className="text-4xl font-NunitoExtraBold text-white text-center mb-3">
+          <Text className="text-4xl font-NunitoExtraBold text-white text-center mb-2">
             Create Account
           </Text>
-              <Text className="text-lg font-NunitoMedium text-white/90 text-center leading-6">
-                Choose the account type{"\n"}that suits you
-              </Text>
+          <Text className="text-lg font-NunitoMedium text-white/90 text-center leading-6">
+            Choose the account type that suits you
+          </Text>
         </Animated.View>
 
         {/* 45% Foreground Content with Animation */}
@@ -203,13 +215,24 @@ const SignUp = () => {
                   activeOpacity={0.8}
                 >
                   <View className="w-full flex flex-row justify-end">
-                    <item.image width={40} height={40} />
+                    {typeof item.image === "function" ? (
+                      <item.image width={40} height={40} />
+                    ) : (
+                      <Image
+                        source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                        style={{ width: 40, height: 40, resizeMode: "cover" }}
+                      />
+                    )}
                   </View>
                   <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
                     {item.title}
                   </Text>
                 </TouchableOpacity>
               )}
+              initialNumToRender={8}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews={true}
             />
           </Animated.View>
 
@@ -226,13 +249,13 @@ const SignUp = () => {
               activeOpacity={0.7}
             >
               <Text className="font-NunitoBold text-[#575C76]">GO BACK</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router?.push(routes?.signIn)}
               activeOpacity={0.8}
             >
               <Text className="font-NunitoBold text-primary-500">SIGN IN</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
           </Animated.View>
         </Animated.View>
       </View>

@@ -18,6 +18,8 @@ const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
       return "bg-[#DDDDDD]";
     case "danger":
       return "bg-red-500";
+    case "dangerborder":
+      return "border-red-500 border bg-white";
     case "success":
       return "bg-green-500";
     case "outline":
@@ -35,6 +37,8 @@ const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
       return "text-[#141414]";
     case "danger":
       return "text-red-100";
+    case "dangerborder":
+      return "text-red-500";
     case "success":
       return "text-green-100";
     default:
@@ -58,6 +62,8 @@ const getLoadingColor = (
     case "secondary":
       return "#141414";
     case "danger":
+      return "#FEE2E2"; // red-100
+    case "dangerborder":
       return "#FEE2E2"; // red-100
     case "success":
       return "#DCFCE7"; // green-100

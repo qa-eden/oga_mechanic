@@ -12,19 +12,23 @@ import {
   View,
   Text,
   Image,
-  FlatList,
   ScrollView,
   Switch,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LAYOUT } from "@/constants/units";
+import { router } from "expo-router";
+import { routes } from "@/constants/routes";
+import { MapPinIcon } from "react-native-heroicons/solid";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
   const toggleSwitch = (
     setState: React.Dispatch<React.SetStateAction<boolean>>,
@@ -40,7 +44,8 @@ const Profile = () => {
   const confirmLogout = () => {
     setShowLogoutModal(false);
     // Add your logout logic here
-    Alert.alert("Logged Out", "You have been successfully logged out.");
+    // Alert.alert("Logged Out", "You have been successfully logged out.");
+    router?.push(routes?.signIn);
   };
 
   const cancelLogout = () => {
@@ -74,7 +79,7 @@ const Profile = () => {
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: 115,
+          paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
       >
         <View className="flex-col justify-center items-center">
@@ -94,7 +99,7 @@ const Profile = () => {
           </Text>
           <View className="flex-row items-center gap-2 pt-2">
             <View className="flex-row items-center justify-center gap-2 pr-3 py-1">
-              <icons.location width={20} height={20} />
+              <MapPinIcon size={16} color={"#D30309"} />
               <Text className="text-[14px] font-NunitoBold text-gray-600">
                 {userInfo.location}
               </Text>
@@ -204,7 +209,7 @@ const Profile = () => {
                   Yes, Logout
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 onPress={cancelLogout}
                 className="bg-gray-100 py-4 mt-4 border border-gray-300 rounded-xl items-center"

@@ -10,15 +10,14 @@ import {
   type NativeScrollEvent,
   Modal,
   Animated,
-  Alert,
   PermissionsAndroid,
   Platform,
 } from "react-native";
-import { icons } from "@/constants";
 import { LAYOUT } from "@/constants/units";
-import { useRef, useEffect, useState } from "react";
-
-// const { width: screenWidth } = Dimensions.get("window");
+import { useRef, useEffect, useState, useCallback } from "react";
+import CategoryTab from "@/components/cards/CategoryTab";
+import SearchSuggestion from "@/components/cards/SearchSuggestion";
+import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 
 interface SearchBarWithCategoriesProps {
   searchQuery: string;
@@ -31,16 +30,16 @@ interface SearchBarWithCategoriesProps {
 
 // Mock search suggestions data
 const mockSuggestions = [
-  { id: "1", title: "Toyota Camry 2020", type: "Car", price: "$25,000" },
-  { id: "2", title: "Honda Civic 2019", type: "Car", price: "$22,500" },
-  { id: "3", title: "Engine Oil Filter", type: "Spare Part", price: "$15" },
-  { id: "4", title: "Brake Pads Set", type: "Spare Part", price: "$45" },
-  { id: "5", title: "Ford Focus 2021", type: "Car", price: "$28,000" },
-  { id: "6", title: "Air Filter", type: "Spare Part", price: "$12" },
-  { id: "7", title: "BMW X5 2018", type: "Car", price: "$35,000" },
-  { id: "8", title: "Spark Plugs", type: "Spare Part", price: "$8" },
-  { id: "9", title: "Mercedes C-Class 2022", type: "Car", price: "$42,000" },
-  { id: "10", title: "Battery", type: "Spare Part", price: "$120" },
+  { id: "1", title: "Toyota Camry 2020", type: "Car", price: "₦25,000" },
+  { id: "2", title: "Honda Civic 2019", type: "Car", price: "₦22,500" },
+  { id: "3", title: "Engine Oil Filter", type: "Spare Part", price: "₦15" },
+  { id: "4", title: "Brake Pads Set", type: "Spare Part", price: "₦45" },
+  { id: "5", title: "Ford Focus 2021", type: "Car", price: "₦28,000" },
+  { id: "6", title: "Air Filter", type: "Spare Part", price: "₦12" },
+  { id: "7", title: "BMW X5 2018", type: "Car", price: "₦35,000" },
+  { id: "8", title: "Spark Plugs", type: "Spare Part", price: "₦8" },
+  { id: "9", title: "Mercedes C-Class 2022", type: "Car", price: "₦42,000" },
+  { id: "10", title: "Battery", type: "Spare Part", price: "₦120" },
 ];
 
 // Auto-suggestion placeholders that cycle through
@@ -101,7 +100,6 @@ const SearchBarWithCategories = ({
   const [isAutoSuggestionReady, setIsAutoSuggestionReady] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
-  const [isVoiceSearching, setIsVoiceSearching] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
     priceRange: [0, 100000],
@@ -257,7 +255,6 @@ const SearchBarWithCategories = ({
         const gap = 0;
         const totalItemWidth = itemWidth + gap;
         const itemStartX = selectedIndex * totalItemWidth;
-        const itemEndX = itemStartX + itemWidth;
 
         // Calculate the target scroll position to center the item
         const targetScrollX = Math.max(
@@ -461,90 +458,6 @@ const SearchBarWithCategories = ({
     return true; // iOS handles permissions differently
   };
 
-  const handleVoiceSearch = async () => {
-    try {
-      // Request microphone permission
-      const hasPermission = await requestMicrophonePermission();
-      if (!hasPermission) {
-        Alert.alert(
-          "Permission Required",
-          "Microphone permission is required for voice search.",
-          [{ text: "OK" }]
-        );
-        return;
-      }
-
-      setIsVoiceSearching(true);
-
-      // For demo purposes, we'll simulate real voice recognition
-      // In a real app, you would integrate with:
-      // - @react-native-voice/voice (for React Native)
-      // - Expo Speech Recognition (for Expo)
-      // - Or a third-party service like Google Speech-to-Text
-
-      // Simulate listening with visual feedback
-      const listeningDuration = 3000; // 3 seconds
-
-      // Show listening animation
-      const pulseAnimation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(new Animated.Value(1), {
-            toValue: 1.2,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(new Animated.Value(1.2), {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-      // Simulate voice recognition process
-      setTimeout(() => {
-        // Common automotive search terms
-        const automotiveTerms = [
-          "Toyota Camry 2020",
-          "BMW X5 2018",
-          "Honda Civic 2019",
-          "Engine oil filter",
-          "Brake pads set",
-          "Air filter replacement",
-          "Spark plugs",
-          "Car battery",
-          "Mercedes C-Class",
-          "Ford Focus 2021",
-        ];
-
-        // Simulate processing and return a result
-        const recognizedText =
-          automotiveTerms[Math.floor(Math.random() * automotiveTerms.length)];
-
-        // Add some realistic processing delay
-        setTimeout(() => {
-          setSearchQuery(recognizedText);
-          setDebouncedSearchQuery(recognizedText);
-          addToSearchHistory(recognizedText);
-          setIsVoiceSearching(false);
-
-          // Show success feedback
-          Alert.alert("Voice Search", `Recognized: "${recognizedText}"`, [
-            { text: "OK" },
-          ]);
-        }, 500);
-      }, listeningDuration);
-    } catch (error) {
-      console.error("Voice search error:", error);
-      setIsVoiceSearching(false);
-      Alert.alert(
-        "Voice Search Error",
-        "Sorry, there was an error with voice search. Please try again.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
   const handleSearchFocus = () => {
     setIsInputFocused(true);
 
@@ -589,54 +502,21 @@ const SearchBarWithCategories = ({
     setSearchQuery(text);
   };
 
-  const renderCategoryTab = ({ item }: { item: string }) => (
-    <TouchableOpacity
-      onPress={() => setSelectedCategory(item)}
-      className={`w-[100px] flex-row justify-center py-3 rounded-[.5rem] ${
-        selectedCategory === item ? "bg-primary-500" : "bg-gray-100"
-      }`}
-      activeOpacity={0.7}
-    >
-      <Text
-        className={`font-NunitoBold text-[1.1rem] ${
-          selectedCategory === item ? "text-white" : "text-gray-600"
-        }`}
-      >
-        {item}
-      </Text>
-    </TouchableOpacity>
+  const renderCategoryTab = useCallback(
+    ({ item }: { item: string }) => (
+      <CategoryTab item={item} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+    ),
+    [selectedCategory, setSelectedCategory]
   );
 
-  const renderSearchSuggestion = ({
-    item,
-  }: {
-    item: (typeof mockSuggestions)[0];
-  }) => (
-    <TouchableOpacity
-      onPress={() => handleSuggestionSelect(item)}
-      className="flex-row items-center justify-between py-3 px-4 border-b border-gray-100"
-      activeOpacity={0.7}
-    >
-      <View className="flex-row items-center flex-1">
-        <View
-          className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-            item.type === "Car" ? "bg-blue-100" : "bg-orange-100"
-          }`}
-        >
-          <Text className="text-lg">{item.type === "Car" ? "🚗" : "🔧"}</Text>
-        </View>
-        <View className="flex-1">
-          <Text className="font-NunitoBold text-base text-gray-900">
-            {item.title}
-          </Text>
-          <Text className="text-sm text-gray-500">{item.type}</Text>
-        </View>
-      </View>
-      <Text className="font-NunitoBold text-primary-600">{item.price}</Text>
-    </TouchableOpacity>
+  const renderSearchSuggestion = useCallback(
+    ({ item }: { item: (typeof mockSuggestions)[0] }) => (
+      <SearchSuggestion item={item} onSelect={handleSuggestionSelect} />
+    ),
+    [handleSuggestionSelect]
   );
 
-  const renderSearchHistory = () => (
+  const renderSearchHistory = useCallback(() => (
     <View className="bg-white rounded-xl mt-2 shadow-2xl p-4">
       <View className="flex-row items-center justify-between mb-3">
         <Text className="font-NunitoBold text-lg text-gray-900">
@@ -669,7 +549,7 @@ const SearchBarWithCategories = ({
         </Text>
       )}
     </View>
-  );
+  ), [searchHistory, clearSearchHistory, handleHistorySelect]);
 
   const { CONTAINER_PADDING } = LAYOUT;
 
@@ -687,36 +567,8 @@ const SearchBarWithCategories = ({
           }}
         >
           <View className="mr-4">
-            <icons.search width={22} height={22} color="#6B7280" />
+            <MagnifyingGlassIcon/>
           </View>
-
-          {/* Voice Search Button */}
-          {/* <TouchableOpacity
-            onPress={handleVoiceSearch}
-            className="mr-3 p-2"
-            activeOpacity={0.7}
-            disabled={isVoiceSearching}
-          >
-            <Animated.View
-              className={`w-6 h-6 items-center justify-center rounded-full ${
-                isVoiceSearching ? "bg-red-100" : "bg-gray-100"
-              }`}
-              style={{
-                transform: isVoiceSearching
-                  ? [
-                      {
-                        scale: new Animated.Value(1).interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [1, 1.2],
-                        }),
-                      },
-                    ]
-                  : [],
-              }}
-            >
-              <Text className="text-lg">{isVoiceSearching ? "🔴" : "🎤"}</Text>
-            </Animated.View>
-          </TouchableOpacity> */}
 
           <View className="flex-1 relative">
             <TextInput
@@ -740,16 +592,27 @@ const SearchBarWithCategories = ({
                 <Animated.View
                   style={{
                     position: "absolute",
-                    top: 0,
                     left: 0,
                     right: 0,
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: "center", // This will center the text vertically
                     opacity: placeholderFadeAnim,
                     transform: [{ translateX: placeholderSlideAnim }],
                     pointerEvents: "none",
                   }}
                   className="bg-transparent"
                 >
-                  <Text className="text-base font-NunitoMedium text-gray-400">
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      lineHeight: 22,
+                      color: "#9CA3AF",
+                      paddingVertical: 0,
+                      textAlignVertical: "center",
+                    }}
+                    className="font-NunitoMedium"
+                  >
                     {autoSuggestions[currentAutoSuggestionIndex]}
                   </Text>
                 </Animated.View>
@@ -826,6 +689,10 @@ const SearchBarWithCategories = ({
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={{ paddingVertical: 4 }}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={7}
+                removeClippedSubviews={true}
               />
             ) : (
               <View className="py-6 px-4">
@@ -865,6 +732,10 @@ const SearchBarWithCategories = ({
             decelerationRate="normal"
             contentContainerStyle={{ paddingHorizontal: 1, paddingVertical: 0 }}
             ItemSeparatorComponent={() => <View style={{ width: 0 }} />}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
           />
         </View>
       </View>
