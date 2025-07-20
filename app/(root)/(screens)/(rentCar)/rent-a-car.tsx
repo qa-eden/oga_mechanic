@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, ScrollView, TouchableOpacity, TextInput, FlatList } from "react-native"
+import { useState, useCallback, useMemo } from "react"
+import { View, Text, TouchableOpacity, TextInput, FlatList } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import { images } from "@/constants"
@@ -18,6 +18,11 @@ interface RentalCar {
   pricePerDay: number
   image: any
   category: string
+}
+
+interface SectionData {
+  type: 'search' | 'categories' | 'cars' | 'empty';
+  data?: any;
 }
 
 const RentACarScreen = () => {
@@ -63,13 +68,31 @@ const RentACarScreen = () => {
     },
   ]
 
-  const filteredCars = rentalCars.filter((car) => {
-    const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || car.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const filteredCars = useMemo(() => 
+    rentalCars.filter((car) => {
+      const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === "All" || car.category === selectedCategory
+      return matchesSearch && matchesCategory
+    }), 
+    [rentalCars, searchQuery, selectedCategory]
+  )
 
-  const renderCategoryTab = ({ item }: { item: string }) => (
+  const sections = useMemo(() => {
+    const sectionsData: SectionData[] = [
+      { type: 'search' },
+      { type: 'categories', data: categories }
+    ]
+    
+    if (filteredCars.length > 0) {
+      sectionsData.push({ type: 'cars', data: filteredCars })
+    } else {
+      sectionsData.push({ type: 'empty' })
+    }
+    
+    return sectionsData
+  }, [categories, filteredCars])
+
+  const renderCategoryTab = useCallback(({ item }: { item: string }) => (
     <TouchableOpacity
       onPress={() => setSelectedCategory(item)}
       className={`px-6 py-3 rounded-full mr-3 ${selectedCategory === item ? "bg-primary-500" : "bg-gray-200"}`}
@@ -79,9 +102,9 @@ const RentACarScreen = () => {
         {item}
       </Text>
     </TouchableOpacity>
-  )
+  ), [selectedCategory])
 
-  const renderCarCard = ({ item }: { item: any }) => (
+  const renderCarCard = useCallback(({ item }: { item: any }) => (
     <RentalCarCard item={item} onPress={(car) => {
       router.push({
         pathname: routes?.carRentalDetail,
@@ -92,61 +115,56 @@ const RentACarScreen = () => {
         },
       });
     }} />
-  );
+  ), [])
 
-  return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Header */}
-      <View className={`flex-row items-center justify-between py-4 ${CONTAINER_PADDING} border-b border-gray-100`}>
-      <BackArrowBtn />
-
-        <Text className="text-xl font-NunitoExtraBold text-gray-900">Rent a car</Text>
-
-        <View className="w-10" />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Search Bar */}
-        <View className={`${CONTAINER_PADDING} pt-6 mb-6`}>
-          <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-4">
-            <MagnifyingGlassIcon/>
-            <TextInput
-              placeholder="Search"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
+  const renderSection = useCallback(({ item }: { item: SectionData }) => {
+    switch (item.type) {
+      case 'search':
+        return (
+          <View className={`${CONTAINER_PADDING} pt-6 mb-6`}>
+            <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-4">
+              <MagnifyingGlassIcon/>
+              <TextInput
+                placeholder="Search"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+        )
+      
+      case 'categories':
+        return (
+          <View className="mb-6">
+            <Text className={`text-xl font-NunitoExtraBold text-gray-900 mb-4 ${CONTAINER_PADDING}`}>Categories</Text>
+            <FlatList
+              data={item.data}
+              renderItem={renderCategoryTab}
+              keyExtractor={(category) => category}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+              initialNumToRender={8}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews={true}
             />
           </View>
-        </View>
-
-        {/* Categories */}
-        <View className="mb-6">
-          <Text className={`text-xl font-NunitoExtraBold text-gray-900 mb-4 ${CONTAINER_PADDING}`}>Categories</Text>
-
-          <FlatList
-            data={categories}
-            renderItem={renderCategoryTab}
-            keyExtractor={(item) => item}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-          />
-        </View>
-
-        {/* Cars List */}
-        <View className={CONTAINER_PADDING}>
-          {filteredCars.length > 0 ? (
+        )
+      
+      case 'cars':
+        return (
+          <View className={CONTAINER_PADDING}>
             <FlatList
-              data={filteredCars}
+              data={item.data}
               renderItem={renderCarCard}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(car) => car.id}
               scrollEnabled={false}
               showsVerticalScrollIndicator={false}
               initialNumToRender={8}
@@ -154,16 +172,49 @@ const RentACarScreen = () => {
               windowSize={7}
               removeClippedSubviews={true}
             />
-          ) : (
-            <View className="items-center justify-center py-12">
-              <Text className="text-lg font-NunitoBold text-gray-500 mb-2">No cars found</Text>
-              <Text className="text-base font-NunitoMedium text-gray-400 text-center">
-                Try adjusting your search or category filter
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        )
+      
+      case 'empty':
+        return (
+          <View className={`${CONTAINER_PADDING} items-center justify-center py-12`}>
+            <Text className="text-lg font-NunitoBold text-gray-500 mb-2">No cars found</Text>
+            <Text className="text-base font-NunitoMedium text-gray-400 text-center">
+              Try adjusting your search or category filter
+            </Text>
+          </View>
+        )
+      
+      default:
+        return null
+    }
+  }, [CONTAINER_PADDING, searchQuery, renderCategoryTab, renderCarCard])
+
+  const keyExtractor = useCallback((item: SectionData, index: number) => 
+    `${item.type}-${index}`, 
+    []
+  )
+
+  return (
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      {/* Header */}
+      <View className={`flex-row items-center justify-between py-4 ${CONTAINER_PADDING} border-b border-gray-100`}>
+        <BackArrowBtn />
+        <Text className="text-xl font-NunitoExtraBold text-gray-900">Rent a car</Text>
+        <View className="w-10" />
+      </View>
+
+      <FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={keyExtractor}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        initialNumToRender={3}
+      />
     </SafeAreaView>
   )
 }

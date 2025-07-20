@@ -1,11 +1,13 @@
 "use client";
 
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
-import { useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, TextInput, ScrollView } from "react-native";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
-import { ChevronDownIcon, MapPinIcon } from "react-native-heroicons/solid";
+import { MapPinIcon, MagnifyingGlassIcon } from "react-native-heroicons/solid";
+import { routes } from "@/constants/routes";
+import { useLocation } from "@/contexts/LocationContext";
 
 interface LocationItem {
   id: string;
@@ -17,9 +19,13 @@ interface LocationItem {
 const LocationSelection = () => {
   const params = useLocalSearchParams();
   const { type } = params; // 'from' or 'to'
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
+  const { setFromLocation, setToLocation } = useLocation();
 
-  // Mock location data
-  const [locations] = useState<LocationItem[]>([
+  // Mock location data - expanded for better suggestions
+  const [allLocations] = useState<LocationItem[]>([
     {
       id: "1",
       name: "Campus Mini Stadium",
@@ -40,71 +46,110 @@ const LocationSelection = () => {
     },
     {
       id: "4",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
+      name: "Lagos Mall",
+      address: "Victoria Island, Lagos",
       type: "suggestion",
     },
     {
       id: "5",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
+      name: "Airport Terminal",
+      address: "Murtala Mohammed Airport, Lagos",
       type: "suggestion",
     },
     {
       id: "6",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
+      name: "University of Lagos",
+      address: "Akoka, Lagos",
       type: "suggestion",
     },
     {
       id: "7",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
+      name: "Lekki Conservation Centre",
+      address: "Lekki, Lagos",
       type: "suggestion",
     },
     {
       id: "8",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
+      name: "National Theatre",
+      address: "Iganmu, Lagos",
       type: "suggestion",
-    },
-    {
-      id: "9",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "10",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "11",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "12",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
-      type: "suggestion",
-    },
+    }
   ]);
 
-  const currentRoute = locations.filter((loc) => loc.type === "current_route");
-  const suggestions = locations.filter((loc) => loc.type === "suggestion");
+  const currentRoute = useMemo(() => 
+    allLocations.filter((loc) => loc.type === "current_route"), 
+    [allLocations]
+  );
+  
+  const suggestions = useMemo(() => 
+    allLocations.filter((loc) => loc.type === "suggestion"), 
+    [allLocations]
+  );
 
-  const handleLocationSelect = (location: LocationItem) => {
-    // Navigate back with selected location
+  // Filter locations for dropdown based on search query
+  const dropdownSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    return allLocations.filter((loc) => 
+      loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loc.address.toLowerCase().includes(searchQuery.toLowerCase())
+    ).slice(0, 8); // Limit to 8 suggestions
+  }, [allLocations, searchQuery]);
+
+  const handleCurrentLocation = useCallback(() => {
+    // For now, we'll use a mock current location
+    // In a real app, you would use geolocation API
+    const currentLocation = {
+      name: "Current Location",
+      address: "Your current location"
+    };
+    
+    if (type === 'from') {
+      setFromLocation(currentLocation);
+    } else if (type === 'to') {
+      setToLocation(currentLocation);
+    }
+    
     router.back();
-    // In a real app, you would pass the selected location back to the previous screen
-    console.log("Selected location:", location);
-  };
+    console.log("Current location selected");
+  }, [type, setFromLocation, setToLocation]);
 
-  const renderLocationItem = ({ item }: { item: LocationItem }) => (
+  const handleLocationSelect = useCallback((location: LocationItem) => {
+    // Update the location in the global context
+    const locationData = {
+      name: location.name,
+      address: location.address
+    };
+    
+    if (type === 'from') {
+      setFromLocation(locationData);
+    } else if (type === 'to') {
+      setToLocation(locationData);
+    }
+    
+    // Navigate back
+    router.back();
+    
+    console.log("Selected location:", location);
+  }, [type, setFromLocation, setToLocation]);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    setShowDropdown(text.length > 0);
+  }, []);
+
+  const handleSearchFocus = useCallback(() => {
+    if (searchQuery.length > 0) {
+      setShowDropdown(true);
+    }
+  }, [searchQuery]);
+
+  const handleSearchBlur = useCallback(() => {
+    // Delay hiding dropdown to allow for taps
+    setTimeout(() => setShowDropdown(false), 200);
+  }, []);
+
+  const renderLocationItem = useCallback(({ item }: { item: LocationItem }) => (
     <TouchableOpacity
       onPress={() => handleLocationSelect(item)}
       className="flex-row items-center py-4 px-5 border-b border-gray-100"
@@ -122,74 +167,130 @@ const LocationSelection = () => {
         </Text>
       </View>
     </TouchableOpacity>
-  );
+  ), [handleLocationSelect]);
+
+  const renderDropdownItem = useCallback(({ item }: { item: LocationItem }) => (
+    <TouchableOpacity
+      onPress={() => handleLocationSelect(item)}
+      className="flex-row items-center py-3 px-4 border-b border-gray-100 bg-white"
+      activeOpacity={0.7}
+    >
+      <View className="w-6 h-6 bg-gray-100 rounded-full items-center justify-center mr-3">
+        <MapPinIcon size={14} color={"#D30309"} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-base font-NunitoBold text-gray-900">
+          {item.name}
+        </Text>
+        <Text className="text-sm text-gray-500 font-NunitoMedium">
+          {item.address}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  ), [handleLocationSelect]);
+
+  const keyExtractor = useCallback((item: LocationItem) => item.id, []);
+
+  const ListHeaderComponent = useCallback(() => (
+    <View className="px-5 py-2">
+      <Text className="text-base font-NunitoBold text-gray-700">
+        Recent Locations
+      </Text>
+    </View>
+  ), []);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
         <BackArrowBtn />
-        <Text className="text-xl font-NunitoBold text-gray-900">Message</Text>
+        <Text className="text-xl font-NunitoBold text-gray-900">
+          {type === 'from' ? 'Select Pickup' : 'Select Destination'}
+        </Text>
         <View className="w-6" />
       </View>
 
-      <FlatList
-        data={suggestions}
-        keyExtractor={(item) => item.id}
-        renderItem={renderLocationItem}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={() => (
-          <View>
-            {/* Current Route Summary */}
-            <View className="mx-5 mt-6 mb-4 p-4 border-2 border-red-300 rounded-xl bg-red-50">
-              {/* From Location */}
-              <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 bg-gray-800 rounded-full items-center justify-center mr-3">
-                  <MapPinIcon size={12} color={"white"} />
+      {/* Search Input */}
+      <View className="mx-5 mt-4 mb-4 relative">
+        <View className="flex-row items-center bg-gray-50 border border-primary-300 rounded-2xl px-4 py-4">
+          <MagnifyingGlassIcon size={20} color="#9CA3AF" />
+          <TextInput
+            ref={searchInputRef}
+            placeholder={`Search for ${type === 'from' ? 'pickup' : 'destination'} location`}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
+            className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            blurOnSubmit={false}
+          />
+        </View>
+
+        {/* Dropdown Suggestions */}
+        {showDropdown && (
+          <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 mt-1 max-h-80">
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Current Location Option */}
+              <TouchableOpacity
+                onPress={handleCurrentLocation}
+                className="flex-row items-center py-3 px-4 border-b border-gray-100 bg-blue-50"
+                activeOpacity={0.7}
+              >
+                <View className="w-6 h-6 bg-blue-500 rounded-full items-center justify-center mr-3">
+                  <MapPinIcon size={14} color={"white"} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900">
-                    {currentRoute[0]?.name}
+                  <Text className="text-base font-NunitoBold text-blue-700">
+                    Use Current Location
                   </Text>
-                  <Text className="text-sm text-gray-600 font-NunitoMedium">
-                    {currentRoute[0]?.address}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Arrow */}
-              <View className="flex-row justify-start ml-3 mb-3">
-                <ChevronDownIcon size={17} />
-              </View>
-
-              {/* To Location */}
-              <View className="flex-row items-center">
-                <View className="w-6 h-6 bg-gray-800 rounded-full items-center justify-center mr-3">
-                  <MapPinIcon size={12} color={"white"} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900">
-                    {currentRoute[1]?.name}
-                  </Text>
-                  <Text className="text-sm text-gray-600 font-NunitoMedium">
-                    {currentRoute[1]?.address}
+                  <Text className="text-sm text-blue-600 font-NunitoMedium">
+                    Your current GPS location
                   </Text>
                 </View>
-              </View>
-            </View>
+              </TouchableOpacity>
 
-            {/* Suggestions Header */}
-            <View className="px-5 py-2">
-              <Text className="text-base font-NunitoBold text-gray-700">
-                Recent Locations
-              </Text>
-            </View>
+              {/* Search Results */}
+              {dropdownSuggestions.map((item) => (
+                <View key={item.id}>
+                  {renderDropdownItem({ item })}
+                </View>
+              ))}
+            </ScrollView>
           </View>
         )}
-        contentContainerStyle={{
-          paddingBottom: 20,
-        }}
-      />
+      </View>
+
+      {/* Main List - Only show when not searching */}
+      {!showDropdown && (
+        <FlatList
+          data={suggestions}
+          keyExtractor={keyExtractor}
+          renderItem={renderLocationItem}
+          ListHeaderComponent={ListHeaderComponent}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          getItemLayout={(data, index) => ({
+            length: 80,
+            offset: 80 * index,
+            index,
+          })}
+          contentContainerStyle={{
+            paddingBottom: 20,
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };

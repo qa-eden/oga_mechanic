@@ -55,6 +55,10 @@ export const routes = {
 
   // Order ride
   enterAddressForRide: "/(root)/(screens)/(orderRide)/enterAddressForRide",
+  locationSelection: "/(root)/(screens)/(orderRide)/location-selection",
+  chooseRide:  "/(root)/(screens)/(orderRide)/choose-ride",
+  rideTracking:  "/(root)/(screens)/(orderRide)/ride-tracking",
+  chatDriver:  "/(root)/(screens)/(orderRide)/chat-driver",
 
   // Rent a car
   rentACar: "/(root)/(screens)/(rentCar)/rent-a-car",

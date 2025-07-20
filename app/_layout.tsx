@@ -9,6 +9,7 @@ import "../global.css";
 import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
+import { LocationProvider } from "@/contexts/LocationContext";
 import AnimatedSplash from "../components/AnimatedSplash"; // <-- Add this
 
 // Keep the splash screen visible while we fetch resources
@@ -52,21 +53,23 @@ export default function RootLayout() {
 
   return (
     <CartProvider>
-      <View className="flex-1">
-        <StatusBar style="light" />
-        <ToastManager
-          position="top"
-          width={toastWidth}
-          duration={2000}
-          animationIn="slideInRight"
-          animationOut="slideOutLeft"
-          showProgressBar={false}
-        />
-        <Stack>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(root)" options={{ headerShown: false }} />
-        </Stack>
-      </View>
+      <LocationProvider>
+        <View className="flex-1">
+          <StatusBar style="light" />
+          <ToastManager
+            position="top"
+            width={toastWidth}
+            duration={2000}
+            animationIn="slideInRight"
+            animationOut="slideOutLeft"
+            showProgressBar={false}
+          />
+          <Stack>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(root)" options={{ headerShown: false }} />
+          </Stack>
+        </View>
+      </LocationProvider>
     </CartProvider>
   );
 }

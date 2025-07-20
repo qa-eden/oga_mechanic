@@ -476,11 +476,11 @@ export const OrderRideOptions = [
     name: "Courier",
     image: courage,
   },
-  {
-    id: 3,
-    name: "Pick Up",
-    image: pickUp,
-  },
+  // {
+  //   id: 3,
+  //   name: "Pick Up",
+  //   image: pickUp,
+  // },
 ];
 
 export const userInfo = {
