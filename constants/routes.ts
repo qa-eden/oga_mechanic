@@ -17,11 +17,6 @@ export const routes = {
   merchantStep2: "/(auth)/(register)/merchant/step2",
   merchantStep3: "/(auth)/(register)/merchant/step3",
 
-  // Registration mechanic steps
-  mechanicStep1: "/(auth)/(register)/mechanic/step1",
-  mechanicStep2: "/(auth)/(register)/mechanic/step2",
-  mechanicStep3: "/(auth)/(register)/mechanic/step3",
-
   // Registration driver steps
   driverStep1: "/(auth)/(register)/driver/step1",
   driverStep2: "/(auth)/(register)/driver/step2",
@@ -32,11 +27,11 @@ export const routes = {
   resetPasswordSuccess: "/(auth)/resetPasswordSucessful",
 
   // Main app routes
-  home: "/(root)/(tabs)/home",
-  cars: "/(root)/(tabs)/cars",
-  services: "/(root)/(tabs)/services",
-  profile: "/(root)/(tabs)/profile",
-  shop: "/(root)/(tabs)/shop",
+  home: "/(root)/(tabs)/(user)/home",
+  cars: "/(root)/(tabs)/(user)/cars",
+  services: "/(root)/(tabs)/(user)/services",
+  profile: "/(root)/(tabs)/(user)/profile",
+  shop: "/(root)/(tabs)/(user)/shop",
 
 
   //screens
@@ -73,3 +68,22 @@ export const routes = {
 
 export type RouteKeys = keyof typeof routes;
 export type RouteValues = (typeof routes)[RouteKeys];
+
+
+// Mechanic routes
+export const mechanicRoutes = {
+  welcome: "/(auth)/(register)/mechanic/mechanic-welcome",
+  step1: "/(auth)/(register)/mechanic/step1",
+  step2: "/(auth)/(register)/mechanic/step2",
+  step3: "/(auth)/(register)/mechanic/step3",
+  step4: "/(auth)/(register)/mechanic/step4",
+
+  // Mechanic tabs
+  home: "/(root)/(tabs)/(mechanic)/home",
+  earnings: "/(root)/(tabs)/(mechanic)/earnings",
+  order: "/(root)/(tabs)/(mechanic)/order",
+  profile: "/(root)/(tabs)/(mechanic)/profile",
+} as const;
+
+export type MechanicRouteKeys = keyof typeof mechanicRoutes;
+export type MechanicRouteValues = (typeof mechanicRoutes)[MechanicRouteKeys];

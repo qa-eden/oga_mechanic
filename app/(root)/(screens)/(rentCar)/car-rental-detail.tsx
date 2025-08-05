@@ -16,18 +16,13 @@ const { width: screenWidth } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
-// import { icons, images } from "@/constants"
-import brabus from "@/assets/images/brabus.svg";
+import { images } from "@/constants";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PhoneIcon,
-  StarIcon,
   MapPinIcon,
   ClockIcon,
-  ShieldCheckIcon,
-  CreditCardIcon,
-  CalendarIcon,
   UserIcon,
   CogIcon,
   FunnelIcon,
@@ -88,7 +83,7 @@ const CarRentalDetail = () => {
     year: "2019",
     brand: "BMW",
     model: "328",
-    image: brabus,
+    image: images.brabus, // Change from brabus to images.brabus
     pricePerDay: Number.parseInt(params.pricePerDay as string) || 15000,
     pricePerWeek: 90000,
     pricePerMonth: 300000,
@@ -133,14 +128,14 @@ const CarRentalDetail = () => {
   });
 
   // Multiple car images for carousel
-  const images = [brabus, brabus, brabus, brabus]; // In real app, these would be different images
+  const carImages = [images.brabus, images.brabus, images.brabus, images.brabus]; // Rename from images to carImages
 
   const handlePreviousImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentImageIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setCurrentImageIndex((prev) => (prev === carImages.length - 1 ? 0 : prev + 1));
   };
 
   const handleContactNow = () => {
@@ -217,7 +212,7 @@ const CarRentalDetail = () => {
         <View className="px-5 mb-8">
           <View className="relative">
             <FlatList
-              data={images}
+              data={carImages}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -239,7 +234,7 @@ const CarRentalDetail = () => {
             />
 
             {/* Image Navigation */}
-            {images.length > 1 && (
+            {carImages.length > 1 && (
               <View className="flex-row items-center justify-center mt-4 space-x-4">
                 <TouchableOpacity
                   onPress={handlePreviousImage}
@@ -251,7 +246,7 @@ const CarRentalDetail = () => {
 
                 {/* Image Indicators */}
                 <View className="flex-row space-x-2">
-                  {images.map((_, index) => (
+                  {carImages.map((_, index) => (
                     <View
                       key={index}
                       className={`w-2 h-2 rounded-full ${

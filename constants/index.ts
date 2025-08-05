@@ -74,6 +74,9 @@ import carTow from "@/assets/icons/carTow.svg";
 
 //tabs icons
 import home from "@/assets/icons/home.svg";
+import earnings from "@/assets/icons/earnings.svg";
+import consultation from "@/assets/icons/consultation.svg";
+import activeEarnings from "@/assets/icons/activeEarnings.svg";
 import activeHome from "@/assets/icons/activeHome.svg";
 import activeServices from "@/assets/icons/activeServices.svg";
 import activeProfile from "@/assets/icons/activeProfile.svg";
@@ -88,7 +91,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { routes } from "./routes";
+import { mechanicRoutes, routes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -128,7 +131,10 @@ export const icons = {
   mechanic,
   driver,
   home,
+  earnings,
+  activeEarnings,
   activeHome,
+  consultation,
   activeServices,
   activeProfile,
   activeCar,
@@ -190,7 +196,7 @@ export const Roles = [
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
-    route: routes?.mechanicStep1,
+    route: mechanicRoutes?.welcome,
   },
   {
     id: 4,

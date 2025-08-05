@@ -19,11 +19,16 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/box_logo.png",
-        "backgroundColor": "#ffffff",
-        "jsEngine": "hermes"
+        "backgroundColor": "#ffffff"
       },
       "package": "com.ogamechanic.app",
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": ["android.permission.RECORD_AUDIO"],
+      "enableProguard": true,
+      "enableShrinkResources": true,
+      "splits": {
+        "abi": true,
+        "density": false
+      }
     },
     "web": {
       "bundler": "metro",

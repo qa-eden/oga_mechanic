@@ -7,7 +7,7 @@ import {
   Dimensions,
   Animated,
 } from "react-native";
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback, memo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Navbar from "@/components/Navbar";
 import AdsComponents from "@/components/AdsComponents";
@@ -21,7 +21,7 @@ import { CalendarIcon, MagnifyingGlassIcon } from "react-native-heroicons/outlin
 
 const { width: screenWidth } = Dimensions.get("window");
 
-const HomePage = () => {
+const HomePage = memo(() => {
   const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } =
     LAYOUT;
   const flatListRef = useRef<FlatList>(null);
@@ -61,7 +61,7 @@ const HomePage = () => {
     }
   }, [isNavigating]);
 
-  const renderAdItem = ({ item, index }: { item: any; index: number }) => (
+  const renderAdItem = useCallback(({ item, index }: { item: any; index: number }) => (
     <View style={{ width: screenWidth, paddingRight: 20 }}>
       <AdsComponents
         image={item.image}
@@ -70,7 +70,54 @@ const HomePage = () => {
         onPress={() => console.log(`Ad ${index + 1} pressed`)}
       />
     </View>
-  );
+  ), [screenWidth]);
+
+  const renderMechanicItem = useCallback(({ item }: { item: any }) => (
+    <View style={{ width: CARD_WIDTH }}>
+      <Card1
+        Images={item.image}
+        rating={item?.rating}
+        name={item?.name}
+        reviewCount={item?.reviewCount}
+        onPress={() => {
+          router.push({
+            pathname: routes.mechanicProfile,
+            params: {
+              mechanicId: item.id,
+              mechanicName: item.name,
+              mechanicRating: item.rating,
+            },
+          });
+        }}
+      />
+    </View>
+  ), [CARD_WIDTH]);
+
+  const renderCarItem = useCallback(({ item }: { item: any }) => (
+    <View style={{ width: CARD_WIDTH }}>
+      <Card1
+        Images={item.image}
+        rating={item?.rating}
+        name={item?.name}
+        price={item?.price}
+        reviewCount={item?.reviewCount}
+        showLove={true}
+      />
+    </View>
+  ), [CARD_WIDTH]);
+
+  const renderSparePartItem = useCallback(({ item }: { item: any }) => (
+    <View style={{ width: CARD_WIDTH }}>
+      <Card1
+        Images={item.image}
+        rating={item?.rating}
+        name={item?.name}
+        reviewCount={item?.reviewCount}
+        price={item?.price}
+        showLove={true}
+      />
+    </View>
+  ), [CARD_WIDTH]);
 
   const renderAdDotIndicator = () => (
     <View
@@ -139,10 +186,11 @@ const HomePage = () => {
               [{ nativeEvent: { contentOffset: { x: scrollX } } }],
               { useNativeDriver: false }
             )}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
+            initialNumToRender={3}
+            maxToRenderPerBatch={2}
+            windowSize={3}
             removeClippedSubviews={true}
+            updateCellsBatchingPeriod={100}
           />
           {renderAdDotIndicator()}
         </View>
@@ -176,26 +224,7 @@ const HomePage = () => {
           />
           <FlatList
             data={MechanicsList}
-            renderItem={({ item }) => (
-              <View style={{ width: CARD_WIDTH }}>
-                <Card1
-                  Images={item.image}
-                  rating={item?.rating}
-                  name={item?.name}
-                  reviewCount={item?.reviewCount}
-                  onPress={() => {
-                    router.push({
-                      pathname: routes.mechanicProfile,
-                      params: {
-                        mechanicId: item.id,
-                        mechanicName: item.name,
-                        mechanicRating: item.rating,
-                      },
-                    });
-                  }}
-                />
-              </View>
-            )}
+            renderItem={renderMechanicItem}
             keyExtractor={(item) => String(item.id)}
             horizontal={true}
             showsHorizontalScrollIndicator={false}
@@ -206,10 +235,11 @@ const HomePage = () => {
               paddingHorizontal: CARD_PADDING,
               gap: CARD_GAP,
             }}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
+            initialNumToRender={4}
+            maxToRenderPerBatch={2}
+            windowSize={3}
             removeClippedSubviews={true}
+            updateCellsBatchingPeriod={100}
           />
         </View>
 
@@ -225,18 +255,7 @@ const HomePage = () => {
           />
           <FlatList
             data={CarsList}
-            renderItem={({ item }) => (
-              <View style={{ width: CARD_WIDTH }}>
-                <Card1
-                  Images={item.image}
-                  rating={item?.rating}
-                  name={item?.name}
-                  price={item?.price}
-                  reviewCount={item?.reviewCount}
-                  showLove={true}
-                />
-              </View>
-            )}
+            renderItem={renderCarItem}
             keyExtractor={(item) => String(item.id)}
             horizontal={true}
             showsHorizontalScrollIndicator={false}
@@ -247,6 +266,11 @@ const HomePage = () => {
               paddingHorizontal: CARD_PADDING,
               gap: CARD_GAP,
             }}
+            initialNumToRender={4}
+            maxToRenderPerBatch={2}
+            windowSize={3}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={100}
           />
         </View>
 
@@ -262,18 +286,7 @@ const HomePage = () => {
           />
           <FlatList
             data={SpareParts}
-            renderItem={({ item }) => (
-              <View style={{ width: CARD_WIDTH }}>
-                <Card1
-                  Images={item.image}
-                  rating={item?.rating}
-                  name={item?.name}
-                  reviewCount={item?.reviewCount}
-                  price={item?.price}
-                  showLove={true}
-                />
-              </View>
-            )}
+            renderItem={renderSparePartItem}
             keyExtractor={(item) => String(item.id)}
             horizontal={true}
             showsHorizontalScrollIndicator={false}
@@ -284,11 +297,16 @@ const HomePage = () => {
               paddingHorizontal: CARD_PADDING,
               gap: CARD_GAP,
             }}
+            initialNumToRender={4}
+            maxToRenderPerBatch={2}
+            windowSize={3}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={100}
           />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
+});
 
 export default HomePage;

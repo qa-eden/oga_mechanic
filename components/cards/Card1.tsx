@@ -2,10 +2,10 @@
 
 import { View, Text, TouchableOpacity, Platform, Animated, Image } from "react-native";
 import type { SvgProps } from "react-native-svg";
-import { type FC, useRef } from "react";
+import { type FC, useRef, memo } from "react";
 import Rating from "../Rating";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import { icons } from "@/constants";
+// import { icons } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { HeartIcon } from "react-native-heroicons/outline";
@@ -26,7 +26,7 @@ interface Props {
   productId?: number;
 }
 
-const Card1 = ({
+const Card1 = memo(({
   Images,
   rating,
   name,
@@ -207,6 +207,6 @@ const Card1 = ({
       </TouchableOpacity>
     </Animated.View>
   );
-};
+});
 
 export default Card1;

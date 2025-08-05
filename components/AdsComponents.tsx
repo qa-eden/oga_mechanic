@@ -1,10 +1,10 @@
 import { View, Text, ImageBackground, TouchableOpacity } from "react-native";
-import React from "react";
+import React, { memo } from 'react';
 import { LinearGradient } from "expo-linear-gradient";
 import { icons } from "@/constants"; // Assuming you have an `images` constant
 import { AdsProps } from "@/types/type";
 
-const AdsComponents = ({ image, title, description, onPress }: AdsProps) => {
+const AdsComponents = memo(({ image, title, description, onPress }: AdsProps) => {
   return (
     <TouchableOpacity
       className="w-full h-[170px] bg-gray-200 rounded-[1rem] overflow-hidden"
@@ -42,6 +42,6 @@ const AdsComponents = ({ image, title, description, onPress }: AdsProps) => {
       </ImageBackground>
     </TouchableOpacity>
   );
-};
+});
 
 export default AdsComponents;

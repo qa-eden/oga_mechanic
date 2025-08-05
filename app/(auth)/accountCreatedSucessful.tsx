@@ -127,7 +127,7 @@ const AccountCreatedSucessful = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Section - Logo */}
-        <View className="flex-1 justify-center items-center pt-10">
+        <View className="flex-1 justify-center items-center pb-10">
           <Animated.View
             style={{
               transform: [{ scale: logoScale }],
@@ -136,70 +136,72 @@ const AccountCreatedSucessful = () => {
           >
             <icons.splash width={180} height={90} />
           </Animated.View>
-        </View>
 
-        {/* Middle Section - Success Content */}
-        <View className="flex-1 justify-center items-center px-8">
-          {/* Success Icon with animations */}
-          <Animated.View
-            className="mb-8"
-            style={{
-              transform: [
-                { scale: Animated.multiply(successIconScale, pulseAnimation) },
-                { rotate: rotateInterpolation },
-              ],
-            }}
-          >
-            <View
+          {/* Middle Section - Success Content */}
+          <View className=" justify-center items-center pt-10 px-8">
+            {/* Success Icon with animations */}
+            <Animated.View
+              className="mb-8"
               style={{
-                shadowColor: "#10B981",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8,
+                transform: [
+                  {
+                    scale: Animated.multiply(successIconScale, pulseAnimation),
+                  },
+                  { rotate: rotateInterpolation },
+                ],
               }}
             >
-              <icons.success />
-              {/* <Image source={icons.success} className="w-20 h-20" resizeMode="contain" /> */}
-            </View>
-          </Animated.View>
+              <View
+                style={{
+                  shadowColor: "#10B981",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 8,
+                }}
+              >
+                <icons.success />
+                {/* <Image source={icons.success} className="w-20 h-20" resizeMode="contain" /> */}
+              </View>
+            </Animated.View>
 
-          {/* Success Message */}
-          <Animated.View
-            style={{
-              opacity: contentOpacity,
-              transform: [{ translateY: contentTranslateY }],
-            }}
-          >
-            <HeaderAndDescTextCenter
-              header="Account Created Successfully!"
-              text1="Your account has been created successfully and you can now proceed to sign in to your dashboard to see your details."
-              containerStyle="!px-0"
-              headerStyle="font-NunitoExtraBold text-gray-800 mb-4"
-              textStyle="text-gray-600 leading-6 text-center"
-            />
-          </Animated.View>
+            {/* Success Message */}
+            <Animated.View
+              style={{
+                opacity: contentOpacity,
+                transform: [{ translateY: contentTranslateY }],
+              }}
+            >
+              <HeaderAndDescTextCenter
+                header="Account Created Successfully!"
+                text1="Your account has been created successfully and you can now proceed to sign in to your dashboard to see your details."
+                containerStyle="!px-0 !mx-0"
+                headerStyle="!font-NunitoExtraBold text-gray-800 mb-2 !text-[1.6rem] !mx-0"
+                textStyle="text-gray-600 leading-6 text-center"
+              />
+            </Animated.View>
 
-          {/* Decorative elements */}
-          <Animated.View
-            className="absolute -top-10 -right-10"
-            style={{
-              opacity: contentOpacity,
-              transform: [{ scale: successIconScale }],
-            }}
-          >
-            <View className="w-20 h-20 bg-green-100 rounded-full opacity-20" />
-          </Animated.View>
+            {/* Decorative elements */}
+            <Animated.View
+              className="absolute -top-10 -right-10"
+              style={{
+                opacity: contentOpacity,
+                transform: [{ scale: successIconScale }],
+              }}
+            >
+              <View className="w-20 h-20 bg-green-100 rounded-full opacity-20" />
+            </Animated.View>
 
-          <Animated.View
-            className="absolute -bottom-10 -left-10"
-            style={{
-              opacity: contentOpacity,
-              transform: [{ scale: successIconScale }],
-            }}
-          >
-            <View className="w-16 h-16 bg-primary-100 rounded-full opacity-20" />
-          </Animated.View>
+            <Animated.View
+              className="absolute -bottom-10 -left-10"
+              style={{
+                opacity: contentOpacity,
+                transform: [{ scale: successIconScale }],
+              }}
+            >
+              <View className="w-16 h-16 bg-primary-100 rounded-full opacity-20" />
+            </Animated.View>
+          </View>
         </View>
 
         {/* Bottom Section - Action Button */}

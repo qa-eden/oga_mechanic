@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, Animated, Image } from "react-native";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { TrashIcon, CheckIcon, PlusIcon, MinusIcon } from "react-native-heroicons/outline";
@@ -9,7 +9,7 @@ interface CartItem {
   price: number;
   quantity: number;
   stock: number;
-  image: any; // <-- change from string to any
+  image: any;
   originalPrice?: number;
   discount?: number;
 }
@@ -26,7 +26,7 @@ interface CartItemCardProps {
   onUpdateQuantity: (id: number, change: number) => void;
 }
 
-const CartItemCard: React.FC<CartItemCardProps> = React.memo(({
+const CartItemCard = memo(({
   item,
   index,
   isSelected,
@@ -36,7 +36,7 @@ const CartItemCard: React.FC<CartItemCardProps> = React.memo(({
   onSelect,
   onRemove,
   onUpdateQuantity,
-}) => (
+}: CartItemCardProps) => (
   <Animated.View
     style={{
       opacity: fadeAnim,
@@ -131,9 +131,7 @@ const CartItemCard: React.FC<CartItemCardProps> = React.memo(({
                 disabled={item.quantity <= 1}
                 style={{ opacity: item.quantity <= 1 ? 0.5 : 1 }}
               >
-                <Text className="text-lg font-NunitoBold text-gray-600">
-                  <MinusIcon color={"#fff"} />
-                </Text>
+                <MinusIcon color={"#fff"} />
               </TouchableOpacity>
               <Text className="mx-2 text-sm font-NunitoBold text-gray-900 min-w-[16px] text-center">
                 {item.quantity}
@@ -144,9 +142,7 @@ const CartItemCard: React.FC<CartItemCardProps> = React.memo(({
                 disabled={item.quantity >= item.stock}
                 style={{ opacity: item.quantity >= item.stock ? 0.5 : 1 }}
               >
-                <Text className="text-lg font-NunitoBold text-white">
-                  <PlusIcon color={"#fff"} />
-                </Text>
+                <PlusIcon color={"#fff"} />
               </TouchableOpacity>
             </View>
           </Animated.View>

@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { loginSchema } from "@/utils/validationSchemas";
-import { routes } from "@/constants/routes";
+import { mechanicRoutes, routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
@@ -29,7 +29,7 @@ const SignIn = () => {
     // Simulate API call
     setTimeout(() => {
       setSubmitting(false);
-      router.push(routes?.home);
+      router.push(mechanicRoutes?.home);
     }, 1000);
   };
 
