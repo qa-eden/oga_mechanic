@@ -1,12 +1,237 @@
-import React from 'react'
-import { View, Text } from 'react-native'
+import ProfileTabs from "@/components/templates/ProfileTabs";
+import ProfileHeader from "@/components/ProfileHeader";
+import {
+  images,
+  userInfo,
+  icons,
+  ProfileSettings,
+  ProfileSopprt,
+  MechanicProfileSettings,
+} from "@/constants";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LAYOUT } from "@/constants/units";
+import { router } from "expo-router";
+import { routes, mechanicRoutes } from "@/constants/routes";
+import { MapPinIcon } from "react-native-heroicons/solid";
 
 const MechanicProfile = () => {
+  const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
+  const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const { SCROLL_PADDING_BOTTOM } = LAYOUT;
+
+  const toggleSwitch = (
+    setState: React.Dispatch<React.SetStateAction<boolean>>,
+    value: boolean
+  ) => {
+    setState(value);
+  };
+
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
+    // Add your logout logic here
+    // Alert.alert("Logged Out", "You have been successfully logged out.");
+    router?.push(routes?.signIn);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
+  const ProfilePref = {
+    name: "PREFERENCES",
+    options: [
+      {
+        id: 1,
+        name: "Enable Fingerprint/Face ID",
+        image: icons.faceId,
+        route: "editProfile",
+        set: setIsEnabledFaceId,
+        state: isEnabledFaceId,
+      },
+      {
+        id: 2,
+        name: "Enable password login",
+        image: icons.enablePass,
+        route: "notifications",
+        set: setIsEnabledEnablePass,
+        state: isEnabledEnablePass,
+      },
+    ],
+  };
   return (
-    <View>
-      <Text>Mechanic Profile</Text>
-    </View>
-  )
-}
+    <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+      <ScrollView
+        className="flex-1 px-5 pt-2"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: SCROLL_PADDING_BOTTOM,
+        }}
+      >
+        <View className="flex-col justify-center items-center">
+          <ProfileHeader title="Profile" />
+
+          <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
+            <Image
+              source={images.dummyProfile}
+              className="w-[60px] h-[60px] rounded-full"
+              resizeMode="cover"
+              alt="Profile"
+            />
+          </View>
+
+          <Text className="font-NunitoBold text-primary-800 text-[1.5rem] pt-3">
+            {userInfo.name}
+          </Text>
+          <View className="flex-row items-center gap-2 pt-2">
+            <View className="flex-row items-center justify-center gap-2 pr-3 py-1">
+              <MapPinIcon size={16} color={"#D30309"} />
+              <Text className="text-[14px] font-NunitoBold text-gray-600">
+                {userInfo.location}
+              </Text>
+            </View>
+            <View className="flex-row items-center justify-center gap-2 pl-3 py-1 border-l-2 border-gray-200">
+              <icons.redPhone width={20} height={20} />
+              <Text className="text-[14px] font-NunitoBold text-gray-600">
+                {userInfo.phone}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View className="shadow-md shadow-gray-300 bg-white mt-9 rounded-[1rem] px-4 py-2 mb-6">
+          <View className="pt-4">
+            <Text className="uppercase text-[#999999] pb-2">
+              {ProfileSettings?.name}
+            </Text>
+            {MechanicProfileSettings.options.map((item) => (
+              <ProfileTabs
+                key={String(item.id)}
+                text={item.name}
+                iconLeft={(props) => item?.image && item.image(props)}
+                onPress={() => {
+                  if (item.name === "My Profile") {
+                    router.push(mechanicRoutes.EditProfile);
+                  }
+                  // Add other navigation logic here for other items
+                }}
+              />
+            ))}
+          </View>
+
+          <View className="pt-4 pb-2">
+            <Text className="uppercase text-[#999999] pb-2">
+              {ProfilePref?.name}
+            </Text>
+            {ProfilePref.options.map((item) => (
+              <ProfileTabs
+                key={String(item.id)}
+                activeOpacity={0.8}
+                text={item.name}
+                iconLeft={(props) => item?.image && item.image(props)}
+                iconRight={
+                  <Switch
+                    trackColor={{ false: "#ccc", true: "#50BE4E" }}
+                    thumbColor={item.state ? "white" : "#f4f3f4"}
+                    // ios_backgroundColor="#3e3e3e"
+                    onValueChange={(value) => toggleSwitch(item.set, value)}
+                    value={item.state}
+                  />
+                }
+              />
+            ))}
+          </View>
+
+          <View className="pt-4 pb-2">
+            <Text className="uppercase text-[#999999] pb-2">
+              {ProfileSopprt?.name}
+            </Text>
+            {ProfileSopprt.options.map((item) => (
+              <ProfileTabs
+                key={String(item.id)}
+                text={item.name}
+                iconLeft={(props) => item?.image && item.image(props)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View className="py-3">
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5"
+          >
+            <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
+              Logout
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Logout Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-5">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            {/* Header */}
+            <View className="items-center mb-6">
+              <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
+                <Text className="text-3xl">🚪</Text>
+              </View>
+              <Text className="text-xl font-NunitoBold text-gray-900 text-center">
+                Logout
+              </Text>
+              <Text className="text-gray-600 text-center mt-2 font-NunitoMedium">
+                Are you sure you want to logout from your account?
+              </Text>
+            </View>
+
+            {/* Buttons */}
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={confirmLogout}
+                className="bg-red-500 py-4 rounded-xl items-center"
+                activeOpacity={0.8}
+              >
+                <Text className="text-white font-NunitoBold text-base">
+                  Yes, Logout
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={cancelLogout}
+                className="bg-gray-100 py-4 mt-4 border border-gray-300 rounded-xl items-center"
+                activeOpacity={0.8}
+              >
+                <Text className="text-gray-700 font-NunitoBold text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
 
 export default MechanicProfile

@@ -25,6 +25,9 @@ import lookman from "@/assets/images/dummy/lookman.svg";
 import salisu from "@/assets/images/dummy/salisu.svg";
 import otunba from "@/assets/images/dummy/salisu.svg";
 
+import mechanic_ads from "@/assets/images/mechanic_ads.png";
+import user1 from "@/assets/images/user.png";
+
 import brabus2 from "@/assets/images/dummy/brabus.svg";
 import benz from "@/assets/images/dummy/benz.svg";
 import carEngine from "@/assets/images/dummy/driverWheel.svg";
@@ -56,6 +59,8 @@ import rent from "@/assets/icons/rent.svg";
 //profile icons
 import redPhone from "@/assets/icons/redPhone.svg";
 import UserCircle from "@/assets/icons/profile/UserCircle.svg";
+import addBank from "@/assets/icons/profile/addBank.svg";
+import savingWallet from "@/assets/icons/profile/savingWallet.svg";
 import padlock from "@/assets/icons/profile/padlock.svg";
 import switch1 from "@/assets/icons/profile/switch.svg";
 import sub from "@/assets/icons/profile/sub.svg";
@@ -115,6 +120,9 @@ export const images = {
   lookman,
   salisu,
   otunba,
+
+  mechanic_ads,
+  user1
 };
 
 export const icons = {
@@ -174,7 +182,7 @@ export const Roles = [
   {
     id: 1,
     title: "Primary user",
-    description: "I want to buy cars, order rides and consult mechanics",
+    description: "I want to buy cars, book rides and get help from mechanics",
     image: icons.user,
     border: "#7DA0FF",
     backgroundColor: "#D6E1FF",
@@ -182,8 +190,8 @@ export const Roles = [
   },
   {
     id: 2,
-    title: "Marchant",
-    description: "I want to buy cars, order rides and consult mechanics",
+    title: "Seller",
+    description: "I want to sell cars and auto parts to customers",
     image: icons.merchant,
     border: "#FFC38D",
     backgroundColor: "#FFEAD8",
@@ -192,7 +200,7 @@ export const Roles = [
   {
     id: 3,
     title: "Mechanic",
-    description: "",
+    description: "I want to offer car repair services and earn money",
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
@@ -201,7 +209,7 @@ export const Roles = [
   {
     id: 4,
     title: "Driver",
-    description: "",
+    description: "I want to drive passengers and make money from trips",
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",
@@ -521,6 +529,36 @@ export const ProfileSettings = {
       id: 4,
       name: "Subscription",
       image: sub,
+      route: "notifications",
+    },
+  ],
+};
+
+export const MechanicProfileSettings = {
+  name: "Profile settings",
+  options: [
+    {
+      id: 1,
+      name: "My Profile",
+      image: UserCircle,
+      route: "editProfile",
+    },
+    {
+      id: 2,
+      name: "Add Bank Details",
+      image: addBank,
+      route: "notifications",
+    },
+    {
+      id: 3,
+      name: "Savings wallet",
+      image: savingWallet,
+      route: "notifications",
+    },
+    {
+      id: 4,
+      name: "Change Password",
+      image: padlock,
       route: "notifications",
     },
   ],

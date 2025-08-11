@@ -227,6 +227,9 @@ const SignUp = () => {
                   <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
                     {item.title}
                   </Text>
+                  {/* <Text className="text-sm font-NunitoSemiBold w-full flex-col justify-end items-end pt-2">
+                    {item.description}
+                  </Text> */}
                 </TouchableOpacity>
               )}
               initialNumToRender={8}

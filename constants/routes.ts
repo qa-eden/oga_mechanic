@@ -83,6 +83,10 @@ export const mechanicRoutes = {
   earnings: "/(root)/(tabs)/(mechanic)/earnings",
   order: "/(root)/(tabs)/(mechanic)/order",
   profile: "/(root)/(tabs)/(mechanic)/profile",
+
+  ConfirmWithdrawal: "/(root)/(screens)/(mechanic)/confirmWithdrawal",
+  WithdrawalHistory: "/(root)/(screens)/(mechanic)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(mechanic)/editProfile",
 } as const;
 
 export type MechanicRouteKeys = keyof typeof mechanicRoutes;

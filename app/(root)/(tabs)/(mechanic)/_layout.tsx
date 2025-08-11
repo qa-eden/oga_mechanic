@@ -42,17 +42,17 @@ export default function Layout() {
         label: "Home",
         component: MechanicHome,
       },
-      Consultation: {
+      consultation: {
         icon: <icons.earnings />,
         activeIcon: <icons.activeEarnings />,
         label: "Consultation",
-        component: MechanicEarnings,
-      },
-      Earnings: {
-        icon: <icons.consultation />,
-        activeIcon: <icons.activeCar />,
-        label: "Earnings",
         component: MechanicOrder,
+      },
+      earnings: {
+        icon: <icons.earnings />,
+        activeIcon: <icons.activeEarnings />,
+        label: "Earnings",
+        component: MechanicEarnings,
       },
       profile: {
         icon: <icons.profile />,
@@ -96,8 +96,8 @@ export default function Layout() {
   const getActiveComponent = () => {
     const tabInfo: Record<string, React.ComponentType> = {
       home: MechanicHome,
+      consultation: MechanicOrder,
       earnings: MechanicEarnings,
-      order: MechanicOrder,
       profile: MechanicProfile,
     };
     const ActiveComponent = tabInfo[activeTab] || MechanicHome;
