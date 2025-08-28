@@ -225,7 +225,11 @@ const SuccessPage = ({
             <CustomButton
               title={btnText || "Done"}
               className="py-4"
-              onPress={() => router?.replace(route)}
+              onPress={() => {
+                if (route) {
+                  router.replace(route);
+                }
+              }}
             />
           </Animated.View>
         </View>

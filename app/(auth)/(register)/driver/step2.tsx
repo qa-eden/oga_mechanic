@@ -1,0 +1,101 @@
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    ActivityIndicator,
+  } from "react-native";
+  import React, { useState, useEffect } from "react";
+  import { icons } from "@/constants";
+  import { maskEmail } from "@/utils/emailUtils";
+  import OTPInput from "@/components/OTPInput";
+  import { useRouter } from "expo-router";
+  import { driverRoutes } from "@/constants/routes";
+  import ProgressBar from "@/components/ProgressBar";
+  import UserAuthHeader from "@/components/UserAuthHeader";
+  import { SafeAreaView } from "react-native-safe-area-context";
+  
+  const DriverStep2 = () => {
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [countdown, setCountdown] = useState(60); // Initial countdown value
+  
+    // Countdown effect
+    useEffect(() => {
+      if (countdown > 0) {
+        const timer = setInterval(() => {
+          setCountdown((prev) => prev - 1);
+        }, 1000);
+  
+        return () => clearInterval(timer); // Cleanup on unmount
+      }
+    }, [countdown]);
+  
+    const handleOtpComplete = (otp: string | number) => {
+      setLoading(true); // Start loader
+  
+      setTimeout(() => {
+        router.push(driverRoutes?.step4);
+        setLoading(false); // Stop loader after navigation
+      }, 1500); // Simulating API call delay
+    };
+  
+    const handleResendCode = () => {
+      setCountdown(60);
+    };
+  
+    return (
+      <SafeAreaView>
+        <View className="">
+          <View className=" w-full px-4">
+            <UserAuthHeader />
+  
+            <View className="pt-6 pb-2">
+              <ProgressBar step={2} totalSteps={6} />
+            </View>
+          </View>
+  
+          <View className="px-5 pt-6">
+            <icons.tick1 />
+  
+            <Text className="font-NunitoSemiBold text-[19px] pt-5 pb-2">
+              Enter the 6-digit code we texted to your linked email{" "}
+              {maskEmail("emmzzyvibes@gmail.com")}
+            </Text>
+            <Text className="text-text-100 text-[16px]">
+              This helps keep your account safe by verifying it's you
+            </Text>
+  
+            <OTPInput
+              numberOfDigits={6}
+              onComplete={handleOtpComplete}
+              countdown={countdown}
+            />
+  
+            {loading ? (
+              <ActivityIndicator size="large" color="#D30309" className="pt-4" />
+            ) : (
+              <>
+                <Text className="pt-2 pb-4 text-[15px]">Didn't receive OTP?</Text>
+                {countdown > 0 ? (
+                  <TouchableOpacity>
+                    <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
+                      {`Resend Code (${countdown}s)`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={handleResendCode}>
+                    <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
+                      {"Resend Code"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  };
+  
+  export default DriverStep2;
+  

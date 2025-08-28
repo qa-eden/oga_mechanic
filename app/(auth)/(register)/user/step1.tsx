@@ -13,10 +13,22 @@ import { router } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { step1Schema } from "@/utils/validationSchemas";
 import { routes } from "@/constants/routes";
+import { useRegistrationStore } from "@/stores/registrationStore";
 
 const Step1 = () => {
+  const { setStep1Data } = useRegistrationStore();
+  
   const handleStep1Submit = (values: any, { setSubmitting }: any) => {
     console.log("Step 1 values:", values);
+    
+    // Store step 1 data
+    setStep1Data({
+      email: values.email,
+      first_name: values.firstName,
+      last_name: values.lastName,
+      phone: values.phone
+    });
+    
     setSubmitting(false);
     router.push(routes?.userStep2);
   };

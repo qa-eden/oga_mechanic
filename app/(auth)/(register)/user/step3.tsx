@@ -20,14 +20,42 @@ import { useRouter } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { resetPasswordSchema } from "@/utils/validationSchemas";
 import { routes } from "@/constants/routes";
+import { useUserStore } from "@/stores/userStore";
+import { useRegistrationStore } from "@/stores/registrationStore";
+import { RegisterData } from "@/lib/api/user";
 
 const Step3 = () => {
   const router = useRouter();
+  const { register, loading, error } = useUserStore();
+  const { getRegistrationData, clearData } = useRegistrationStore();
 
-  const handleStep3Submit = (values: any, { setSubmitting }: any) => {
+  const handleStep3Submit = async (values: any, { setSubmitting }: any) => {
     console.log("Step 3 values:", values);
-    setSubmitting(false);
-    router.push(routes?.accountCreated);
+    
+    try {
+      // Get data from previous steps
+      const step1Data = getRegistrationData();
+      
+      const registrationData: RegisterData = {
+        email: step1Data.email,
+        password: values.password,
+        password_confirm: values.confirmPassword,
+        first_name: step1Data.first_name,
+        last_name: step1Data.last_name,
+        roles: [0] // User role
+      };
+      
+      const success = await register(registrationData);
+      
+      if (success) {
+        clearData(); // Clear registration data after successful registration
+        router.push(routes?.accountCreated);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -98,8 +126,10 @@ const Step3 = () => {
                     <View style={{ height: 40 }} />
 
                     <FormikButton
-                      title="Create account"
+                      title={loading ? "Creating account..." : "Create account"}
                       className="py-4 mb-2"
+                      loading={loading}
+                      disabled={loading}
                     />
 
                     <AuthNavigateLink

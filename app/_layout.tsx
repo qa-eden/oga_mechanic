@@ -10,12 +10,23 @@ import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AnimatedSplash from "../components/AnimatedSplash"; // <-- Add this
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  // Create a client
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 2,
+      },
+    },
+  });
+
   const [loaded, error] = useFonts({
     "Nunito-Bold": require("../assets/fonts/nunito/Nunito-Bold.ttf"),
     "Nunito-ExtraBold": require("../assets/fonts/nunito/Nunito-ExtraBold.ttf"),
@@ -52,24 +63,26 @@ export default function RootLayout() {
   const toastWidth = screenWidth * 0.9;
 
   return (
-    <CartProvider>
-      <LocationProvider>
-        <View className="flex-1">
-          <StatusBar style="light" />
-          <ToastManager
-            position="top"
-            width={toastWidth}
-            duration={2000}
-            animationIn="slideInRight"
-            animationOut="slideOutLeft"
-            showProgressBar={false}
-          />
-          <Stack>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(root)" options={{ headerShown: false }} />
-          </Stack>
-        </View>
-      </LocationProvider>
-    </CartProvider>
+    <QueryClientProvider client={queryClient}>
+      <CartProvider>
+        <LocationProvider>
+          <View className="flex-1">
+            <StatusBar style="light" />
+            <ToastManager
+              position="top"
+              width={toastWidth}
+              duration={2000}
+              animationIn="slideInRight"
+              animationOut="slideOutLeft"
+              showProgressBar={false}
+            />
+            <Stack>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(root)" options={{ headerShown: false }} />
+            </Stack>
+          </View>
+        </LocationProvider>
+      </CartProvider>
+    </QueryClientProvider>
   );
 }

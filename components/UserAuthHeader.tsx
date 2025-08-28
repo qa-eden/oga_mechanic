@@ -19,7 +19,9 @@ const UserAuthHeader = ({
         {header ? (
           <Text className="text-[1.4rem] font-NunitoBold">{header}</Text>
         ) : (
-          <icons.splash />
+          <View className="w-[100px] items-center justify-center">
+            <icons.splash width={120} height={80} />
+          </View>
         )}
         <View className="w-[10%]"></View>
       </View>

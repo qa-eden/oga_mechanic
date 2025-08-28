@@ -84,6 +84,9 @@ const Services = () => {
       case "Chat a Specialist":
         router.push(routes.chatSeller);
         break;
+      case "Find a Mechanic":
+        router.push(routes.findMechanic);
+        break;
       default:
         console.log("Navigate to:", service.name);
     }

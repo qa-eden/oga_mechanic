@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import type { InputFieldProps } from "@/types/type";
 import { icons } from "@/constants";
+import clsx from "clsx";
 
 const InputField = ({
   label,
@@ -23,6 +24,7 @@ const InputField = ({
   secureTextEntry = false,
   labelStyle,
   containerStyle,
+  containerStyle1,
   inputStyle,
   iconStyle,
   placeholder,
@@ -37,6 +39,7 @@ const InputField = ({
   onFocus,
   autoCapitalize = "sentences",
   autoCorrect = true,
+  noMargin = false,
   ...props
 }: InputFieldProps & {
   error?: string;
@@ -46,6 +49,8 @@ const InputField = ({
   leftIcon?: any;
   required?: boolean;
   helperText?: string;
+  containerStyle1?: string;
+  noMargin?: boolean;
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -129,7 +134,7 @@ const InputField = ({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="mb-4 w-full">
+        <View className={clsx("mb-4 w-full", containerStyle1, !noMargin && "mb-4")}>
           {/* Label */}
           {label && (
             <Text

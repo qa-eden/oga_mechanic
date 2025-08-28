@@ -1,6 +1,6 @@
 "use client";
 
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { View, Text, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -27,14 +27,6 @@ const MechanicWelcome = () => {
       }),
     ]).start();
   }, []);
-  const handleLogIn = () => {
-    router.push(routes.signIn);
-  };
-
-  const handleSignUp = () => {
-    // Navigate to mechanic registration form
-    router.push(mechanicRoutes.step1);
-  };
 
   return (
     <SafeAreaView className="flex-1 h-screen bg-white" edges={["top"]}>

@@ -9,7 +9,7 @@ import { EyeIcon, EyeSlashIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import WithdrawFundsModal from "@/components/modals/WithdrawFundsModal";
 import { router } from "expo-router";
-import { mechanicRoutes } from "@/constants/routes";
+import { mechanicRoutes, routes } from "@/constants/routes";
 
 const MechanicEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
@@ -96,13 +96,22 @@ const MechanicEarnings = () => {
                 )}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => setShowWithdrawModal(true)}
-              className="flex-row items-center justify-center mb-6"
-            >
-              <Text className="text-white font-NunitoBold mr-2">Withdraw</Text>
-              <Text className="text-white">→</Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center justify-center w-full gap-4 px-6">
+              <TouchableOpacity
+                onPress={() => router.push(routes?.bankTransfer)}
+                className="flex-row items-center justify-center mb-6 w-[50%] bg-white border border-white rounded-[.3rem] py-2"
+              >
+                <Text className="text-[#991B1B] font-NunitoBold mr-2">Fund wallet</Text>
+                <Text className="text-[#991B1B]">→</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowWithdrawModal(true)}
+                className="flex-row items-center justify-center mb-6 w-[50%] border border-white rounded-lg py-2 rounded-[.3rem]"
+              >
+                <Text className="text-white font-NunitoBold mr-2">Withdraw</Text>
+                <Text className="text-white">→</Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
 
           {/* Earnings Header */}
@@ -167,7 +176,7 @@ const MechanicEarnings = () => {
             </View>
           ))}
 
-          <View className="h-20" />
+          {/* <View className="h-20" /> */}
         </View>
       </ScrollView>
 

@@ -23,7 +23,7 @@ const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
     case "success":
       return "bg-green-500";
     case "outline":
-      return "bg-transparent border-neutral-300 border-[0.5px]";
+      return "bg-transparent border-2 border-gray-300";
     default:
       return "border border-2 border-white";
   }
@@ -34,39 +34,38 @@ const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
     case "primary":
       return "text-black";
     case "secondary":
-      return "text-[#141414]";
+      return "text-[#000]";
     case "danger":
       return "text-red-100";
     case "dangerborder":
       return "text-red-500";
     case "success":
       return "text-green-100";
+    case "outline":
+      return "text-gray-500";
     default:
       return "text-white";
   }
-};
+};  
 
 const getLoadingColor = (
   variant: ButtonProps["bgVariant"],
   textVariant: ButtonProps["textVariant"]
 ) => {
-  // If it's an outline button, use the text color
-  if (variant === "outline") {
-    return "#6B7280"; // gray-500
-  }
-
   // For other variants, use the text color
   switch (textVariant) {
     case "primary":
       return "#000000"; // black
     case "secondary":
-      return "#141414";
+      return "#cccccc";
     case "danger":
       return "#FEE2E2"; // red-100
     case "dangerborder":
       return "#FEE2E2"; // red-100
     case "success":
       return "#DCFCE7"; // green-100
+    case "outline":
+      return "#6B7280"; // gray-500
     default:
       return "#FFFFFF"; // white
   }

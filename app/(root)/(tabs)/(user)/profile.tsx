@@ -22,11 +22,13 @@ import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
+import SwitchUserModal from "@/components/modals/SwitchUserModal";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -50,6 +52,12 @@ const Profile = () => {
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
+  };
+
+  const handleSwitchUser = (userType: string) => {
+    // Handle user switching logic here
+    console.log("Switching to user type:", userType);
+    // You can add navigation logic or state management here
   };
 
   const ProfilePref = {
@@ -123,6 +131,12 @@ const Profile = () => {
                 key={String(item.id)}
                 text={item.name}
                 iconLeft={(props) => item?.image && item.image(props)}
+                onPress={() => {
+                  if (item.name === "Switch user") {
+                    setShowSwitchUserModal(true);
+                  }
+                  // Add other navigation logic here for other items
+                }}
               />
             ))}
           </View>
@@ -223,6 +237,13 @@ const Profile = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Switch User Modal */}
+      <SwitchUserModal
+        isVisible={showSwitchUserModal}
+        onClose={() => setShowSwitchUserModal(false)}
+        onSwitchUser={handleSwitchUser}
+      />
     </SafeAreaView>
   );
 };

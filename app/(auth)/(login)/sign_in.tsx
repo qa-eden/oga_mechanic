@@ -8,29 +8,48 @@ import { mechanicRoutes, routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
+import { useUserStore } from "@/stores/userStore";
+import { LoginCredentials } from "@/lib/api/user";
+import { Toast } from "toastify-react-native";
 
 const SignIn = () => {
-  const handleSignIn = (values: any, { setSubmitting, setFieldError }: any) => {
+  const { login, loading, error, clearError } = useUserStore();
+
+  const handleSignIn = async (values: LoginCredentials, { setSubmitting, setFieldError }: any) => {
     console.log("Sign in values:", values);
+    router.push(routes?.home);
 
-    // Additional client-side validation (optional)
-    if (!values.email || !values.email.includes("@")) {
-      setFieldError("email", "Please enter a valid email address");
-      setSubmitting(false);
-      return;
-    }
+    // // Additional client-side validation (optional)
+    // if (!values.email || !values.email.includes("@")) {
+    //   setFieldError("email", "Please enter a valid email address");
+    //   setSubmitting(false);
+    //   return;
+    // }
 
-    if (!values.password || values.password.length < 6) {
-      setFieldError("password", "Password must be at least 6 characters");
-      setSubmitting(false);
-      return;
-    }
+    // if (!values.password || values.password.length < 6) {
+    //   setFieldError("password", "Password must be at least 6 characters");
+    //   setSubmitting(false);
+    //   return;
+    // }
 
-    // Simulate API call
-    setTimeout(() => {
-      setSubmitting(false);
-      router.push(mechanicRoutes?.home);
-    }, 1000);
+    // // Clear any previous errors
+    // clearError();
+
+    // // Call login API
+    // const success = await login(values);
+    
+    // if (success) {
+    //   Toast.success("Login successful! Welcome back!");
+    //   // Navigate based on user role
+    //   setTimeout(() => {
+    //     router.push(routes?.home);
+    //   }, 1000);
+    // } else {
+    //   // Error toast will be shown by the store
+    //   Toast.error("Login failed. Please check your credentials.");
+    // }
+    
+    setSubmitting(false);
   };
 
   return (
@@ -92,7 +111,12 @@ const SignIn = () => {
             </View>
           </View>
 
-          <FormikButton title="Sign In" className="mb-6" />
+          <FormikButton 
+            title={loading ? "Signing In..." : "Sign In"} 
+            className="mb-6" 
+            loading={loading}
+            disabled={loading}
+          />
 
           <AuthNavigateLink
             onPress={() => router?.push(routes?.signUp)}

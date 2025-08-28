@@ -1,0 +1,119 @@
+// Base API URL
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.ogamechanic.com/v1';
+
+// Auth endpoints (common for all roles)
+export const AUTH_ENDPOINTS = {
+  LOGIN: '/auth/login',
+  REGISTER: '/auth/register',
+  REFRESH_TOKEN: '/auth/refresh',
+  LOGOUT: '/auth/logout',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  RESET_PASSWORD: '/auth/reset-password',
+  VERIFY_OTP: '/auth/verify-otp',
+  SWITCH_ROLE: '/auth/switch-role',
+} as const;
+
+// User endpoints (regular users/customers)
+export const USER_ENDPOINTS = {
+  LOGIN: '/users/login/',
+  REGISTER: '/users/register/',
+  PROFILE: '/user/profile',
+  UPDATE_PROFILE: '/user/profile',
+  CARS: '/user/cars',
+  ADD_CAR: '/user/cars',
+  UPDATE_CAR: (id: string) => `/user/cars/${id}`,
+  DELETE_CAR: (id: string) => `/user/cars/${id}`,
+  FIND_MECHANIC: '/user/mechanics/find',
+  BOOK_MECHANIC: '/user/mechanics/book',
+  ORDER_RIDE: '/user/rides/order',
+  RENT_CAR: '/user/cars/rent',
+  BUY_CAR: '/user/cars/buy',
+  SHOP_ITEMS: '/user/shop/items',
+  CART: '/user/cart',
+  ORDERS: '/user/orders',
+  PAYMENTS: '/user/payments',
+} as const;
+
+// Mechanic endpoints (service providers)
+export const MECHANIC_ENDPOINTS = {
+  PROFILE: '/mechanic/profile',
+  UPDATE_PROFILE: '/mechanic/profile',
+  SERVICES: '/mechanic/services',
+  ADD_SERVICE: '/mechanic/services',
+  UPDATE_SERVICE: (id: string) => `/mechanic/services/${id}`,
+  DELETE_SERVICE: (id: string) => `/mechanic/services/${id}`,
+  BOOKINGS: '/mechanic/bookings',
+  ACCEPT_BOOKING: (id: string) => `/mechanic/bookings/${id}/accept`,
+  REJECT_BOOKING: (id: string) => `/mechanic/bookings/${id}/reject`,
+  COMPLETE_BOOKING: (id: string) => `/mechanic/bookings/${id}/complete`,
+  EARNINGS: '/mechanic/earnings',
+  WITHDRAW: '/mechanic/earnings/withdraw',
+  AVAILABILITY: '/mechanic/availability',
+  SET_AVAILABILITY: '/mechanic/availability',
+  REVIEWS: '/mechanic/reviews',
+  SCHEDULE: '/mechanic/schedule',
+} as const;
+
+// Driver endpoints (transportation providers)
+export const DRIVER_ENDPOINTS = {
+  PROFILE: '/driver/profile',
+  UPDATE_PROFILE: '/driver/profile',
+  VEHICLE: '/driver/vehicle',
+  UPDATE_VEHICLE: '/driver/vehicle',
+  RIDES: '/driver/rides',
+  ACCEPT_RIDE: (id: string) => `/driver/rides/${id}/accept`,
+  REJECT_RIDE: (id: string) => `/driver/rides/${id}/reject`,
+  START_RIDE: (id: string) => `/driver/rides/${id}/start`,
+  COMPLETE_RIDE: (id: string) => `/driver/rides/${id}/complete`,
+  LOCATION: '/driver/location',
+  UPDATE_LOCATION: '/driver/location',
+  EARNINGS: '/driver/earnings',
+  WITHDRAW: '/driver/earnings/withdraw',
+  AVAILABILITY: '/driver/availability',
+  SET_AVAILABILITY: '/driver/availability',
+} as const;
+
+// Merchant endpoints (shop owners)
+export const MERCHANT_ENDPOINTS = {
+  PROFILE: '/merchant/profile',
+  UPDATE_PROFILE: '/merchant/profile',
+  SHOPS: '/merchant/shops',
+  CREATE_SHOP: '/merchant/shops',
+  UPDATE_SHOP: (id: string) => `/merchant/shops/${id}`,
+  DELETE_SHOP: (id: string) => `/merchant/shops/${id}`,
+  PRODUCTS: '/merchant/products',
+  ADD_PRODUCT: '/merchant/products',
+  UPDATE_PRODUCT: (id: string) => `/merchant/products/${id}`,
+  DELETE_PRODUCT: (id: string) => `/merchant/products/${id}`,
+  ORDERS: '/merchant/orders',
+  UPDATE_ORDER_STATUS: (id: string) => `/merchant/orders/${id}/status`,
+  INVENTORY: '/merchant/inventory',
+  UPDATE_INVENTORY: (id: string) => `/merchant/inventory/${id}`,
+  EARNINGS: '/merchant/earnings',
+  WITHDRAW: '/merchant/earnings/withdraw',
+  ANALYTICS: '/merchant/analytics',
+} as const;
+
+// Common service endpoints (used by multiple roles)
+export const SERVICE_ENDPOINTS = {
+  MECHANICS_FIND: '/mechanics/find',
+  MECHANICS_NEARBY: '/mechanics/nearby',
+  MECHANIC_PROFILE: (id: string) => `/mechanics/${id}`,
+  MECHANIC_REVIEWS: (id: string) => `/mechanics/${id}/reviews`,
+  RIDES_CREATE: '/rides',
+  RIDES_NEARBY_DRIVERS: '/rides/nearby-drivers',
+  RIDES_TRACK: (id: string) => `/rides/${id}/track`,
+  RIDES_CANCEL: (id: string) => `/rides/${id}/cancel`,
+  RIDES_COMPLETE: (id: string) => `/rides/${id}/complete`,
+  PAYMENTS_CREATE: '/payments',
+  PAYMENTS_VERIFY: (id: string) => `/payments/${id}/verify`,
+  PAYMENTS_HISTORY: '/payments/history',
+  SHOP_PRODUCTS: '/shop/products',
+  SHOP_PRODUCT_DETAIL: (id: string) => `/shop/products/${id}`,
+  SHOP_CATEGORIES: '/shop/categories',
+  SHOP_SEARCH: '/shop/search',
+  SUPPORT_CONTACT: '/support/contact',
+  SUPPORT_FAQ: '/support/faq',
+  SUPPORT_TICKETS: '/support/tickets',
+  SUPPORT_CREATE_TICKET: '/support/tickets',
+} as const;

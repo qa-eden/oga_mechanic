@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   Text,
-  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Formik } from "formik";
@@ -20,8 +19,6 @@ import { router } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { step1Schema } from "@/utils/validationSchemas";
 import { mechanicRoutes, routes } from "@/constants/routes";
-import { CheckIcon } from "react-native-heroicons/outline";
-import { useState } from "react";
 import SelectField from "@/components/forms/SelectField";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
 

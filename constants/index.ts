@@ -13,6 +13,10 @@ import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar1.svg";
 import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
 import adsbackground from "@/assets/images/adsbackground.png";
+import carFront from "@/assets/images/frontCarPlaceholder.jpg";
+import carBack from "@/assets/images/carBack.png";
+import carRight from "@/assets/images/carRight.png";
+import carLeft from "@/assets/images/carLeft.png";
 
 import car1 from "@/assets/images/car.svg";
 import sparePart from "@/assets/images/sparePart.svg";
@@ -80,8 +84,9 @@ import carTow from "@/assets/icons/carTow.svg";
 //tabs icons
 import home from "@/assets/icons/home.svg";
 import earnings from "@/assets/icons/earnings.svg";
-import consultation from "@/assets/icons/consultation.svg";
+import order from "@/assets/icons/order.svg";
 import activeEarnings from "@/assets/icons/activeEarnings.svg";
+import activeOrder from "@/assets/icons/activeOrder.svg";
 import activeHome from "@/assets/icons/activeHome.svg";
 import activeServices from "@/assets/icons/activeServices.svg";
 import activeProfile from "@/assets/icons/activeProfile.svg";
@@ -96,7 +101,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { mechanicRoutes, routes } from "./routes";
+import { driverRoutes, mechanicRoutes, routes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -122,7 +127,12 @@ export const images = {
   otunba,
 
   mechanic_ads,
-  user1
+  user1,
+
+  carFront,
+  carBack,
+  carRight,
+  carLeft,
 };
 
 export const icons = {
@@ -142,7 +152,8 @@ export const icons = {
   earnings,
   activeEarnings,
   activeHome,
-  consultation,
+  order,
+  activeOrder,
   activeServices,
   activeProfile,
   activeCar,
@@ -213,7 +224,7 @@ export const Roles = [
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",
-    route: routes?.driverStep1,
+    route: driverRoutes?.chooseOptions,
   },
 ];
 
@@ -429,10 +440,10 @@ export const myCars = [
 
 export const Services: ServicesProps[] = [
   {
-    id: 1,
-    name: "Order a Ride",
-    description: "Book a ride to your destination",
-    image: orderRide,
+    id: 6,
+    name: "Find a Mechanic",
+    description: "Get a mechanic to fix your car",
+    image: mechanic2,
     bgColor: "#F3F2FE",
     border: "#ACA6FF",
   },
@@ -452,7 +463,14 @@ export const Services: ServicesProps[] = [
     bgColor: "#F8FFD8",
     border: "#F6B80D",
   },
-
+  {
+    id: 1,
+    name: "Order a Ride",
+    description: "Book a ride to your destination",
+    image: orderRide,
+    bgColor: "#F3F2FE",
+    border: "#ACA6FF",
+  },
   {
     id: 4,
     name: "Tow your car",
@@ -469,8 +487,9 @@ export const Services: ServicesProps[] = [
     bgColor: "#F3FFF1",
     border: "#189804",
   },
+  
   {
-    id: 6,
+    id: 7,
     name: "Chat a Specialist",
     description: "Get expert advice on your car",
     image: mechanic2,
@@ -560,6 +579,12 @@ export const MechanicProfileSettings = {
       name: "Change Password",
       image: padlock,
       route: "notifications",
+    },
+    {
+      id: 5,
+      name: "Switch user",
+      image: switch1,
+      route: "editProfile",
     },
   ],
 };

@@ -3,15 +3,12 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import { icons } from "@/constants";
 import { maskEmail } from "@/utils/emailUtils";
 import OTPInput from "@/components/OTPInput";
 import { useRouter } from "expo-router";
-import BackArrowBtn from "@/components/BackArrowBtn";
 import { mechanicRoutes } from "@/constants/routes";
 import ProgressBar from "@/components/ProgressBar";
 import UserAuthHeader from "@/components/UserAuthHeader";

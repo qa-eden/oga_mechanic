@@ -211,9 +211,9 @@ const paymentConfirm = () => {
             }}
           >
             <CustomButton
-              title="Continue Shopping"
+              title="Done"
               className="py-4"
-              onPress={() => router?.replace(routes?.home)}
+              onPress={() => { router?.back(); router?.back() }}
             />
           </Animated.View>
         </View>

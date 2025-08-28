@@ -17,11 +17,6 @@ export const routes = {
   merchantStep2: "/(auth)/(register)/merchant/step2",
   merchantStep3: "/(auth)/(register)/merchant/step3",
 
-  // Registration driver steps
-  driverStep1: "/(auth)/(register)/driver/step1",
-  driverStep2: "/(auth)/(register)/driver/step2",
-  driverStep3: "/(auth)/(register)/driver/step3",
-
   // Success pages
   accountCreated: "/(auth)/accountCreatedSucessful",
   resetPasswordSuccess: "/(auth)/resetPasswordSucessful",
@@ -42,7 +37,8 @@ export const routes = {
   AllMechanic: "/(root)/(screens)/(mechanicScreens)/all-mechanic",
   mechanicProfile: "/(root)/(screens)/(mechanicScreens)/mechanic-profile",
   chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
-  
+  findMechanic: "/(root)/(screens)/(user)/(ordermechanic)/find-mechanic",
+
 
   //calls
   videoCall: "/(root)/(screens)/(calls)/video-call",
@@ -51,9 +47,9 @@ export const routes = {
   // Order ride
   enterAddressForRide: "/(root)/(screens)/(orderRide)/enterAddressForRide",
   locationSelection: "/(root)/(screens)/(orderRide)/location-selection",
-  chooseRide:  "/(root)/(screens)/(orderRide)/choose-ride",
-  rideTracking:  "/(root)/(screens)/(orderRide)/ride-tracking",
-  chatDriver:  "/(root)/(screens)/(orderRide)/chat-driver",
+  chooseRide: "/(root)/(screens)/(orderRide)/choose-ride",
+  rideTracking: "/(root)/(screens)/(orderRide)/ride-tracking",
+  chatDriver: "/(root)/(screens)/(orderRide)/chat-driver",
 
   // Rent a car
   rentACar: "/(root)/(screens)/(rentCar)/rent-a-car",
@@ -85,9 +81,36 @@ export const mechanicRoutes = {
   profile: "/(root)/(tabs)/(mechanic)/profile",
 
   ConfirmWithdrawal: "/(root)/(screens)/(mechanic)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(mechanic)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(mechanic)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(mechanic)/editProfile",
 } as const;
 
 export type MechanicRouteKeys = keyof typeof mechanicRoutes;
 export type MechanicRouteValues = (typeof mechanicRoutes)[MechanicRouteKeys];
+
+// driver routes
+export const driverRoutes = {
+  chooseOptions: "/(auth)/(register)/driver/choose-options",
+  welcomeDriver: "/(auth)/(register)/driver/welcome-driver",
+  step1: "/(auth)/(register)/driver/step1",
+  step2: "/(auth)/(register)/driver/step2",
+  step4: "/(auth)/(register)/driver/step4",
+  step5: "/(auth)/(register)/driver/step5",
+  step6: "/(auth)/(register)/driver/step6",
+  step7: "/(auth)/(register)/driver/step7",
+
+  // Mechanic tabs
+  home: "/(root)/(tabs)/(driver)/home",
+  earnings: "/(root)/(tabs)/(driver)/earnings",
+  order: "/(root)/(tabs)/(driver)/order",
+  profile: "/(root)/(tabs)/(driver)/profile",
+
+  ConfirmWithdrawal: "/(root)/(screens)/(driver)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(driver)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(driver)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(driver)/editProfile",
+} as const;
+
+export type DriverRouteKeys = keyof typeof driverRoutes;
+export type DriverRouteValues = (typeof driverRoutes)[DriverRouteKeys];

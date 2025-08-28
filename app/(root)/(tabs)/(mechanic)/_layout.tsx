@@ -26,7 +26,8 @@ export default function Layout() {
 
   // Function to render tab icons with labels
   const renderTabBar = () => {
-    // Define the icon and label for each tab
+    // Define the icon and label for each tab  order,
+  // activeOrder,
     const tabInfo: Record<
       string,
       {
@@ -43,9 +44,9 @@ export default function Layout() {
         component: MechanicHome,
       },
       consultation: {
-        icon: <icons.earnings />,
-        activeIcon: <icons.activeEarnings />,
-        label: "Consultation",
+        icon: <icons.order />,
+        activeIcon: <icons.activeOrder />,
+        label: "Orders",
         component: MechanicOrder,
       },
       earnings: {
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     minHeight: 90,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#888",
     marginTop: 4,
     fontFamily: "Nunito-Regular",

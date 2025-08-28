@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { BellIcon, EyeIcon } from "react-native-heroicons/outline";
+import { BellIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { images } from "@/constants";
+import OrderCard, { Order } from "@/components/OrderCard";
+import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -46,6 +48,40 @@ const MechanicHome = () => {
     },
   ];
 
+  const currentOrders: Order[] = [
+    {
+      id: "1",
+      clientName: "Susan Sheidu",
+      phoneNumber: "09087654322",
+      carType: "Mercedes Benz",
+      carIssue: "Bad engine response",
+    },
+    {
+      id: "2",
+      clientName: "David Wilson",
+      phoneNumber: "08076543210",
+      carType: "BMW X5",
+      carIssue: "Transmission repair",
+    },
+    {
+      id: "3",
+      clientName: "Sarah Connor",
+      phoneNumber: "08065432109",
+      carType: "Audi A4",
+      carIssue: "Air conditioning not working",
+    },
+  ];
+
+  const handleAccept = (orderId: string) => {
+    console.log("Accept order:", orderId);
+    // Handle accept logic here
+  };
+
+  const handleDecline = (orderId: string) => {
+    console.log("Decline order:", orderId);
+    // Handle decline logic here
+  };
+
   const ratingData = [
     { stars: 5, count: 900, percentage: 90 },
     { stars: 4, count: 50, percentage: 5 },
@@ -57,7 +93,7 @@ const MechanicHome = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
-      
+
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 py-4 bg-white">
@@ -82,23 +118,21 @@ const MechanicHome = () => {
           <View className="rounded-2xl mb-6 overflow-hidden">
             <ImageBackground
               source={images?.mechanic_ads}
-              className="w-full"
+              className="w-full h-[150px] bg-cover bg-center"
               resizeMode="cover"
             >
-              <View className="bg-black/40 p-6">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Text className="text-white text-xl font-NunitoBold mb-2">
-                      Let's fix some cars
-                    </Text>
-                    <Text className="text-gray-300 text-sm font-NunitoMedium mb-4">
-                      Connecting with car owners
-                    </Text>
-                    <TouchableOpacity className="bg-white px-4 py-2 rounded-full self-start flex-row items-center space-x-2 gap-2">
-                      <EyeIcon size={17} />
-                      <Text className="text-black font-NunitoBold">View all consultation</Text>
-                    </TouchableOpacity>
-                  </View>
+              <View className="bg-black/40 flex-1 justify-center items-start p-6">
+                <View className="items-start">
+                  <Text className="text-white text-[1.4rem] font-NunitoBold mb-2 text-start">
+                    Let's fix some cars
+                  </Text>
+                  <Text className="text-gray-300 text-md font-NunitoMedium text-start">
+                    Connecting with car owners
+                  </Text>
+                  {/* <TouchableOpacity className="bg-white px-4 py-2 rounded-full self-start flex-row items-center space-x-2 gap-2">
+                    <EyeIcon size={17} />
+                    <Text className="text-black font-NunitoBold">View all consultation</Text>
+                  </TouchableOpacity> */}
                 </View>
               </View>
             </ImageBackground>
@@ -166,41 +200,30 @@ const MechanicHome = () => {
           </View>
 
           {/* New Consultations */}
-          <View className="bg-white rounded-2xl p-6 shadow-sm">
-            <View className="flex-row items-center justify-between mb-4">
+          <View >
+            <View className="flex-row items-center justify-between my-4">
               <Text className="text-lg font-NunitoBold text-gray-900">
-                New Consultation
+                Recent Current Orders
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router?.push("./order")}>
                 <Text className="text-red-600 font-NunitoBold">View All</Text>
               </TouchableOpacity>
             </View>
 
-            {consultations.map((consultation, index) => (
-              <View key={consultation.id} className={`flex-row items-center justify-between py-3 ${index < consultations.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                <View className="flex-row items-center flex-1">
-                  <Image
-                    source={consultation.avatar}
-                    
-                    className="w-10 h-10 rounded-full mr-3 bg-gray-100"
-                  />
-                  <View className="flex-1">
-                    <Text className="font-NunitoBold text-gray-900">
-                      {consultation.name}
-                    </Text>
-                    <Text className="text-sm text-gray-600 font-NunitoMedium">
-                      {consultation.email}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity className="bg-red-600 px-4 py-2 rounded-full">
-                  <Text className="text-white font-NunitoBold text-sm">Visit</Text>
-                </TouchableOpacity>
-              </View>
+           <View className="">
+             {currentOrders.slice(0, 3).map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                type="current"
+                onAccept={handleAccept}
+                onDecline={handleDecline}
+              />
             ))}
+           </View>
           </View>
 
-          <View className="h-20" />
+          {/* <View className="h-10" /> */}
         </View>
       </ScrollView>
     </SafeAreaView>

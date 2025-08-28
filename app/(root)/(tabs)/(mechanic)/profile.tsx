@@ -23,11 +23,13 @@ import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes, mechanicRoutes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
+import SwitchUserModal from "@/components/modals/SwitchUserModal";
 
 const MechanicProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -51,6 +53,12 @@ const MechanicProfile = () => {
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
+  };
+
+  const handleSwitchUser = (userType: string) => {
+    // Handle user switching logic here
+    console.log("Switching to user type:", userType);
+    // You can add navigation logic or state management here
   };
 
   const ProfilePref = {
@@ -127,6 +135,8 @@ const MechanicProfile = () => {
                 onPress={() => {
                   if (item.name === "My Profile") {
                     router.push(mechanicRoutes.EditProfile);
+                  } else if (item.name === "Switch user") {
+                    setShowSwitchUserModal(true);
                   }
                   // Add other navigation logic here for other items
                 }}
@@ -230,6 +240,13 @@ const MechanicProfile = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Switch User Modal */}
+      <SwitchUserModal
+        isVisible={showSwitchUserModal}
+        onClose={() => setShowSwitchUserModal(false)}
+        onSwitchUser={handleSwitchUser}
+      />
     </SafeAreaView>
   );
 };

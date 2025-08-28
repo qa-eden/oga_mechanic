@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from "react-native";
 import { ChevronDownIcon } from "react-native-heroicons/outline";
 
 interface SelectOption {
@@ -31,7 +31,7 @@ const SelectField = ({
   error,
   touched,
   disabled = false,
-  labelStyle = "mt-2",
+  labelStyle = "mb-3",
   required = false,
 }: SelectFieldProps) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -51,55 +51,83 @@ const SelectField = ({
   };
 
   return (
-    <View className={labelStyle}>
+    <View className="relative">
       {label && (
-            <Text
-              className={`text-base font-NunitoSemiBold text-gray-700 mb-2 ${labelStyle}`}
-            >
-              {label}
-              {required && <Text className="text-red-500 ml-1">*</Text>}
-            </Text>
-          )}
+        <Text
+          className={`text-base font-NunitoBold text-gray-900 mb-3 ${labelStyle}`}
+        >
+          {label}
+          {required && <Text className="text-red-500 ml-1">*</Text>}
+        </Text>
+      )}
 
       <TouchableOpacity
         onPress={handlePress}
-        className={`border-2 rounded-[.6rem] px-4 py-4 flex-row items-center justify-between bg-white ${
-          hasError ? "border-red-500" : "border-[#D1D5DB]"
-        } ${disabled ? "opacity-50" : ""}`}
+        className={`border-2 rounded-xl px-4 py-4 flex-row items-center justify-between bg-white transition-all duration-200 ${
+          hasError 
+            ? "border-red-500 bg-red-50" 
+            : showDropdown 
+            ? "border-blue-500 bg-blue-50" 
+            : "border-gray-200 hover:border-gray-300"
+        } ${disabled ? "opacity-50 bg-gray-50" : ""}`}
         disabled={disabled}
+        activeOpacity={0.7}
       >
         <Text
-          className={`font-NunitoMedium text-lg ${
-            value ? "text-gray-900" : "text-gray-400"
+          className={`font-NunitoMedium text-base ${
+            value ? "text-gray-900" : "text-gray-500"
           }`}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <ChevronDownIcon size={20} color={disabled ? "#9CA3AF" : "#6B7280"} />
+        <View className={`transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}>
+          <ChevronDownIcon 
+            size={20} 
+            color={hasError ? "#EF4444" : showDropdown ? "#3B82F6" : "#6B7280"} 
+          />
+        </View>
       </TouchableOpacity>
 
       {hasError && (
-        <Text className="text-red-500 text-xs font-NunitoMedium mt-1">
+        <Text className="text-red-500 text-sm font-NunitoMedium mt-2 ml-1">
           {error}
         </Text>
       )}
 
       {showDropdown && !disabled && (
-        <View className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-40">
-          <ScrollView>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => handleSelect(option)}
-                className="px-4 py-3 border-b border-gray-100"
-              >
-                <Text className="text-gray-900 font-NunitoMedium">
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        <>
+          {/* Backdrop overlay */}
+          <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
+            <View className="absolute inset-0 -z-10" />
+          </TouchableWithoutFeedback>
+          
+          {/* Dropdown */}
+          <View className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-xl mt-2 z-50 shadow-xl shadow-gray-300 max-h-48">
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              className="max-h-48"
+            >
+              {options.map((option, index) => (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => handleSelect(option)}
+                  className={`px-4 py-3.5 border-b border-gray-100 last:border-b-0 transition-colors duration-150 ${
+                    option.value === value 
+                      ? "bg-blue-50 border-blue-200" 
+                      : "hover:bg-gray-50"
+                  }`}
+                  activeOpacity={0.7}
+                >
+                  <Text className={`font-NunitoMedium text-base ${
+                    option.value === value ? "text-blue-700" : "text-gray-700"
+                  }`}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </>
       )}
     </View>
   );

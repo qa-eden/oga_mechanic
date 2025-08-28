@@ -10,6 +10,7 @@ interface FormikInputProps extends InputFieldProps {
   name: string
   type?: string
   secureTextEntry?: boolean
+  containerStyle1?: string
 }
 
 function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikInputProps) {
@@ -94,6 +95,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
       keyboardType={keyboardType}
       autoCapitalize={autoCapitalize}
       autoCorrect={autoCorrect}
+      containerStyle1={props.containerStyle1}
       {...props}
     />
   )
