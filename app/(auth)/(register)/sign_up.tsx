@@ -17,11 +17,51 @@ import { StatusBar } from "expo-status-bar";
 import { routes } from "@/constants/routes";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { height } = Dimensions.get("window");
 
 const SignUp = () => {
   const router = useRouter();
+
+  // Function to save selected role to local storage
+  const saveSelectedRole = async (role: any) => {
+    try {
+      console.log('💾 Saving role to storage:', role);
+      console.log('💾 Role ID:', role.id, 'Role Title:', role.title);
+      
+      await AsyncStorage.setItem('selectedRole', JSON.stringify(role));
+      console.log('✅ Role saved to local storage:', role.title);
+      
+      // Verify what was saved
+      const savedRole = await AsyncStorage.getItem('selectedRole');
+      console.log('🔍 Verification - saved role:', savedRole);
+      
+    } catch (error) {
+      console.error('❌ Error saving role to local storage:', error);
+    }
+  };
+
+  // Handle role selection
+  const handleRoleSelection = async (role: any) => {
+    try {
+      // Clear any previously saved role first
+      await AsyncStorage.removeItem('selectedRole');
+      
+      // Save the new role to local storage
+      await saveSelectedRole(role);
+      
+      // Small delay to ensure AsyncStorage write completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Then navigate to the role's route
+      router?.push(role?.route as any);
+    } catch (error) {
+      console.error('❌ Error during role selection:', error);
+      // Still navigate even if saving fails
+      router?.push(role?.route as any);
+    }
+  };
 
   // Animation values
   const backgroundScale = useRef(new Animated.Value(1.1)).current;
@@ -105,6 +145,18 @@ const SignUp = () => {
         ]),
       ]),
     ]).start();
+
+    // Clear any stale role data when component mounts
+    const clearStaleRole = async () => {
+      try {
+        await AsyncStorage.removeItem('selectedRole');
+        console.log('🧹 Cleared stale role data on component mount');
+      } catch (error) {
+        console.error('❌ Error clearing stale role:', error);
+      }
+    };
+    
+    clearStaleRole();
   }, []);
 
   return (
@@ -211,7 +263,7 @@ const SignUp = () => {
                     borderColor: item?.border,
                   }}
                   className="w-[48%] h-[137px] p-4 rounded-2xl items-center"
-                  onPress={() => router?.push(item?.route as any)}
+                  onPress={() => handleRoleSelection(item)}
                   activeOpacity={0.8}
                 >
                   <View className="w-full flex flex-row justify-end">

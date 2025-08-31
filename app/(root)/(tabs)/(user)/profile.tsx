@@ -23,6 +23,8 @@ import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
+import { useUserStore } from "@/stores/userStore";
+import LogoutModal from "@/components/modals/LogoutModal";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -191,52 +193,11 @@ const Profile = () => {
       </ScrollView>
 
       {/* Logout Modal */}
-      <Modal
+      <LogoutModal
         visible={showLogoutModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelLogout}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center px-5">
-          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            {/* Header */}
-            <View className="items-center mb-6">
-              <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
-                <Text className="text-3xl">🚪</Text>
-              </View>
-              <Text className="text-xl font-NunitoBold text-gray-900 text-center">
-                Logout
-              </Text>
-              <Text className="text-gray-600 text-center mt-2 font-NunitoMedium">
-                Are you sure you want to logout from your account?
-              </Text>
-            </View>
-
-            {/* Buttons */}
-            <View className="space-y-3">
-              <TouchableOpacity
-                onPress={confirmLogout}
-                className="bg-red-500 py-4 rounded-xl items-center"
-                activeOpacity={0.8}
-              >
-                <Text className="text-white font-NunitoBold text-base">
-                  Yes, Logout
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={cancelLogout}
-                className="bg-gray-100 py-4 mt-4 border border-gray-300 rounded-xl items-center"
-                activeOpacity={0.8}
-              >
-                <Text className="text-gray-700 font-NunitoBold text-base">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onConfirm={confirmLogout}
+        onCancel={cancelLogout}
+      />
 
       {/* Switch User Modal */}
       <SwitchUserModal

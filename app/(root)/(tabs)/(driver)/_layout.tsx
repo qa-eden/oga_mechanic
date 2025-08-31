@@ -13,10 +13,10 @@ import { icons } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Import your actual tab screen components
-import MechanicEarnings from "./earnings";
-import MechanicOrder from "./order";
-import MechanicProfile from "./profile";
-import MechanicHome from "./home";
+import DriverEarnings from "./earnings";
+import DriverHome from "./home";
+import DriverOrder from "./order";
+import DriverProfile from "./profile";
 
 export default function Layout() {
   // const router = useRouter();
@@ -41,25 +41,25 @@ export default function Layout() {
         icon: <icons.home />,
         activeIcon: <icons.activeHome />,
         label: "Home",
-        component: MechanicHome,
+        component: DriverHome,
       },
       consultation: {
         icon: <icons.order />,
         activeIcon: <icons.activeOrder />,
         label: "Orders",
-        component: MechanicOrder,
+        component: DriverOrder,
       },
       earnings: {
         icon: <icons.earnings />,
         activeIcon: <icons.activeEarnings />,
         label: "Earnings",
-        component: MechanicEarnings,
+        component: DriverEarnings,
       },
       profile: {
         icon: <icons.profile />,
         activeIcon: <icons.activeProfile />,
         label: "Profile",
-        component: MechanicProfile,
+        component: DriverProfile,
       },
     };
 
@@ -96,12 +96,12 @@ export default function Layout() {
   // Get the active component
   const getActiveComponent = () => {
     const tabInfo: Record<string, React.ComponentType> = {
-      home: MechanicHome,
-      consultation: MechanicOrder,
-      earnings: MechanicEarnings,
-      profile: MechanicProfile,
+      home: DriverHome,
+      consultation: DriverOrder,
+      earnings: DriverEarnings,
+      profile: DriverProfile,
     };
-    const ActiveComponent = tabInfo[activeTab] || MechanicHome;
+    const ActiveComponent = tabInfo[activeTab] || DriverHome;
     return <ActiveComponent />;
   };
 

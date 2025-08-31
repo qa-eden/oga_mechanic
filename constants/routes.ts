@@ -100,7 +100,7 @@ export const driverRoutes = {
   step6: "/(auth)/(register)/driver/step6",
   step7: "/(auth)/(register)/driver/step7",
 
-  // Mechanic tabs
+  // driver tabs
   home: "/(root)/(tabs)/(driver)/home",
   earnings: "/(root)/(tabs)/(driver)/earnings",
   order: "/(root)/(tabs)/(driver)/order",

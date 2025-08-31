@@ -14,6 +14,7 @@ import UserAuthHeader from '@/components/UserAuthHeader'
 import ProgressBar from '@/components/ProgressBar'
 import CountryStatePicker from '@/components/CountryStatePicker'
 import DatePicker from '@/components/DatePicker'
+import TermsModal from '@/components/modals/TermsModal'
 import { driverRoutes, routes } from '@/constants/routes'
 import { Country } from 'react-native-country-picker-modal'
 import AuthNavigateLink from '@/components/AuthNavigateLink'
@@ -56,6 +57,7 @@ const Step1 = () => {
     const [showDatePicker, setShowDatePicker] = useState(false)
     const [dateOfBirth, setDateOfBirth] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [showTermsModal, setShowTermsModal] = useState(false)
 
     const handleSubmit = (values: any) => {
         router.push(driverRoutes.step2)
@@ -268,15 +270,21 @@ const Step1 = () => {
                                         name="termsAccepted"
                                         label=""
                                     />
-                                    <Text className="text-gray-600 text-sm mt-2">
-                                        By registering you accept our <Text className="text-red-500 font-semibold">Terms and Conditions</Text>, and <Text className="text-red-500 font-semibold">Privacy Policy</Text> on this platform.
-                                    </Text>
+                                    <View className="text-gray-600 text-sm mt-2 flex-row items-center flex-wrap">
+                                        <Text className="text-gray-600 text-sm">By registering you accept our </Text>
+                                        <TouchableOpacity onPress={() => setShowTermsModal(true)}>
+                                            <Text className="text-red-500 font-semibold">Terms and Conditions</Text>
+                                        </TouchableOpacity>
+                                        <Text className="text-gray-600 text-sm">, and </Text>
+                                        <Text className="text-red-500 font-semibold">Privacy Policy</Text>
+                                        <Text className="text-gray-600 text-sm"> on this platform.</Text>
+                                    </View>
                                 </View>
 
                                 {/* Submit Button */}
                                 <View className="my-8">
                                     <CustomButton
-                                        title={isSubmitting ? "Processing..." : "Get OTP"}
+                                        title={isSubmitting ? "Processing..." : "Proceed"}
                                         onPress={() => { handleSubmit(); router.push(driverRoutes.step2) }}
                                         disabled={!isFormValid || isSubmitting}
                                         className="py-5"
@@ -317,6 +325,12 @@ const Step1 = () => {
                 }}
                 selectedDate={dateOfBirth}
                 title="Select Date of Birth"
+            />
+
+            {/* Terms Modal */}
+            <TermsModal
+                visible={showTermsModal}
+                onClose={() => setShowTermsModal(false)}
             />
         </RNSafeAreaView>
     )

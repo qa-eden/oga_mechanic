@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native'
 import { ChevronDownIcon, XMarkIcon, CheckCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
-import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
+import { Country, CountryCode } from 'react-native-country-picker-modal'
 import { IState } from 'countries-states-cities'
 
 interface CountryStatePickerProps {
@@ -50,6 +50,34 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     }
   }
 
+  // Get countries list
+  const countries = useMemo(() => {
+    const popularCountries = [
+      { cca2: 'NG', name: 'Nigeria', callingCode: ['234'], flag: '🇳🇬' },
+      { cca2: 'US', name: 'United States', callingCode: ['1'], flag: '🇺🇸' },
+      { cca2: 'GB', name: 'United Kingdom', callingCode: ['44'], flag: '🇬🇧' },
+      { cca2: 'FR', name: 'France', callingCode: ['33'], flag: '🇫🇷' },
+      { cca2: 'DE', name: 'Germany', callingCode: ['49'], flag: '🇩🇪' },
+      { cca2: 'JP', name: 'Japan', callingCode: ['81'], flag: '🇯🇵' },
+      { cca2: 'CN', name: 'China', callingCode: ['86'], flag: '🇨🇳' },
+      { cca2: 'IN', name: 'India', callingCode: ['91'], flag: '🇮🇳' },
+      { cca2: 'CA', name: 'Canada', callingCode: ['1'], flag: '🇨🇦' },
+      { cca2: 'AU', name: 'Australia', callingCode: ['61'], flag: '🇦🇺' },
+      { cca2: 'BR', name: 'Brazil', callingCode: ['55'], flag: '🇧🇷' },
+      { cca2: 'MX', name: 'Mexico', callingCode: ['52'], flag: '🇲🇽' },
+      { cca2: 'ZA', name: 'South Africa', callingCode: ['27'], flag: '🇿🇦' },
+      { cca2: 'EG', name: 'Egypt', callingCode: ['20'], flag: '🇪🇬' },
+      { cca2: 'KE', name: 'Kenya', callingCode: ['254'], flag: '🇰🇪' },
+      { cca2: 'GH', name: 'Ghana', callingCode: ['233'], flag: '🇬🇭' }
+    ]
+    return popularCountries
+  }, [])
+
+  const filteredCountries = countries.filter((country: any) => 
+    country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    country.cca2.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   // Get states dynamically from the package
   const states = useMemo(() => {
     console.log('🔍 States calculation triggered for country:', selectedCountry?.cca2)
@@ -88,8 +116,6 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
         'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
       ]
     }
-    
-    console.log('⚠️ No states found, returning empty array')
     return []
   }, [selectedCountry])
 
@@ -97,7 +123,7 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     state.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleCountrySelect = (country: Country) => {
+  const handleCountrySelect = (country: any) => {
     onCountryChange(country)
     onStateChange('') // Reset state when country changes
     setShowCountry(false)
@@ -113,37 +139,72 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   return (
     <>
       {/* Country Picker Modal */}
-      {showCountry && (
-        <CountryPicker
-          countryCode={selectedCountry?.cca2 as CountryCode || 'NG'}
-          visible={true}
-          onSelect={handleCountrySelect}
-          onClose={() => setShowCountry(false)}
-          withFilter
-          withFlag
-          withCallingCode
-          withEmoji
-          // withCurrency
-          withModal
-          modalProps={{
-            animationType: 'slide',
-            transparent: true,
-          }}
-          theme={{
-            flagSize: 25,
-            fontSize: 16,
-            primaryColor: '#EF4444',
-            primaryColorVariant: '#FEE2E2',
-            backgroundColor: '#FFFFFF',
-            onBackgroundTextColor: '#1F2937',
-            filterPlaceholderTextColor: '#6B7280',
-          }}
-          filterProps={{
-            placeholder: "Search countries...",
-            autoFocus: false,
-          }}
-        />
-      )}
+      <Modal
+        visible={showCountry}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCountry(false)}
+      >
+        <View className="flex-1 bg-black/30">
+          <View className="flex-1 mt-20 bg-white rounded-t-3xl">
+            {/* Header */}
+            <View className="flex-row items-center justify-between p-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-900">Select Country</Text>
+              <TouchableOpacity onPress={() => setShowCountry(false)} className="p-2">
+                <XMarkIcon size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search */}
+            <View className="p-6 border-b border-gray-100">
+              <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
+                <MagnifyingGlassIcon size={20} color="gray" />
+                <TextInput
+                  placeholder="Search countries..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="flex-1 ml-2 text-base"
+                />
+              </View>
+            </View>
+
+            {/* Country List */}
+            <FlatList
+              data={filteredCountries}
+              keyExtractor={(item) => item.cca2}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleCountrySelect(item)}
+                  className={`p-4 border-b border-gray-100 ${
+                    selectedCountry?.cca2 === item.cca2 ? 'bg-red-50' : ''
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <Text className="text-2xl mr-3">{item.flag}</Text>
+                      <View>
+                        <Text className="text-base font-medium text-gray-900">{item.name}</Text>
+                        <Text className="text-sm text-gray-500">+{item.callingCode[0]}</Text>
+                      </View>
+                    </View>
+                    {selectedCountry?.cca2 === item.cca2 && (
+                      <CheckCircleIcon size={24} color="#EF4444" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              )}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View className="p-8 items-center">
+                  <Text className="text-gray-500 text-center">
+                    No countries found matching "{searchQuery}"
+                  </Text>
+                </View>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* State Picker Modal */}
       <Modal
@@ -152,20 +213,20 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
         animationType="slide"
         onRequestClose={() => setShowState(false)}
       >
-        <View className="flex-1 bg-black/20 justify-end">
-          <View className="bg-white rounded-t-3xl max-h-[70%]">
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 mt-20 bg-white rounded-t-3xl">
             {/* Header */}
-            <View className="flex-row items-center justify-between p-4 border-b border-gray-200">
-              <Text className="text-lg font-semibold text-gray-900">
+            <View className="flex-row items-center justify-between p-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-900">
                 Select State/Province
               </Text>
               <TouchableOpacity onPress={() => setShowState(false)}>
-                <XMarkIcon size={24} color="gray" />
+                <XMarkIcon size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
             {/* Search */}
-            <View className="p-4 border-b border-gray-100">
+            <View className="p-6 border-b border-gray-100">
               <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
                 <MagnifyingGlassIcon size={20} color="gray" />
                 <TextInput

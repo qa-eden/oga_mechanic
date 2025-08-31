@@ -37,6 +37,7 @@ const VINInput: React.FC<VINInputProps> = ({
 
   // 1GNEK13ZX3R298984 or 4Y1SL65848Z411439 or 1GNEK13ZX3R298984
 
+
   const handleBlur = () => {
     setFieldTouched(name, true)
   }

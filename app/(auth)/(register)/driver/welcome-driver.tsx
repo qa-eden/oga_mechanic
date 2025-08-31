@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useEffect } from 'react'
-import { View, Text, TouchableOpacity } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { StatusBar } from 'expo-status-bar'
+import React, { useState, useEffect } from 'react'
+import { View, Text, ScrollView } from 'react-native'
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context'
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import Animated, { useSharedValue, withSpring, withTiming } from 'react-native-reanimated'
 import { routes, mechanicRoutes, driverRoutes } from '@/constants/routes'
 import { icons } from '@/constants'
-import CustomButton from '@/components/CustomButton';
-import BackArrowBtn from '@/components/BackArrowBtn';
+import CustomButton from '@/components/CustomButton'
+import BackArrowBtn from '@/components/BackArrowBtn'
 
 const WelcomeDriver = () => {
   const router = useRouter()
   const params = useLocalSearchParams()
   const type = params.type as string
+  const [isSignUpLoading, setIsSignUpLoading] = useState(false)
+  const [isSignInLoading, setIsSignInLoading] = useState(false)
 
   // Animation values
   const logoScale = useSharedValue(0.8)
@@ -32,9 +34,35 @@ const WelcomeDriver = () => {
       : 'Ride with us, Get where you need to go'
   }
 
+  const handleSignUp = async () => {
+    if (router && driverRoutes.step1) {
+      setIsSignUpLoading(true)
+      try {
+        await router.push(driverRoutes.step1)
+      } catch (error) {
+        console.error('Navigation error:', error)
+      } finally {
+        setIsSignUpLoading(false)
+      }
+    }
+  }
+
+  const handleSignIn = async () => {
+    if (router && routes.signIn) {
+      setIsSignInLoading(true)
+      try {
+        await router.push(routes.signIn)
+      } catch (error) {
+        console.error('Navigation error:', error)
+      } finally {
+        setIsSignInLoading(false)
+      }
+    }
+  }
+
   return (
-    <SafeAreaView className="flex-1 h-screen bg-white" edges={["top"]}>
-      <StatusBar style="dark" />
+    <RNSafeAreaView className="flex-1 h-screen bg-white" edges={["top"]}>
+      <ExpoStatusBar style="dark" />
 
       <BackArrowBtn text="Go back" className="ml-4 mt-4" />
 
@@ -50,8 +78,11 @@ const WelcomeDriver = () => {
           >
             <icons.splash width={180} height={90} />
 
-            {/* Subtitle */}
-            <Text className="text-lg text-gray-500 font-NunitoMedium text-center leading-relaxed mt-6">
+            <Text className="text-2xl font-bold text-gray-900 mt-6 text-center">
+              Welcome to OGA MECHANIC
+            </Text>
+
+            <Text className="text-lg text-gray-600 mt-4 text-center px-4">
               {getSubtitle()}
             </Text>
           </Animated.View>
@@ -59,25 +90,23 @@ const WelcomeDriver = () => {
 
         {/* Action Buttons */}
         <View className="mt-auto pb-[5rem]">
-        
-
           <CustomButton
-              title="Sign up"
-              className="py-5 mb-3 mt-2 shadow-lg"
-              onPress={() => {
-                router?.push(driverRoutes?.step1 as any)
-              }}
-            />
-            <CustomButton
-              onPress={() => router?.push(routes?.signIn as any)}
-              title="Sign in"
-              bgVariant="dangerborder"
-              textVariant="dangerborder"
-              className="py-5 my-2 shadow-sm"
-            />
+            title="Sign up"
+            className="py-5 mb-3 mt-2 shadow-lg"
+            onPress={handleSignUp}
+            loading={isSignUpLoading}
+          />
+          <CustomButton
+            title="Sign in"
+            bgVariant="dangerborder"
+            textVariant="dangerborder"
+            className="py-5 mb-3 shadow-lg"
+            onPress={handleSignIn}
+            loading={isSignInLoading}
+          />
         </View>
       </View>
-    </SafeAreaView>
+    </RNSafeAreaView>
   );
 }
 

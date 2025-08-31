@@ -2,159 +2,181 @@ import React, { useState } from 'react'
 import { View, Text, SafeAreaView, StatusBar, ScrollView, TouchableOpacity, Alert } from 'react-native'
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import CustomButton from '@/components/CustomButton'
 import BackArrowBtn from '@/components/BackArrowBtn'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
-import { Ionicons } from '@expo/vector-icons'
+import UserAuthHeader from '@/components/UserAuthHeader'
+import ProgressBar from '@/components/ProgressBar'
+import AuthNavigateLink from '@/components/AuthNavigateLink'
+import { driverRoutes, routes } from '@/constants/routes'
+import FormikInput from '@/components/forms/FormikInput'
+import SuccessModal from '@/components/SuccessModal'
 
 const validationSchema = Yup.object().shape({
-  // No validation needed for final step, just confirmation
+  password: Yup.string()
+    .min(8, 'Password must be at least 8 characters')
+    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .matches(/[0-9]/, 'Password must contain at least one number')
+    .required('Password is required'),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('password')], 'Passwords must match')
+    .required('Please confirm your password'),
 })
 
 const Step7 = () => {
   const router = useRouter()
-  const [documentsUploaded, setDocumentsUploaded] = useState({
-    driversLicense: false,
-    insuranceCard: false,
-    vehicleRegistration: false,
-    profilePhoto: false,
-  })
+  const params = useLocalSearchParams()
+  const userType = params.type as string || 'driver'
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
-  const handleDocumentUpload = (documentType: string) => {
-    // Simulate document upload
-    setDocumentsUploaded(prev => ({
-      ...prev,
-      [documentType]: !prev[documentType as keyof typeof prev]
-    }))
-  }
-
-  const handleSubmit = () => {
-    const allUploaded = Object.values(documentsUploaded).every(uploaded => uploaded)
-    
-    if (!allUploaded) {
-      Alert.alert(
-        'Documents Required',
-        'Please upload all required documents before proceeding.',
-        [{ text: 'OK' }]
-      )
-      return
+  const handleSubmit = (values: any) => {
+    try {
+      console.log('Password Setup:', { password: values.password, confirmPassword: values.confirmPassword })
+      setShowSuccessModal(true)
+    } catch (error) {
+      console.error('❌ Error in handleSubmit:', error)
     }
-
-    Alert.alert(
-      'Registration Complete!',
-      'Your driver registration has been submitted successfully. We will review your application and contact you within 24-48 hours.',
-      [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/(auth)/(login)/sign_in')
-        }
-      ]
-    )
   }
 
-  const DocumentUploadItem = ({ 
-    title, 
-    description, 
-    type, 
-    isUploaded 
-  }: { 
-    title: string
-    description: string
-    type: string
-    isUploaded: boolean
-  }) => (
-    <TouchableOpacity
-      onPress={() => handleDocumentUpload(type)}
-      className={`p-4 border-2 rounded-xl mb-4 ${
-        isUploaded 
-          ? 'border-green-500 bg-green-50' 
-          : 'border-gray-300 bg-gray-50'
-      }`}
-    >
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1">
-          <Text className="text-lg font-semibold text-gray-900 mb-1">
-            {title}
-          </Text>
-          <Text className="text-gray-600 text-sm">
-            {description}
-          </Text>
-        </View>
-        <View className="ml-4">
-          {isUploaded ? (
-            <View className="w-10 h-10 bg-green-500 rounded-full items-center justify-center">
-              <Ionicons name="checkmark" size={24} color="white" />
-            </View>
-          ) : (
-            <View className="w-10 h-10 bg-gray-300 rounded-full items-center justify-center">
-              <Ionicons name="add" size={24} color="gray" />
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  )
+  const handleModalClose = () => {
+    setShowSuccessModal(false)
+    // Navigate to sign-in page after modal closes
+    if (router && routes?.signIn) {
+      router.replace(routes.signIn)
+    }
+  }
+
+  // Dynamic success message based on user type
+  const getSuccessMessage = () => {
+    if (userType === 'rider') {
+      return "You have successfully created your rider account and can proceed to sign in."
+    }
+    return "You have successfully created your driver account and can proceed to sign in."
+  }
 
   return (
     <RNSafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <ExpoStatusBar style="dark" />
-      
-      <BackArrowBtn text="Go back" className="ml-4 mt-4" />
 
-      <ScrollView className="flex-1 px-6">
-        <View className="mt-8">
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            Document Upload
-          </Text>
-          <Text className="text-lg text-gray-600 mb-8">
-            Upload required documents to complete your registration
-          </Text>
+      <ScrollView className="flex-1 px-4">
+        {/* Header with Logo and Progress */}
+        <View className="w-full">
+          <UserAuthHeader />
 
-          <View className="space-y-4">
-            <DocumentUploadItem
-              title="Driver's License"
-              description="Upload a clear photo of your driver's license (front and back)"
-              type="driversLicense"
-              isUploaded={documentsUploaded.driversLicense}
-            />
-
-            <DocumentUploadItem
-              title="Insurance Card"
-              description="Upload your current auto insurance card"
-              type="insuranceCard"
-              isUploaded={documentsUploaded.insuranceCard}
-            />
-
-            <DocumentUploadItem
-              title="Vehicle Registration"
-              description="Upload your vehicle registration document"
-              type="vehicleRegistration"
-              isUploaded={documentsUploaded.vehicleRegistration}
-            />
-
-            <DocumentUploadItem
-              title="Profile Photo"
-              description="Upload a clear, professional headshot"
-              type="profilePhoto"
-              isUploaded={documentsUploaded.profilePhoto}
-            />
-          </View>
-
-          <View className="mt-8 mb-8">
-            <Text className="text-sm text-gray-500 text-center mb-4">
-              By submitting this application, you agree to our terms of service and privacy policy.
-            </Text>
-
-            <CustomButton
-              title="Submit Application"
-              onPress={handleSubmit}
-              className="py-5"
-            />
+          <View className="pt-4 pb-2">
+            <ProgressBar step={6} totalSteps={6} />
           </View>
         </View>
+
+        {/* Password Setup Form */}
+        <View className="mt-4 px-2">
+          <Text className="text-3xl font-bold text-gray-700 text-center mb-2">
+            Password
+          </Text>
+          <Text className="text-lg text-gray-600 text-center mb-8">
+            Kindly set up your password
+          </Text>
+
+          <Formik
+            initialValues={{
+              password: '',
+              confirmPassword: '',
+            }}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ handleSubmit, isValid, values }) => {
+              // Check if all required fields are filled
+              const isFormValid = React.useMemo(() => {
+                try {
+                  return !!(
+                    values.password &&
+                    values.confirmPassword &&
+                    values.password === values.confirmPassword
+                  )
+                } catch (error) {
+                  console.error('❌ Error in form validation:', error)
+                  return false
+                }
+              }, [values])
+
+              return (
+                <View className="space-y-6">
+                  {/* Password Field */}
+                  <View>
+                    <FormikInput
+                      name="password"
+                      label="Password"
+                      placeholder="Enter your password"
+                      type="password"
+                      required
+                      containerStyle="mb-4"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  {/* Confirm Password Field */}
+                  <View>
+                    <FormikInput
+                      name="confirmPassword"
+                      label="Confirm password"
+                      placeholder="Confirm your password"
+                      type="password"
+                      required
+                      containerStyle="mb-4"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+
+                  <CustomButton
+                    title="Create account"
+                    onPress={() => {
+                      try {
+                        handleSubmit()
+                      } catch (error) {
+                        console.error('❌ Error in button press:', error)
+                      }
+                    }}
+                    disabled={!isFormValid}
+                    className="py-5"
+                  />
+
+                  {/* Sign In Link */}
+                  <View className="my-4">
+                    <AuthNavigateLink
+                      onPress={() => {
+                        try {
+                          if (router && routes?.signIn) {
+                            router.push(routes.signIn)
+                          }
+                        } catch (error) {
+                          console.error('❌ Error in navigation:', error)
+                        }
+                      }}
+                      text="Already have an account?"
+                      textLink="Sign In"
+                      containerClassName="mb-6"
+                    />
+                  </View>
+                </View>
+              )
+            }}
+          </Formik>
+        </View>
       </ScrollView>
+      <SuccessModal 
+        visible={showSuccessModal} 
+        onClose={handleModalClose}
+        header="Account created successfully"
+        text={getSuccessMessage()}
+        buttonText="Continue to Sign In"
+      />
     </RNSafeAreaView>
   )
 }

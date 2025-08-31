@@ -55,6 +55,7 @@ import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import courage from "@/assets/icons/courage.svg";
 import pickUp from "@/assets/icons/pickUp.svg";
+import empty from "@/assets/icons/empty.svg";
 import carticon from "@/assets/icons/carticon.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
@@ -95,6 +96,10 @@ import car from "@/assets/icons/car.svg";
 import services from "@/assets/icons/services.svg";
 import profile from "@/assets/icons/profile.svg";
 import shopTab from "@/assets/icons/shopTab.svg";
+
+//driver icons
+import trip from "@/assets/icons/trip.svg";
+import round from "@/assets/icons/round.svg";
 
 //roles images
 import user from "@/assets/icons/user.svg";
@@ -170,6 +175,10 @@ export const icons = {
   shopTab,
   carticon,
   bankIcon,
+
+  empty,
+  trip,
+  round,
 };
 
 export const onboarding = [
