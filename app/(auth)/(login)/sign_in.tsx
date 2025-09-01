@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal } from "react-native";
 import { Formik } from "formik";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { loginSchema } from "@/utils/validationSchemas";
@@ -33,6 +33,10 @@ const SignIn = () => {
     flag: '🇳🇬'
   });
   const [selectedState, setSelectedState] = useState<string>('');
+  
+  // Get user type from route params (set during registration)
+  const params = useLocalSearchParams();
+  const userType = params.userType as string;
 
   const getCountryFlag = (cca2: string) => {
     const countryCode = cca2?.toUpperCase();
@@ -65,7 +69,23 @@ const SignIn = () => {
     console.log("Sign in values:", values);
     
     try {
-      // Check for saved role in local storage
+      // If user type is specified from registration, use that for redirection
+      if (userType) {
+        console.log('🔍 User type from registration:', userType);
+        
+        if (userType === 'rider') {
+          console.log('🚀 Redirecting rider to rider dashboard');
+          router.push('/(root)/(tabs)/(rider)/home');
+        } else if (userType === 'driver') {
+          console.log('🚀 Redirecting driver to driver dashboard');
+          router.push('/(root)/(tabs)/(driver)/home');
+        }
+        
+        // Clear the user type parameter after successful login
+        return;
+      }
+      
+      // Check for saved role in local storage (existing logic)
       const savedRole = await AsyncStorage.getItem('selectedRole');
       console.log('🔍 Raw saved role from storage:', savedRole);
       
@@ -137,7 +157,10 @@ const SignIn = () => {
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className="pt-[2rem]">
-        <HeaderAndDescTextCenter header="Sign in" text1="Hi, Welcome back." />
+        <HeaderAndDescTextCenter 
+          header={userType ? `Sign in as ${userType.charAt(0).toUpperCase() + userType.slice(1)}` : "Sign in"} 
+          text1={userType ? `Hi, Welcome back ${userType}.` : "Hi, Welcome back."} 
+        />
       </View>
 
       {/* Segmented Control */}

@@ -110,7 +110,29 @@ export const driverRoutes = {
   ConfirmOrder: "/(root)/(screens)/(driver)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(driver)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(driver)/editProfile",
+  takebookings: "/(root)/(screens)/(driver)/takebookings",
 } as const;
 
 export type DriverRouteKeys = keyof typeof driverRoutes;
 export type DriverRouteValues = (typeof driverRoutes)[DriverRouteKeys];
+
+// rider routes
+export const riderRoutes = {
+  chooseOptions: "/(auth)/(register)/driver/choose-options",
+
+  // rider tabs
+  home: "/(root)/(tabs)/(rider)/home",
+  earnings: "/(root)/(tabs)/(rider)/earnings",
+  order: "/(root)/(tabs)/(rider)/order",
+  profile: "/(root)/(tabs)/(rider)/profile",
+
+  // rider screens
+  ConfirmWithdrawal: "/(root)/(screens)/(rider)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(rider)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(rider)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(rider)/editProfile",
+  takebookings: "/(root)/(screens)/(rider)/takebookings",
+} as const;
+
+export type RiderRouteKeys = keyof typeof riderRoutes;
+export type RiderRouteValues = (typeof riderRoutes)[RiderRouteKeys];

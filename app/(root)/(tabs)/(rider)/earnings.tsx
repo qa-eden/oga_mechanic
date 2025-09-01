@@ -9,9 +9,9 @@ import { EyeIcon, EyeSlashIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import WithdrawFundsModal from "@/components/modals/WithdrawFundsModal";
 import { router } from "expo-router";
-import { driverRoutes } from "@/constants/routes";
+import { riderRoutes } from "@/constants/routes";
 
-const DriverEarnings = () => {
+const RiderEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   
@@ -20,7 +20,7 @@ const DriverEarnings = () => {
       id: "#0CAC6C64",
       date: "April 14, 2025 - 2:53 PM",
       amount: 15000,
-      tripType: "One Way",
+      tripType: "Round Trip",
       distance: "85 km",
       duration: "3h 00min",
     },
@@ -36,7 +36,7 @@ const DriverEarnings = () => {
       id: "#0CAC6C66",
       date: "April 14, 2025 - 8:15 AM",
       amount: 12000,
-      tripType: "One Way",
+      tripType: "Round Trip",
       distance: "65 km",
       duration: "2h 30min",
     },
@@ -55,7 +55,7 @@ const DriverEarnings = () => {
       id: "#0CAC6C68",
       date: "April 13, 2025 - 9:20 PM",
       amount: 18000,
-      tripType: "One Way",
+      tripType: "Round Trip",
       distance: "95 km",
       duration: "3h 30min",
     },
@@ -71,7 +71,7 @@ const DriverEarnings = () => {
       id: "#0CAC6C70",
       date: "April 13, 2025 - 1:30 PM",
       amount: 13500,
-      tripType: "One Way",
+      tripType: "Round Trip",
       distance: "78 km",
       duration: "3h 00min",
     },
@@ -125,7 +125,7 @@ const DriverEarnings = () => {
             </View>
             <View className="flex-row items-center justify-center w-full gap-4 px-6">
               <TouchableOpacity
-                onPress={() => router.push('/(root)/(screens)/(driver)/bank-transfer')}
+                onPress={() => router.push('/(root)/(screens)/(rider)/bank-transfer')}
                 className="flex-row items-center justify-center mb-6 w-[50%] bg-white border border-white rounded-[.3rem] py-2"
               >
                 <Text className="text-[#991B1B] font-NunitoBold mr-2">Fund wallet</Text>
@@ -146,7 +146,7 @@ const DriverEarnings = () => {
             <Text className="text-lg font-NunitoBold text-gray-900">
               Trip Earnings
             </Text>
-            <TouchableOpacity onPress={() => router.push('/(root)/(screens)/(driver)/withdrawalHistory')}>
+            <TouchableOpacity onPress={() => router.push('/(root)/(screens)/(rider)/withdrawalHistory')}>
               <Text className="text-red-600 font-NunitoBold">
                 View withdrawals
               </Text>
@@ -189,7 +189,7 @@ const DriverEarnings = () => {
                 </View>
                 <TouchableOpacity 
                   onPress={() => router.push({
-                    pathname: '/(root)/(screens)/(driver)/trip-completed',
+                    pathname: '/(root)/(screens)/(rider)/trip-completed',
                     params: { tripId: earning.id }
                   })}
                 >
@@ -237,7 +237,7 @@ const DriverEarnings = () => {
                 </View>
                 <TouchableOpacity 
                   onPress={() => router.push({
-                    pathname: '/(root)/(screens)/(driver)/trip-completed',
+                    pathname: '/(root)/(screens)/(rider)/trip-completed',
                     params: { tripId: earning.id }
                   })}
                 >
@@ -258,10 +258,10 @@ const DriverEarnings = () => {
         isVisible={showWithdrawModal}
         onClose={() => setShowWithdrawModal(false)}
         availableBalance={45000}
-        confirmWithdrawalRoute="/(root)/(screens)/(driver)/confirmWithdrawal"
+        confirmWithdrawalRoute="/(root)/(screens)/(rider)/confirmWithdrawal"
       />
     </SafeAreaView>
   );
 };
 
-export default DriverEarnings;
+export default RiderEarnings;

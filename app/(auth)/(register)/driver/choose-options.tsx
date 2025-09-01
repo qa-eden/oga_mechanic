@@ -9,8 +9,10 @@ const ChooseOptions = () => {
   const router = useRouter()
 
   const handleDriverSelect = (type: "driver" | "rider") => {
-    // Navigate to driver registration flow
     console.log("type", type)
+    
+    // Store the user type for later use
+    // Navigate to the same registration flow for both driver and rider
     router.push({
       pathname: driverRoutes.welcomeDriver,
       params: { type }

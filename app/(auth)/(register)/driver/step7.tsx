@@ -43,18 +43,21 @@ const Step7 = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false)
-    // Navigate to sign-in page after modal closes
+    // Navigate to sign-in page with user type parameter
     if (router && routes?.signIn) {
-      router.replace(routes.signIn)
+      router.replace({
+        pathname: routes.signIn,
+        params: { userType }
+      })
     }
   }
 
   // Dynamic success message based on user type
   const getSuccessMessage = () => {
     if (userType === 'rider') {
-      return "You have successfully created your rider account and can proceed to sign in."
+      return "Welcome to Oga Mechanic! Your rider account has been created successfully. You can now start booking transportation services."
     }
-    return "You have successfully created your driver account and can proceed to sign in."
+    return "Welcome to Oga Mechanic! Your driver account has been created successfully. You can now start providing transportation services."
   }
 
   return (

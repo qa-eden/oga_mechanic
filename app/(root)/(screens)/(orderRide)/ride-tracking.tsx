@@ -103,7 +103,7 @@ const RideTracking = () => {
   const handleProceed = () => {
     // Navigate to ride completion or payment screen
     alert("Ride completed! Thank you for using our service.");
-    router.push("/(root)/(tabs)/home");
+    router.push("/(root)/(tabs)/(user)/home");
   };
 
   return (

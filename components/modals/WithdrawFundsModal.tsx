@@ -25,12 +25,14 @@ interface WithdrawFundsModalProps {
   isVisible: boolean;
   onClose: () => void;
   availableBalance: number;
+  confirmWithdrawalRoute?: string; // Add route prop
 }
 
 const WithdrawFundsModal = ({
   isVisible,
   onClose,
   availableBalance,
+  confirmWithdrawalRoute = mechanicRoutes?.ConfirmWithdrawal, // Default to mechanic route
 }: WithdrawFundsModalProps) => {
   const [withdrawAmount, setWithdrawAmount] = useState("50,000");
   const [selectedAmount, setSelectedAmount] = useState("50,000");
@@ -60,7 +62,7 @@ const WithdrawFundsModal = ({
     // Handle withdrawal logic here
     onClose(); // Close modal first
     setTimeout(() => {
-      router.push(mechanicRoutes?.ConfirmWithdrawal);
+      router.push(confirmWithdrawalRoute);
     }, 100); // Small delay to ensure modal closes
   };
 

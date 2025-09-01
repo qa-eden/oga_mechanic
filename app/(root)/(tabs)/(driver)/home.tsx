@@ -7,13 +7,16 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   TruckIcon,
-  ArrowPathIcon
 } from 'react-native-heroicons/outline';
 
 import {
   MapPinIcon,
 } from 'react-native-heroicons/solid';
 import { icons } from '@/constants';
+import OngoingBookingCard from '@/components/cards/OngoingBookingCard';
+import BookingCard from '@/components/cards/BookingCard';
+import { router } from 'expo-router';
+import { driverRoutes } from '@/constants/routes';
 
 const Home = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -73,7 +76,23 @@ const Home = () => {
         color: "#00A85A"
       },
       price: "₦15,000"
-    }
+    },
+    {
+      id: 2,
+      type: "Round Trip",
+      dateTime: "28 Feb, 10:10 AM",
+      estimateUsage: "5 Hrs",
+      totalDistance: "85 km",
+      pickup: {
+        address: "108, Auchandi Bawana Rd, Bawana Village, Lag...",
+        color: "#2F6FED"
+      },
+      dropoff: {
+        address: "E-15, Block E, East of Kailash, Ikeja FAAN Quart...",
+        color: "#00A85A"
+      },
+      price: "₦15,000"
+    },
   ];
 
   useEffect(() => {
@@ -95,17 +114,13 @@ const Home = () => {
     Alert.alert('Location', 'Location selector tapped');
   };
 
-  const handleViewAll = () => {
-    Alert.alert('View All', 'View All button tapped');
-  };
-
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="h-screen">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header Section */}
-        <View className="bg-white px-5 pt-4 pb-6">
+        <View className="bg-white px-5 py-4">
           {/* Profile and Greeting */}
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
@@ -124,7 +139,7 @@ const Home = () => {
 
           <View className="flex-row items-center justify-between">
             {/* Location */}
-            <TouchableOpacity className="flex-row items-center mb-4" onPress={handleLocationPress}>
+            <TouchableOpacity className="flex-row items-center " onPress={handleLocationPress}>
               <MapPinIcon size={20} color="#6B7280" />
               <Text className="text-gray-700 ml-2">{selectedLocation}</Text>
               <ChevronDownIcon size={16} color="#6B7280" />
@@ -133,7 +148,7 @@ const Home = () => {
             {/* Online/Offline Toggle */}
             <TouchableOpacity
               onPress={toggleOnlineStatus}
-              className={`py-3 px-6 rounded-xl self-end ${isOnline ? 'bg-primary-500' : 'bg-green-500'}`}
+              className={`py-3 px-6 rounded-xl self-end ${isOnline ? 'bg-primary-500' : 'bg-yellow-500'}`}
             >
               <Text className="text-white font-semibold text-center">
                 {isOnline ? 'Go offline' : 'Go online'}
@@ -143,15 +158,15 @@ const Home = () => {
         </View>
 
         {/* Daily Performance Metrics */}
-        <View className="px-5 mb-6">
+        <View className="px-5 mb-6 mt-3">
           <View className="flex-row space-x-3 gap-2">
             {dailyMetrics.map((metric) => {
               // const IconComponent = metric.icon;
               return (
                 <View key={metric.id} className="flex-1 bg-white p-4 rounded-xl shadow-xs border border-gray-300">
-                  <View className="flex-row items-center mb-2 justify-center flex-1">
+                  <View className="items-center mb-2">
                     {/* <IconComponent size={20} color={metric.iconColor} /> */}
-                    <Text className="text-gray-500 text-[.86rem] ml-2 font-NunitoMedium text-center">{metric.label}</Text>
+                    <Text className="text-gray-500 text-[.86rem] text-center">{metric.label}</Text>
                   </View>
                   <Text className="text-xl text-center font-medium text-red-500">{metric.value}</Text>
                 </View>
@@ -164,93 +179,66 @@ const Home = () => {
         <View className="px-5 mb-6">
           <Text className="text-lg font-bold text-gray-900 mb-3">On Going Bookings</Text>
           {ongoingBookings.map((booking) => (
-            <View key={booking.id} className="bg-white p-4 rounded-xl shadow-sm">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <View className=" items-center justify-center mr-3">
-                    {/* <Text className="text-white font-bold text-lg">{booking.count}</Text> */}
-                    <icons.trip width={50} height={50} />
-                  </View>
-                  <View>
-                    <Text className="font-semibold text-lg text-gray-900">{booking.type}</Text>
-                    <Text className="text-sm text-gray-500">{booking.timeRemaining}</Text>
-                  </View>
-                </View>
-                <Text className="text-green-700 text-sm font-medium">{booking.dateTime}</Text>
-              </View>
-            </View>
+            <OngoingBookingCard
+              key={booking.id}
+              id={booking.id}
+              count={booking.count}
+              type={booking.type}
+              timeRemaining={booking.timeRemaining}
+              dateTime={booking.dateTime}
+            />
           ))}
         </View>
 
-        {/* Close by Bookings */}
-        <View className="px-5 mb-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-gray-900">Close by bookings</Text>
-            <TouchableOpacity className="flex-row items-center" onPress={handleViewAll}>
-              <Text className="text-red-500 font-medium mr-1">View All</Text>
-              <ArrowRightIcon size={16} color="#EF4444" />
-            </TouchableOpacity>
+
+
+        {/* Recommended Bookings - Show when offline */}
+        {!isOnline ? (
+          <View className="px-5 mb-6">
+            <Text className="text-lg font-bold text-gray-900 mb-4">Recommended Bookings</Text>
+            <View className="bg-white rounded-xl border border-gray-200 p-8 items-center">
+              <View className="w-40 h-40 bg-gray-100 rounded-full items-center justify-center mb-4">
+                <icons.empty className='w-full h-full' />
+              </View>
+              <Text className="text-lg font-bold text-gray-900 mb-2">No Bookings Found</Text>
+              <Text className="text-sm text-gray-500 text-center leading-5">
+                You can't view recommended bookings while you are offline, go online to see available request.
+              </Text>
+            </View>
           </View>
-
-          {nearbyBookings.map((booking) => (
-            <View key={booking.id} className="bg-white rounded-xl border border-gray-300">
-              {/* Booking Header */}
-              <View className="flex-row items-center gap-2 w-full border-b border-gray-300 p-3">
-                <icons.round width={50} height={50} />
-                <View className="flex-1">
-                  <View className="mb-2 flex-row items-center justify-between">
-                    <Text className="font-semibold text-gray-900">{booking.type}</Text>
-                    <Text className="text-green-500 text-sm font-medium bg-green-700 text-white px-2 py-1 rounded-full">{booking.dateTime}</Text>
-                  </View>
-                  {/* Trip Details */}
-                  <View className="flex-row items-center space-x-2 mb-2">
-                    <Text className="text-sm text-gray-500">Estimate Usage: <Text className="text-gray-900 font-medium">{booking.estimateUsage}</Text></Text>
-                    <Text className="text-sm text-gray-500 border-l border-gray-300 pl-1 ml-1">Total Dist.: <Text className="text-gray-900 font-medium">{booking.totalDistance}</Text></Text>
-                  </View>
-                </View>
-              </View>
-
-
-
-              {/* Route Information */}
-              <View className="mb-4 p-3">
-                {/* Pickup */}
-                <View className="flex-row items-center mb-2">
-                  <View className="w-6 h-6 rounded-full items-center justify-center mr-3 mt-1" >
-                    <MapPinIcon size={30} color={booking.pickup.color} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm text-gray-700 leading-5">
-                      {booking.pickup.address}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Route Line */}
-                <View className="ml-3 mb-1">
-                  <View className="w-px h-6 bg-gray-300 border-l-2 border-dashed border-gray-300" />
-                </View>
-
-                {/* Drop-off */}
-                <View className="flex-row items-center">
-                  <View className="w-6 h-6 rounded-full items-center justify-center mr-3 mt-1" >
-                    <MapPinIcon size={30} color={booking.dropoff.color} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm text-gray-700 leading-5">
-                      {booking.dropoff.address}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Price */}
-              <View className="border-t border-gray-100 bg-red-100 py-3">
-                <Text className="text-2xl font-bold text-primary-500 text-center">{booking.price}</Text>
-              </View>
+        ) : (
+          <View className="px-5 mb-6">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-lg font-bold text-gray-900">Close by bookings</Text>
+              <TouchableOpacity
+                className="flex-row items-center"
+                onPress={() => router.push({
+                  pathname: "/(root)/(tabs)/(driver)/home",
+                  params: { tab: "consultation" }
+                })}
+              >
+                <Text className="text-red-500 font-medium mr-1">View All</Text>
+                <ArrowRightIcon size={16} color="#EF4444" />
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
+
+            <View className="flex flex-col gap-4">
+              {nearbyBookings.map((booking) => (
+                <BookingCard
+                  key={booking.id}
+                  id={booking.id}
+                  type={booking.type}
+                  dateTime={booking.dateTime}
+                  estimateUsage={booking.estimateUsage}
+                  totalDistance={booking.totalDistance}
+                  pickup={booking.pickup}
+                  dropoff={booking.dropoff}
+                  price={booking.price}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Bottom Spacing */}
         <View className="h-20" />

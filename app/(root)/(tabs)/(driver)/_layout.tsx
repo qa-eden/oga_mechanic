@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -6,10 +6,8 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-// import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { icons } from "@/constants";
-// import { Dimensions } from "react-native";
-// import { routes } from "@/constants/routes";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Import your actual tab screen components
@@ -19,15 +17,22 @@ import DriverOrder from "./order";
 import DriverProfile from "./profile";
 
 export default function Layout() {
-  // const router = useRouter();
-  // const { width } = Dimensions.get("window");
+  const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState("home");
+
+  // Handle navigation to specific tabs
+  useEffect(() => {
+    if (params.tab) {
+      setActiveTab(params.tab as string);
+    }
+  }, [params.tab]);
 
   // Function to render tab icons with labels
   const renderTabBar = () => {
     // Define the icon and label for each tab  order,
-  // activeOrder,
+    // activeOrder,
     const tabInfo: Record<
       string,
       {
@@ -43,17 +48,17 @@ export default function Layout() {
         label: "Home",
         component: DriverHome,
       },
-      consultation: {
+       earnings: {
         icon: <icons.order />,
         activeIcon: <icons.activeOrder />,
-        label: "Orders",
-        component: DriverOrder,
+        label: "Earnings",
+        component:  DriverEarnings,
       },
-      earnings: {
+      consultation: {
         icon: <icons.earnings />,
         activeIcon: <icons.activeEarnings />,
-        label: "Earnings",
-        component: DriverEarnings,
+        label: "Bookings",
+        component: DriverOrder,
       },
       profile: {
         icon: <icons.profile />,
