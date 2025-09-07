@@ -10,6 +10,7 @@ import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AnimatedSplash from "../components/AnimatedSplash"; // <-- Add this
 
@@ -64,25 +65,39 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <LocationProvider>
-          <View className="flex-1">
-            <StatusBar style="light" />
-            <ToastManager
-              position="top"
-              width={toastWidth}
-              duration={2000}
-              animationIn="slideInRight"
-              animationOut="slideOutLeft"
-              showProgressBar={false}
-            />
-            <Stack>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(root)" options={{ headerShown: false }} />
-            </Stack>
-          </View>
-        </LocationProvider>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <LocationProvider>
+            <View className="flex-1">
+              <StatusBar style="light" />
+              <ToastManager
+                position="top"
+                width={toastWidth}
+                duration={3000}
+                animationIn="fadeIn"
+                animationOut="fadeOut"
+                showProgressBar={false}
+                textStyle={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: '#FFFFFF',
+                }}
+                style={{
+                  backgroundColor: '#1F2937',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  marginTop: 50,
+                }}
+              />
+              <Stack>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(root)" options={{ headerShown: false }} />
+              </Stack>
+            </View>
+          </LocationProvider>
+        </CartProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

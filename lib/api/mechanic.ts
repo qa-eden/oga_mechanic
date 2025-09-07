@@ -51,6 +51,12 @@ export const mechanicAPI = {
     return response.data;
   },
 
+  // Get all available mechanics
+  getAvailableMechanics: async (): Promise<Mechanic[]> => {
+    const response = await api.get(SERVICE_ENDPOINTS.MECHANICS_AVAILABLE);
+    return response.data;
+  },
+
   // Book mechanic
   bookMechanic: async (mechanicId: string, bookingDetails: any): Promise<any> => {
     const response = await api.post(SERVICE_ENDPOINTS.MECHANIC_PROFILE(mechanicId), bookingDetails);

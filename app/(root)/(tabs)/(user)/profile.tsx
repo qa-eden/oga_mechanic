@@ -11,20 +11,29 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   Switch,
   TouchableOpacity,
-  Modal,
+  // Modal,
+  ActivityIndicator,
+  StatusBar,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { MapPinIcon } from "react-native-heroicons/solid";
+import { MapPinIcon, UserIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
-import { useUserStore } from "@/stores/userStore";
+// import { useUserStore } from "@/stores/userStore";
 import LogoutModal from "@/components/modals/LogoutModal";
+import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import CustomAlert from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLogout } from "@/hooks/useLogout";
+import { PrimaryUserProfileResponse } from "@/lib/api/user";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -33,6 +42,25 @@ const Profile = () => {
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
+  
+  // Fetch user profile data
+  const { 
+    data: profileData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = usePrimaryUserProfile();
+  
+  const { visible, alertConfig, hideAlert } = useCustomAlert();
+  const logoutMutation = useLogout();
+
+  // Pull to refresh functionality
+  const { refreshControl } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch();
+    }
+  });
+
 
   const toggleSwitch = (
     setState: React.Dispatch<React.SetStateAction<boolean>>,
@@ -41,20 +69,48 @@ const Profile = () => {
     setState(value);
   };
 
+
   const handleLogout = () => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setShowLogoutModal(false);
-    // Add your logout logic here
-    // Alert.alert("Logged Out", "You have been successfully logged out.");
-    router?.push(routes?.signIn);
+    
+    try {
+      // Get refresh token from AsyncStorage
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      
+      if (refreshToken) {
+        // Call logout API with refresh token
+        logoutMutation.mutate({ refresh: refreshToken });
+      } else {
+        // If no refresh token, just clear local storage and navigate
+        await AsyncStorage.multiRemove([
+          'auth_token',
+          'refresh_token',
+          'user_data',
+          'is_logged_in'
+        ]);
+        router?.push(routes?.signIn);
+      }
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      // Fallback: clear storage and navigate
+      await AsyncStorage.multiRemove([
+        'auth_token',
+        'refresh_token',
+        'user_data',
+        'is_logged_in'
+      ]);
+      router?.push(routes?.signIn);
+    }
   };
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
   };
+
 
   const handleSwitchUser = (userType: string) => {
     // Handle user switching logic here
@@ -83,45 +139,123 @@ const Profile = () => {
       },
     ],
   };
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#D30309" />
+          <Text className="text-gray-600 mt-4 font-NunitoMedium">
+            Loading profile...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Get user data from API or fallback to static data
+  const userData = (profileData as PrimaryUserProfileResponse)?.data;
+  const displayName = userData?.first_name && userData?.last_name 
+    ? `${userData.first_name} ${userData.last_name}`
+    : userInfo.name;
+  
+  const displayEmail = userData?.email || '';
+  const displayPhone = userData?.phone_number || userInfo.phone;
+  const isVerified = userData?.is_verified || false;
+  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'primary_user';
+
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <ScrollView
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
+        refreshControl={<RefreshControl {...refreshControl} />}
       >
         <View className="flex-col justify-center items-center">
           <ProfileHeader title="Profile" />
 
           <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
-            <Image
-              source={images.dummyProfile}
-              className="w-[60px] h-[60px] rounded-full"
-              resizeMode="cover"
-              alt="Profile"
-            />
+            <UserIcon size={32} color="#666" />
           </View>
 
-          <Text className="font-NunitoBold text-primary-800 text-[1.5rem] pt-3">
-            {userInfo.name}
-          </Text>
-          <View className="flex-row items-center gap-2 pt-2">
-            <View className="flex-row items-center justify-center gap-2 pr-3 py-1">
-              <MapPinIcon size={16} color={"#D30309"} />
-              <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {userInfo.location}
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-center gap-2 pl-3 py-1 border-l-2 border-gray-200">
-              <icons.redPhone width={20} height={20} />
-              <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {userInfo.phone}
-              </Text>
-            </View>
+          <View className="flex-row items-center gap-2 pt-3">
+            <Text className="font-NunitoBold text-primary-800 text-[1.5rem]">
+              {displayName}
+            </Text>
+            {isVerified && (
+              <View className="bg-green-100 px-2 py-1 rounded-full">
+                <Text className="text-green-800 text-xs font-NunitoMedium">
+                  ✓ Verified
+                </Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Email display */}
+          {displayEmail && (
+            <Text className="font-NunitoMedium text-gray-600 text-sm pt-1">
+              {displayEmail}
+            </Text>
+          )}
+          
+          {/* Role display */}
+          <View className="bg-blue-50 px-3 py-1 rounded-full mt-2">
+            <Text className="text-blue-800 text-xs font-NunitoMedium capitalize">
+              {activeRole.replace('_', ' ')} Account
+            </Text>
+          </View>
+          
+          {/* Member since */}
+          {userData?.date_joined && (
+            <Text className="text-gray-500 text-xs mt-2 font-NunitoMedium">
+              Member since {new Date(userData.date_joined).toLocaleDateString()}
+            </Text>
+          )}
+          
+          <View className="flex-row items-center justify-center gap-2 pt-2">
+            <icons.redPhone width={20} height={20} />
+            <Text className="text-[14px] font-NunitoBold text-gray-600">
+              {displayPhone}
+            </Text>
           </View>
         </View>
+
+        {/* Car Information Section */}
+        {userData && (userData.car_make || userData.car_model || userData.car_year || userData.license_plate) && (
+          <View className="shadow-md shadow-gray-300 bg-white mt-6 rounded-[1rem] px-4 py-4 mb-4">
+            <Text className="uppercase text-[#999999] pb-3 font-NunitoBold">
+              Vehicle Information
+            </Text>
+            
+            {userData.car_make && userData.car_model && (
+              <View className="flex-row items-center justify-between py-2">
+                <Text className="text-gray-700 font-NunitoMedium">Vehicle</Text>
+                <Text className="text-gray-900 font-NunitoBold">
+                  {userData.car_make} {userData.car_model}
+                </Text>
+              </View>
+            )}
+            
+            {userData.car_year && (
+              <View className="flex-row items-center justify-between py-2">
+                <Text className="text-gray-700 font-NunitoMedium">Year</Text>
+                <Text className="text-gray-900 font-NunitoBold">{userData.car_year}</Text>
+              </View>
+            )}
+            
+            {userData.license_plate && (
+              <View className="flex-row items-center justify-between py-2">
+                <Text className="text-gray-700 font-NunitoMedium">License Plate</Text>
+                <Text className="text-gray-900 font-NunitoBold">{userData.license_plate}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View className="shadow-md shadow-gray-300 bg-white mt-9 rounded-[1rem] px-4 py-2 mb-6">
           <View className="pt-4">
@@ -183,10 +317,16 @@ const Profile = () => {
         <View className="py-3">
           <TouchableOpacity
             onPress={handleLogout}
-            className="flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5"
+            disabled={logoutMutation.isPending}
+            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${
+              logoutMutation.isPending ? 'opacity-50' : ''
+            }`}
           >
+            {logoutMutation.isPending ? (
+              <ActivityIndicator size="small" color="#D30309" />
+            ) : null}
             <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
-              Logout
+              {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -205,6 +345,19 @@ const Profile = () => {
         onClose={() => setShowSwitchUserModal(false)}
         onSwitchUser={handleSwitchUser}
       />
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+          autoDismiss={alertConfig.autoDismiss}
+          autoDismissDelay={alertConfig.autoDismissDelay}
+        />
+      )}
     </SafeAreaView>
   );
 };

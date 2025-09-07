@@ -1,11 +1,9 @@
+import { ENV_CONFIG } from '../config/env';
+
 // Signaling server configuration
 export const SIGNALING_CONFIG = {
-  // Replace with your actual signaling server URL
-  // For development, you can use a local server or a service like:
-  // - Local: 'ws://localhost:8080'
-  // - ngrok: 'wss://your-ngrok-url.ngrok.io'
-  // - Production: 'wss://your-production-server.com'
-  WEBSOCKET_URL: 'wss://your-signaling-server.com',
+  // WebSocket URL from environment configuration
+  WEBSOCKET_URL: ENV_CONFIG.WEBSOCKET_URL,
   
   // WebRTC ICE servers for NAT traversal
   ICE_SERVERS: [

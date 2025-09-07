@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { userAPI, LoginCredentials, RegisterData, UserProfile } from '../lib/api/user';
-import { Toast } from 'toastify-react-native';
+import { showToast } from '../utils/toastUtils';
 
 interface UserState {
   // State
@@ -57,7 +57,7 @@ export const useUserStore = create<UserState>()(
           return true;
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || 'Login failed';
-          Toast.error(errorMessage);
+          showToast.error(errorMessage);
           set({ 
             error: errorMessage,
             loading: false 
@@ -101,7 +101,7 @@ export const useUserStore = create<UserState>()(
           loading: false,
           error: null
         });
-        Toast.success("Registration successful! Welcome!");
+        showToast.success("Registration successful! Welcome!");
         return true;
       } else {
         set({ 
@@ -112,7 +112,7 @@ export const useUserStore = create<UserState>()(
       }
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || 'Registration failed';
-          Toast.error(errorMessage);
+          showToast.error(errorMessage);
           set({ 
             error: errorMessage,
             loading: false 
@@ -151,7 +151,7 @@ export const useUserStore = create<UserState>()(
           });
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || 'Profile update failed';
-          Toast.error(errorMessage);
+          showToast.error(errorMessage);
           set({ 
             error: errorMessage,
             loading: false 

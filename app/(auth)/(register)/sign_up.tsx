@@ -10,19 +10,34 @@ import {
   Platform,
   Animated,
   Image,
+  ActivityIndicator,
 } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { images, Roles } from "@/constants";
 import { StatusBar } from "expo-status-bar";
 import { routes } from "@/constants/routes";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRoles } from "@/hooks/useRoles";
+import { userAPI } from "@/lib/api/user";
+import { useRegistrationStore } from "@/stores/registrationStore";
 
 const { height } = Dimensions.get("window");
 
 const SignUp = () => {
   const router = useRouter();
+  const { setStepByStepData, setStepByStepMode, setCurrentStep } = useRegistrationStore();
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Use TanStack Query hook for roles
+  const { 
+    data: apiRoles = [], 
+    isLoading: isLoadingRoles, 
+    error: rolesError,
+    isError: isRolesError,
+    refetch: refetchRoles
+  } = useRoles();
 
   // Function to save selected role to local storage
   const saveSelectedRole = async (role: any) => {
@@ -42,24 +57,53 @@ const SignUp = () => {
     }
   };
 
-  // Handle role selection
+  // Handle role selection with proper error handling and debounce
   const handleRoleSelection = async (role: any) => {
+    // Prevent multiple rapid clicks
+    if (isNavigating) {
+      console.log('⏳ Navigation already in progress, ignoring click');
+      return;
+    }
+    
     try {
+      setIsNavigating(true);
+      console.log('🎯 Selected role:', role);
+      
+      // Enable step-by-step mode
+      setStepByStepMode(true);
+      setCurrentStep(1);
+      
+      // Post role selection to step 1 endpoint
+      console.log('📤 Posting role selection to step 1 endpoint...');
+      const step1Response = await userAPI.registerStep(1, {
+        role_id: role.id
+      });
+      
+      console.log('✅ Step 1 response:', step1Response);
+      
+      // Store role data in step-by-step store
+      setStepByStepData({
+        role_id: role.id,
+        sessionId: step1Response.sessionId || step1Response.session_id
+      });
+      
       // Clear any previously saved role first
       await AsyncStorage.removeItem('selectedRole');
       
       // Save the new role to local storage
       await saveSelectedRole(role);
       
-      // Small delay to ensure AsyncStorage write completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then navigate to the role's route
-      router?.push(role?.route as any);
+      // Navigate immediately without delay
+      router.replace(role?.route as any);
     } catch (error) {
       console.error('❌ Error during role selection:', error);
-      // Still navigate even if saving fails
-      router?.push(role?.route as any);
+      // Still navigate even if API call fails
+      router.replace(role?.route as any);
+    } finally {
+      // Reset navigation state after a delay
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 1000);
     }
   };
 
@@ -159,6 +203,69 @@ const SignUp = () => {
     clearStaleRole();
   }, []);
 
+  // Create a mapping between API role names and local role titles
+  const roleMapping = {
+    'primary_user': 'Primary User',
+    'merchant': 'Seller', 
+    'mechanic': 'Mechanic',
+    'driver': 'Driver'
+  };
+
+  // Filter API roles to match existing local roles
+  const filteredApiRoles = apiRoles.filter(apiRole => {
+    // Match by mapped title or id with existing Roles
+    return Roles.some(localRole => 
+      localRole.id === apiRole.id || 
+      roleMapping[apiRole.name as keyof typeof roleMapping] === localRole.title
+    );
+  });
+
+  // Merge API data with local role data (keeping local styling, adding API data)
+  const mergedRoles = Roles.map(localRole => {
+    const apiRole = apiRoles.find(apiRole => 
+      localRole.id === apiRole.id || 
+      roleMapping[apiRole.name as keyof typeof roleMapping] === localRole.title
+    );
+    
+    return {
+      ...localRole, // Keep local styling and properties
+      ...apiRole,   // Override with API data
+      // Ensure we keep local styling properties
+      backgroundColor: localRole.backgroundColor,
+      border: localRole.border,
+      image: localRole.image,
+      route: localRole.route,
+      // Keep local title for display
+      title: localRole.title,
+    };
+  });
+
+  // Log API roles data for debugging (not rendering)
+  console.log('🎯 Current API Roles State:', {
+    isLoadingRoles,
+    isRolesError,
+    apiRolesCount: apiRoles.length,
+    filteredApiRolesCount: filteredApiRoles.length,
+    mergedRolesCount: mergedRoles.length,
+    roleMapping: roleMapping,
+    apiRoles: apiRoles,
+    filteredApiRoles: filteredApiRoles,
+    mergedRoles: mergedRoles,
+    error: rolesError
+  });
+
+  // Debug role matching
+  console.log('🔍 Role Matching Debug:', {
+    localRoles: Roles.map(r => ({ id: r.id, title: r.title })),
+    apiRoles: apiRoles.map(r => ({ id: r.id, name: r.name })),
+    mergedRoles: mergedRoles.map(r => ({ 
+      id: r.id, 
+      title: r.title, 
+      name: r.name,
+      hasApiData: !!apiRoles.find(ar => ar.id === r.id || roleMapping[ar.name as keyof typeof roleMapping] === r.title)
+    }))
+  });
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -245,7 +352,7 @@ const SignUp = () => {
             }}
           >
             <FlatList
-              data={Roles}
+              data={mergedRoles}
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
               columnWrapperStyle={{
@@ -263,7 +370,13 @@ const SignUp = () => {
                     borderColor: item?.border,
                   }}
                   className="w-[48%] h-[137px] p-4 rounded-2xl items-center"
-                  onPress={() => handleRoleSelection(item)}
+                  onPress={() => {
+                    try {
+                      handleRoleSelection(item);
+                    } catch (error) {
+                      console.error('Role selection error:', error);
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <View className="w-full flex flex-row justify-end">
@@ -279,15 +392,20 @@ const SignUp = () => {
                   <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
                     {item.title}
                   </Text>
-                  {/* <Text className="text-sm font-NunitoSemiBold w-full flex-col justify-end items-end pt-2">
+                  <Text className="text-sm text-gray-500 w-full flex-col justify-end items-end pt-2">
                     {item.description}
-                  </Text> */}
+                  </Text>
                 </TouchableOpacity>
               )}
-              initialNumToRender={8}
-              maxToRenderPerBatch={8}
-              windowSize={7}
+              initialNumToRender={4}
+              maxToRenderPerBatch={4}
+              windowSize={3}
               removeClippedSubviews={true}
+              getItemLayout={(data, index) => ({
+                length: 137,
+                offset: 137 * index,
+                index,
+              })}
             />
           </Animated.View>
 
@@ -300,19 +418,55 @@ const SignUp = () => {
             }}
           >
             <TouchableOpacity
-              onPress={() => router?.push(routes?.welcome)}
+              onPress={() => {
+                if (isNavigating) return;
+                try {
+                  setIsNavigating(true);
+                  router.replace(routes?.welcome as any);
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                  setIsNavigating(false);
+                }
+              }}
               activeOpacity={0.7}
+              disabled={isNavigating}
             >
-              <Text className="font-NunitoBold text-[#575C76]">GO BACK</Text>
+              <Text className={`font-NunitoBold ${isNavigating ? 'text-gray-400' : 'text-[#575C76]'}`}>
+                GO BACK
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router?.push(routes?.signIn)}
+              onPress={() => {
+                if (isNavigating) return;
+                try {
+                  setIsNavigating(true);
+                  router.replace(routes?.signIn as any);
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                  setIsNavigating(false);
+                }
+              }}
               activeOpacity={0.8}
+              disabled={isNavigating}
             >
-              <Text className="font-NunitoBold text-primary-500">SIGN IN</Text>
+              <Text className={`font-NunitoBold ${isNavigating ? 'text-gray-400' : 'text-primary-500'}`}>
+                SIGN IN
+              </Text>
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
+        
+        {/* Loading Overlay */}
+        {isNavigating && (
+          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+            <View className="bg-white rounded-2xl p-6 items-center">
+              <ActivityIndicator size="large" color="#D30309" />
+              <Text className="text-gray-700 font-NunitoMedium mt-3">
+                Loading...
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );

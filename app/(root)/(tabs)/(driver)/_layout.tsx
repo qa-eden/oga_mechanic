@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import { icons } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,16 +18,9 @@ import DriverProfile from "./profile";
 
 export default function Layout() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState("home");
 
-  // Handle navigation to specific tabs
-  useEffect(() => {
-    if (params.tab) {
-      setActiveTab(params.tab as string);
-    }
-  }, [params.tab]);
 
   // Function to render tab icons with labels
   const renderTabBar = () => {

@@ -7,10 +7,17 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from '@expo/vector-icons';
 import { ShoppingBagIcon, WrenchScrewdriverIcon, UsersIcon } from "react-native-heroicons/solid";
 import CustomButton from "../CustomButton";
+import { useUserRoles } from "@/hooks/useUserProfile";
+import { useRoles } from "@/hooks/useRoles";
+import { router } from "expo-router";
+import { routes } from "@/constants/routes";
+import CustomAlert from "../CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -26,6 +33,9 @@ interface UserOption {
   icon: React.ComponentType<any>;
   iconName?: string;
   description: string;
+  isActive?: boolean;
+  isDisabled?: boolean;
+  hasAccess?: boolean;
 }
 
 const SwitchUserModal = ({
@@ -34,6 +44,21 @@ const SwitchUserModal = ({
   onSwitchUser,
 }: SwitchUserModalProps) => {
   const [selectedUser, setSelectedUser] = useState<string>("");
+  const { showError, hideAlert, visible, alertConfig } = useCustomAlert();
+
+  // Fetch user roles from API
+  const {
+    data: rolesData,
+    isLoading: isLoadingUserRoles,
+    error: userRolesError
+  } = useUserRoles();
+
+  // Fetch all available roles from API
+  const {
+    data: allRoles = [],
+    isLoading: isLoadingAllRoles,
+    error: allRolesError
+  } = useRoles();
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
@@ -76,36 +101,72 @@ const SwitchUserModal = ({
     }
   }, [isVisible]);
 
-  const userOptions: UserOption[] = [
-    {
-      id: "driver",
-      name: "Driver",
-      icon: MaterialIcons,
-      iconName: "local-taxi",
-      description: "Drive and earn money",
-    },
-    {
-      id: "rider",
-      name: "Rider",
-      icon: MaterialIcons,
-      iconName: "pedal-bike",
-      description: "Book rides and travel",
-    },
-    {
-      id: "mechanic",
-      name: "Mechanic",
-      icon: WrenchScrewdriverIcon,
-      iconName: "tools",
-      description: "Provide repair services",
-    },
-    {
-      id: "merchant",
-      name: "Merchant",
-      icon: ShoppingBagIcon,
-      iconName: "storefront",
-      description: "Sell products and services",
-    },
-  ];
+  // Map role names to icons and descriptions
+  const getRoleInfo = (roleName: string) => {
+    const roleMap: Record<string, { icon: React.ComponentType<any>, iconName?: string, description: string }> = {
+      driver: {
+        icon: MaterialIcons,
+        iconName: "local-taxi",
+        description: "Drive and earn money"
+      },
+      rider: {
+        icon: MaterialIcons,
+        iconName: "pedal-bike",
+        description: "Book rides and travel"
+      },
+      mechanic: {
+        icon: WrenchScrewdriverIcon,
+        description: "Provide repair services"
+      },
+      merchant: {
+        icon: ShoppingBagIcon,
+        description: "Sell products and services"
+      },
+      primary_user: {
+        icon: UsersIcon,
+        description: "Main user account"
+      }
+    };
+
+    return roleMap[roleName] || {
+      icon: UsersIcon,
+      description: "User account"
+    };
+  };
+
+  // Create user options from all system roles fetched from API
+  const userOptions: UserOption[] = React.useMemo(() => {
+    if (!rolesData?.data || !allRoles.length) return [];
+
+    const activeRole = rolesData.data.active_role;
+    const userRoles = rolesData.data.roles || [];
+    const userRoleNames = userRoles.map(role => role.name);
+
+    // Filter out developer role and active role
+    const filteredRoles = allRoles.filter(role => {
+      const isNotDeveloper = role.name !== 'developer';
+      const isNotActive = role.name !== activeRole;
+      return isNotDeveloper && isNotActive;
+    });
+
+    return filteredRoles.map((role) => {
+      const roleInfo = getRoleInfo(role.name);
+      const hasRole = userRoleNames.includes(role.name);
+
+      return {
+        id: role.name,
+        name: role.title || role.name,
+        icon: roleInfo.icon,
+        iconName: roleInfo.iconName,
+        description: role.description || roleInfo.description,
+        isActive: false, // No active role in the list
+        isDisabled: false, // No disabled roles
+        hasAccess: hasRole
+      };
+    });
+  }, [rolesData, allRoles]);
+
+  // No need to set active role as selected since we're not showing it
 
   const handleSelectUser = (userType: string) => {
     setSelectedUser(userType);
@@ -113,13 +174,51 @@ const SwitchUserModal = ({
 
   const handleConfirm = () => {
     if (selectedUser) {
-      onSwitchUser(selectedUser);
-      // Small delay to show the animation before closing
-      setTimeout(() => {
-        onClose();
-      }, 100);
+      // Find the selected option to check if user has access
+      const selectedOption = userOptions.find(option => option.id === selectedUser);
+      const hasAccess = selectedOption?.hasAccess || false;
+
+      if (hasAccess) {
+        // User has this role, log them in directly
+        onSwitchUser(selectedUser);
+        // Navigate to role-specific home page
+        let targetRoute: string = routes?.userHome;
+        switch (selectedUser) {
+          case 'primary_user': targetRoute = routes?.userHome; break;
+          case 'driver': targetRoute = routes?.driverHome; break;
+          case 'mechanic': targetRoute = routes?.mechanicHome; break;
+          case 'rider': targetRoute = routes?.riderHome; break;
+          case 'merchant': targetRoute = routes?.userHome; break; // Use userHome for merchant
+          default: targetRoute = routes?.userHome;
+        }
+        router.replace(targetRoute as any);
+        
+        // Small delay to show the animation before closing
+        setTimeout(() => {
+          onClose();
+        }, 100);
+      } else {
+        // User doesn't have this role, show alert with signup option
+        const roleName = selectedOption?.name || selectedUser;
+        showError(
+          "Role Not Available",
+          `You haven't signed up for the ${roleName} role yet. The app will redirect you to sign up for this role.`
+        );
+        
+        // After showing the alert, navigate to signup after a delay
+        // setTimeout(() => {
+         
+        // }, 2000); // 2 second delay to let user read the message
+      }
     }
   };
+
+  const handleSignUp = () => {
+    hideAlert();
+    onClose(); // Close the switch modal first
+    // Navigate to signup page for the specific role
+    router.push(routes?.signUp as any);
+  }
 
   return (
     <Modal
@@ -161,39 +260,76 @@ const SwitchUserModal = ({
 
             {/* User Options */}
             <ScrollView className="px-6 pb-6">
-              {userOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  onPress={() => handleSelectUser(option.id)}
-                  className="flex-row items-center justify-between py-4 border-b border-gray-100 last:border-b-0"
-                  activeOpacity={0.7}
-                >
-                  <View className="flex-row items-center gap-3">
-                    <View className="w-10 h-10 items-center justify-center">
-                      {option.icon && option.iconName ? (
-                        <option.icon name={option.iconName} size={24} color="#374151" />
-                      ) : (
-                        <option.icon size={24} color="#374151" />
-                      )}
-                    </View>
-                    <View>
-                      <Text className="text-base font-NunitoBold text-gray-900">
-                        {option.name}
-                      </Text>
-                      <Text className="text-sm text-gray-500 font-NunitoMedium">
-                        {option.description}
-                      </Text>
-                    </View>
-                  </View>
+              {isLoadingUserRoles || isLoadingAllRoles ? (
+                <View className="py-8 items-center">
+                  <ActivityIndicator size="large" color="#D30309" />
+                  <Text className="text-gray-600 mt-4 font-NunitoMedium">
+                    Loading roles...
+                  </Text>
+                </View>
+              ) : userRolesError || allRolesError ? (
+                <View className="py-8 items-center">
+                  <Text className="text-red-600 font-NunitoMedium">
+                    Failed to load roles
+                  </Text>
+                  <Text className="text-gray-500 text-sm mt-2 text-center">
+                    Please try again later
+                  </Text>
+                </View>
+              ) : userOptions.length === 0 ? (
+                <View className="py-8 items-center">
+                  <Text className="text-gray-600 font-NunitoMedium">
+                    No roles available
+                  </Text>
+                </View>
+              ) : (
+                userOptions.map((option) => (
+                  <View key={option.id}>
+                    {!option?.hasAccess && <TouchableOpacity
+                      onPress={() => handleSelectUser(option.id)}
+                      className="flex-row items-center justify-between py-4 border-b border-gray-100 last:border-b-0"
+                      activeOpacity={0.7}
+                    >
+                      <View className="flex-row items-center gap-3">
+                        <View className="w-10 h-10 items-center justify-center">
 
-                  {/* Radio Button */}
-                  <View className="w-5 h-5 border-2 border-gray-300 rounded-full items-center justify-center">
-                    {selectedUser === option.id && (
-                      <View className="w-2.5 h-2.5 bg-red-500 rounded-full" />
-                    )}
+
+                          <option.icon
+                            name={option.iconName}
+                            size={24}
+                            color={"#374151"}
+                          />
+                        </View>
+                        <View>
+                          <View className="flex-row items-center gap-2">
+                            <Text className={`text-base font-NunitoBold text-gray-900`}>
+                              {option.name}
+                            </Text>
+                            {/* {!option.hasAccess && (
+                              <View className="bg-orange-100 px-2 py-0.5 rounded-full">
+                                <Text className="text-orange-800 text-xs font-NunitoMedium">
+                                  Login Required
+                                </Text>
+                              </View>
+                            )} */}
+                          </View>
+                          <Text className={`text-sm font-NunitoMedium ${option.hasAccess ? 'text-gray-500' : 'text-gray-400'
+                            }`}>
+                            {option.description}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Radio Button */}
+                      <View className="w-5 h-5 border-2 border-gray-300 rounded-full items-center justify-center">
+                        {selectedUser === option.id && (
+                          <View className="w-2.5 h-2.5 bg-red-500 rounded-full" />
+                        )}
+                      </View>
+                    </TouchableOpacity>}
                   </View>
-                </TouchableOpacity>
-              ))}
+                ))
+              )}
             </ScrollView>
 
             {/* Action Buttons */}
@@ -201,9 +337,18 @@ const SwitchUserModal = ({
 
 
               <CustomButton
-                title={`Switch to ${selectedUser ? userOptions.find(u => u.id === selectedUser)?.name : "User"}`}
+                title={
+                  selectedUser
+                    ? (() => {
+                      const selectedOption = userOptions.find(u => u.id === selectedUser);
+                      const hasAccess = selectedOption?.hasAccess || false;
+                      const roleName = selectedOption?.name || selectedUser;
+                      return hasAccess ? `Switch to ${roleName}` : `Sign up for ${roleName}`;
+                    })()
+                    : "Select a role"
+                }
                 onPress={handleConfirm}
-                disabled={!selectedUser}
+                disabled={!selectedUser || isLoadingUserRoles || isLoadingAllRoles}
 
               />
 
@@ -220,6 +365,17 @@ const SwitchUserModal = ({
           </Animated.View>
         </View>
       </TouchableOpacity>
+      
+      {/* Custom Alert for role signup */}
+      <CustomAlert
+        visible={visible}
+        title={alertConfig?.title || ""}
+        message={alertConfig?.message || ""}
+        onClose={hideAlert}
+        onButtonPress={handleSignUp}
+        type={alertConfig?.type || "error"}
+        buttonText="Sign Up"
+      />
     </Modal>
   );
 };

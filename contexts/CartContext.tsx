@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
-import Toast from 'toastify-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showToast } from '../utils/toastUtils';
+import { cartAPI } from '../lib/api/cart';
+import { getErrorMessage, getSuccessMessage } from '../utils/errorMessages';
 
 // Types
 export interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
@@ -22,21 +25,22 @@ interface CartState {
 
 type CartAction =
   | { type: 'ADD_ITEM'; payload: CartItem }
-  | { type: 'REMOVE_ITEM'; payload: number }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: number; quantity: number } }
+  | { type: 'REMOVE_ITEM'; payload: string }
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'SET_CART'; payload: CartItem[] };
 
 interface CartContextType {
   state: CartState;
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
-  clearCart: () => void;
-  getItemQuantity: (id: number) => number;
-  isInCart: (id: number) => boolean;
+  addToCart: (item: Omit<CartItem, 'quantity'>) => Promise<void>;
+  removeFromCart: (id: string) => Promise<void>;
+  updateQuantity: (id: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
+  getItemQuantity: (id: string) => number;
+  isInCart: (id: string) => boolean;
   cartAnimation: Animated.Value;
   triggerCartAnimation: () => void;
+  syncWithServer: () => Promise<void>;
 }
 
 // Initial state
@@ -171,62 +175,165 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Add to cart function
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
     const existingItem = state.items.find(cartItem => cartItem.id === item.id);
     
     if (existingItem && existingItem.quantity >= existingItem.stock) {
-      // Toast.error(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`);
+      showToast(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`, 'error');
       return;
     }
 
-    dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
-    triggerCartAnimation();
-    
-    // Show success feedback
-    // Toast.success(`${item.name} added to cart!`);
+    try {
+      // Add to server first
+      const response = await cartAPI.addToCart(item.id, 1);
+      
+      if (response.status) {
+        // Update local state
+        dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
+        triggerCartAnimation();
+        showToast(getSuccessMessage('cart_add'), 'success');
+      } else {
+        showToast(getErrorMessage({ response }, 'cart'), 'error');
+      }
+    } catch (error: any) {
+      console.error('Add to cart error:', error);
+      showToast(getErrorMessage(error, 'cart'), 'error');
+    }
   };
 
   // Remove from cart function
-  const removeFromCart = (id: number) => {
+  const removeFromCart = async (id: string) => {
     const item = state.items.find(item => item.id === id);
-    dispatch({ type: 'REMOVE_ITEM', payload: id });
     
-    // if (item) {
-    //   Toast.info(`${item.name} removed from cart`);
-    // }
+    try {
+      const response = await cartAPI.removeFromCart(id);
+      
+      if (response.status) {
+        dispatch({ type: 'REMOVE_ITEM', payload: id });
+        showToast(getSuccessMessage('cart_remove'), 'success');
+      } else {
+        showToast(getErrorMessage({ response }, 'cart'), 'error');
+      }
+    } catch (error: any) {
+      console.error('Remove from cart error:', error);
+      showToast(getErrorMessage(error, 'cart'), 'error');
+    }
   };
 
   // Update quantity function
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = async (id: string, quantity: number) => {
     const item = state.items.find(item => item.id === id);
     const oldQuantity = item?.quantity || 0;
     
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
-    
-    // if (item && quantity !== oldQuantity) {
-    //   if (quantity > oldQuantity) {
-    //     Toast.success(`Increased ${item.name} quantity to ${quantity}`);
-    //   } else if (quantity < oldQuantity) {
-    //     Toast.info(`Decreased ${item.name} quantity to ${quantity}`);
-    //   }
-    // }
+    try {
+      const response = await cartAPI.updateCartItem(id, quantity);
+      
+      if (response.status) {
+        dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+        showToast(getSuccessMessage('cart_update'), 'success');
+      } else {
+        showToast(getErrorMessage({ response }, 'cart'), 'error');
+      }
+    } catch (error: any) {
+      console.error('Update quantity error:', error);
+      showToast(getErrorMessage(error, 'cart'), 'error');
+    }
   };
 
   // Clear cart function
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
+  const clearCart = async () => {
+    try {
+      const response = await cartAPI.clearCart();
+      
+      if (response.status) {
+        dispatch({ type: 'CLEAR_CART' });
+        showToast(getSuccessMessage('cart_clear'), 'success');
+      } else {
+        showToast(getErrorMessage({ response }, 'cart'), 'error');
+      }
+    } catch (error: any) {
+      console.error('Clear cart error:', error);
+      showToast(getErrorMessage(error, 'cart'), 'error');
+    }
+  };
+
+  // Sync with server function
+  const syncWithServer = async () => {
+    try {
+      const response = await cartAPI.getCart();
+      
+      console.log('🛒 Cart sync response:', response);
+      
+      if (response.status) {
+        // Handle different response structures
+        let cartData = response.data;
+        
+        // If response.data is not an array, check if it's wrapped in another data property
+        if (!Array.isArray(cartData)) {
+          if (cartData && Array.isArray(cartData.data)) {
+            cartData = cartData.data;
+          } else if (cartData && Array.isArray(cartData.items)) {
+            cartData = cartData.items;
+          } else {
+            console.log('🛒 No cart items found in response');
+            dispatch({ type: 'SET_CART', payload: [] });
+            return;
+          }
+        }
+        
+        // Convert server cart items to local format
+        const localItems: CartItem[] = cartData.map((serverItem: any) => ({
+          id: serverItem.product_id || serverItem.id,
+          name: serverItem.product?.name || serverItem.name || 'Unknown Product',
+          price: serverItem.product?.price ? parseFloat(serverItem.product.price) : 
+                 serverItem.price ? parseFloat(serverItem.price) : 0,
+          quantity: serverItem.quantity || 1,
+          stock: serverItem.stock || 10, // Default stock
+          image: serverItem.product?.images?.[0]?.image || 
+                 serverItem.images?.[0]?.image || 
+                 serverItem.image || 'sparePart',
+        }));
+        
+        console.log('🛒 Converted cart items:', localItems);
+        dispatch({ type: 'SET_CART', payload: localItems });
+      } else {
+        console.log('🛒 Cart sync failed - status false');
+        dispatch({ type: 'SET_CART', payload: [] });
+      }
+    } catch (error: any) {
+      console.error('❌ Sync cart error:', error);
+      // Don't clear cart on error, just log it
+    }
   };
 
   // Get item quantity
-  const getItemQuantity = (id: number): number => {
+  const getItemQuantity = (id: string): number => {
     const item = state.items.find(item => item.id === id);
     return item ? item.quantity : 0;
   };
 
   // Check if item is in cart
-  const isInCart = (id: number): boolean => {
+  const isInCart = (id: string): boolean => {
     return state.items.some(item => item.id === id);
   };
+
+  // Sync with server on mount (optional - only if user is authenticated)
+  useEffect(() => {
+    // Only sync cart if user is likely authenticated
+    // This prevents errors during development when API might not be available
+    const checkAndSync = async () => {
+      try {
+        const isLoggedIn = await AsyncStorage.getItem('is_logged_in');
+        if (isLoggedIn === 'true') {
+          syncWithServer();
+        }
+      } catch (error) {
+        console.log('🛒 Skipping cart sync - user not authenticated');
+      }
+    };
+    
+    checkAndSync();
+  }, []);
 
   const value: CartContextType = {
     state,
@@ -238,6 +345,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isInCart,
     cartAnimation,
     triggerCartAnimation,
+    syncWithServer,
   };
 
   return (

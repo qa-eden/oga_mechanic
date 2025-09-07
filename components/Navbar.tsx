@@ -1,12 +1,13 @@
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar } from "react-native";
 import React from "react";
-import { images } from "@/constants";
 import {
   SunIcon,
   MoonIcon,
   CloudIcon,
   BellIcon,
+  UserIcon,
 } from "react-native-heroicons/outline";
+import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 
 const getTimeOfDay = () => {
   const hour = new Date().getHours();
@@ -31,23 +32,39 @@ const getTimeOfDay = () => {
 
 const Navbar = () => {
   const { label, icon } = getTimeOfDay();
+  const { data: profileData, isLoading } = usePrimaryUserProfile();
+
+  // Get user data from API or fallback to static data
+  const userData = profileData?.data;
+  const displayName = userData?.first_name || 'User';
+  const isVerified = userData?.is_verified || false;
 
   return (
     <View className="flex-row justify-between items-center pt-3">
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View className="flex flex-row items-center gap-2">
         <View className="w-[45px] h-[45px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
-          <Image
+          <UserIcon size={24} color="#666" />
+
+          {/* <Image
             source={images.dummyProfile}
             className="w-[40px] h-[40px] rounded-full"
             resizeMode="cover"
             alt="Profile"
-          />
+          /> */}
         </View>
 
         <View>
           <View className="flex flex-row items-center gap-1">
-            <Text className="font-NunitoBold text-[1.2rem]">Hi, Okorie</Text>
+            <Text className="font-NunitoBold text-[1.2rem]">Hi, {displayName}</Text>
             {icon}
+            {/* {isVerified && (
+              <View className="bg-green-100 px-1 py-0.5 rounded-full ml-1">
+                <Text className="text-green-800 text-xs font-NunitoMedium">
+                  ✓
+                </Text>
+              </View>
+            )} */}
           </View>
           <Text className="text-[12px] text-text-100 pt-[.1rem]">
             Everything your car needs is here.

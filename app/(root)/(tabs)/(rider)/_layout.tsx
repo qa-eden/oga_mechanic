@@ -1,173 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Tabs } from 'expo-router';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { icons } from '@/constants';
+import React, { useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Platform,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { icons } from "@/constants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const RiderTabsLayout = () => {
+// Import your actual tab screen components
+import RiderEarnings from "./earnings";
+import RiderHome from "./home";
+import RiderOrder from "./order";
+import RiderProfile from "./profile";
+
+export default function Layout() {
   const router = useRouter();
-  const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const [activeTab, setActiveTab] = useState('home');
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState("home");
 
-  useEffect(() => {
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, [tab]);
+  // Function to render tab icons with labels
+  const renderTabBar = () => {
+    // Define the icon and label for each tab
+    const tabInfo: Record<
+      string,
+      {
+        icon: React.ReactElement;
+        activeIcon: React.ReactElement;
+        label: string;
+        component: React.ComponentType;
+      }
+    > = {
+      home: {
+        icon: <icons.home />,
+        activeIcon: <icons.activeHome />,
+        label: "Home",
+        component: RiderHome,
+      },
+      earnings: {
+        icon: <icons.order />,
+        activeIcon: <icons.activeOrder />,
+        label: "Earnings",
+        component: RiderEarnings,
+      },
+      consultation: {
+        icon: <icons.earnings />,
+        activeIcon: <icons.activeEarnings />,
+        label: "Bookings",
+        component: RiderOrder,
+      },
+      profile: {
+        icon: <icons.profile />,
+        activeIcon: <icons.activeProfile />,
+        label: "Profile",
+        component: RiderProfile,
+      },
+    };
 
-  const handleTabPress = (tabName: string) => {
-    setActiveTab(tabName);
-    if (tabName === 'home') {
-      router.push('/(root)/(tabs)/(rider)/home');
-    } else if (tabName === 'order') {
-      router.push('/(root)/(tabs)/(rider)/order');
-    } else if (tabName === 'earnings') {
-      router.push('/(root)/(tabs)/(rider)/earnings');
-    } else if (tabName === 'profile') {
-      router.push('/(root)/(tabs)/(rider)/profile');
-    }
+    return (
+      <View
+        style={[
+          styles.bottomBar,
+          Platform.OS === "android" && { paddingBottom: insets.bottom },
+        ]}
+      >
+        {Object.keys(tabInfo).map((routeName) => {
+          const isActive = routeName === activeTab;
+          return (
+            <TouchableOpacity
+              key={routeName}
+              onPress={() => setActiveTab(routeName)}
+              style={styles.tabBarItem}
+            >
+              {isActive
+                ? tabInfo[routeName]?.activeIcon
+                : tabInfo[routeName]?.icon}
+              <Text
+                style={[styles.tabLabel, isActive && styles.activeTabLabel]}
+              >
+                {tabInfo[routeName]?.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  // Get the active component
+  const getActiveComponent = () => {
+    const tabInfo: Record<string, React.ComponentType> = {
+      home: RiderHome,
+      consultation: RiderOrder,
+      earnings: RiderEarnings,
+      profile: RiderProfile,
+    };
+    const ActiveComponent = tabInfo[activeTab] || RiderHome;
+    return <ActiveComponent />;
   };
 
   return (
-    <View style={styles.container}>
-      {/* Custom Tab Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'home' && styles.activeTab]}
-          onPress={() => handleTabPress('home')}
-        >
-          <View style={styles.tabContent}>
-            {activeTab === 'home' ? (
-              <icons.activeHome style={styles.tabIcon} />
-            ) : (
-              <icons.home style={styles.tabIcon} />
-            )}
-            <Text style={[styles.tabText, activeTab === 'home' && styles.activeTabText]}>
-              Home
-            </Text>
-          </View>
-        </TouchableOpacity>
+    <View style={{ flex: 1, position: "relative" }}>
+      {/* Main Content */}
+      <View style={{ flex: 1 }}>{getActiveComponent()}</View>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'order' && styles.activeTab]}
-          onPress={() => handleTabPress('order')}
-        >
-          <View style={styles.tabContent}>
-            {activeTab === 'order' ? (
-              <icons.activeOrder style={styles.tabIcon} />
-            ) : (
-              <icons.order style={styles.tabIcon} />
-            )}
-            <Text style={[styles.tabText, activeTab === 'order' && styles.activeTabText]}>
-              Bookings
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'earnings' && styles.activeTab]}
-          onPress={() => handleTabPress('earnings')}
-        >
-          <View style={styles.tabContent}>
-            {activeTab === 'earnings' ? (
-              <icons.activeEarnings style={styles.tabIcon} />
-            ) : (
-              <icons.earnings style={styles.tabIcon} />
-            )}
-            <Text style={[styles.tabText, activeTab === 'earnings' && styles.activeTabText]}>
-              Earnings
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'profile' && styles.activeTab]}
-          onPress={() => handleTabPress('profile')}
-        >
-          <View style={styles.tabContent}>
-            {activeTab === 'profile' ? (
-              <icons.activeProfile style={styles.tabIcon} />
-            ) : (
-              <icons.profile style={styles.tabIcon} />
-            )}
-            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>
-              Profile
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      <Tabs.Screen
-        name="home"
-        options={{
-          headerShown: false,
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="order"
-        options={{
-          headerShown: false,
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          headerShown: false,
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          headerShown: false,
-          tabBarButton: () => null,
-        }}
-      />
+      {/* Custom Bottom Tab Bar */}
+      {renderTabBar()}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
+  bottomBar: {
+    backgroundColor: "white",
+    flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingBottom: 20,
-    paddingTop: 10,
+    borderTopColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
   },
-  tab: {
+  tabBarItem: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    minHeight: 90,
   },
-  activeTab: {
-    // Active tab styling
+  tabLabel: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 4,
+    fontFamily: "Nunito-Regular",
   },
-  tabContent: {
-    alignItems: 'center',
-  },
-  tabIcon: {
-    width: 24,
-    height: 24,
-    marginBottom: 4,
-  },
-  tabText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#DC3F1D',
-    fontWeight: '600',
+  activeTabLabel: {
+    color: "#D30309",
+    fontFamily: "Nunito-Bold",
   },
 });
-
-export default RiderTabsLayout;

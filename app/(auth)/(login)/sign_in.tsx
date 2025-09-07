@@ -1,24 +1,26 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal } from "react-native";
+import React, { useState, useMemo } from "react";
+import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
 import { Formik } from "formik";
 import { router, useLocalSearchParams } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { loginSchema } from "@/utils/validationSchemas";
-import { driverRoutes, mechanicRoutes, routes } from "@/constants/routes";
+import { riderRoutes, routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
-import { useUserStore } from "@/stores/userStore";
 import { LoginCredentials } from "@/lib/api/user";
-import { Toast } from "toastify-react-native";
+import { useLogin } from "@/hooks/useLogin";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import CustomAlert from "@/components/CustomAlert";
 import { ChevronDownIcon } from "react-native-heroicons/outline";
 import CountryStatePicker from "@/components/CountryStatePicker";
 import { Country } from 'react-native-country-picker-modal';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SignIn = () => {
-  const { login, loading, error, clearError } = useUserStore();
+  const loginMutation = useLogin();
+  const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
+  
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('email');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -38,13 +40,14 @@ const SignIn = () => {
   const params = useLocalSearchParams();
   const userType = params.userType as string;
 
-  const getCountryFlag = (cca2: string) => {
+  // Memoize expensive calculations
+  const getCountryFlag = useMemo(() => (cca2: string) => {
     const countryCode = cca2?.toUpperCase();
     const flagOffset = 127397;
     return String.fromCodePoint(...countryCode.split('').map(char => char.charCodeAt(0) + flagOffset));
-  };
+  }, []);
 
-  const getPhoneExample = (country: any) => {
+  const getPhoneExample = useMemo(() => (country: any) => {
     if (!country?.callingCode) return 'Enter phone number';
     const examples: { [key: string]: string } = {
       '234': '906 935 0833',
@@ -58,100 +61,70 @@ const SignIn = () => {
     };
     const callingCode = Array.isArray(country.callingCode) ? country.callingCode[0] : country.callingCode;
     return examples[callingCode] || 'Enter phone number';
-  };
+  }, []);
 
   const handleCountrySelect = (country: Country) => {
     setSelectedCountry(country);
     setShowCountryPicker(false);
   };
 
-  const handleSignIn = async (values: LoginCredentials, { setSubmitting, setFieldError }: any) => {
-    console.log("Sign in values:", values);
+  const handleSignIn = async (values: any, { setSubmitting, setFieldError }: any) => {
+    // router.replace(riderRoutes?.home);
     
     try {
-      // If user type is specified from registration, use that for redirection
-      if (userType) {
-        console.log('🔍 User type from registration:', userType);
-        
-        if (userType === 'rider') {
-          console.log('🚀 Redirecting rider to rider dashboard');
-          router.push('/(root)/(tabs)/(rider)/home');
-        } else if (userType === 'driver') {
-          console.log('🚀 Redirecting driver to driver dashboard');
-          router.push('/(root)/(tabs)/(driver)/home');
-        }
-        
-        // Clear the user type parameter after successful login
-        return;
-      }
-      
-      // Check for saved role in local storage (existing logic)
-      const savedRole = await AsyncStorage.getItem('selectedRole');
-      console.log('🔍 Raw saved role from storage:', savedRole);
-      
-      if (savedRole) {
-        const role = JSON.parse(savedRole);
-        
-        // Determine the appropriate dashboard based on role
-        if (role.id === 1 || role.id === 2) { // Primary user (1) or Seller (2) -> User dashboard
-          console.log('🚀 Redirecting user to user dashboard');
-          router.push(routes?.home as any);
-        } else if (role.id === 3) {
-          router.push(mechanicRoutes?.home as any);
-        } else if (role.id === 4) {
-          router.push(driverRoutes?.home as any);
-        } else {
-          // Fallback to default home route
-          console.log('🚀 No specific role, using default route');
-          router.push(routes?.home as any);
-        }
+      // Prepare login credentials based on login method
+      const credentials: LoginCredentials = {
+        password: values.password,
+      };
+
+      if (loginMethod === 'email') {
+        credentials.email = values.email;
       } else {
-        // No saved role, use default route
-        console.log('🚀 No saved role found, using default route');
-        router.push(routes?.home as any);
+        // For phone login, combine country code with phone number
+        const countryCode = Array.isArray(selectedCountry?.callingCode) 
+          ? selectedCountry?.callingCode[0] 
+          : selectedCountry?.callingCode || '234';
+        credentials.phone_number = `+${countryCode}${phoneNumber}`;
       }
-      
-      // Clear the saved role after successful login
-      await AsyncStorage.removeItem('selectedRole');
-      console.log('🧹 Cleared saved role from storage');
+
+      // Call login mutation
+      loginMutation.mutate(credentials, {
+        onSuccess: (response) => {
+          showSuccess('Login Successful!', 'Welcome back!');
+          setSubmitting(false);
+          
+          // Immediate navigation - no delay
+          router.replace(routes?.userHome);
+        },
+        onError: (error: any) => {
+          console.error('❌ Login failed:', error);
+          
+          // Extract error message
+          let errorMessage = 'Login failed. Please check your credentials.';
+          
+          if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            if (errors.email) {
+              errorMessage = errors.email[0];
+            } else if (errors.password) {
+              errorMessage = errors.password[0];
+            } else if (errors.phone_number) {
+              errorMessage = errors.phone_number[0];
+            }
+          }
+          
+          showError('Login Failed', errorMessage);
+          setSubmitting(false);
+        }
+      });
       
     } catch (error) {
       console.error('❌ Error during sign in:', error);
-      // Fallback to default home route
-      router.push(routes?.home as any);
+      showError('Login Failed', 'An unexpected error occurred. Please try again.');
+      setSubmitting(false);
     }
-
-    // // Additional client-side validation (optional)
-    // if (!values.email || !values.email.includes("@")) {
-    //   setFieldError("email", "Please enter a valid email address");
-    //   setSubmitting(false);
-    //   return;
-    // }
-
-    // if (!values.password || values.password.length < 6) {
-    //   setFieldError("password", "Password must be at least 6 characters");
-    //   setSubmitting(false);
-    //   return;
-    // }
-
-    // // Clear any previous errors
-    // clearError();
-
-    // // Call login API
-    // const success = await login(values);
-    
-    // if (success) {
-    //   Toast.success("Login successful! Welcome back!");
-    //   // Navigate based on user role
-    //   setTimeout(() => {
-    //     router.push(routes?.home);
-    //   }, 1000);
-    // } else {
-    //   // Error toast will be shown by the store
-    //   Toast.error("Login failed. Please check your credentials.");
-    // }
-    
-    setSubmitting(false);
   };
 
   return (
@@ -299,10 +272,10 @@ const SignIn = () => {
           </View>
 
           <FormikButton 
-            title={loading ? "Signing In..." : "Sign In"} 
+            title={loginMutation.isPending ? "Signing In..." : "Sign In"} 
             className="mb-6" 
-            loading={loading}
-            disabled={loading}
+            loading={loginMutation.isPending}
+            disabled={loginMutation.isPending}
           />
 
           <AuthNavigateLink
@@ -314,17 +287,31 @@ const SignIn = () => {
         </View>
       </Formik>
 
-      {/* Country Picker Modal */}
-      <CountryStatePicker
-        selectedCountry={selectedCountry}
-        selectedState={selectedState}
-        onCountryChange={setSelectedCountry}
-        onStateChange={setSelectedState}
-        showCountryPicker={showCountryPicker}
-        showStatePicker={showStatePicker}
-        onCountryPickerToggle={setShowCountryPicker}
-        onStatePickerToggle={setShowStatePicker}
-      />
+      {/* Country Picker Modal - Only render when needed */}
+      {showCountryPicker && (
+        <CountryStatePicker
+          selectedCountry={selectedCountry}
+          selectedState={selectedState}
+          onCountryChange={setSelectedCountry}
+          onStateChange={setSelectedState}
+          showCountryPicker={showCountryPicker}
+          showStatePicker={showStatePicker}
+          onCountryPickerToggle={setShowCountryPicker}
+          onStatePickerToggle={setShowStatePicker}
+        />
+      )}
+
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+        />
+      )}
     </ScrollView>
   );
 };

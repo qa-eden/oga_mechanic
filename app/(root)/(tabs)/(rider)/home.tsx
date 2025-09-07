@@ -1,13 +1,40 @@
-import React, { useState } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Image, StatusBar, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { Text, View, ScrollView, TouchableOpacity, Image, StatusBar, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDownIcon, ArrowRightIcon } from 'react-native-heroicons/outline';
 import { MapPinIcon } from 'react-native-heroicons/solid';
 import { icons } from '@/constants';
 import { router } from 'expo-router';
+import RiderRequestCard from '@/components/cards/RiderRequestCard';
+import CustomMapView from '@/components/MapView';
 
 const Home = () => {
   const [selectedLocation, setSelectedLocation] = useState("No 5, Agbondodo str, Ijai...");
+  const [selectedRequestId, setSelectedRequestId] = useState<string | number | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Generate markers for delivery requests
+  const generateDeliveryMarkers = () => {
+    return deliveryRequests.map((request, index) => ({
+      id: `delivery-${request.id}`,
+      coordinate: {
+        latitude: 6.5244 + (Math.random() - 0.5) * 0.02, // Random nearby locations
+        longitude: 3.3792 + (Math.random() - 0.5) * 0.02,
+      },
+      title: `Delivery Request ${request.id}`,
+      description: `${request.customerName} - ${request.orderId}`,
+      color: selectedRequestId === request.id ? '#EF4444' : '#10B981',
+      size: selectedRequestId === request.id ? 20 : 16,
+    }));
+  };
+
+  // Handle marker press
+  const handleMarkerPress = (markerId: string) => {
+    if (markerId.startsWith('delivery-')) {
+      const requestId = parseInt(markerId.replace('delivery-', ''));
+      setSelectedRequestId(requestId);
+    }
+  };
 
   // Summary cards data
   const summaryCards = [
@@ -63,11 +90,38 @@ const Home = () => {
     Alert.alert('Check Details', 'Check details button tapped');
   };
 
+  // Pull to refresh function
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Simulate API call - replace with actual data fetching
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Rider home data refreshed');
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   return (
-    <SafeAreaView className="h-screen">
+    <SafeAreaView className="h-screen bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']} // Android
+            tintColor="#D30309" // iOS
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
+      >
         {/* Header Section */}
         <View className="bg-white px-5 py-4">
           {/* Profile and Greeting */}
@@ -104,16 +158,38 @@ const Home = () => {
         </View>
 
         {/* Map Section */}
-        <View className="h-64 bg-gray-200 mx-5 rounded-xl mb-4">
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-gray-500">Map View</Text>
-            <View className="w-6 h-6 border-2 border-blue-500 border-dashed rounded-full mt-2" />
-          </View>
+        <View className="h-64 mx-5 rounded-xl mb-4 overflow-hidden">
+          <CustomMapView
+            region={{
+              latitude: 6.5244, // Lagos, Nigeria
+              longitude: 3.3792,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+            markers={[
+              {
+                id: 'user-location',
+                coordinate: {
+                  latitude: 6.5244,
+                  longitude: 3.3792,
+                },
+                title: 'Your Location',
+                description: selectedLocation,
+                color: '#3B82F6',
+                size: 20,
+              },
+              ...generateDeliveryMarkers(),
+            ]}
+            showUserLocation={true}
+            showMyLocationButton={true}
+            showCompass={true}
+            className="rounded-xl"
+          />
         </View>
 
         {/* Summary Cards */}
         <View className="px-5 mb-6">
-          <View className="flex-row space-x-3">
+          <View className="flex-row gap-3 space-x-3">
             {summaryCards.map((card) => (
               <View key={card.id} className="flex-1 bg-white p-4 rounded-xl shadow-xs border border-gray-300">
                 <View className="flex-row items-center justify-between mb-2">
@@ -130,8 +206,8 @@ const Home = () => {
         </View>
 
         {/* Nearby Delivery Requests */}
-        <View className="px-5 mb-6">
-          <View className="flex-row items-center justify-between mb-3">
+        <View className="px-5 mb-3">
+          <View className="flex-row items-center justify-between ">
             <Text className="text-lg font-bold text-gray-900">Nearby Delivery Requests</Text>
             <TouchableOpacity className="flex-row items-center">
               <Text className="text-red-500 font-medium mr-1">View all</Text>
@@ -140,47 +216,45 @@ const Home = () => {
           </View>
 
           <View className="space-y-3">
-            {deliveryRequests.map((request) => (
-              <View
-                key={request.id}
-                className={`bg-white rounded-xl p-4 border ${
-                  request.isSelected ? 'border-red-500' : 'border-gray-200'
-                }`}
-              >
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="font-bold text-gray-900">{request.customerName}</Text>
-                  <Text className="text-sm text-gray-600">{request.orderId}</Text>
+            {deliveryRequests.map((request) => {
+              const isSelected = selectedRequestId === request.id;
+              return (
+                <View key={request.id} className="w-full mt-2">
+                  <RiderRequestCard
+                    request={{
+                      ...request,
+                      isSelected: isSelected
+                    }}
+                    onPress={() => {
+                      // Handle request selection
+                      setSelectedRequestId(request.id);
+                      console.log('Request selected:', request.id);
+                    }}
+                    showSelection={true}
+                    pickupColor="#3B82F6"
+                    deliveryColor="#10B981"
+                    borderColor="border-gray-200"
+                    selectedBorderColor="border-red-500"
+                  />
                 </View>
-                
-                <View className="flex-row items-start">
-                  <View className="w-4 h-4 bg-blue-500 rounded-full mt-1 mr-3" />
-                  <Text className="text-sm text-gray-700 flex-1">{request.pickup}</Text>
-                </View>
-                
-                <View className="ml-2 my-1">
-                  <View className="w-px h-4 bg-gray-300" />
-                </View>
-                
-                <View className="flex-row items-start">
-                  <View className="w-4 h-4 bg-green-500 rounded-full mt-1 mr-3" />
-                  <Text className="text-sm text-gray-700 flex-1">{request.delivery}</Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
-        {/* Check Details Button */}
-        <View className="px-5 mb-6">
-          <TouchableOpacity
-            onPress={handleCheckDetails}
-            className="bg-red-500 py-4 rounded-xl"
-          >
-            <Text className="text-white font-bold text-center text-lg">
-              Check details
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Check Details Button - Only show when a request is selected */}
+        {selectedRequestId && (
+          <View className="px-5 mb-6">
+            <TouchableOpacity
+              onPress={handleCheckDetails}
+              className="bg-red-500 py-4 rounded-xl"
+            >
+              <Text className="text-white font-bold text-center text-lg">
+                Check details
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Bottom Spacing */}
         <View className="h-20" />

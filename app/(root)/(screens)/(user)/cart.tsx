@@ -9,8 +9,9 @@ import {
   FlatList,
   Animated,
   Dimensions,
+  RefreshControl,
 } from "react-native";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { icons, images } from "@/constants";
@@ -43,6 +44,7 @@ interface CartItem {
 }
 
 const Cart = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([
     {
       id: 1,
@@ -225,6 +227,20 @@ const Cart = () => {
     }, 1500);
   };
 
+  // Pull to refresh function
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Simulate API call - replace with actual cart data fetching
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Cart data refreshed');
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   // Handle select all functionality
   const handleSelectAll = () => {
     if (selectAll) {
@@ -307,6 +323,16 @@ const Cart = () => {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']} // Android
+            tintColor="#D30309" // iOS
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
       >
         {/* Savings Banner */}
         {calculateSavings() > 0 && (

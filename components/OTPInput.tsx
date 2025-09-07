@@ -13,7 +13,7 @@ const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
         hideStick={true}
         placeholder=""
         blurOnFilled={true}
-        disabled={countdown === 0}
+
         type="numeric"
         secureTextEntry={false}
         focusStickBlinkingDuration={500}
@@ -32,7 +32,7 @@ const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
           focusedPinCodeContainerStyle: styles.activePinCodeContainer,
           placeholderTextStyle: styles.placeholderText,
           filledPinCodeContainerStyle: styles.filledPinCodeContainer,
-          disabledPinCodeContainerStyle: styles.disabledPinCodeContainer,
+
         }}
       />
     </View>
@@ -69,9 +69,6 @@ const styles = StyleSheet.create({
   },
   filledPinCodeContainer: {
     borderColor: "red",
-  },
-  disabledPinCodeContainer: {
-    backgroundColor: "#ddd",
   },
 });
 

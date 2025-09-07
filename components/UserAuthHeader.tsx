@@ -6,9 +6,11 @@ import { icons } from "@/constants";
 const UserAuthHeader = ({
   header,
   onPress,
+  children,
 }: {
   header?: string;
   onPress?: () => void;
+  children?: React.ReactNode;
 }) => {
   return (
     <View className="">
@@ -23,7 +25,7 @@ const UserAuthHeader = ({
             <icons.splash width={120} height={80} />
           </View>
         )}
-        <View className="w-[10%]"></View>
+        {children ? children : <View className="w-[10%]"></View>}
       </View>
     </View>
   );

@@ -6,20 +6,47 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  RefreshControl,
 } from "react-native";
 import React, { useRef, useEffect, useState, useCallback, memo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Navbar from "@/components/Navbar";
 import AdsComponents from "@/components/AdsComponents";
-import { Ads, CarsList, MechanicsList, SpareParts } from "@/constants";
+import { Ads } from "@/constants";
 import Card1 from "@/components/cards/Card1";
 import SectionHeader from "@/components/SectionHeader";
 import { router } from "expo-router";
 import { LAYOUT } from "@/constants/units";
 import { routes } from "@/constants/routes";
 import { CalendarIcon, MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import { useHomeProducts } from "@/hooks/useProducts";
+import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 
 const { width: screenWidth } = Dimensions.get("window");
+
+// Skeleton component for loading states
+const CardSkeleton = memo(({ width }: { width: number }) => (
+  <View style={{ width }} className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden">
+    {/* Image skeleton */}
+    <View className="w-full h-[140px] bg-gray-200 animate-pulse" />
+    
+    {/* Content skeleton */}
+    <View className="p-3 space-y-2">
+      {/* Title skeleton */}
+      <View className="h-4 bg-gray-200 rounded animate-pulse" />
+      
+      {/* Rating skeleton */}
+      <View className="flex-row items-center space-x-1">
+        <View className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+        <View className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+      </View>
+      
+      {/* Price skeleton */}
+      <View className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+    </View>
+  </View>
+));
 
 const HomePage = memo(() => {
   const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } =
@@ -28,6 +55,16 @@ const HomePage = memo(() => {
   const [activeAdIndex, setActiveAdIndex] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const scrollX = useRef(new Animated.Value(0)).current;
+
+  // Fetch home products from API (includes mechanics, cars, and spare parts)
+  const { data: homeProducts, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useHomeProducts();
+
+  // Pull to refresh functionality
+  const { refreshControl } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetchProducts();
+    }
+  });
 
   // Calculate card width to show 2 full cards + 1 partial card (20-30% visible)
   const CARD_WIDTH = Math.floor((screenWidth - 35 - 32) / 2.15); // 40px padding, 32px gap, 2.3 cards visible
@@ -72,20 +109,57 @@ const HomePage = memo(() => {
     </View>
   ), [screenWidth]);
 
-  const renderMechanicItem = useCallback(({ item }: { item: any }) => (
+  const renderMechanicItem = useCallback(({ item }: { item: any }) => {
+    // Extract name from user object or use fallback
+    const getName = () => {
+      if (item?.name) return item.name;
+      if (item?.user) {
+        if (typeof item.user === 'string') return item.user;
+        if (typeof item.user === 'object' && item.user.first_name) {
+          return `${item.user.first_name} ${item.user.last_name || ''}`.trim();
+        }
+      }
+      return 'Mechanic';
+    };
+
+    return (
+      <View style={{ width: CARD_WIDTH }}>
+        <Card1
+          Images={item.image || item.avatar || require('@/assets/icons/mechanic.png')} // Use API image or fallback
+          rating={item?.rating || 0} // Default rating if not provided
+          name={getName()} // Use extracted name
+          reviewCount={item?.reviewCount || 0} // Default review count
+          onPress={() => {
+            router.push({
+              pathname: routes.mechanicProfile,
+              params: {
+                mechanicId: item.id,
+                mechanicName: getName(),
+                mechanicRating: item.rating || 0,
+              },
+            });
+          }}
+        />
+      </View>
+    );
+  }, [CARD_WIDTH]);
+
+  const renderCarItem = useCallback(({ item }: { item: any }) => (
     <View style={{ width: CARD_WIDTH }}>
       <Card1
-        Images={item.image}
-        rating={item?.rating}
-        name={item?.name}
-        reviewCount={item?.reviewCount}
+        Images={item.images?.[0]?.image || item.image || require('@/assets/images/car.svg')} // Use first image from API or fallback
+        rating={item?.rating || 4.5} // Default rating if not provided
+        name={item?.name || 'Car'} // Use name from API
+        price={item?.price || '0'} // Use price from API
+        reviewCount={item?.reviewCount || 0} // Default review count
+        showLove={true}
         onPress={() => {
           router.push({
-            pathname: routes.mechanicProfile,
+            pathname: routes.ProductDetail,
             params: {
-              mechanicId: item.id,
-              mechanicName: item.name,
-              mechanicRating: item.rating,
+              productId: item.id,
+              productName: item.name,
+              productPrice: item.price,
             },
           });
         }}
@@ -93,30 +167,40 @@ const HomePage = memo(() => {
     </View>
   ), [CARD_WIDTH]);
 
-  const renderCarItem = useCallback(({ item }: { item: any }) => (
+  const renderSparePartItem = useCallback(({ item }: { item: any }) => (
     <View style={{ width: CARD_WIDTH }}>
       <Card1
-        Images={item.image}
-        rating={item?.rating}
-        name={item?.name}
-        price={item?.price}
-        reviewCount={item?.reviewCount}
+        Images={item.images?.[0]?.image || item.image || require('@/assets/images/sparePart.svg')} // Use first image from API or fallback
+        rating={item?.rating || 4.5} // Default rating if not provided
+        name={item?.name || 'Spare Part'} // Use name from API
+        reviewCount={item?.reviewCount || 0} // Default review count
+        price={item?.price || '0'} // Use price from API
         showLove={true}
+        onPress={() => {
+          router.push({
+            pathname: routes.ProductDetail,
+            params: {
+              productId: item.id,
+              productName: item.name,
+              productPrice: item.price,
+            },
+          });
+        }}
       />
     </View>
   ), [CARD_WIDTH]);
 
-  const renderSparePartItem = useCallback(({ item }: { item: any }) => (
-    <View style={{ width: CARD_WIDTH }}>
-      <Card1
-        Images={item.image}
-        rating={item?.rating}
-        name={item?.name}
-        reviewCount={item?.reviewCount}
-        price={item?.price}
-        showLove={true}
-      />
-    </View>
+  // Skeleton render functions
+  const renderMechanicSkeleton = useCallback(() => (
+    <CardSkeleton width={CARD_WIDTH} />
+  ), [CARD_WIDTH]);
+
+  const renderCarSkeleton = useCallback(() => (
+    <CardSkeleton width={CARD_WIDTH} />
+  ), [CARD_WIDTH]);
+
+  const renderSparePartSkeleton = useCallback(() => (
+    <CardSkeleton width={CARD_WIDTH} />
   ), [CARD_WIDTH]);
 
   const renderAdDotIndicator = () => (
@@ -160,6 +244,7 @@ const HomePage = memo(() => {
           paddingBottom: SCROLL_PADDING_BOTTOM, // Increased padding for better spacing
         }}
         className={`${CONTAINER_PADDING}`}
+        refreshControl={<RefreshControl {...refreshControl} />}
       >
         <Navbar />
 
@@ -222,25 +307,55 @@ const HomePage = memo(() => {
             }}
             isLoading={isNavigating}
           />
-          <FlatList
-            data={MechanicsList}
-            renderItem={renderMechanicItem}
-            keyExtractor={(item) => String(item.id)}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            snapToAlignment="start"
-            snapToInterval={CARD_WIDTH + CARD_GAP}
-            decelerationRate="fast"
-            contentContainerStyle={{
-              paddingHorizontal: CARD_PADDING,
-              gap: CARD_GAP,
-            }}
-            initialNumToRender={4}
-            maxToRenderPerBatch={2}
-            windowSize={3}
-            removeClippedSubviews={true}
-            updateCellsBatchingPeriod={100}
-          />
+          
+          {/* Error Message */}
+          {productsError && (
+            <View className="bg-red-50 p-4 rounded-lg mb-4 mx-4">
+              <Text className="text-red-600 font-NunitoMedium text-center">
+                {getErrorMessage(productsError, 'products')}
+              </Text>
+              <Text className="text-gray-500 text-center mt-1 text-sm">
+                Pull down to refresh or try again
+              </Text>
+            </View>
+          )}
+          
+          {productsLoading ? (
+            <FlatList
+              data={Array.from({ length: 4 }, (_, i) => ({ id: `skeleton-${i}` }))} // Generate 4 skeleton items
+              renderItem={renderMechanicSkeleton}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+            />
+          ) : (
+            <FlatList
+              data={homeProducts?.data?.mechanics || []} // Use API data only, no fallback
+              renderItem={renderMechanicItem}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+              initialNumToRender={4}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={100}
+            />
+          )}
         </View>
 
         {/* Enhanced Cars Section */}
@@ -253,25 +368,42 @@ const HomePage = memo(() => {
             }}
             isLoading={isNavigating}
           />
-          <FlatList
-            data={CarsList}
-            renderItem={renderCarItem}
-            keyExtractor={(item) => String(item.id)}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            snapToAlignment="start"
-            snapToInterval={CARD_WIDTH + CARD_GAP}
-            decelerationRate="fast"
-            contentContainerStyle={{
-              paddingHorizontal: CARD_PADDING,
-              gap: CARD_GAP,
-            }}
-            initialNumToRender={4}
-            maxToRenderPerBatch={2}
-            windowSize={3}
-            removeClippedSubviews={true}
-            updateCellsBatchingPeriod={100}
-          />
+          {productsLoading ? (
+            <FlatList
+              data={Array.from({ length: 4 }, (_, i) => ({ id: `skeleton-car-${i}` }))} // Generate 4 skeleton items
+              renderItem={renderCarSkeleton}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+            />
+          ) : (
+            <FlatList
+              data={homeProducts?.data?.best_selling_cars || []} // Use API data only, no fallback
+              renderItem={renderCarItem}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+              initialNumToRender={4}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={100}
+            />
+          )}
         </View>
 
         {/* Enhanced Spare Parts Section */}
@@ -284,25 +416,42 @@ const HomePage = memo(() => {
             }}
             isLoading={isNavigating}
           />
-          <FlatList
-            data={SpareParts}
-            renderItem={renderSparePartItem}
-            keyExtractor={(item) => String(item.id)}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            snapToAlignment="start"
-            snapToInterval={CARD_WIDTH + CARD_GAP}
-            decelerationRate="fast"
-            contentContainerStyle={{
-              paddingHorizontal: CARD_PADDING,
-              gap: CARD_GAP,
-            }}
-            initialNumToRender={4}
-            maxToRenderPerBatch={2}
-            windowSize={3}
-            removeClippedSubviews={true}
-            updateCellsBatchingPeriod={100}
-          />
+          {productsLoading ? (
+            <FlatList
+              data={Array.from({ length: 4 }, (_, i) => ({ id: `skeleton-part-${i}` }))} // Generate 4 skeleton items
+              renderItem={renderSparePartSkeleton}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+            />
+          ) : (
+            <FlatList
+              data={homeProducts?.data?.best_selling_spare_parts || []} // Use API data only, no fallback
+              renderItem={renderSparePartItem}
+              keyExtractor={(item) => String(item.id)}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: CARD_PADDING,
+                gap: CARD_GAP,
+              }}
+              initialNumToRender={4}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={100}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

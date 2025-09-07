@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+const envExample = `# API Configuration
+EXPO_PUBLIC_API_URL=https://api.ogamechanic.com/v1
+EXPO_PUBLIC_API_KEY=DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq
+
+# Environment
+EXPO_PUBLIC_ENV=development
+
+# App Configuration
+EXPO_PUBLIC_APP_NAME=Oga Mechanic
+EXPO_PUBLIC_APP_VERSION=1.0.0
+
+# Feature Flags
+EXPO_PUBLIC_ENABLE_ANALYTICS=true
+EXPO_PUBLIC_ENABLE_CRASH_REPORTING=true
+
+# Third-party Services
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key_here
+
+# WebSocket Configuration
+EXPO_PUBLIC_WEBSOCKET_URL=wss://api.ogamechanic.com/ws
+
+# File Upload Configuration
+EXPO_PUBLIC_MAX_FILE_SIZE=10485760
+EXPO_PUBLIC_ALLOWED_FILE_TYPES=jpg,jpeg,png,pdf,doc,docx`;
+
+const envPath = path.join(process.cwd(), '.env');
+
+// Check if .env already exists
+if (fs.existsSync(envPath)) {
+  console.log('⚠️  .env file already exists. Skipping creation.');
+  console.log('   If you want to update it, please edit it manually.');
+} else {
+  // Create .env file
+  fs.writeFileSync(envPath, envExample);
+  console.log('✅ Created .env file with default configuration.');
+  console.log('📝 Please update the values in .env according to your environment.');
+}
+
+console.log('\n📋 Next steps:');
+console.log('1. Edit the .env file with your actual API URLs and keys');
+console.log('2. For development: Use development API URLs');
+console.log('3. For production: Use production API URLs');
+console.log('4. Restart your development server after making changes');
+console.log('\n🔒 Security reminder:');
+console.log('- Never commit .env to version control');
+console.log('- Add .env to your .gitignore file');

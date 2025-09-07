@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Toast } from "toastify-react-native";
+import { showToast } from "@/utils/toastUtils";
 import { routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
@@ -18,7 +18,7 @@ const ResetPassword = () => {
     console.log("Reset password values:", values);
 
     if (values.password !== values.confirmPassword) {
-      Toast?.error("Password does not match");
+      showToast.error("Password does not match");
       setSubmitting(false);
     } else {
       // Simulate API call

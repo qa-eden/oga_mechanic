@@ -4,12 +4,46 @@ import { useRouter } from 'expo-router'
 import { UserIcon } from 'react-native-heroicons/solid'
 import BackArrowBtn from '@/components/BackArrowBtn'
 import { driverRoutes } from '@/constants/routes'
+import { useRoles } from '@/hooks/useRoles'
 
 const ChooseOptions = () => {
   const router = useRouter()
+  
+  // Use TanStack Query hook for roles
+  const { 
+    data: apiRoles = [], 
+    isLoading: isLoadingRoles, 
+    error: rolesError,
+    isError: isRolesError
+  } = useRoles()
+
+  // Filter API roles to get only driver and rider
+  const driverRiderRoles = apiRoles.filter(apiRole => 
+    apiRole.name === 'driver' || apiRole.name === 'rider'
+  )
+
+  // Create role mapping for display
+  const roleDisplayNames = {
+    'driver': 'Driver',
+    'rider': 'Rider'
+  }
+
+  // Debug API roles data
+  console.log('🎯 Choose Options API Roles State:', {
+    isLoadingRoles,
+    isRolesError,
+    apiRolesCount: apiRoles.length,
+    driverRiderRolesCount: driverRiderRoles.length,
+    driverRiderRoles: driverRiderRoles,
+    error: rolesError
+  })
 
   const handleDriverSelect = (type: "driver" | "rider") => {
     console.log("type", type)
+    
+    // Find the API role data for the selected type
+    const selectedRole = apiRoles.find(role => role.name === type)
+    console.log("Selected role from API:", selectedRole)
     
     // Store the user type for later use
     // Navigate to the same registration flow for both driver and rider
@@ -50,23 +84,38 @@ const ChooseOptions = () => {
 
           {/* Selection Buttons */}
           <View className="space-y-4">
-            <TouchableOpacity
-              onPress={() => handleDriverSelect("driver")}
-              className="bg-white border border-gray-200 rounded-xl py-4 px-6 active:bg-gray-50 shadow-xs mb-4"
-            >
-              <Text className="text-lg font-semibold text-center text-gray-900">
-                Driver
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleDriverSelect("rider")}
-              className="bg-white border border-gray-200 rounded-xl py-4 px-6 active:bg-gray-50 shadow-xs"
-            >
-              <Text className="text-lg font-semibold text-center text-gray-900">
-                Rider
-              </Text>
-            </TouchableOpacity>
+            {isLoadingRoles ? (
+              <View className="bg-white border border-gray-200 rounded-xl py-4 px-6 items-center">
+                <Text className="text-lg font-semibold text-center text-gray-500">
+                  Loading options...
+                </Text>
+              </View>
+            ) : isRolesError ? (
+              <View className="bg-white border border-gray-200 rounded-xl py-4 px-6 items-center">
+                <Text className="text-lg font-semibold text-center text-red-500">
+                  Error loading options
+                </Text>
+              </View>
+            ) : (
+              driverRiderRoles.map((role, index) => (
+                <TouchableOpacity
+                  key={role.id}
+                  onPress={() => handleDriverSelect(role.name as "driver" | "rider")}
+                  className={`bg-white border border-gray-200 rounded-xl py-4 px-6 active:bg-gray-50 shadow-xs ${
+                    index === 0 ? 'mb-4' : ''
+                  }`}
+                >
+                  <Text className="text-lg font-semibold text-center text-gray-900">
+                    {roleDisplayNames[role.name as keyof typeof roleDisplayNames]}
+                  </Text>
+                  {role.description && (
+                    <Text className="text-sm text-center text-gray-500 mt-1">
+                      {role.description}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
       </View>

@@ -278,30 +278,18 @@ const Step5 = () => {
                       name="vin"
                       placeholder="Enter VIN"
                       label="VIN"
+                      showLookupButton={false}
                       onChangeText={(text) => {
                         setCurrentVIN(text)
-                        // Only trigger VIN lookup if we have a valid VIN
+                        // Auto-trigger VIN lookup when it reaches 17 characters
                         if (text.length === 17) {
                           console.log('🔄 VIN ready for lookup:', text);
                           // Simple lookup without complex timeout
                           handleVINLookup(text, setFieldValue);
                         }
                       }}
+                      onVINLookup={handleVINLookup}
                     />
-                    
-                    {/* Manual VIN Lookup Button */}
-                    {currentVIN.length === 17 && (
-                      <View className="mt-2">
-                        <CustomButton
-                          title={isVINLoading ? "🔍 Looking up..." : "🔍 Lookup Vehicle Details"}
-                          onPress={() => {
-                            handleVINLookup(currentVIN, setFieldValue);
-                          }}
-                          disabled={isVINLoading}
-                          className="py-2"
-                        />
-                      </View>
-                    )}
                   </View>
 
                     {/* Vehicle Make */}

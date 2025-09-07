@@ -1,5 +1,7 @@
+import { ENV_CONFIG } from '../config/env';
+
 // Base API URL
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.ogamechanic.com/v1';
+export const BASE_URL = ENV_CONFIG.API_URL;
 
 // Auth endpoints (common for all roles)
 export const AUTH_ENDPOINTS = {
@@ -11,13 +13,19 @@ export const AUTH_ENDPOINTS = {
   RESET_PASSWORD: '/auth/reset-password',
   VERIFY_OTP: '/auth/verify-otp',
   SWITCH_ROLE: '/auth/switch-role',
+  ALL_ROLES: '/users/roles/list/',
 } as const;
 
 // User endpoints (regular users/customers)
 export const USER_ENDPOINTS = {
   LOGIN: '/users/login/',
+  LOGOUT: '/users/logout/',
   REGISTER: '/users/register/',
+  REGISTER_STEP: (stepId: number) => `/users/register/step/${stepId}/`,
+  REGISTER_VEHICLE: '/users/register/vehicle/',
+  ROLES: '/users/roles/',
   PROFILE: '/user/profile',
+  PRIMARY_PROFILE: '/users/profile/primary/',
   UPDATE_PROFILE: '/user/profile',
   CARS: '/user/cars',
   ADD_CAR: '/user/cars',
@@ -98,6 +106,7 @@ export const MERCHANT_ENDPOINTS = {
 export const SERVICE_ENDPOINTS = {
   MECHANICS_FIND: '/mechanics/find',
   MECHANICS_NEARBY: '/mechanics/nearby',
+  MECHANICS_AVAILABLE: '/mechanics/available-mechanics/',
   MECHANIC_PROFILE: (id: string) => `/mechanics/${id}`,
   MECHANIC_REVIEWS: (id: string) => `/mechanics/${id}/reviews`,
   RIDES_CREATE: '/rides',
@@ -112,6 +121,17 @@ export const SERVICE_ENDPOINTS = {
   SHOP_PRODUCT_DETAIL: (id: string) => `/shop/products/${id}`,
   SHOP_CATEGORIES: '/shop/categories',
   SHOP_SEARCH: '/shop/search',
+  PRODUCTS_HOME: '/products/home/',
+  PRODUCTS_LIST: '/products/products/',
+  PRODUCTS_SEARCH: '/products/products/search/',
+  PRODUCT_DETAIL: (id: string) => `/products/products/${id}/`,
+  PRODUCTS_CATEGORIES: '/products/categories/',
+  // Cart endpoints
+  ADD_TO_CART: '/products/cart/',
+  GET_CART: '/products/cart/',
+  UPDATE_CART_ITEM: '/products/cart/',
+  REMOVE_FROM_CART: '/products/cart',
+  CLEAR_CART: '/products/cart/clear/',
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_FAQ: '/support/faq',
   SUPPORT_TICKETS: '/support/tickets',

@@ -18,6 +18,8 @@ import { images, icons } from "@/constants";
 import { useEffect, useRef, useState } from "react";
 import React from "react";
 import type { ComponentType } from "react";
+import { useRoles } from "@/hooks/useRoles";
+import { ActivityIndicator } from "react-native";
 
 type RenderImageProps = {
   source: ImageSourcePropType | ComponentType<any>;
@@ -73,9 +75,46 @@ const Welcome = () => {
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const overlayFadeAnim = useRef(new Animated.Value(1)).current;
   const overlayScaleAnim = useRef(new Animated.Value(0.98)).current;
+
+  const { 
+    refetch: refetchRoles
+  } = useRoles();
+  // Navigation handlers with debouncing
+  const handleSignUp = () => {
+    if (isNavigating) return;
+    try {
+      setIsNavigating(true);
+      router.replace(routes?.signUp as any);
+    } catch (error) {
+      console.error('Sign up navigation error:', error);
+      setIsNavigating(false);
+    }
+  };
+
+  const handleSignIn = () => {
+    if (isNavigating) return;
+    try {
+      setIsNavigating(true);
+      router.replace(routes?.signIn as any);
+    } catch (error) {
+      console.error('Sign in navigation error:', error);
+      setIsNavigating(false);
+    }
+  };
+
+  // Reset navigation state after timeout
+  useEffect(() => {
+    if (isNavigating) {
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigating]);
 
   // Infinite auto-slide animation
   useEffect(() => {
@@ -318,19 +357,33 @@ const Welcome = () => {
             className={"bg-[#fafafa] p-4"}
           >
             <CustomButton
-              title="Sign up"
+              title={isNavigating ? "Loading..." : "Sign up"}
               className="py-5 mb-3 mt-2 shadow-lg"
-              onPress={() => router?.replace(routes?.signUp as any)}
+              onPress={handleSignUp}
+              disabled={isNavigating}
             />
             <CustomButton
-              onPress={() => router?.replace(routes?.signIn as any)}
-              title="Sign in"
+              onPress={handleSignIn}
+              title={isNavigating ? "Loading..." : "Sign in"}
               bgVariant="dangerborder"
               textVariant="dangerborder"
               className="py-5 my-2 shadow-sm"
+              disabled={isNavigating}
             />
           </Animated.View>
         </View>
+        
+        {/* Loading Overlay */}
+        {isNavigating && (
+          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+            <View className="bg-white rounded-2xl p-6 items-center">
+              <ActivityIndicator size="large" color="#D30309" />
+              <Text className="text-gray-700 font-NunitoMedium mt-3">
+                Loading...
+              </Text>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );

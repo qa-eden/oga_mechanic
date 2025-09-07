@@ -14,23 +14,68 @@ import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { step1Schema } from "@/utils/validationSchemas";
 import { routes } from "@/constants/routes";
 import { useRegistrationStore } from "@/stores/registrationStore";
+import { useRegisterStep2 } from "@/hooks/useRegistration";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import CustomAlert from "@/components/CustomAlert";
 
 const Step1 = () => {
-  const { setStep1Data } = useRegistrationStore();
+  const { setStep1Data, isStepByStepMode } = useRegistrationStore();
+  const registerStep2Mutation = useRegisterStep2();
+  const { visible, alertConfig, hideAlert, showError } = useCustomAlert();
   
-  const handleStep1Submit = (values: any, { setSubmitting }: any) => {
+  const handleStep1Submit = async (values: any, { setSubmitting }: any) => {
     console.log("Step 1 values:", values);
     
-    // Store step 1 data
-    setStep1Data({
-      email: values.email,
-      first_name: values.firstName,
-      last_name: values.lastName,
-      phone: values.phone
-    });
-    
-    setSubmitting(false);
-    router.push(routes?.userStep2);
+    if (isStepByStepMode) {
+      // Use TanStack Query mutation for step 2
+      console.log('📤 Posting personal details to step 2 endpoint...');
+      registerStep2Mutation.mutate({
+        email: values.email.trim(),
+        first_name: values.firstName.trim(),
+        last_name: values.lastName.trim(),
+        phone_number: values.phone.trim()
+      }, {
+        onSuccess: () => {
+          setSubmitting(false);
+          router.push(routes?.userStep2);
+        },
+        onError: (error: any) => {
+          console.error('❌ Error posting step 2 data:', error);
+          setSubmitting(false);
+          
+          // Extract error message from API response
+          let errorMessage = 'An error occurred. Please try again.';
+          
+          if (error?.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            if (errors.email && errors.email.length > 0) {
+              errorMessage = errors.email[0];
+            } else if (errors.message) {
+              errorMessage = errors.message;
+            }
+          } else if (error?.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error?.message) {
+            errorMessage = error.message;
+          }
+          
+          // Show custom error alert
+          showError('Registration Error', errorMessage);
+          
+          // Don't navigate on error - let user fix the issue
+        }
+      });
+    } else {
+      // Legacy flow - store step 1 data
+      setStep1Data({
+        email: values.email.trim(),
+        first_name: values.firstName.trim(),
+        last_name: values.lastName.trim(),
+        phone: values.phone.trim()
+      });
+      setSubmitting(false);
+      router.push(routes?.userStep2);
+    }
   };
 
   return (
@@ -62,7 +107,7 @@ const Step1 = () => {
             <UserAuthHeader />
 
             <View className="py-4">
-              <ProgressBar step={1} totalSteps={3} />
+              <ProgressBar step={1} totalSteps={4} />
             </View>
 
             <HeaderAndDescTextCenter
@@ -122,9 +167,13 @@ const Step1 = () => {
                     autoCorrect={false}
                   />
 
-                  <View style={{ height: 30 }} />
+                  {/* <View style={{ height: 30 }} /> */}
 
-                  <FormikButton title="Proceed" className="py-4 mb-2" />
+                  <FormikButton 
+                    title="Proceed" 
+                    className="py-4 my-2" 
+                    loading={registerStep2Mutation.isPending}
+                  />
 
                   <AuthNavigateLink
                     onPress={() => router.push(routes.signIn)}
@@ -138,6 +187,17 @@ const Step1 = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onClose={hideAlert}
+        />
+      )}
     </SafeAreaView>
   );
 };

@@ -32,7 +32,8 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
     if (!touched[name]) {
       setFieldTouched(name, true, false)
     }
-    handleChange(name)(text)
+    // Trim the text before setting the value
+    handleChange(name)(text.trim())
   }
 
   // Memoize keyboard type to prevent changes during re-renders

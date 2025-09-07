@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, Image, StatusBar, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Text, View, ScrollView, TouchableOpacity, Image, StatusBar, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronDownIcon,
@@ -22,6 +22,7 @@ const Home = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState("No 5, Agbondodo str, Ijai...");
   const [debugCount, setDebugCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Daily performance metrics data
   const dailyMetrics = [
@@ -114,11 +115,38 @@ const Home = () => {
     Alert.alert('Location', 'Location selector tapped');
   };
 
+  // Pull to refresh function
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Simulate API call - replace with actual data fetching
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Driver home data refreshed');
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   return (
     <SafeAreaView className="h-screen">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']} // Android
+            tintColor="#D30309" // iOS
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
+      >
         {/* Header Section */}
         <View className="bg-white px-5 py-4">
           {/* Profile and Greeting */}

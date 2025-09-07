@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, AUTH_ENDPOINTS } from './endpoints';
+import { ENV_CONFIG } from '../config/env';
 
 // Create axios instance
 const api = axios.create({
@@ -9,6 +10,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'X-Api-Key': ENV_CONFIG.API_KEY,
   },
 });
 
@@ -18,9 +20,26 @@ api.interceptors.request.use(
     try {
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('auth_token');
+      console.log(`🔑 Token check for ${config.method?.toUpperCase()} ${config.url}:`, token ? 'Found' : 'Not found');
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log(`✅ Authorization header added: Bearer ${token.substring(0, 20)}...`);
+      } else {
+        console.log(`❌ No token found for ${config.method?.toUpperCase()} ${config.url}`);
       }
+      
+      // Add requestType: "inbound" only to POST/PUT/PATCH requests
+      if (config.method === 'post' || config.method === 'put' || config.method === 'patch') {
+        // For POST, PUT, PATCH requests, wrap data in the new format
+        const originalData = config.data || {};
+        config.data = {
+          requestType: "inbound",
+          data: originalData
+        };
+        console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
+      }
+      // Note: GET/DELETE requests don't need requestType parameter
     } catch (error) {
       console.error('Error getting auth token:', error);
     }

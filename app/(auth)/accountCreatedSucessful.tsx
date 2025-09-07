@@ -213,9 +213,9 @@ const AccountCreatedSucessful = () => {
             }}
           >
             <CustomButton
-              title="Continue to Sign In"
+              title="Continue to Dashboard"
               className="py-4"
-              onPress={() => router?.replace(routes?.signIn)}
+              onPress={() => router?.replace(routes?.home)}
             />
           </Animated.View>
         </View>

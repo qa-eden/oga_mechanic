@@ -10,12 +10,8 @@ export const routes = {
   // Registration user steps
   userStep1: "/(auth)/(register)/user/step1",
   userStep2: "/(auth)/(register)/user/step2",
-  userStep3: "/(auth)/(register)/user/step3",
-
-  // Registration merchant steps
-  merchantStep1: "/(auth)/(register)/merchant/step1",
-  merchantStep2: "/(auth)/(register)/merchant/step2",
-  merchantStep3: "/(auth)/(register)/merchant/step3",
+  userStep3: "/(auth)/(register)/user/step3", 
+  userStep4: "/(auth)/(register)/user/step4", 
 
   // Success pages
   accountCreated: "/(auth)/accountCreatedSucessful",
@@ -23,6 +19,10 @@ export const routes = {
 
   // Main app routes
   home: "/(root)/(tabs)/(user)/home",
+  userHome: "/(root)/(tabs)/(user)/home",
+  driverHome: "/(root)/(tabs)/(driver)/home",
+  mechanicHome: "/(root)/(tabs)/(mechanic)/home",
+  riderHome: "/(root)/(tabs)/(rider)/home",
   cars: "/(root)/(tabs)/(user)/cars",
   services: "/(root)/(tabs)/(user)/services",
   profile: "/(root)/(tabs)/(user)/profile",
@@ -136,3 +136,28 @@ export const riderRoutes = {
 
 export type RiderRouteKeys = keyof typeof riderRoutes;
 export type RiderRouteValues = (typeof riderRoutes)[RiderRouteKeys];
+
+// merchant routes
+export const merchantRoutes = {
+  welcomeMerchant: "/(auth)/(register)/merchant/welcome-merchant",
+  step1: "/(auth)/(register)/merchant/step1",
+  step2: "/(auth)/(register)/merchant/step2",
+  step3: "/(auth)/(register)/merchant/step3",
+  step4: "/(auth)/(register)/merchant/step4",
+
+  // merchant tabs
+  home: "/(root)/(tabs)/(merchant)/home",
+  earnings: "/(root)/(tabs)/(merchant)/earnings",
+  order: "/(root)/(tabs)/(merchant)/order",
+  profile: "/(root)/(tabs)/(merchant)/profile",
+
+  // merchant screens
+  ConfirmWithdrawal: "/(root)/(screens)/(merchant)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(merchant)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(merchant)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(merchant)/editProfile",
+  takebookings: "/(root)/(screens)/(merchant)/takebookings",
+} as const;
+
+export type MerchantRouteKeys = keyof typeof merchantRoutes;
+export type MerchantRouteValues = (typeof merchantRoutes)[MerchantRouteKeys];

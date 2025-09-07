@@ -201,8 +201,8 @@ export const onboarding = [
 export const Roles = [
   {
     id: 1,
-    title: "Primary user",
-    description: "I want to buy cars, book rides and get help from mechanics",
+    title: "Primary User",
+    description: "I am a customer",
     image: icons.user,
     border: "#7DA0FF",
     backgroundColor: "#D6E1FF",
@@ -211,7 +211,7 @@ export const Roles = [
   {
     id: 2,
     title: "Seller",
-    description: "I want to sell cars and auto parts to customers",
+    description: "I want to sell",
     image: icons.merchant,
     border: "#FFC38D",
     backgroundColor: "#FFEAD8",
@@ -220,7 +220,7 @@ export const Roles = [
   {
     id: 3,
     title: "Mechanic",
-    description: "I want to offer car repair services and earn money",
+    description: "I am a mechanic",
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
@@ -229,7 +229,7 @@ export const Roles = [
   {
     id: 4,
     title: "Driver",
-    description: "I want to drive passengers and make money from trips",
+    description: "I am a driver",
     image: icons.driver,
     border: "#FF9292",
     backgroundColor: "#FFE9E9",

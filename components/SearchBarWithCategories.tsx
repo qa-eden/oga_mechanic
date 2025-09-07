@@ -24,37 +24,14 @@ interface SearchBarWithCategoriesProps {
   setSearchQuery: (query: string) => void;
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
-  categories: string[];
+  categories: Array<{ name: string; id: number | null }>;
   onFilterPress?: () => void;
+  minPrice?: string;
+  maxPrice?: string;
+  onPriceChange?: (field: 'min' | 'max', value: string) => void;
 }
 
-// Mock search suggestions data
-const mockSuggestions = [
-  { id: "1", title: "Toyota Camry 2020", type: "Car", price: "₦25,000" },
-  { id: "2", title: "Honda Civic 2019", type: "Car", price: "₦22,500" },
-  { id: "3", title: "Engine Oil Filter", type: "Spare Part", price: "₦15" },
-  { id: "4", title: "Brake Pads Set", type: "Spare Part", price: "₦45" },
-  { id: "5", title: "Ford Focus 2021", type: "Car", price: "₦28,000" },
-  { id: "6", title: "Air Filter", type: "Spare Part", price: "₦12" },
-  { id: "7", title: "BMW X5 2018", type: "Car", price: "₦35,000" },
-  { id: "8", title: "Spark Plugs", type: "Spare Part", price: "₦8" },
-  { id: "9", title: "Mercedes C-Class 2022", type: "Car", price: "₦42,000" },
-  { id: "10", title: "Battery", type: "Spare Part", price: "₦120" },
-];
-
-// Auto-suggestion placeholders that cycle through
-const autoSuggestions = [
-  "Search for Toyota Camry...",
-  "Find brake pads...",
-  "Looking for BMW X5?",
-  "Search engine oil filters...",
-  "Find Honda Civic parts...",
-  "Search for Mercedes parts...",
-  "Looking for spark plugs?",
-  "Find car batteries...",
-  "Search for Ford Focus...",
-  "Looking for air filters?",
-];
+// No dummy data - use real search functionality
 
 const SearchBarWithCategories = ({
   searchQuery,
@@ -63,6 +40,9 @@ const SearchBarWithCategories = ({
   setSelectedCategory,
   categories,
   onFilterPress,
+  minPrice = "",
+  maxPrice = "",
+  onPriceChange,
 }: SearchBarWithCategoriesProps) => {
   const flatListRef = useRef<FlatList>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -77,8 +57,7 @@ const SearchBarWithCategories = ({
     height: 0,
   });
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] =
-    useState(mockSuggestions);
+  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [isSelectingSuggestion, setIsSelectingSuggestion] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentAutoSuggestionIndex, setCurrentAutoSuggestionIndex] =
@@ -125,18 +104,10 @@ const SearchBarWithCategories = ({
     return () => clearTimeout(timer);
   }, [searchQuery, isSelectingSuggestion]);
 
-  // Filter suggestions based on debounced search query
+  // No suggestions filtering - use real search API
   useEffect(() => {
     if (debouncedSearchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
-      const filtered = mockSuggestions.filter(
-        (item) =>
-          item.title
-            .toLowerCase()
-            .includes(debouncedSearchQuery.toLowerCase()) ||
-          item.type.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-      );
-      setFilteredSuggestions(filtered);
-      setShowSearchSuggestions(true);
+      setShowSearchSuggestions(false); // Don't show suggestions, let the parent handle search
     } else {
       setShowSearchSuggestions(false);
       setFilteredSuggestions([]);
@@ -179,77 +150,11 @@ const SearchBarWithCategories = ({
     console.log("SearchQuery changed to:", searchQuery);
   }, [searchQuery]);
 
-  // Auto-rotate suggestions when input is not focused and empty
-  useEffect(() => {
-    if (!isInputFocused && searchQuery.trim().length === 0) {
-      // Set ready state after initial delay
-      const readyTimer = setTimeout(() => {
-        setIsAutoSuggestionReady(true);
-      }, 500);
-
-      const interval = setInterval(() => {
-        // Animate out current suggestion (slide left and fade)
-        Animated.parallel([
-          Animated.timing(placeholderFadeAnim, {
-            toValue: 0,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.timing(placeholderSlideAnim, {
-            toValue: -50,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          // Change to next suggestion
-          setCurrentAutoSuggestionIndex(
-            (prev) => (prev + 1) % autoSuggestions.length
-          );
-
-          // Reset position for new suggestion (start from right)
-          placeholderSlideAnim.setValue(50);
-
-          // Animate in new suggestion (slide from right to center)
-          Animated.parallel([
-            Animated.timing(placeholderFadeAnim, {
-              toValue: 1,
-              duration: 600,
-              useNativeDriver: true,
-            }),
-            Animated.timing(placeholderSlideAnim, {
-              toValue: 0,
-              duration: 600,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        });
-      }, 5000); // Change every 5 seconds
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(readyTimer);
-      };
-    } else {
-      // Reset animations when input is focused or has content
-      setIsAutoSuggestionReady(false);
-      Animated.parallel([
-        Animated.timing(placeholderFadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(placeholderSlideAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [isInputFocused, searchQuery]);
+  // No auto-rotating suggestions - use real search
 
   useEffect(() => {
     if (!isUserScrolling && containerWidth && selectedCategory) {
-      const selectedIndex = categories.indexOf(selectedCategory);
+      const selectedIndex = categories.findIndex(cat => cat.name === selectedCategory);
       if (selectedIndex !== -1) {
         const itemWidth = 100;
         const gap = 0;
@@ -377,7 +282,7 @@ const SearchBarWithCategories = ({
     });
   };
 
-  const handleSuggestionSelect = (suggestion: (typeof mockSuggestions)[0]) => {
+  const handleSuggestionSelect = (suggestion: any) => {
     console.log("Before selection - searchQuery:", searchQuery);
     console.log("Selecting suggestion:", suggestion.title);
 
@@ -466,24 +371,13 @@ const SearchBarWithCategories = ({
       if (searchHistory.length > 0) {
         setShowSearchHistory(true);
       } else {
-        const currentSuggestion = autoSuggestions[currentAutoSuggestionIndex];
-        // Extract the search term from the suggestion (remove "Search for", "Find", "Looking for" etc.)
-        const searchTerm = currentSuggestion
-          .replace(/^(Search for|Find|Looking for)\s+/i, "")
-          .replace(/\.\.\.$/, "")
-          .replace(/\?$/, "");
-
-        setSearchQuery(searchTerm);
-        setDebouncedSearchQuery(searchTerm);
-        setIsAutoSuggestionSelected(true);
+        // No auto-suggestion functionality
       }
     } else {
       // Only show suggestions if user is typing (not just after history select or auto-suggestion)
       if (searchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
         setShowSearchSuggestions(true);
-        if (filteredSuggestions.length === 0) {
-          setFilteredSuggestions(mockSuggestions);
-        }
+        // No suggestions to show
       }
     }
   };
@@ -503,14 +397,14 @@ const SearchBarWithCategories = ({
   };
 
   const renderCategoryTab = useCallback(
-    ({ item }: { item: string }) => (
+    ({ item }: { item: { name: string; id: number | null } }) => (
       <CategoryTab item={item} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
     ),
     [selectedCategory, setSelectedCategory]
   );
 
   const renderSearchSuggestion = useCallback(
-    ({ item }: { item: (typeof mockSuggestions)[0] }) => (
+    ({ item }: { item: any }) => (
       <SearchSuggestion item={item} onSelect={handleSuggestionSelect} />
     ),
     [handleSuggestionSelect]
@@ -613,7 +507,7 @@ const SearchBarWithCategories = ({
                     }}
                     className="font-NunitoMedium"
                   >
-                    {autoSuggestions[currentAutoSuggestionIndex]}
+                    Search for products...
                   </Text>
                 </Animated.View>
               )}
@@ -721,7 +615,7 @@ const SearchBarWithCategories = ({
             ref={flatListRef}
             data={categories}
             renderItem={renderCategoryTab}
-            keyExtractor={(item) => item}
+            keyExtractor={(item) => item.id?.toString() || item.name}
             horizontal
             showsHorizontalScrollIndicator={false}
             onScroll={handleScroll}
@@ -874,34 +768,18 @@ const SearchBarWithCategories = ({
                     <View className="flex-row items-center">
                       <Text className="text-gray-500 mr-2">₦</Text>
                       <TextInput
-                        value={advancedFilters.priceRange[0].toString()}
-                        onChangeText={(text) =>
-                          setAdvancedFilters((prev) => ({
-                            ...prev,
-                            priceRange: [
-                              parseInt(text) || 0,
-                              prev.priceRange[1],
-                            ],
-                          }))
-                        }
+                        value={minPrice}
+                        onChangeText={(text) => onPriceChange?.('min', text)}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
-                        placeholder="Min"
+                        placeholder="Min Price"
                         keyboardType="numeric"
                       />
                       <Text className="text-gray-500 mx-2">to</Text>
                       <TextInput
-                        value={advancedFilters.priceRange[1].toString()}
-                        onChangeText={(text) =>
-                          setAdvancedFilters((prev) => ({
-                            ...prev,
-                            priceRange: [
-                              prev.priceRange[0],
-                              parseInt(text) || 100000,
-                            ],
-                          }))
-                        }
+                        value={maxPrice}
+                        onChangeText={(text) => onPriceChange?.('max', text)}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 ml-2"
-                        placeholder="Max"
+                        placeholder="Max Price"
                         keyboardType="numeric"
                       />
                     </View>
