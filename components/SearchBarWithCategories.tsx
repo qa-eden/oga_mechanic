@@ -12,6 +12,7 @@ import {
   Animated,
   PermissionsAndroid,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { LAYOUT } from "@/constants/units";
 import { useRef, useEffect, useState, useCallback } from "react";
@@ -29,6 +30,9 @@ interface SearchBarWithCategoriesProps {
   minPrice?: string;
   maxPrice?: string;
   onPriceChange?: (field: 'min' | 'max', value: string) => void;
+  onApplySearch?: (categoryId?: number | null) => void;
+  onResetSearch?: () => void;
+  isSearching?: boolean;
 }
 
 // No dummy data - use real search functionality
@@ -43,13 +47,15 @@ const SearchBarWithCategories = ({
   minPrice = "",
   maxPrice = "",
   onPriceChange,
+  onApplySearch,
+  onResetSearch,
+  isSearching = false,
 }: SearchBarWithCategoriesProps) => {
   const flatListRef = useRef<FlatList>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [currentScrollX, setCurrentScrollX] = useState(0);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState("All");
   const [filterButtonLayout, setFilterButtonLayout] = useState({
     x: 0,
     y: 0,
@@ -79,14 +85,19 @@ const SearchBarWithCategories = ({
   const [isAutoSuggestionReady, setIsAutoSuggestionReady] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
-    priceRange: [0, 100000],
     brand: "",
     condition: "",
-    location: "",
-    sortBy: "relevance",
   });
+  
+  // Enhanced search features
+  const [popularSearches] = useState([
+    "Engine Oil", "Brake Pads", "Air Filter", "Spark Plugs", "Battery",
+    "Tires", "Headlights", "Windshield Wipers", "Oil Filter", "Transmission Fluid"
+  ]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showPopularSearches, setShowPopularSearches] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
 
   // Track if value was set by auto-suggestion
   const [isAutoSuggestionSelected, setIsAutoSuggestionSelected] = useState(false);
@@ -104,15 +115,28 @@ const SearchBarWithCategories = ({
     return () => clearTimeout(timer);
   }, [searchQuery, isSelectingSuggestion]);
 
-  // No suggestions filtering - use real search API
+  // Generate intelligent search suggestions
   useEffect(() => {
     if (debouncedSearchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
-      setShowSearchSuggestions(false); // Don't show suggestions, let the parent handle search
+      setShowSearchSuggestions(true);
+      
+      // Generate smart suggestions based on query
+      const query = debouncedSearchQuery.toLowerCase();
+      const suggestions = popularSearches
+        .filter(item => item.toLowerCase().includes(query))
+        .slice(0, 5);
+      
+      // Add recent searches that match
+      const recentMatches = recentSearches
+        .filter(item => item.toLowerCase().includes(query))
+        .slice(0, 3);
+      
+      setSearchSuggestions([...recentMatches, ...suggestions]);
     } else {
       setShowSearchSuggestions(false);
-      setFilteredSuggestions([]);
+      setSearchSuggestions([]);
     }
-  }, [debouncedSearchQuery, isAutoSuggestionSelected]);
+  }, [debouncedSearchQuery, isAutoSuggestionSelected, popularSearches, recentSearches]);
 
   // Animate search suggestions
   useEffect(() => {
@@ -237,84 +261,55 @@ const SearchBarWithCategories = ({
     }, 200); // Increased delay to prevent auto-scroll interference
   };
 
-  const filterOptions = [
-    { id: "all", label: "All", icon: "🏷️", description: "Show all items" },
-    { id: "cars", label: "Cars", icon: "🚗", description: "Vehicles only" },
-    {
-      id: "spareParts",
-      label: "Spare Parts",
-      icon: "🔧",
-      description: "Parts & accessories",
-    },
-  ];
-
   const brandOptions = ["Toyota", "Honda", "BMW", "Mercedes", "Ford"];
   const conditionOptions = ["New", "Used", "Certified"];
-
-  const handleFilterSelect = (filter: string) => {
-    setSelectedFilter(filter);
-    setShowFilterDropdown(false);
-    // You can add additional logic here to filter the data
-    console.log("Filter selected:", filter);
-  };
 
   const handleFilterPress = () => {
     setShowFilterDropdown(true);
   };
 
-  const handleAdvancedFilterPress = () => {
-    setShowAdvancedFilters(!showAdvancedFilters);
-  };
-
   const applyAdvancedFilters = () => {
     console.log("Applying advanced filters:", advancedFilters);
-    setShowAdvancedFilters(false);
-    // Here you would apply the filters to your search results
+    setShowFilterDropdown(false);
+    // Call the main Apply function from parent
+    onApplySearch?.();
   };
 
   const resetFilters = () => {
     setAdvancedFilters({
-      priceRange: [0, 100000],
       brand: "",
       condition: "",
-      location: "",
-      sortBy: "relevance",
     });
+    onPriceChange?.('min', '');
+    onPriceChange?.('max', '');
+    // Call the main Reset function from parent
+    onResetSearch?.();
   };
 
-  const handleSuggestionSelect = (suggestion: any) => {
-    console.log("Before selection - searchQuery:", searchQuery);
-    console.log("Selecting suggestion:", suggestion.title);
+  const handleSuggestionSelect = (suggestion: string) => {
+    console.log("Selecting suggestion:", suggestion);
 
     // Set flag to prevent filtering interference
     setIsSelectingSuggestion(true);
 
     // Update search query with the selected suggestion
-    setSearchQuery(suggestion.title);
+    setSearchQuery(suggestion);
 
     // Also update debounced query immediately
-    setDebouncedSearchQuery(suggestion.title);
+    setDebouncedSearchQuery(suggestion);
 
-    // Add to search history
-    addToSearchHistory(suggestion.title);
+    // Add to recent searches
+    addToRecentSearches(suggestion);
 
     // Hide suggestions immediately
     setShowSearchSuggestions(false);
-
-    // Clear filtered suggestions to prevent interference
-    setFilteredSuggestions([]);
+    setShowSearchHistory(false);
+    setShowPopularSearches(false);
 
     // Reset the flag after a short delay
     setTimeout(() => {
       setIsSelectingSuggestion(false);
-      console.log("After delay - searchQuery should be:", suggestion.title);
     }, 200);
-
-    // You can add navigation logic here
-    console.log(
-      "After selection - new searchQuery should be:",
-      suggestion.title
-    );
   };
 
   const addToSearchHistory = (query: string) => {
@@ -322,6 +317,15 @@ const SearchBarWithCategories = ({
       setSearchHistory((prev) => {
         const filtered = prev.filter((item) => item !== query);
         return [query, ...filtered].slice(0, 10); // Keep only last 10 searches
+      });
+    }
+  };
+
+  const addToRecentSearches = (query: string) => {
+    if (query.trim().length > 0) {
+      setRecentSearches((prev) => {
+        const filtered = prev.filter((item) => item !== query);
+        return [query, ...filtered].slice(0, 5); // Keep only last 5 recent searches
       });
     }
   };
@@ -366,18 +370,17 @@ const SearchBarWithCategories = ({
   const handleSearchFocus = () => {
     setIsInputFocused(true);
 
-    // If input is empty, show search history or auto-suggestion
+    // If input is empty, show popular searches or search history
     if (searchQuery.trim().length === 0) {
-      if (searchHistory.length > 0) {
+      if (recentSearches.length > 0) {
         setShowSearchHistory(true);
       } else {
-        // No auto-suggestion functionality
+        setShowPopularSearches(true);
       }
     } else {
-      // Only show suggestions if user is typing (not just after history select or auto-suggestion)
+      // Show suggestions if user is typing
       if (searchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
         setShowSearchSuggestions(true);
-        // No suggestions to show
       }
     }
   };
@@ -387,6 +390,8 @@ const SearchBarWithCategories = ({
     // Delay hiding to allow for suggestion selection
     setTimeout(() => {
       setShowSearchSuggestions(false);
+      setShowSearchHistory(false);
+      setShowPopularSearches(false);
     }, 200);
   };
 
@@ -398,9 +403,18 @@ const SearchBarWithCategories = ({
 
   const renderCategoryTab = useCallback(
     ({ item }: { item: { name: string; id: number | null } }) => (
-      <CategoryTab item={item} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+      <CategoryTab 
+        item={item} 
+        selectedCategory={selectedCategory} 
+        onSelect={(categoryName, categoryId) => {
+          console.log('🏷️ Category clicked:', { categoryName, categoryId });
+          setSelectedCategory(categoryName);
+          // Call a special handler that applies the category filter immediately
+          onApplySearch?.(categoryId);
+        }} 
+      />
     ),
-    [selectedCategory, setSelectedCategory]
+    [selectedCategory, onApplySearch]
   );
 
   const renderSearchSuggestion = useCallback(
@@ -461,7 +475,11 @@ const SearchBarWithCategories = ({
           }}
         >
           <View className="mr-4">
-            <MagnifyingGlassIcon/>
+            {isSearching ? (
+              <ActivityIndicator size="small" color="#3B82F6" />
+            ) : (
+              <MagnifyingGlassIcon/>
+            )}
           </View>
 
           <View className="flex-1 relative">
@@ -531,7 +549,7 @@ const SearchBarWithCategories = ({
             </TouchableOpacity>
           )}
 
-          <View className="border-l border-primary-100">
+          <View className="border-l border-primary-100 flex-row">
             <TouchableOpacity
               onPress={handleFilterPress}
               onLayout={(event) => {
@@ -550,6 +568,7 @@ const SearchBarWithCategories = ({
                 Filter
               </Text>
             </TouchableOpacity>
+            
           </View>
         </View>
 
@@ -566,6 +585,37 @@ const SearchBarWithCategories = ({
           </Animated.View>
         )}
 
+        {/* Popular Searches Dropdown */}
+        {showPopularSearches && searchQuery.trim().length === 0 && (
+          <Animated.View
+            style={{
+              transform: [{ translateY: searchSlideAnim }],
+              opacity: searchFadeAnim,
+            }}
+            className="absolute top-full left-0 right-0 z-50"
+          >
+            <View className="bg-white rounded-xl mt-2 shadow-2xl p-4">
+              <Text className="font-NunitoBold text-lg text-gray-900 mb-3">
+                Popular Searches
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {popularSearches.slice(0, 8).map((search, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleSuggestionSelect(search)}
+                    className="px-3 py-2 bg-gray-100 rounded-full"
+                    activeOpacity={0.7}
+                  >
+                    <Text className="text-gray-700 font-NunitoMedium text-sm">
+                      {search}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Search Suggestions Dropdown */}
         {showSearchSuggestions && (
           <Animated.View
@@ -575,23 +625,42 @@ const SearchBarWithCategories = ({
             }}
             className="absolute top-full left-0 right-0 bg-white rounded-xl mt-2 shadow-2xl z-50 max-h-80"
           >
-            {filteredSuggestions.length > 0 ? (
-              <FlatList
-                data={filteredSuggestions}
-                renderItem={renderSearchSuggestion}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
-                contentContainerStyle={{ paddingVertical: 4 }}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={7}
-                removeClippedSubviews={true}
-              />
+            {isSearching ? (
+              <View className="py-6 px-4 flex-row items-center justify-center">
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text className="text-gray-500 font-NunitoMedium ml-2">
+                  Searching for "{searchQuery}"...
+                </Text>
+              </View>
+            ) : searchSuggestions.length > 0 ? (
+              <View className="py-2">
+                <Text className="px-4 py-2 text-sm font-NunitoBold text-gray-600">
+                  Suggestions
+                </Text>
+                {searchSuggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleSuggestionSelect(suggestion)}
+                    className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                    activeOpacity={0.7}
+                  >
+                    <View className="w-6 h-6 bg-blue-100 rounded-full items-center justify-center mr-3">
+                      <Text className="text-blue-600 text-xs">🔍</Text>
+                    </View>
+                    <Text className="font-NunitoMedium text-gray-900 flex-1">
+                      {suggestion}
+                    </Text>
+                    <Text className="text-gray-400">→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             ) : (
               <View className="py-6 px-4">
                 <Text className="text-center text-gray-500 font-NunitoMedium">
-                  No results found
+                  No suggestions found for "{searchQuery}"
+                </Text>
+                <Text className="text-center text-gray-400 text-sm mt-1">
+                  Try different keywords
                 </Text>
               </View>
             )}
@@ -654,131 +723,27 @@ const SearchBarWithCategories = ({
               }}
               className="bg-white rounded-2xl p-1 w-72 shadow-2xl"
             >
-              {/* Header */}
-              <View className="px-4 py-3 border-b border-gray-100">
-                <Text className="text-lg font-NunitoExtraBold text-gray-900 text-center">
-                  Filter Options
-                </Text>
-                <Text className="text-sm text-gray-500 text-center mt-1">
-                  Choose your preferred filter
-                </Text>
-              </View>
-
-              {/* Tab Navigation */}
-              <View className="flex-row border-b border-gray-100 mb-4">
-                <TouchableOpacity
-                  onPress={() => setShowAdvancedFilters(false)}
-                  className={`flex-1 py-3 px-4 border-b-2 ${
-                    !showAdvancedFilters
-                      ? "border-primary-500"
-                      : "border-transparent"
-                  }`}
-                >
-                  <Text
-                    className={`text-center font-NunitoBold ${
-                      !showAdvancedFilters
-                        ? "text-primary-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    Categories
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowAdvancedFilters(true)}
-                  className={`flex-1 py-3 px-4 border-b-2 ${
-                    showAdvancedFilters
-                      ? "border-primary-500"
-                      : "border-transparent"
-                  }`}
-                >
-                  <Text
-                    className={`text-center font-NunitoBold ${
-                      showAdvancedFilters ? "text-primary-600" : "text-gray-500"
-                    }`}
-                  >
-                    Advanced
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Content based on active tab */}
-              {!showAdvancedFilters ? (
-                /* Category Filter Options */
-                <View className="py-2">
-                  {filterOptions.map((option, index) => (
-                    <TouchableOpacity
-                      key={option.id}
-                      onPress={() => handleFilterSelect(option.label)}
-                      className={`flex-row items-center justify-between py-4 px-4 mx-2 rounded-xl mb-1 ${
-                        selectedFilter === option.label
-                          ? "bg-primary-50 border border-primary-200"
-                          : "bg-transparent hover:bg-gray-50"
-                      }`}
-                      activeOpacity={0.7}
-                      style={{
-                        shadowColor:
-                          selectedFilter === option.label
-                            ? "#D30309"
-                            : "transparent",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: selectedFilter === option.label ? 2 : 0,
-                      }}
-                    >
-                      <View className="flex-row items-center flex-1">
-                        <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                          <Text className="text-lg">{option.icon}</Text>
-                        </View>
-                        <View className="flex-1">
-                          <Text
-                            className={`font-NunitoBold text-base ${
-                              selectedFilter === option.label
-                                ? "text-primary-600"
-                                : "text-gray-800"
-                            }`}
-                          >
-                            {option.label}
-                          </Text>
-                          <Text className="text-xs text-gray-500 mt-0.5">
-                            {option.description}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {selectedFilter === option.label && (
-                        <View className="w-6 h-6 bg-primary-500 rounded-full items-center justify-center">
-                          <Text className="text-white text-xs font-NunitoBold">
-                            ✓
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                /* Advanced Filter Options */
+              {/* Advanced Filter Options */}
                 <View className="py-2">
                   {/* Price Range */}
                   <View className="mb-4 px-4">
                     <Text className="font-NunitoBold text-gray-700 mb-2">
                       Price Range
                     </Text>
-                    <View className="flex-row items-center">
-                      <Text className="text-gray-500 mr-2">₦</Text>
+                    <View className="flex-col gap-2">
+                      <Text className="text-gray-500">Min Price</Text>
                       <TextInput
                         value={minPrice}
                         onChangeText={(text) => onPriceChange?.('min', text)}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
+                        className="flex-1 w-full border border-gray-300 rounded-[.4rem] px-3 py-6"
                         placeholder="Min Price"
                         keyboardType="numeric"
                       />
-                      <Text className="text-gray-500 mx-2">to</Text>
+                      <Text className="text-gray-500">Max Price</Text>
                       <TextInput
                         value={maxPrice}
                         onChangeText={(text) => onPriceChange?.('max', text)}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 ml-2"
+                        className="flex-1 w-full border border-gray-300 rounded-[.4rem] px-3 py-6 mb-[3rem]"
                         placeholder="Max Price"
                         keyboardType="numeric"
                       />
@@ -786,7 +751,7 @@ const SearchBarWithCategories = ({
                   </View>
 
                   {/* Brand Filter */}
-                  <View className="mb-4 px-4">
+                  {/* <View className="mb-4 px-4">
                     <Text className="font-NunitoBold text-gray-700 mb-2">
                       Brand
                     </Text>
@@ -818,10 +783,10 @@ const SearchBarWithCategories = ({
                         </TouchableOpacity>
                       ))}
                     </View>
-                  </View>
+                  </View> */}
 
                   {/* Condition Filter */}
-                  <View className="mb-4 px-4">
+                  {/* <View className="mb-4 px-4">
                     <Text className="font-NunitoBold text-gray-700 mb-2">
                       Condition
                     </Text>
@@ -854,13 +819,13 @@ const SearchBarWithCategories = ({
                         </TouchableOpacity>
                       ))}
                     </View>
-                  </View>
+                  </View> */}
 
                   {/* Action Buttons */}
                   <View className="flex-row gap-3 px-4">
                     <TouchableOpacity
                       onPress={resetFilters}
-                      className="flex-1 py-3 border border-gray-300 rounded-lg items-center"
+                      className="flex-1 py-3 border border-gray-300 rounded-[.4rem] items-center"
                       activeOpacity={0.7}
                     >
                       <Text className="text-gray-700 font-NunitoBold">
@@ -869,14 +834,13 @@ const SearchBarWithCategories = ({
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={applyAdvancedFilters}
-                      className="flex-1 py-3 bg-primary-500 rounded-lg items-center"
+                      className="flex-1 py-3 bg-primary-500 rounded-[.4rem] items-center"
                       activeOpacity={0.7}
                     >
                       <Text className="text-white font-NunitoBold">Apply</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-              )}
             </Animated.View>
           </View>
         </TouchableOpacity>

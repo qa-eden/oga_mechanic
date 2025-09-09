@@ -4,12 +4,12 @@ import { TouchableOpacity, Text } from "react-native";
 interface CategoryTabProps {
   item: { name: string; id: number | null };
   selectedCategory: string;
-  onSelect: (category: string) => void;
+  onSelect: (category: string, categoryId: number | null) => void;
 }
 
 const CategoryTab: React.FC<CategoryTabProps> = React.memo(({ item, selectedCategory, onSelect }) => (
   <TouchableOpacity
-    onPress={() => onSelect(item.name)}
+    onPress={() => onSelect(item.name, item.id)}
     className={`w-[100px] flex-row justify-center py-3 rounded-[.5rem] ${
       selectedCategory === item.name ? "bg-primary-500" : "bg-gray-100"
     }`}

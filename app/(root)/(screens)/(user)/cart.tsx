@@ -5,7 +5,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   FlatList,
   Animated,
   Dimensions,
@@ -14,13 +13,10 @@ import {
 import { useState, useRef, useEffect, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { icons, images } from "@/constants";
+import { images } from "@/constants";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import {
-  TrashIcon,
   CheckIcon,
-  PlusIcon,
-  MinusIcon,
 } from "react-native-heroicons/outline";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState as useLocalState } from "react";
@@ -29,6 +25,8 @@ import BackArrowBtn from "@/components/BackArrowBtn";
 import PaymentMethodModal from "@/components/modals/PaymentMethodModal";
 import { routes } from "@/constants/routes";
 import CartItemCard from "@/components/cards/CartItemCard";
+import { useCart, useUpdateCartItem, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
+import { getErrorMessage } from "@/utils/errorMessages";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -45,55 +43,75 @@ interface CartItem {
 
 const Cart = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      name: "Toyota Corolla Brake Pads",
-      price: 7000,
-      originalPrice: 8500,
-      discount: 18,
-      quantity: 1,
-      stock: 12,
-      image: images.cartImg,
-    },
-    {
-      id: 2,
-      name: "Honda Civic Oil Filter",
-      price: 3500,
-      originalPrice: 4000,
-      discount: 12,
-      quantity: 2,
-      stock: 8,
-      image: images.cartImg,
-    },
-    {
-      id: 3,
-      name: "BMW X5 Air Filter",
-      price: 12000,
-      quantity: 1,
-      stock: 5,
-      image: images.cartImg,
-    },
-    // {
-    //   id: 4,
-    //   name: "Mercedes Spark Plugs",
-    //   price: 15000,
-    //   originalPrice: 18000,
-    //   discount: 17,
-    //   quantity: 1,
-    //   stock: 15,
-    //   image: "/placeholder.svg?height=80&width=80",
-    // },
-  ]);
-
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // Cart API hooks
+  const { 
+    data: cartData, 
+    isLoading: cartLoading, 
+    error: cartError, 
+    refetch: refetchCart 
+  } = useCart();
+  
+  const updateCartItemMutation = useUpdateCartItem();
+  const removeFromCartMutation = useRemoveFromCart();
+  const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
+
+  // Transform API data to local format for compatibility
+  const cartItems: CartItem[] = (() => {
+    try {
+      // Check if cart data exists and has items
+      if (!cartData?.data) {
+        console.log('🛒 No cart data available');
+        return [];
+      }
+      
+      if (!cartData.data.items || !Array.isArray(cartData.data.items)) {
+        console.log('🛒 No items array in cart data:', cartData.data);
+        return [];
+      }
+      
+      return cartData.data.items
+        .filter((item) => {
+          // Filter out invalid items
+          if (!item) {
+            console.warn('⚠️ Cart item is null/undefined');
+            return false;
+          }
+          
+          return true;
+        })
+        .map((item) => ({
+          id: parseInt(item.id || '0'),
+          name: item.product?.name || `Product ${item.id}`, // Fallback to product ID
+          price: parseFloat(item.product?.price || '0'),
+          originalPrice: item.product?.original_price ? parseFloat(item.product.original_price) : undefined,
+          discount: item.product?.discount || 0,
+          quantity: item.quantity || 1,
+          stock: item.product?.stock || 0,
+          image: item.product?.images?.[0]?.image || images.cartImg,
+        }));
+    } catch (error) {
+      console.error('❌ Error transforming cart items:', error);
+      return [];
+    }
+  })();
+
+  // Debug: Log cart data structure
+  console.log('🛒 Cart API Response:', cartData);
+  console.log('🛒 Cart Items:', cartItems);
+  
+  // Note: The cart API only returns item IDs and quantities, not full product details
+  // For a complete cart experience, we would need to:
+  // 1. Fetch product details for each cart item ID separately, or
+  // 2. Modify the cart API to include product details in the response
+
   const deliveryFee = 2000;
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const bounceAnim = useRef(new Animated.Value(1)).current;
+  // const fadeAnim = useRef(new Animated.Value(1)).current;
+  // const slideAnim = useRef(new Animated.Value(0)).current;
+  // const scaleAnim = useRef(new Animated.Value(1)).current;
+  // const bounceAnim = useRef(new Animated.Value(1)).current;
 
   const itemSlideAnim = useRef(new Animated.Value(50)).current;
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
@@ -157,18 +175,26 @@ const Cart = () => {
       }),
     ]).start();
 
-    setCartItems((prevItems) =>
-      prevItems.map((item) => {
-        if (item.id === id) {
-          const newQuantity = Math.max(
-            1,
-            Math.min(item.stock, item.quantity + change)
-          );
-          return { ...item, quantity: newQuantity };
+    // Find the cart item and determine action
+    const cartItem = cartItems.find(item => item.id === id);
+    if (cartItem) {
+      // Check if we can increment/decrement based on stock
+      const canIncrement = change > 0 && cartItem.quantity < cartItem.stock;
+      const canDecrement = change < 0 && cartItem.quantity > 1;
+      
+      if ((change > 0 && canIncrement) || (change < 0 && canDecrement)) {
+        // Find the original API item ID
+        const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
+        if (apiItem) {
+          // Use the new increment/decrement API
+          // Note: Using cart item ID as product_id since the cart API doesn't provide product_id
+          updateCartItemQuantityMutation.mutate({
+            productId: apiItem.id, // Using cart item ID as product_id
+            action: change > 0 ? "increment" : "decrement"
+          });
         }
-        return item;
-      })
-    );
+      }
+    }
   };
 
   const removeItem = (id: number) => {
@@ -185,7 +211,13 @@ const Cart = () => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      // Find the original API item ID and remove from API
+      const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
+      if (apiItem) {
+        // Using cart item ID as product_id since the cart API doesn't provide product_id
+        removeFromCartMutation.mutate(apiItem.id);
+      }
+      
       // Reset animations for future use
       slideAnims[id].setValue(0);
       fadeAnims[id].setValue(1);
@@ -231,15 +263,14 @@ const Cart = () => {
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // Simulate API call - replace with actual cart data fetching
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await refetchCart();
       console.log('Cart data refreshed');
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [refetchCart]);
 
   // Handle select all functionality
   const handleSelectAll = () => {
@@ -295,6 +326,103 @@ const Cart = () => {
       onUpdateQuantity={updateQuantity}
     />
   );
+
+  // Loading state
+  if (cartLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <LinearGradient
+          colors={["#FFFFFF", "#F8FAFC"]}
+          className="border-b border-gray-100"
+        >
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <BackArrowBtn />
+            <View className="items-center">
+              <Text className="text-xl font-NunitoExtraBold text-gray-900">
+                My Cart
+              </Text>
+              <Text className="text-sm text-gray-500">Loading...</Text>
+            </View>
+            <View className="w-12" />
+          </View>
+        </LinearGradient>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-gray-600 text-lg">Loading cart...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (cartError) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <LinearGradient
+          colors={["#FFFFFF", "#F8FAFC"]}
+          className="border-b border-gray-100"
+        >
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <BackArrowBtn />
+            <View className="items-center">
+              <Text className="text-xl font-NunitoExtraBold text-gray-900">
+                My Cart
+              </Text>
+              <Text className="text-sm text-gray-500">Error</Text>
+            </View>
+            <View className="w-12" />
+          </View>
+        </LinearGradient>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-red-500 text-center text-lg mb-4">
+            {getErrorMessage(cartError)}
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetchCart()}
+            className="bg-primary-500 px-6 py-3 rounded-lg"
+          >
+            <Text className="text-white font-NunitoBold">Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Empty cart state - check if cart exists but has no items
+  if (!cartData?.data || cartItems.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <LinearGradient
+          colors={["#FFFFFF", "#F8FAFC"]}
+          className="border-b border-gray-100"
+        >
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <BackArrowBtn />
+            <View className="items-center">
+              <Text className="text-xl font-NunitoExtraBold text-gray-900">
+                My Cart
+              </Text>
+              <Text className="text-sm text-gray-500">0 items</Text>
+            </View>
+            <View className="w-12" />
+          </View>
+        </LinearGradient>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-gray-600 text-center text-lg mb-4">
+            Your cart is empty
+          </Text>
+          <Text className="text-gray-400 text-center mb-6">
+            Add some products to get started
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="bg-primary-500 px-6 py-3 rounded-lg"
+          >
+            <Text className="text-white font-NunitoBold">Continue Shopping</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>

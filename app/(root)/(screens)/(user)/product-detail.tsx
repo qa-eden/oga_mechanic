@@ -29,27 +29,39 @@ import AddToCartButton from "@/components/AddToCartButton";
 import ImageGalleryModal from "@/components/ImageGalleryModal";
 import { useProductDetail } from "@/hooks/useProducts";
 import { getErrorMessage } from "@/utils/errorMessages";
+import { useAddToCart, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 const ProductDetail = () => {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams() as { id?: string; productId?: string };
+  const productId = params?.id || params?.productId;
+  
+  console.log('🔍 Product Detail - Params:', params);
+  console.log('🔍 Product Detail - Product ID:', productId);
+  
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const { addToCart, isInCart, getItemQuantity } = useCart();
+  
+  // Cart API hooks
+  const addToCartMutation = useAddToCart();
+  const removeFromCartMutation = useRemoveFromCart();
+  const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  
-  // Get product ID from params
-  const productId = params.productId as string;
+  const bounceAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
   
   // Fetch product detail from API
-  const { data: product, isLoading, error, refetch } = useProductDetail(productId);
+  const { data: product, isLoading, error, refetch } = useProductDetail(productId || '');
 
   // Animation effects
   useEffect(() => {
@@ -74,6 +86,48 @@ const ProductDetail = () => {
       ]).start();
     }
   }, [product]);
+
+  // Sync quantity with cart when product loads
+  useEffect(() => {
+    if (product && (product as any).is_in_cart) {
+      // Get quantity from cart context if available
+      const cartQuantity = getItemQuantity(product.id);
+      if (cartQuantity > 0) {
+        setQuantity(cartQuantity);
+      }
+    }
+  }, [product, getItemQuantity]);
+
+  // Pull to refresh function
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
+
+  // Handle missing product ID - moved after all hooks
+  if (!productId) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-red-500 text-center text-lg mb-4">
+            Product ID not found
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="bg-primary-500 px-6 py-3 rounded-lg"
+          >
+            <Text className="text-white font-NunitoBold">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Loading state with skeleton
   if (isLoading) {
@@ -107,7 +161,7 @@ const ProductDetail = () => {
                   <View className="w-1/2 h-4 bg-gray-200 rounded animate-pulse" />
                 </View>
               </View>
-            </View>
+        </View>
           ))}
         </ScrollView>
       </SafeAreaView>
@@ -171,26 +225,65 @@ const ProductDetail = () => {
     id: product.id, // Convert string ID to number
     name: product.name,
     price: parseFloat(product.price),
-    stock: 10, // Default stock since not in API
+    stock: (product as any).stock || 10,
     image: product.images?.[0]?.image || "sparePart",
     originalPrice: parseFloat(product.price),
     discount: 15,
   };
 
-  // Pull to refresh function
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
+  const handleAddToCart = async () => {
     try {
+      await addToCartMutation.mutateAsync({
+        productId: product.id,
+        quantity: quantity
+      });
+      // Refetch product detail to update is_in_cart status
       await refetch();
     } catch (error) {
-      console.error('Refresh error:', error);
-    } finally {
-      setIsRefreshing(false);
+      console.error('Add to cart error:', error);
     }
-  }, [refetch]);
+  };
 
-  const handleAddToCart = async () => {
-    await addToCart(cartItem);
+  const handleRemoveFromCart = async () => {
+    try {
+      await removeFromCartMutation.mutateAsync(product.id);
+      // Refetch product detail to update is_in_cart status
+      await refetch();
+    } catch (error) {
+      console.error('Remove from cart error:', error);
+    }
+  };
+
+  const handleIncrementQuantity = async () => {
+    if (quantity < ((product as any).stock || 10)) {
+      try {
+        await updateCartItemQuantityMutation.mutateAsync({
+          productId: product.id,
+          action: "increment"
+        });
+        setQuantity(prev => prev + 1);
+        // Refetch product detail to ensure UI stays in sync
+        await refetch();
+      } catch (error) {
+        console.error('Increment quantity error:', error);
+      }
+    }
+  };
+
+  const handleDecrementQuantity = async () => {
+    if (quantity > 1) {
+      try {
+        await updateCartItemQuantityMutation.mutateAsync({
+          productId: product.id,
+          action: "decrement"
+        });
+        setQuantity(prev => prev - 1);
+        // Refetch product detail to ensure UI stays in sync
+        await refetch();
+      } catch (error) {
+        console.error('Decrement quantity error:', error);
+      }
+    }
   };
 
   const handleChatSeller = () => {
@@ -230,8 +323,8 @@ const ProductDetail = () => {
           <Text className="text-xs text-gray-500">Failed</Text>
         </View>
       ) : (
-        <Image
-          source={{ uri: item.image }}
+      <Image
+        source={{ uri: item.image }}
           className="w-full h-full object-cover rounded-xl"
           onError={() => handleImageError(index)}
         />
@@ -254,7 +347,7 @@ const ProductDetail = () => {
         <View className="flex-1 items-center">
           <Text className="text-lg font-NunitoBold text-gray-900">
             Product Details
-          </Text>
+        </Text>
         </View>
         <CartIconBtn />
       </Animated.View>
@@ -289,15 +382,15 @@ const ProductDetail = () => {
               style={{ height: screenWidth * 1.1 }}
             >
               {product.images && product.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
-                <Image
-                  source={{ uri: product.images[selectedImageIndex]?.image }}
+              <Image
+                source={{ uri: product.images[selectedImageIndex]?.image }}
                   className="w-full h-full"
                   style={{ resizeMode: 'contain' }}
                   onError={() => handleImageError(selectedImageIndex)}
-                />
-              ) : (
+              />
+            ) : (
                 <View className="w-full h-full items-center justify-center bg-gray-50">
-                  <images.ProductImg
+              <images.ProductImg
                     className="w-full h-full"
                   />
                   {imageErrors.has(selectedImageIndex) && (
@@ -393,12 +486,12 @@ const ProductDetail = () => {
                 </Text>
               </View>
               
-              <View className="flex-1">
+            <View className="flex-1">
                 <Text className="text-base font-NunitoBold text-gray-900 mb-1">
                   {typeof product.merchant === 'string' 
                     ? 'Merchant Store' 
                     : `${product.merchant?.first_name || ''} ${product.merchant?.last_name || ''}`.trim() || 'Merchant Store'}
-                </Text>
+              </Text>
                 <Text className="text-sm text-gray-500 mb-2">
                   {typeof product.merchant === 'string' 
                     ? `Store ID: ${product.merchant.slice(0, 8)}...` 
@@ -436,22 +529,22 @@ const ProductDetail = () => {
           <View className="p-6">
             {/* Product Title */}
             <Text className="text-xl font-NunitoExtraBold text-gray-900 mb-2 leading-8">
-              {product.name}
-            </Text>
+            {product.name}
+          </Text>
 
             {/* Price and Stock Status */}
             <View className="flex-row items-center justify-between my-4">
-              <NairaCurrency
-                value={parseFloat(product.price)}
+          <NairaCurrency
+            value={parseFloat(product.price)}
                 className="text-3xl font-NunitoExtraBold text-primary-500"
               />
               <View className="flex-row items-center bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
                 <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
                 <Text className="text-sm text-green-700 font-NunitoBold">
                   {(product as any).stock > 0 ? "In Stock" : "Out of Stock"}
-                </Text>
+            </Text>
               </View>
-            </View>
+          </View>
 
             {/* Rating and Reviews */}
             {/* <View className="flex-row items-center mb-6">
@@ -463,8 +556,8 @@ const ProductDetail = () => {
                 <Text className="text-sm text-gray-500">Category:</Text>
                 <Text className="text-sm font-NunitoBold text-primary-600 ml-1">
                   {product.category?.name || 'N/A'}
-                </Text>
-              </View>
+          </Text>
+        </View>
             </View> */}
 
             {/* Key Features */}
@@ -511,12 +604,12 @@ const ProductDetail = () => {
               elevation: 5 
             }}>
             <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-              Description
-            </Text>
-            <Text className="text-base text-gray-700 leading-7">
-              {product.description || 'No description available for this product.'}
-            </Text>
-          </View>
+            Description
+          </Text>
+          <Text className="text-base text-gray-700 leading-7">
+            {product.description || 'No description available for this product.'}
+          </Text>
+        </View>
         </Animated.View>
 
         {/* Product Specifications */}
@@ -548,16 +641,16 @@ const ProductDetail = () => {
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Category</Text>
                 <Text className="text-sm font-NunitoBold text-primary-600">{product.category?.name || 'N/A'}</Text>
-              </View>
+          </View>
 
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Rental Option</Text>
                 <View className={`px-2 py-1 rounded-full ${(product as any).is_rental ? 'bg-green-100' : 'bg-gray-100'}`}>
                   <Text className={`text-xs font-NunitoBold ${(product as any).is_rental ? 'text-green-700' : 'text-gray-600'}`}>
                     {product.is_rental ? 'Available' : 'Not Available'}
-                  </Text>
-                </View>
-              </View>
+            </Text>
+          </View>
+        </View>
 
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Condition</Text>
@@ -576,7 +669,7 @@ const ProductDetail = () => {
                     month: 'short',
                     day: 'numeric'
                   })}
-                </Text>
+            </Text>
               </View>
             </View>
           </View>
@@ -601,7 +694,7 @@ const ProductDetail = () => {
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-lg font-NunitoBold text-gray-900">
                 Customer Reviews
-              </Text>
+            </Text>
               <TouchableOpacity>
                 <Text className="text-sm text-primary-600 font-NunitoMedium">View All</Text>
               </TouchableOpacity>
@@ -618,7 +711,7 @@ const ProductDetail = () => {
             <View className="bg-gray-50 rounded-xl p-4">
               <Text className="text-sm text-gray-600 text-center">
                 No reviews yet. Be the first to review this product!
-              </Text>
+            </Text>
             </View>
           </View>
         </Animated.View>
@@ -659,7 +752,7 @@ const ProductDetail = () => {
         </View> */}
 
         {/* Action Buttons */}
-        <View className="px-4 py-4 flex-row gap-2 space-x-3">
+        <View className="px-2 py-4 flex-row gap-2 space-x-3">
           <TouchableOpacity
             onPress={handleChatSeller}
             className="w-14 h-14 bg-gray-100 rounded-2xl items-center justify-center"
@@ -672,17 +765,74 @@ const ProductDetail = () => {
           </TouchableOpacity>
           
           <View className="flex-1">
-            <TouchableOpacity
-              onPress={handleAddToCart}
-              className="bg-primary-600 py-4 px-6 rounded-2xl items-center justify-center"
-            >
-              <Text className="text-white text-lg font-NunitoBold">
-                Add to Cart
-              </Text>
-            </TouchableOpacity>
+            {(product as any).is_in_cart ? (
+              // Cart item controls
+              <View className="flex-row gap-2 items-center justify-between bg-gray-100 rounded-2xl px-2 py-2">
+                <TouchableOpacity
+                  onPress={handleRemoveFromCart}
+                  disabled={removeFromCartMutation.isPending}
+                  className="bg-primary-500 px-4 py-3 rounded-xl items-center justify-center"
+                >
+                  {removeFromCartMutation.isPending ? (
+                    <Text className="text-white text-sm font-NunitoMedium">Removing...</Text>
+                  ) : (
+                    <Text className="text-white text-sm font-NunitoMedium">Remove from cart</Text>
+                  )}
+                </TouchableOpacity>
+                
+                <View className="flex-row items-center bg-white rounded-xl px-2">
+                  <TouchableOpacity
+                    onPress={handleDecrementQuantity}
+                    disabled={updateCartItemQuantityMutation.isPending || quantity <= 1}
+                    className="w-8 h-8 items-center justify-center"
+                  >
+                    {updateCartItemQuantityMutation.isPending ? (
+                      <Text className="text-gray-400 text-sm">...</Text>
+                    ) : (
+                      <Text className="text-gray-600 text-4xl">-</Text>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <View className="px-3 py-2">
+                    <Text className="text-base font-NunitoBold text-gray-900">
+                      {quantity}
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    onPress={handleIncrementQuantity}
+                    disabled={updateCartItemQuantityMutation.isPending || quantity >= ((product as any).stock)}
+                    className="w-8 h-8 items-center justify-center"
+                  >
+                    {updateCartItemQuantityMutation.isPending ? (
+                      <Text className="text-gray-400 text-sm">...</Text>
+                    ) : (
+                      <Text className="text-gray-600 text-4xl">+</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              // Add to cart button
+              <TouchableOpacity
+                onPress={handleAddToCart}
+                disabled={addToCartMutation.isPending}
+                className="bg-primary-600 py-4 px-6 rounded-2xl items-center justify-center"
+              >
+                {addToCartMutation.isPending ? (
+                  <Text className="text-white text-lg font-NunitoBold">
+                    Adding...
+                  </Text>
+                ) : (
+                  <Text className="text-white text-lg font-NunitoBold">
+                    Add to Cart
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-        
+
         {/* Safe Area Bottom */}
         <View className="h-8 bg-white" />
       </Animated.View>
