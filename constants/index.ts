@@ -106,7 +106,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { driverRoutes, mechanicRoutes, routes } from "./routes";
+import { driverRoutes, mechanicRoutes, routes, sellerRoutes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -200,7 +200,7 @@ export const onboarding = [
 
 export const Roles = [
   {
-    id: 1,
+    id: 7,
     title: "Primary User",
     description: "I am a customer",
     image: icons.user,
@@ -209,16 +209,16 @@ export const Roles = [
     route: routes?.userStep1,
   },
   {
-    id: 2,
+    id: 3,
     title: "Seller",
     description: "I want to sell",
     image: icons.merchant,
     border: "#FFC38D",
     backgroundColor: "#FFEAD8",
-    route: routes?.merchantStep1,
+    route: sellerRoutes?.step1,
   },
   {
-    id: 3,
+    id: 5,
     title: "Mechanic",
     description: "I am a mechanic",
     image: icons.mechanic,
@@ -227,7 +227,7 @@ export const Roles = [
     route: mechanicRoutes?.welcome,
   },
   {
-    id: 4,
+    id: 6,
     title: "Driver",
     description: "I am a driver",
     image: icons.driver,

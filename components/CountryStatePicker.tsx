@@ -116,7 +116,71 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
         'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
       ]
     }
-    return []
+
+    // Fallback for other countries
+    console.log('🌍 Using fallback states for country:', selectedCountry.cca2)
+    
+    // US States
+    if (selectedCountry.cca2 === 'US') {
+      return [
+        'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+        'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+        'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
+        'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
+        'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+        'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+        'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+      ]
+    }
+
+    // UK Countries/Regions
+    if (selectedCountry.cca2 === 'GB') {
+      return [
+        'England', 'Scotland', 'Wales', 'Northern Ireland'
+      ]
+    }
+
+    // Canada Provinces
+    if (selectedCountry.cca2 === 'CA') {
+      return [
+        'Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador',
+        'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island',
+        'Quebec', 'Saskatchewan', 'Yukon'
+      ]
+    }
+
+    // Australia States
+    if (selectedCountry.cca2 === 'AU') {
+      return [
+        'New South Wales', 'Victoria', 'Queensland', 'Western Australia', 'South Australia',
+        'Tasmania', 'Australian Capital Territory', 'Northern Territory'
+      ]
+    }
+
+    // Germany States
+    if (selectedCountry.cca2 === 'DE') {
+      return [
+        'Baden-Württemberg', 'Bavaria', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hesse',
+        'Lower Saxony', 'Mecklenburg-Vorpommern', 'North Rhine-Westphalia', 'Rhineland-Palatinate',
+        'Saarland', 'Saxony', 'Saxony-Anhalt', 'Schleswig-Holstein', 'Thuringia'
+      ]
+    }
+
+    // France Regions
+    if (selectedCountry.cca2 === 'FR') {
+      return [
+        'Auvergne-Rhône-Alpes', 'Bourgogne-Franche-Comté', 'Brittany', 'Centre-Val de Loire',
+        'Corsica', 'Grand Est', 'Hauts-de-France', 'Île-de-France', 'Normandy', 'Nouvelle-Aquitaine',
+        'Occitanie', 'Pays de la Loire', 'Provence-Alpes-Côte d\'Azur'
+      ]
+    }
+
+    // Generic fallback for any country
+    console.log('⚠️ Using generic fallback states for country:', selectedCountry.cca2)
+    return [
+      'Central Region', 'Northern Region', 'Southern Region', 'Eastern Region', 'Western Region',
+      'Capital Region', 'Metropolitan Area', 'Province', 'State', 'Territory'
+    ]
   }, [selectedCountry])
 
   const filteredStates = states.filter((state: string) => 
@@ -124,6 +188,7 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   )
 
   const handleCountrySelect = (country: any) => {
+    console.log('🌍 Country selected:', country.name, 'Code:', country.cca2)
     onCountryChange(country)
     onStateChange('') // Reset state when country changes
     setShowCountry(false)
@@ -131,6 +196,7 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   }
 
   const handleStateSelect = (state: string) => {
+    console.log('🏛️ State selected:', state)
     onStateChange(state)
     setShowState(false)
     setSearchQuery('')
@@ -178,6 +244,8 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
                   className={`p-4 border-b border-gray-100 ${
                     selectedCountry?.cca2 === item.cca2 ? 'bg-red-50' : ''
                   }`}
+                  activeOpacity={0.7}
+                  delayPressIn={0}
                 >
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center">
@@ -248,6 +316,8 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
                   className={`p-4 border-b border-gray-100 ${
                     selectedState === item ? 'bg-red-50' : ''
                   }`}
+                  activeOpacity={0.7}
+                  delayPressIn={0}
                 >
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-medium text-gray-900">{item}</Text>

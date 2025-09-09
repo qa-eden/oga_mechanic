@@ -137,27 +137,28 @@ export const riderRoutes = {
 export type RiderRouteKeys = keyof typeof riderRoutes;
 export type RiderRouteValues = (typeof riderRoutes)[RiderRouteKeys];
 
-// merchant routes
-export const merchantRoutes = {
-  welcomeMerchant: "/(auth)/(register)/merchant/welcome-merchant",
-  step1: "/(auth)/(register)/merchant/step1",
-  step2: "/(auth)/(register)/merchant/step2",
-  step3: "/(auth)/(register)/merchant/step3",
-  step4: "/(auth)/(register)/merchant/step4",
+// seller routes
+export const sellerRoutes = {
+  step1: "/(auth)/(register)/seller/step1",
+  step2: "/(auth)/(register)/seller/step2",
+  step3: "/(auth)/(register)/seller/step3",
+  step4: "/(auth)/(register)/seller/step4",
+  step5: "/(auth)/(register)/seller/step5",
+  accountCreated: "/(auth)/(register)/seller/accountCreated",
 
-  // merchant tabs
-  home: "/(root)/(tabs)/(merchant)/home",
-  earnings: "/(root)/(tabs)/(merchant)/earnings",
-  order: "/(root)/(tabs)/(merchant)/order",
-  profile: "/(root)/(tabs)/(merchant)/profile",
+  // seller tabs
+  home: "/(root)/(tabs)/(seller)/home",
+  earnings: "/(root)/(tabs)/(seller)/earnings",
+  order: "/(root)/(tabs)/(seller)/order",
+  profile: "/(root)/(tabs)/(seller)/profile",
 
-  // merchant screens
-  ConfirmWithdrawal: "/(root)/(screens)/(merchant)/confirmWithdrawal",
-  ConfirmOrder: "/(root)/(screens)/(merchant)/confirmOrder",
-  WithdrawalHistory: "/(root)/(screens)/(merchant)/withdrawalHistory",
-  EditProfile: "/(root)/(screens)/(merchant)/editProfile",
-  takebookings: "/(root)/(screens)/(merchant)/takebookings",
+  // seller screens
+  ConfirmWithdrawal: "/(root)/(screens)/(seller)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(seller)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(seller)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(seller)/editProfile",
+  takebookings: "/(root)/(screens)/(seller)/takebookings",
 } as const;
 
-export type MerchantRouteKeys = keyof typeof merchantRoutes;
-export type MerchantRouteValues = (typeof merchantRoutes)[MerchantRouteKeys];
+export type SellerRouteKeys = keyof typeof sellerRoutes;
+export type SellerRouteValues = (typeof sellerRoutes)[SellerRouteKeys];
