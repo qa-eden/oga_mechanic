@@ -4,6 +4,13 @@ const { withNativeWind } = require("nativewind/metro");
 const config = getDefaultConfig(__dirname);
 const tailwindConfig = withNativeWind(config, { input: "./global.css" });
 
+// Exclude react-native-maps from web builds
+if (process.env.EXPO_PLATFORM === 'web') {
+  tailwindConfig.resolver.blockList = [
+    /react-native-maps/,
+  ];
+}
+
 // SVG support
 tailwindConfig.resolver.assetExts = tailwindConfig.resolver.assetExts.filter(
   (ext) => ext !== "svg"

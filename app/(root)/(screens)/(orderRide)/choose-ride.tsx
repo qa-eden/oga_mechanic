@@ -9,7 +9,6 @@ import BackArrowBtn from "@/components/BackArrowBtn";
 import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
 import { ChevronRightIcon } from "react-native-heroicons/outline";
-import { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import MapSection from "@/components/templates/MapSection";
 import SelectionModal, { SelectionOption } from "@/components/modals/SelectionModal";
@@ -232,30 +231,7 @@ const ChooseRide = () => {
           latitude: userLocation.coords.latitude,
           longitude: userLocation.coords.longitude,
         } : undefined}
-        renderOverlays={
-          <>
-            {/* Driver Markers */}
-            {drivers.map((driver) => (
-              <Marker
-                key={driver.id}
-                coordinate={driver.location}
-                title={driver.name}
-                description={`${driver.vehicle} • ⭐ ${driver.rating}`}
-                pinColor="red"
-              />
-            ))}
-
-            {/* Selected Ride Route */}
-            {rideOptions.find((ride) => ride.selected) && (
-              <Marker
-                coordinate={rideOptions.find((ride) => ride.selected)!.driverLocation}
-                title="Selected Driver"
-                description="Your selected ride"
-                pinColor="green"
-              />
-            )}
-          </>
-        }
+        renderOverlays={null}
       />
 
       {/* Bottom Sheet */}

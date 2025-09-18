@@ -7,7 +7,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { icons, images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import CustomButton from "@/components/CustomButton";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import { routes } from "@/constants/routes";
 import {
@@ -16,7 +15,6 @@ import {
   PhoneIcon,
 } from "react-native-heroicons/solid";
 import MapSection from "@/components/templates/MapSection";
-import { Polyline } from 'react-native-maps';
 
 interface DriverInfo {
   id: string;
@@ -128,18 +126,7 @@ const RideTracking = () => {
         driverName={driver.name}
         driverVehicle={driver.vehicle}
         driverRating={driver.rating}
-        renderOverlays={
-          userLocation && driver.location ? (
-            <Polyline
-              coordinates={[
-                { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-                { latitude: driver.location.latitude, longitude: driver.location.longitude }
-              ]}
-              strokeColor="#FF0000"
-              strokeWidth={3}
-            />
-          ) : null
-        }
+        renderOverlays={null}
       />
       {/* Bottom Sheet */}
       <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl px-5 pt-6 pb-8">

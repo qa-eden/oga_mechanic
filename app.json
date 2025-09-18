@@ -22,7 +22,9 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.ogamechanic.app",
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "enableProguard": true,
       "enableShrinkResources": true,
       "splits": {
@@ -46,7 +48,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

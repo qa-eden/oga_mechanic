@@ -5,10 +5,10 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel",
     ],
-    compact: false, // Change from true to false to handle larger files
+    compact: false,
     plugins: [
       ["transform-remove-console", { "exclude": ["error", "warn"] }],
-      "react-native-reanimated/plugin"
+      // No worklets plugin for web
     ]
   };
 };
