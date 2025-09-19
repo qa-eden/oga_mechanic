@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { loginSchema } from "@/utils/validationSchemas";
-import { riderRoutes, routes } from "@/constants/routes";
+import { riderRoutes, routes, sellerRoutes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
@@ -69,62 +69,63 @@ const SignIn = () => {
   };
 
   const handleSignIn = async (values: any, { setSubmitting, setFieldError }: any) => {
-    // router.replace(riderRoutes?.home);
+          router.replace(sellerRoutes?.home);
     
-    try {
-      // Prepare login credentials based on login method
-      const credentials: LoginCredentials = {
-        password: values.password,
-      };
+    // try {
+    //   // Prepare login credentials based on login method
+    //   const credentials: LoginCredentials = {
+    //     password: values.password,
+    //   };
 
-      if (loginMethod === 'email') {
-        credentials.email = values.email;
-      } else {
-        // For phone login, combine country code with phone number
-        const countryCode = Array.isArray(selectedCountry?.callingCode) 
-          ? selectedCountry?.callingCode[0] 
-          : selectedCountry?.callingCode || '234';
-        credentials.phone_number = `+${countryCode}${phoneNumber}`;
-      }
+    //   if (loginMethod === 'email') {
+    //     credentials.email = values.email;
+    //   } else {
+    //     // For phone login, combine country code with phone number
+    //     const countryCode = Array.isArray(selectedCountry?.callingCode) 
+    //       ? selectedCountry?.callingCode[0] 
+    //       : selectedCountry?.callingCode || '234';
+    //     credentials.phone_number = `+${countryCode}${phoneNumber}`;
+    //   }
 
-      // Call login mutation
-      loginMutation.mutate(credentials, {
-        onSuccess: (response) => {
-          showSuccess('Login Successful!', 'Welcome back!');
-          setSubmitting(false);
+    //   // Call login mutation
+    //   loginMutation.mutate(credentials, {
+    //     onSuccess: (response) => {
+    //       showSuccess('Login Successful!', 'Welcome back!');
+    //       setSubmitting(false);
           
-          // Immediate navigation - no delay
-          router.replace(routes?.userHome);
-        },
-        onError: (error: any) => {
-          console.error('❌ Login failed:', error);
+    //       // Immediate navigation - no delay
+    //       router.replace(routes?.userHome);
+    //       // router.replace(sellerRoutes?.home as any);
+    //     },
+    //     onError: (error: any) => {
+    //       console.error('❌ Login failed:', error);
           
-          // Extract error message
-          let errorMessage = 'Login failed. Please check your credentials.';
+    //       // Extract error message
+    //       let errorMessage = 'Login failed. Please check your credentials.';
           
-          if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-          } else if (error.response?.data?.errors) {
-            const errors = error.response.data.errors;
-            if (errors.email) {
-              errorMessage = errors.email[0];
-            } else if (errors.password) {
-              errorMessage = errors.password[0];
-            } else if (errors.phone_number) {
-              errorMessage = errors.phone_number[0];
-            }
-          }
+    //       if (error.response?.data?.message) {
+    //         errorMessage = error.response.data.message;
+    //       } else if (error.response?.data?.errors) {
+    //         const errors = error.response.data.errors;
+    //         if (errors.email) {
+    //           errorMessage = errors.email[0];
+    //         } else if (errors.password) {
+    //           errorMessage = errors.password[0];
+    //         } else if (errors.phone_number) {
+    //           errorMessage = errors.phone_number[0];
+    //         }
+    //       }
           
-          showError('Login Failed', errorMessage);
-          setSubmitting(false);
-        }
-      });
+    //       showError('Login Failed', errorMessage);
+    //       setSubmitting(false);
+    //     }
+    //   });
       
-    } catch (error) {
-      console.error('❌ Error during sign in:', error);
-      showError('Login Failed', 'An unexpected error occurred. Please try again.');
-      setSubmitting(false);
-    }
+    // } catch (error) {
+    //   console.error('❌ Error during sign in:', error);
+    //   showError('Login Failed', 'An unexpected error occurred. Please try again.');
+    //   setSubmitting(false);
+    // }
   };
 
   return (

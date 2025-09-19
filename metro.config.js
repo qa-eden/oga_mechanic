@@ -4,11 +4,28 @@ const { withNativeWind } = require("nativewind/metro");
 const config = getDefaultConfig(__dirname);
 const tailwindConfig = withNativeWind(config, { input: "./global.css" });
 
-// Exclude react-native-maps from web builds
+// Exclude problematic packages from web builds
 if (process.env.EXPO_PLATFORM === 'web') {
   tailwindConfig.resolver.blockList = [
     /react-native-maps/,
+    /react-native-worklets/,
+    /worklets/,
   ];
+  
+  // Override react-native-reanimated for web
+  tailwindConfig.resolver.alias = {
+    ...tailwindConfig.resolver.alias,
+    'react-native-reanimated': 'react-native-reanimated/lib/reanimated2/core',
+  };
+  
+  // Use web-specific babel config
+  tailwindConfig.transformer.babelTransformerPath = require.resolve('metro-react-native-babel-transformer');
+  tailwindConfig.transformer.getTransformOptions = async () => ({
+    transform: {
+      experimentalImportSupport: false,
+      inlineRequires: true,
+    },
+  });
 }
 
 // SVG support

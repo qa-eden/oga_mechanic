@@ -96,6 +96,8 @@ import car from "@/assets/icons/car.svg";
 import services from "@/assets/icons/services.svg";
 import profile from "@/assets/icons/profile.svg";
 import shopTab from "@/assets/icons/shopTab.svg";
+import productTab from "@/assets/icons/productTab.svg";
+import activeProductTab from "@/assets/icons/activeProductTab.svg";
 
 //driver icons
 import trip from "@/assets/icons/trip.svg";
@@ -175,7 +177,8 @@ export const icons = {
   shopTab,
   carticon,
   bankIcon,
-
+  productTab,
+  activeProductTab,
   empty,
   trip,
   round,

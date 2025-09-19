@@ -25,12 +25,6 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "enableProguard": true,
-      "enableShrinkResources": true,
-      "splits": {
-        "abi": true,
-        "density": false
-      }
     },
     "web": {
       "bundler": "metro",
@@ -53,9 +47,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "packagerOpts": {
-      "config": "metro.config.js"
     },
     "extra": {
       "router": {},

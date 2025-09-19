@@ -147,17 +147,19 @@ export const sellerRoutes = {
   accountCreated: "/(auth)/(register)/seller/accountCreated",
 
   // seller tabs
-  home: "/(root)/(tabs)/(seller)/home",
-  earnings: "/(root)/(tabs)/(seller)/earnings",
-  order: "/(root)/(tabs)/(seller)/order",
-  profile: "/(root)/(tabs)/(seller)/profile",
+  home: "/(root)/(tabs)/(sellers)/home",
+  earnings: "/(root)/(tabs)/(sellers)/earnings",
+  order: "/(root)/(tabs)/(sellers)/order",
+  profile: "/(root)/(tabs)/(sellers)/profile",
 
   // seller screens
-  ConfirmWithdrawal: "/(root)/(screens)/(seller)/confirmWithdrawal",
-  ConfirmOrder: "/(root)/(screens)/(seller)/confirmOrder",
-  WithdrawalHistory: "/(root)/(screens)/(seller)/withdrawalHistory",
-  EditProfile: "/(root)/(screens)/(seller)/editProfile",
-  takebookings: "/(root)/(screens)/(seller)/takebookings",
+  ConfirmWithdrawal: "/(root)/(screens)/(sellers)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(sellers)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(sellers)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(sellers)/editProfile",
+  takebookings: "/(root)/(screens)/(sellers)/takebookings",
+  uploadProducts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/uploadProducts",
+  uploadSpareParts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/upload-sparePart",
 } as const;
 
 export type SellerRouteKeys = keyof typeof sellerRoutes;

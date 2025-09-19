@@ -1,136 +1,201 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from "react-native";
-import { ChevronDownIcon } from "react-native-heroicons/outline";
+import React, { useState, useRef, useCallback, useMemo } from 'react'
+import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform } from 'react-native'
+import { ChevronDownIcon, CheckIcon } from 'react-native-heroicons/outline'
 
 interface SelectOption {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 interface SelectFieldProps {
-  label?: string;
-  placeholder?: string;
-  options: SelectOption[];
-  value?: string;
-  onSelect?: (value: string) => void;
-  error?: string;
-  touched?: boolean;
-  disabled?: boolean;
-  labelStyle?: string;
-  required?: boolean;
+  name: string
+  label: string
+  placeholder: string
+  options: SelectOption[]
+  value: string
+  onValueChange: (value: string) => void
+  error?: string
+  touched?: boolean
+  required?: boolean
 }
 
-const SelectField = ({
+const SelectField: React.FC<SelectFieldProps> = ({
+  name,
   label,
   placeholder,
   options,
   value,
-  onSelect,
+  onValueChange,
   error,
   touched,
-  disabled = false,
-  labelStyle = "mb-3",
-  required = false,
-}: SelectFieldProps) => {
-  const [showDropdown, setShowDropdown] = useState(false);
+  required = false
+}) => {
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const animatedValue = useRef(new Animated.Value(0)).current
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null)
 
-  const selectedOption = options.find((option) => option.value === value);
-  const hasError = error && touched;
+  const selectedOption = options.find(option => option.value === value)
+  const hasError = touched && error
 
-  const handleSelect = (option: SelectOption) => {
-    onSelect?.(option.value);
-    setShowDropdown(false);
-  };
+  // Memoized border colors to prevent recalculation
+  const borderColors = useMemo(
+    () => ({
+      default: hasError ? "#EF4444" : "#D1D5DB",
+      focused: hasError ? "#EF4444" : "#F59E42",
+    }),
+    [hasError]
+  )
 
-  const handlePress = () => {
-    if (!disabled) {
-      setShowDropdown(!showDropdown);
+  const handleFocus = useCallback(() => {
+    if (!isFocused) {
+      setIsFocused(true)
+
+      // Cancel any existing animation
+      if (animationRef.current) {
+        animationRef.current.stop()
+      }
+
+      animationRef.current = Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      })
+
+      animationRef.current.start()
     }
-  };
+  }, [isFocused, animatedValue])
+
+  const handleBlur = useCallback(() => {
+    if (isFocused) {
+      setIsFocused(false)
+
+      // Cancel any existing animation
+      if (animationRef.current) {
+        animationRef.current.stop()
+      }
+
+      animationRef.current = Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      })
+
+      animationRef.current.start()
+    }
+  }, [isFocused, animatedValue])
+
+  // Stable border color interpolation
+  const borderColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [borderColors.default, borderColors.focused],
+    extrapolate: "clamp",
+  })
+
+  const handleSelect = (optionValue: string) => {
+    onValueChange(optionValue)
+    setShowDrawer(false)
+    handleBlur()
+  }
+
+  const openDrawer = () => {
+    handleFocus()
+    setShowDrawer(true)
+  }
 
   return (
-    <View className="relative">
+    <View className="mb-4 w-full">
+      {/* Label */}
       {label && (
-        <Text
-          className={`text-base font-NunitoBold text-gray-900 mb-3 ${labelStyle}`}
-        >
+        <Text className="text-base font-NunitoSemiBold text-gray-700 mb-2">
           {label}
           {required && <Text className="text-red-500 ml-1">*</Text>}
         </Text>
       )}
 
-      <TouchableOpacity
-        onPress={handlePress}
-        className={`border-2 rounded-xl px-4 py-4 flex-row items-center justify-between bg-white transition-all duration-200 ${
-          hasError 
-            ? "border-red-500 bg-red-50" 
-            : showDropdown 
-            ? "border-blue-500 bg-blue-50" 
-            : "border-gray-200 hover:border-gray-300"
-        } ${disabled ? "opacity-50 bg-gray-50" : ""}`}
-        disabled={disabled}
-        activeOpacity={0.7}
+      {/* Select Container */}
+      <Animated.View
+        className="flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1"
+        style={{
+          borderWidth: 1.5,
+          borderColor: borderColor,
+          ...Platform.select({
+            ios: {
+              shadowColor: hasError
+                ? "#EF4444"
+                : isFocused
+                ? "#F59E42"
+                : "transparent",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+            },
+            android: {
+              elevation: isFocused ? 2 : 0,
+            },
+          }),
+        }}
       >
-        <Text
-          className={`font-NunitoMedium text-base ${
-            value ? "text-gray-900" : "text-gray-500"
-          }`}
+        <TouchableOpacity 
+          onPress={openDrawer}
+          className="flex-1 flex-row items-center justify-between py-3"
         >
-          {selectedOption ? selectedOption.label : placeholder}
-        </Text>
-        <View className={`transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}>
-          <ChevronDownIcon 
-            size={20} 
-            color={hasError ? "#EF4444" : showDropdown ? "#3B82F6" : "#6B7280"} 
-          />
-        </View>
-      </TouchableOpacity>
+          <Text className={`text-[1.2rem] font-NunitoMedium ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </Text>
+          <ChevronDownIcon size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+      </Animated.View>
 
+      {/* Error Message */}
       {hasError && (
-        <Text className="text-red-500 text-sm font-NunitoMedium mt-2 ml-1">
-          {error}
-        </Text>
+        <View className="flex-row items-center mt-2">
+          <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
+          <Text className="text-md font-NunitoMedium text-red-500 flex-1">
+            {error}
+          </Text>
+        </View>
       )}
 
-      {showDropdown && !disabled && (
-        <>
-          {/* Backdrop overlay */}
-          <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
-            <View className="absolute inset-0 -z-10" />
-          </TouchableWithoutFeedback>
-          
-          {/* Dropdown */}
-          <View className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-xl mt-2 z-50 shadow-xl shadow-gray-300 max-h-48">
-            <ScrollView 
-              showsVerticalScrollIndicator={false}
-              className="max-h-48"
-            >
-              {options.map((option, index) => (
+      {/* Bottom Drawer Modal */}
+      <Modal
+        visible={showDrawer}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDrawer(false)}
+      >
+        <Pressable 
+          className="flex-1 justify-end bg-black/50"
+          onPress={() => setShowDrawer(false)}
+        >
+          <Pressable className="bg-white rounded-t-3xl p-6 max-h-96">
+            <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
+            
+            <Text className="text-lg font-NunitoBold text-gray-900 mb-4 text-center">
+              Select {label}
+            </Text>
+            
+            <View className="space-y-2">
+              {options.map((option) => (
                 <TouchableOpacity
                   key={option.value}
-                  onPress={() => handleSelect(option)}
-                  className={`px-4 py-3.5 border-b border-gray-100 last:border-b-0 transition-colors duration-150 ${
-                    option.value === value 
-                      ? "bg-blue-50 border-blue-200" 
-                      : "hover:bg-gray-50"
-                  }`}
-                  activeOpacity={0.7}
+                  onPress={() => handleSelect(option.value)}
+                  className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl"
                 >
-                  <Text className={`font-NunitoMedium text-base ${
-                    option.value === value ? "text-blue-700" : "text-gray-700"
-                  }`}>
+                  <Text className="text-base font-NunitoMedium text-gray-900">
                     {option.label}
                   </Text>
+                  {value === option.value && (
+                    <CheckIcon size={20} color="#0A6DEE" />
+                  )}
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-          </View>
-        </>
-      )}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
-  );
-};
+  )
+}
 
-export default SelectField;
+export default SelectField

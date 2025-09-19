@@ -1,3 +1,5 @@
+import { driverRoutes, mechanicRoutes, routes, sellerRoutes } from "@/constants/routes";
+
 // Mock roles data for development
 export interface Role {
   id: number;
@@ -14,37 +16,37 @@ export const mockRoles: Role[] = [
     id: 1,
     name: 'primary_user',
     title: 'Primary User',
-    description: 'Access all services as a customer',
+    description: 'I want to buy',
     icon: 'user',
     color: '#3B82F6',
-    route: '/register/user/step1'
+    route: routes.userStep1
   },
   {
     id: 2,
     name: 'merchant',
     title: 'Seller',
-    description: 'Sell products and manage your shop',
+    description: 'I want to sell',
     icon: 'shop',
     color: '#10B981',
-    route: '/register/merchant/step1'
+    route: sellerRoutes.step1
   },
   {
     id: 3,
     name: 'mechanic',
     title: 'Mechanic',
-    description: 'Provide mechanical services',
+    description: 'I want to Offer Services',
     icon: 'wrench',
     color: '#F59E0B',
-    route: '/register/mechanic/step1'
+    route: mechanicRoutes.step1
   },
   {
     id: 4,
     name: 'driver',
     title: 'Driver',
-    description: 'Provide transportation services',
+    description: 'I want to Drive',
     icon: 'car',
     color: '#EF4444',
-    route: '/register/driver/step1'
+    route: driverRoutes.step1
   }
 ];
 
