@@ -36,10 +36,13 @@ const PaymentMethodModal = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center px-5">
-        <View className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
+      <View className="flex-1 bg-black/50 justify-end">
+        <View className="bg-white rounded-t-3xl w-full overflow-hidden">
+          {/* Top indicator */}
+          <View className="w-12 h-1 bg-gray-300 rounded-full self-center mt-4 mb-2" />
+          
           {/* Header */}
-          <View className="flex-row items-center justify-between p-6 border-b border-gray-100">
+          <View className="flex-row items-center justify-between p-6 pb-4 border-b border-gray-100">
             <Text className="text-xl font-NunitoBold text-gray-900">
               Select Payment method
             </Text>
@@ -110,7 +113,7 @@ const PaymentMethodModal = ({
           </View>
 
           {/* Proceed Button */}
-          <View className="p-6 border-t border-gray-100">
+          <View className="p-6 pt-4 pb-8 border-t border-gray-100">
             <TouchableOpacity
               onPress={handleProceed}
               className="bg-primary-500 py-4 px-6 rounded-xl items-center justify-center"

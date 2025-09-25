@@ -149,17 +149,25 @@ export const sellerRoutes = {
   // seller tabs
   home: "/(root)/(tabs)/(sellers)/home",
   earnings: "/(root)/(tabs)/(sellers)/earnings",
-  order: "/(root)/(tabs)/(sellers)/order",
+  order: "/(root)/(tabs)/(sellers)/orders",
+  products: "/(root)/(tabs)/(sellers)/product",
   profile: "/(root)/(tabs)/(sellers)/profile",
 
   // seller screens
-  ConfirmWithdrawal: "/(root)/(screens)/(sellers)/confirmWithdrawal",
-  ConfirmOrder: "/(root)/(screens)/(sellers)/confirmOrder",
-  WithdrawalHistory: "/(root)/(screens)/(sellers)/withdrawalHistory",
-  EditProfile: "/(root)/(screens)/(sellers)/editProfile",
-  takebookings: "/(root)/(screens)/(sellers)/takebookings",
+  ConfirmWithdrawal: "/(root)/(screens)/(seller)/confirmWithdrawal",
+  ConfirmOrder: "/(root)/(screens)/(seller)/confirmOrder",
+  WithdrawalHistory: "/(root)/(screens)/(seller)/withdrawalHistory",
+  EditProfile: "/(root)/(screens)/(seller)/editProfile",
   uploadProducts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/uploadProducts",
   uploadSpareParts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/upload-sparePart",
+  uploadCarToRent: "/(root)/(screens)/(seller)/(products)/(uploadCarRent)/uploadCarToRent",
+  successfulPage: "/(root)/(screens)/(seller)/(products)/SuccessfulPage",
+  allSpareParts: "/(root)/(screens)/(seller)/allSpareParts",
+  allCars: "/(root)/(screens)/(seller)/allCars",
+  allRentedCars: "/(root)/(screens)/(seller)/allRentedCars",
+  productDetails: "/(root)/(screens)/(seller)/productDetails",
+  productDetailsDetailed: "/(root)/(screens)/(seller)/productDetailsDetailed",
+  deleteSuccess: "/(root)/(screens)/(seller)/deleteSuccess",
 } as const;
 
 export type SellerRouteKeys = keyof typeof sellerRoutes;

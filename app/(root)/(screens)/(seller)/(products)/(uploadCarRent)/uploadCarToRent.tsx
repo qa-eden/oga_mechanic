@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -12,7 +13,7 @@ import ImageUploadSection from '@/components/ImageUploadSection'
 import FormikButton from '@/components/forms/FormikButton'
 import { sellerRoutes } from '@/constants/routes'
 
-const UploadProducts = () => {
+const UploadCarToRent = () => {
   const [images, setImages] = useState<string[]>([])
   const { editMode, productId, productData } = useLocalSearchParams<{
     editMode?: string;
@@ -44,24 +45,24 @@ const UploadProducts = () => {
 
   const validationSchema = Yup.object().shape({
     carName: Yup.string().required('Car name is required'),
-    yearModel: Yup.string().required('Year model is required'),
-    make: Yup.string().required('Make is required'),
-    mileage: Yup.string().required('Mileage is required'),
+    year: Yup.string().required('Year is required'),
+    horsePower: Yup.string().required('Horse power is required'),
+    modem: Yup.string().required('Modem is required'),
     carType: Yup.string().required('Car type is required'),
     fuelType: Yup.string().required('Fuel type is required'),
     seats: Yup.string().required('Number of seats is required'),
-    pricing: Yup.string().required('Pricing is required'),
+    rentCost: Yup.string().required('Rent cost is required'),
   })
 
   const initialValues = {
     carName: parsedProductData?.name || '',
-    yearModel: parsedProductData?.year || '',
-    make: parsedProductData?.make || '',
-    mileage: parsedProductData?.mileage || '',
+    year: parsedProductData?.year || '',
+    horsePower: parsedProductData?.horsePower || '',
+    modem: parsedProductData?.modem || '',
     carType: parsedProductData?.carType || '',
     fuelType: parsedProductData?.fuelType || '',
     seats: parsedProductData?.seats || '',
-    pricing: parsedProductData?.price?.toString() || ''
+    rentCost: parsedProductData?.price?.toString() || ''
   }
 
   const handleImagesChange = (newImages: string[]) => {
@@ -87,15 +88,15 @@ const UploadProducts = () => {
   }, [isEditMode, parsedProductData]);
 
   const handleSubmit = (values: typeof initialValues) => {
-    console.log('Upload car:', { ...values, images })
+    console.log('Upload car for rent:', { ...values, images })
     // Handle form submission
     
-    // Navigate to success page with car-specific content
+    // Navigate to success page with car rental-specific content
     router.push({
       pathname: sellerRoutes.successfulPage as any,
       params: {
-        title: "Car Uploaded Successfully!",
-        message: `Your ${values.carName && values.carName?.toUpperCase()} has been Uploaded Successfully and is now Available in your Car Catalog. Customers can now View and Purchase your Car.`,
+        title: "Car Listed for Rent Successfully!",
+        message: `Your ${values.carName} has been listed for rent successfully. Customers can now view and rent your car at ₦${values.rentCost} per day.`,
         route: sellerRoutes.products
       }
     })
@@ -111,7 +112,7 @@ const UploadProducts = () => {
           <ArrowLeftIcon size={24} color="#000" />
         </TouchableOpacity>
         <Text className="text-lg font-NunitoBold text-gray-900">
-          {isEditMode ? 'Edit Car' : 'Upload Cars'}
+          {isEditMode ? 'Edit Rental Car' : 'Rent out Cars'}
         </Text>
         <View className="w-6" />
       </View>
@@ -123,7 +124,7 @@ const UploadProducts = () => {
           onImagesChange={handleImagesChange}
           maxImages={3}
           layout="large-small"
-          title="Upload image"
+          title="Upload Image"
         />
 
         {/* Form Fields */}
@@ -142,28 +143,29 @@ const UploadProducts = () => {
                 type="text"
               />
 
-              {/* Year model */}
+              {/* Year */}
               <FormikInput
-                name="yearModel"
-                label="Year Model"
-                placeholder="Enter year Model"
+                name="year"
+                label="Year"
+                placeholder="Enter Year of Make"
                 keyboardType="numeric"
                 type="text"
               />
 
-              {/* Make */}
+              {/* Horse power */}
               <FormikInput
-                name="make"
-                label="Make"
-                placeholder="Enter Car Make"
+                name="horsePower"
+                label="Horse Power"
+                placeholder="Enter Horse Power"
+                keyboardType="numeric"
                 type="text"
               />
 
-              {/* Mileage */}
+              {/* Modem */}
               <FormikInput
-                name="mileage"
-                label="Mileage"
-                placeholder="Enter km/mileage"
+                name="modem"
+                label="Modem"
+                placeholder="Enter Modem"
                 type="text"
               />
 
@@ -171,7 +173,7 @@ const UploadProducts = () => {
               <SelectField
                 name="carType"
                 label="Car Type"
-                placeholder="Select car type"
+                placeholder="Select Car Type"
                 options={carTypeOptions}
                 value={values.carType}
                 onValueChange={(value) => setFieldValue('carType', value)}
@@ -183,7 +185,7 @@ const UploadProducts = () => {
               <SelectField
                 name="fuelType"
                 label="Fuel Type"
-                placeholder="Select fuel type"
+                placeholder="Select Fuel Type"
                 options={fuelTypeOptions}
                 value={values.fuelType}
                 onValueChange={(value) => setFieldValue('fuelType', value)}
@@ -196,37 +198,28 @@ const UploadProducts = () => {
                 name="seats"
                 keyboardType="numeric"
                 label="No of Seats"
-                placeholder="Enter no of seats"
+                placeholder="Enter No of Seats"
                 type="text"
               />
 
-              {/* Pricing */}
+              {/* Rent cost */}
               <FormikInput
-                name="pricing"
+                name="rentCost"
                 keyboardType="numeric"
-                label="Pricing"
-                placeholder="Enter pricing"
+                label="Rent Cost"
+                placeholder="Enter Cost per Day"
                 type="text"
               />
 
               {/* Upload Button */}
-              {/* <TouchableOpacity 
-                onPress={() => formikHandleSubmit()}
-                disabled={!isValid || !dirty || isSubmitting}
-                className={`rounded-xl py-4 mb-8 ${!isValid || !dirty ? 'bg-gray-400' : 'bg-red-600'}`}
-              >
-                <Text className="text-white text-center text-lg font-NunitoBold">
-                  {isSubmitting ? 'Uploading...' : 'Upload'}
-                </Text>
-              </TouchableOpacity> */}
               <FormikButton
-                title={isEditMode ? "Update Car" : "Upload"}
+                title={isEditMode ? "Update Rental" : "List for Rent"}
                 type="submit"
                 onPress={formikHandleSubmit}
                 disabled={!isValid || !dirty || isSubmitting}
                 loading={isSubmitting}
                 loadingText="Uploading"
-                className="mb-8  mt-4"
+                className="mb-8 mt-4"
               />
             </View>
           )}
@@ -236,4 +229,4 @@ const UploadProducts = () => {
   )
 }
 
-export default UploadProducts
+export default UploadCarToRent  

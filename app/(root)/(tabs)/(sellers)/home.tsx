@@ -6,53 +6,20 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
-  ImageBackground,
-  Dimensions,
   Modal,
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { BellIcon, CalendarIcon, ChevronDownIcon, ChevronRightIcon, ShoppingBagIcon } from "react-native-heroicons/outline";
-import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import { images } from "@/constants";
-import OrderCard, { Order } from "@/components/OrderCard";
+import { CalendarIcon, ChevronDownIcon, ChevronRightIcon } from "react-native-heroicons/outline";
+// import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
-
-const { width } = Dimensions.get("window");
+import OrderItemCard from "@/components/cards/OrderItemCard";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
-
-  const consultations = [
-    {
-      id: 1,
-      name: "Yvonne Ede",
-      email: "yvonnede@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 2,
-      name: "Azeez Babatunde",
-      email: "azeez@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 3,
-      name: "Tomiwa Bamigboye",
-      email: "tomiwa@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 4,
-      name: "Funmilayo Shomefun",
-      email: "funmi@email.com",
-      avatar: images?.user1,
-    },
-  ];
 
   const recentOrders = [
     {
@@ -77,16 +44,6 @@ const SellerHome = () => {
       status: "Paid",
     },
   ];
-
-  const handleAccept = (orderId: string) => {
-    console.log("Accept order:", orderId);
-    // Handle accept logic here
-  };
-
-  const handleDecline = (orderId: string) => {
-    console.log("Decline order:", orderId);
-    // Handle decline logic here
-  };
 
   const ratingData = [
     { stars: 5, count: 900, percentage: 90, color: 'bg-green-500' },
@@ -148,7 +105,7 @@ const SellerHome = () => {
           {/* Customer Reviews */}
           <CustomerReviewCard
             totalReviews="1K"
-            averageRating={4.7}
+            averageRating={5}
             ratingData={ratingData}
           />
 
@@ -158,36 +115,19 @@ const SellerHome = () => {
               <Text className="text-lg font-NunitoBold text-gray-900">
                 Recent Orders
               </Text>
-              <TouchableOpacity className="flex-row items-center gap-1">
-                <Text className="text-gray-600 font-NunitoMedium flex-row text-lg items-center">See All </Text>
-                <ChevronRightIcon size={20} color="#0A6DEE" />
+              <TouchableOpacity className="flex-row items-center gap-1"
+                onPress={() => router.push("/(root)/(tabs)/(sellers)/?tab=orders" as any)}
+              >
+                <Text className="text-primary-500 font-NunitoMedium flex-row text-lg items-center">See All</Text>
+                <ChevronRightIcon size={20} color="#D30309" />
               </TouchableOpacity>
             </View>
 
             {recentOrders.map((order) => (
-              <View key={order.id} className="flex-row items-center py-4 border-b border-gray-300 ">
-                <View className=" p-3 bg-blue-50 rounded-full items-center justify-center mr-3">
-                  <Text className=" text-sm">
-                    <ShoppingBagIcon size={20} color="#0A6DEE" />
-                  </Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 font-NunitoMedium text-[1.1rem] capitalize clamp-1">
-                    {order.productName}
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    {order.orderDate}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text className="text-gray-900 font-NunitoBold text-[1.1rem]]">
-                    ₦{order.price.toLocaleString()}
-                  </Text>
-                  <Text className="text-green-700 text-sm font-NunitoMedium">
-                    {order.status}
-                  </Text>
-                </View>
-              </View>
+              <OrderItemCard
+                key={order.id}
+                order={order}
+              />
             ))}
           </View>
         </View>

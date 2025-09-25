@@ -9,7 +9,7 @@ import { EyeIcon, EyeSlashIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import WithdrawFundsModal from "@/components/modals/WithdrawFundsModal";
 import { router } from "expo-router";
-import { mechanicRoutes, routes } from "@/constants/routes";
+import { sellerRoutes, routes } from "@/constants/routes";
 
 const SellerEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
@@ -119,7 +119,7 @@ const SellerEarnings = () => {
             <Text className="text-lg font-NunitoBold text-gray-900">
               Earnings
             </Text>
-            <TouchableOpacity onPress={() => router.push(mechanicRoutes?.WithdrawalHistory)}>
+            <TouchableOpacity onPress={() => router.push(sellerRoutes?.WithdrawalHistory as any)}>
               <Text className="text-red-600 font-NunitoBold">
                 View withdrawals
               </Text>
@@ -185,6 +185,7 @@ const SellerEarnings = () => {
         isVisible={showWithdrawModal}
         onClose={() => setShowWithdrawModal(false)}
         availableBalance={223000}
+        userType="seller"
       />
     </SafeAreaView>
   );

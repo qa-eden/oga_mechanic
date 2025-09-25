@@ -1,17 +1,27 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { ArrowLeftIcon } from 'react-native-heroicons/outline'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
 import FormikInput from '@/components/forms/FormikInput'
 import SelectField from '@/components/forms/SelectField'
 import ImageUploadSection from '@/components/ImageUploadSection'
+import FormikButton from '@/components/forms/FormikButton'
+import { sellerRoutes } from '@/constants/routes'
 
 const UploadSparePart = () => {
   const [images, setImages] = useState<string[]>([])
+  const { editMode, productId, productData } = useLocalSearchParams<{
+    editMode?: string;
+    productId?: string;
+    productData?: string;
+  }>();
+
+  const isEditMode = editMode === 'true';
+  const parsedProductData = productData ? JSON.parse(productData) : null;
 
   const sparePartTypeOptions = [
     { label: 'Engine Parts', value: 'engine' },
@@ -35,20 +45,48 @@ const UploadSparePart = () => {
   })
 
   const initialValues = {
-    sparePartName: '',
-    carType: '',
-    sparePartType: '',
-    year: '',
-    pricing: ''
+    sparePartName: parsedProductData?.name || '',
+    carType: parsedProductData?.carType || '',
+    sparePartType: parsedProductData?.sparePartType || '',
+    year: parsedProductData?.year || '',
+    pricing: parsedProductData?.price?.toString() || ''
   }
 
   const handleImagesChange = (newImages: string[]) => {
     setImages(newImages)
   }
 
+  // Set images when in edit mode
+  useEffect(() => {
+    if (isEditMode && parsedProductData?.images) {
+      const imageUris = parsedProductData.images.map((img: any) => {
+        if (typeof img.image === 'string') {
+          return img.image;
+        } else if (img.image && typeof img.image === 'object') {
+          // Handle function components or other object types
+          return img.image.toString();
+        } else if (img.image) {
+          return img.image.toString();
+        }
+        return '';
+      }).filter(uri => uri); // Filter out empty strings
+      setImages(imageUris);
+    }
+  }, [isEditMode, parsedProductData]);
+
   const handleSubmit = (values: typeof initialValues) => {
     console.log('Upload spare part:', { ...values, images })
     // Handle form submission
+    
+    // Navigate to success page with spare part-specific content
+    router.push({
+      pathname: sellerRoutes.successfulPage as any,
+      params: {
+        title: "Spare Part Uploaded Successfully!",
+        message: `Your ${values.sparePartName && values.sparePartName?.toUpperCase()} has been Uploaded Successfully and is now Available in your Spare Parts Catalog. Customers can now View and Purchase this Spare Part.`,
+        route: sellerRoutes.products
+      }
+    })
   }
 
   return (
@@ -60,7 +98,9 @@ const UploadSparePart = () => {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeftIcon size={24} color="#000" />
         </TouchableOpacity>
-        <Text className="text-lg font-NunitoBold text-gray-900">Upload spare parts</Text>
+        <Text className="text-lg font-NunitoBold text-gray-900">
+          {isEditMode ? 'Edit Spare Part' : 'Upload Spare Parts'}
+        </Text>
         <View className="w-6" />
       </View>
 
@@ -71,7 +111,7 @@ const UploadSparePart = () => {
           onImagesChange={handleImagesChange}
           maxImages={3}
           layout="large-small"
-          title="Upload image"
+          title="Upload Image"
         />
 
         {/* Form Fields */}
@@ -85,24 +125,24 @@ const UploadSparePart = () => {
               {/* Name of spare part */}
               <FormikInput
                 name="sparePartName"
-                label="Name of spare part"
-                placeholder="Enter name of spare part"
+                label="Name of Spare Part"
+                placeholder="Enter name of Spare Part"
                 type="text"
               />
 
               {/* Car type */}
               <FormikInput
                 name="carType"
-                label="Car type"
-                placeholder="Enter car type"
+                label="Car Type"
+                placeholder="Enter Car Type"
                 type="text"
               />
 
               {/* Spare part type */}
               <SelectField
                 name="sparePartType"
-                label="Spare part type"
-                placeholder="Select spare part type"
+                label="Spare Part Type"
+                placeholder="Select Spare Part Type"
                 options={sparePartTypeOptions}
                 value={values.sparePartType}
                 onValueChange={(value) => setFieldValue('sparePartType', value)}
@@ -113,8 +153,9 @@ const UploadSparePart = () => {
               {/* Year */}
               <FormikInput
                 name="year"
+                keyboardType="numeric"
                 label="Year"
-                placeholder="Enter year of make"
+                placeholder="Enter Year of Make"
                 type="text"
               />
 
@@ -122,12 +163,13 @@ const UploadSparePart = () => {
               <FormikInput
                 name="pricing"
                 label="Pricing"
-                placeholder="Enter pricing"
+                keyboardType="numeric"
+                placeholder="Enter Pricing"
                 type="text"
               />
 
               {/* Upload Button */}
-              <TouchableOpacity 
+              {/* <TouchableOpacity 
                 onPress={() => formikHandleSubmit()}
                 disabled={!isValid || !dirty || isSubmitting}
                 className={`rounded-xl py-4 mb-8 ${!isValid || !dirty ? 'bg-gray-400' : 'bg-red-600'}`}
@@ -135,7 +177,16 @@ const UploadSparePart = () => {
                 <Text className="text-white text-center text-lg font-NunitoBold">
                   {isSubmitting ? 'Uploading...' : 'Upload'}
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
+              <FormikButton
+                title={isEditMode ? "Update Spare Part" : "Upload"}
+                type="submit"
+                onPress={formikHandleSubmit}
+                disabled={!isValid || !dirty || isSubmitting}
+                loading={isSubmitting}
+                loadingText="Uploading"
+                className="mb-8  mt-4"
+              />
             </View>
           )}
         </Formik>

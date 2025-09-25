@@ -98,6 +98,8 @@ import profile from "@/assets/icons/profile.svg";
 import shopTab from "@/assets/icons/shopTab.svg";
 import productTab from "@/assets/icons/productTab.svg";
 import activeProductTab from "@/assets/icons/activeProductTab.svg";
+import orderIcon2 from "@/assets/icons/orderIcon2.svg";
+import activeOrderIcon2 from "@/assets/icons/activeOrderIcon2.svg";
 
 //driver icons
 import trip from "@/assets/icons/trip.svg";
@@ -140,6 +142,12 @@ export const images = {
   carBack,
   carRight,
   carLeft,
+
+  //products
+  car1,
+  benz,
+  sparePart,
+  carEngine,
 };
 
 export const icons = {
@@ -182,6 +190,8 @@ export const icons = {
   empty,
   trip,
   round,
+  orderIcon2,
+  activeOrderIcon2,
 };
 
 export const onboarding = [

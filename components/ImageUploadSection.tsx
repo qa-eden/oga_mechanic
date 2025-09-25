@@ -21,7 +21,9 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   showTitle = true
 }) => {
   const handleImageUpload = async (slotIndex?: number) => {
-    if (images.length >= maxImages) {
+    // Check if we have reached the maximum number of images
+    const currentImageCount = images.filter(img => img).length
+    if (currentImageCount >= maxImages) {
       Alert.alert('Maximum images reached', `You can only upload up to ${maxImages} images`)
       return
     }
@@ -50,6 +52,10 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
         if (slotIndex !== undefined) {
           // Add to specific slot
           const newImages = [...images]
+          // Ensure the array is long enough for the slot
+          while (newImages.length <= slotIndex) {
+            newImages.push('')
+          }
           newImages[slotIndex] = newImage
           onImagesChange(newImages)
         } else {
@@ -58,7 +64,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
           const nextIndex = newImages.findIndex(img => !img)
           if (nextIndex !== -1) {
             newImages[nextIndex] = newImage
-          } else {
+          } else if (newImages.length < maxImages) {
             newImages.push(newImage)
           }
           onImagesChange(newImages)

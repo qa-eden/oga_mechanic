@@ -17,7 +17,7 @@ import { XMarkIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import CustomButton from "../CustomButton";
 import { router } from "expo-router";
-import { mechanicRoutes } from "@/constants/routes";
+import { mechanicRoutes, sellerRoutes } from "@/constants/routes";
 
 const { width } = Dimensions.get("window");
 
@@ -26,14 +26,30 @@ interface WithdrawFundsModalProps {
   onClose: () => void;
   availableBalance: number;
   confirmWithdrawalRoute?: string; // Add route prop
+  userType?: 'mechanic' | 'seller' | 'driver' | 'rider'; // Add user type for dynamic routing
 }
 
 const WithdrawFundsModal = ({
   isVisible,
   onClose,
   availableBalance,
-  confirmWithdrawalRoute = mechanicRoutes?.ConfirmWithdrawal, // Default to mechanic route
+  confirmWithdrawalRoute,
+  userType = 'mechanic', // Default to mechanic for backward compatibility
 }: WithdrawFundsModalProps) => {
+  // Auto-determine route if not provided
+  const getDefaultRoute = () => {
+    if (confirmWithdrawalRoute) return confirmWithdrawalRoute;
+    
+    switch (userType) {
+      case 'seller':
+        return sellerRoutes?.ConfirmWithdrawal;
+      case 'mechanic':
+      default:
+        return mechanicRoutes?.ConfirmWithdrawal;
+    }
+  };
+
+  const withdrawalRoute = getDefaultRoute();
   const [withdrawAmount, setWithdrawAmount] = useState("50,000");
   const [selectedAmount, setSelectedAmount] = useState("50,000");
 
@@ -62,7 +78,7 @@ const WithdrawFundsModal = ({
     // Handle withdrawal logic here
     onClose(); // Close modal first
     setTimeout(() => {
-      router.push(confirmWithdrawalRoute);
+      router.push(withdrawalRoute);
     }, 100); // Small delay to ensure modal closes
   };
 

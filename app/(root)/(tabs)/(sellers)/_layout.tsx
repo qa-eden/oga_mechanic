@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -11,18 +11,28 @@ import { icons } from "@/constants";
 // import { Dimensions } from "react-native";
 // import { routes } from "@/constants/routes";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 
 // Import your actual tab screen components
 import SellerEarnings from "./earnings";
 import SellerProduct from "./product";
 import SellerProfile from "./profile";
 import SellerHome from "./home";
+import SellerOrders from "./orders";
 
 export default function Layout() {
   // const router = useRouter();
   // const { width } = Dimensions.get("window");
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState("home");
+  const { tab } = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState(tab as string || "home");
+
+  // Update active tab when query param changes
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      setActiveTab(tab);
+    }
+  }, [tab]);
 
   // Function to render tab icons with labels
   const renderTabBar = () => {
@@ -43,7 +53,13 @@ export default function Layout() {
         label: "Home",
         component: SellerHome,
       },
-      consultation: {
+      orders: {
+        icon: <icons.orderIcon2 />,
+        activeIcon: <icons.activeOrderIcon2 />,
+        label: "Orders",
+        component: SellerOrders,
+      },
+      products: {
         icon: <icons.productTab />,
         activeIcon: <icons.activeProductTab />,
         label: "Products",
@@ -97,7 +113,8 @@ export default function Layout() {
   const getActiveComponent = () => {
     const tabInfo: Record<string, React.ComponentType> = {
       home: SellerHome,
-      consultation: SellerProduct,
+      orders: SellerOrders,
+      products: SellerProduct,
       earnings: SellerEarnings,
       profile: SellerProfile,
     };

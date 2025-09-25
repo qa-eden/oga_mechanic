@@ -16,7 +16,9 @@ import { BellIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { images } from "@/constants";
 import OrderCard, { Order } from "@/components/OrderCard";
+import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
+import Navbar from "@/components/Navbar";
 
 const { width } = Dimensions.get("window");
 
@@ -83,37 +85,22 @@ const MechanicHome = () => {
   };
 
   const ratingData = [
-    { stars: 5, count: 900, percentage: 90 },
-    { stars: 4, count: 50, percentage: 5 },
-    { stars: 3, count: 25, percentage: 2.5 },
-    { stars: 2, count: 15, percentage: 1.5 },
-    { stars: 1, count: 15, percentage: 1.5 },
+    { stars: 5, count: 900, percentage: 90, color: "bg-green-500" },
+    { stars: 4, count: 50, percentage: 5, color: "bg-blue-500" },
+    { stars: 3, count: 25, percentage: 2.5, color: "bg-purple-500" },
+    { stars: 2, count: 15, percentage: 1.5, color: "bg-orange-500" },
+    { stars: 1, count: 15, percentage: 1.5, color: "bg-red-500" },
   ];
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="flex-row items-center justify-between px-5 py-4 bg-white">
-          <View className="flex-row items-center">
-            <View className="w-12 h-12 bg-gray-200 rounded-full mr-3" />
-            <View>
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Hi, Waarith
-              </Text>
-              <Text className="text-sm text-gray-600 font-NunitoMedium">
-                Everything your car needs is here.
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-            <BellIcon size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
+        <Navbar />
 
-        <View className="px-5 py-4">
+        <View className="py-4">
           {/* Let's fix some cars card */}
           <View className="rounded-2xl mb-6 overflow-hidden">
             <ImageBackground
@@ -163,41 +150,11 @@ const MechanicHome = () => {
           </View>
 
           {/* Customer Reviews */}
-          <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                📊 Customer's Review
-              </Text>
-            </View>
-
-            <View className="flex-row items-center mb-4">
-              <Text className="text-2xl font-NunitoBold text-gray-900 mr-2">
-                1K (4.7)
-              </Text>
-              <View className="flex-row">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Text key={star} className="text-yellow-400 text-lg">⭐</Text>
-                ))}
-              </View>
-            </View>
-
-            {/* Rating bars */}
-            {ratingData.map((item, index) => {
-              const colors = ['bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'];
-              return (
-                <View key={item.stars} className="flex-row items-center mb-2">
-                  <Text className="text-sm text-gray-600 w-8">({item.stars}) ⭐</Text>
-                  <View className="flex-1 bg-gray-200 rounded-full h-2 mx-3">
-                    <View
-                      className={`${colors[index]} h-2 rounded-full`}
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </View>
-                  <Text className="text-sm text-gray-600 w-12">{item.count}</Text>
-                </View>
-              );
-            })}
-          </View>
+          <CustomerReviewCard
+            totalReviews="1K"
+            averageRating={4.7}
+            ratingData={ratingData}
+          />
 
           {/* New Consultations */}
           <View >
