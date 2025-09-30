@@ -15,7 +15,7 @@ import CustomButton from "../CustomButton";
 import { useUserRoles } from "@/hooks/useUserProfile";
 import { useRoles } from "@/hooks/useRoles";
 import { router } from "expo-router";
-import { routes } from "@/constants/routes";
+import { routes, mechanicRoutes, driverRoutes, sellerRoutes } from "@/constants/routes";
 import CustomAlert from "../CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 
@@ -216,8 +216,31 @@ const SwitchUserModal = ({
   const handleSignUp = () => {
     hideAlert();
     onClose(); // Close the switch modal first
-    // Navigate to signup page for the specific role
-    router.push(routes?.signUp as any);
+    
+    // Navigate to the specific role's step 1 registration page
+    let targetRoute: string = routes?.signUp; // fallback
+    
+    switch (selectedUser) {
+      case 'primary_user': 
+        targetRoute = routes?.userStep1; 
+        break;
+      case 'driver': 
+        targetRoute = driverRoutes?.step1; 
+        break;
+      case 'mechanic': 
+        targetRoute = mechanicRoutes?.step1; 
+        break;
+      case 'rider': 
+        targetRoute = driverRoutes?.chooseOptions; // Rider uses driver's choose options
+        break;
+      case 'merchant': 
+        targetRoute = sellerRoutes?.step1; 
+        break;
+      default: 
+        targetRoute = routes?.signUp;
+    }
+    
+    router.push(targetRoute as any);
   }
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform } from 'react-native'
-import { ChevronDownIcon, CheckIcon } from 'react-native-heroicons/outline'
+import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput } from 'react-native'
+import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 
 interface SelectOption {
   label: string
@@ -13,7 +13,7 @@ interface SelectFieldProps {
   placeholder: string
   options: SelectOption[]
   value: string
-  onValueChange: (value: string) => void
+  onValueChange?: (value: string) => void
   error?: string
   touched?: boolean
   required?: boolean
@@ -32,11 +32,22 @@ const SelectField: React.FC<SelectFieldProps> = ({
 }) => {
   const [showDrawer, setShowDrawer] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const animatedValue = useRef(new Animated.Value(0)).current
   const animationRef = useRef<Animated.CompositeAnimation | null>(null)
 
   const selectedOption = options.find(option => option.value === value)
   const hasError = touched && error
+
+  // Filter options based on search query
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return options
+    
+    return options.filter(option =>
+      option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      option.value.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [options, searchQuery])
 
   // Memoized border colors to prevent recalculation
   const borderColors = useMemo(
@@ -93,14 +104,24 @@ const SelectField: React.FC<SelectFieldProps> = ({
   })
 
   const handleSelect = (optionValue: string) => {
-    onValueChange(optionValue)
+    if (onValueChange && typeof onValueChange === 'function') {
+      onValueChange(optionValue)
+    }
     setShowDrawer(false)
+    setSearchQuery('') // Clear search when selecting
     handleBlur()
   }
 
   const openDrawer = () => {
     handleFocus()
+    setSearchQuery('') // Clear search when opening
     setShowDrawer(true)
+  }
+
+  const closeDrawer = () => {
+    setShowDrawer(false)
+    setSearchQuery('') // Clear search when closing
+    handleBlur()
   }
 
   return (
@@ -162,35 +183,72 @@ const SelectField: React.FC<SelectFieldProps> = ({
         visible={showDrawer}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowDrawer(false)}
+        onRequestClose={closeDrawer}
       >
         <Pressable 
           className="flex-1 justify-end bg-black/50"
-          onPress={() => setShowDrawer(false)}
+          onPress={closeDrawer}
         >
-          <Pressable className="bg-white rounded-t-3xl p-6 max-h-96">
-            <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
-            
-            <Text className="text-lg font-NunitoBold text-gray-900 mb-4 text-center">
-              Select {label}
-            </Text>
-            
-            <View className="space-y-2">
-              {options.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => handleSelect(option.value)}
-                  className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl"
-                >
-                  <Text className="text-base font-NunitoMedium text-gray-900">
-                    {option.label}
+          <Pressable className="bg-white rounded-t-3xl h-[70vh] max-h-[80vh]">
+            <View className="p-6 pb-0">
+              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
+              
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Select {label}
+                </Text>
+                {searchQuery.trim() && (
+                  <Text className="text-sm font-NunitoMedium text-gray-500">
+                    {filteredOptions.length} result{filteredOptions.length !== 1 ? 's' : ''}
                   </Text>
-                  {value === option.value && (
-                    <CheckIcon size={20} color="#0A6DEE" />
-                  )}
-                </TouchableOpacity>
-              ))}
+                )}
+              </View>
+              
+              {/* Search Input */}
+              <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2 mb-4">
+                <MagnifyingGlassIcon size={20} color="#9CA3AF" />
+                <TextInput
+                  placeholder={`Search ${label.toLowerCase()}...`}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="flex-1 ml-2 text-base font-NunitoMedium text-gray-900"
+                  placeholderTextColor="#9CA3AF"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
+            
+            <ScrollView 
+              className="flex-1 px-6"
+              showsVerticalScrollIndicator={true}
+              bounces={false}
+            >
+              <View className="space-y-2 pb-6">
+                {filteredOptions.length > 0 ? (
+                  filteredOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => handleSelect(option.value)}
+                      className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl"
+                    >
+                      <Text className="text-base font-NunitoMedium text-gray-900">
+                        {option.label}
+                      </Text>
+                      {value === option.value && (
+                        <CheckIcon size={20} color="#0A6DEE" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View className="p-8 items-center">
+                    <Text className="text-gray-500 text-center font-NunitoMedium">
+                      No {label.toLowerCase()} found matching "{searchQuery}"
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>

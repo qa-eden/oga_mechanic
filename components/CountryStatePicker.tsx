@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, memo, useEffect } from 'react'
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native'
 import { ChevronDownIcon, XMarkIcon, CheckCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 import { Country, CountryCode } from 'react-native-country-picker-modal'
@@ -28,6 +28,16 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   const [localShowCountryPicker, setLocalShowCountryPicker] = useState(false)
   const [localShowStatePicker, setLocalShowStatePicker] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const isControlled = onCountryPickerToggle !== undefined && onStatePickerToggle !== undefined
 
@@ -73,10 +83,13 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     return popularCountries
   }, [])
 
-  const filteredCountries = countries.filter((country: any) => 
-    country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.cca2.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredCountries = useMemo(() => {
+    if (!debouncedSearchQuery) return countries.slice(0, 20) // Limit initial load for better performance
+    return countries.filter((country: any) => 
+      country.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      country.cca2.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    )
+  }, [countries, debouncedSearchQuery])
 
   // Get states dynamically from the package
   const states = useMemo(() => {
@@ -183,24 +196,27 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     ]
   }, [selectedCountry])
 
-  const filteredStates = states.filter((state: string) => 
-    state.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredStates = useMemo(() => {
+    if (!debouncedSearchQuery) return states.slice(0, 20) // Limit initial load for better performance
+    return states.filter((state: string) => 
+      state.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    )
+  }, [states, debouncedSearchQuery])
 
-  const handleCountrySelect = (country: any) => {
+  const handleCountrySelect = useCallback((country: any) => {
     console.log('🌍 Country selected:', country.name, 'Code:', country.cca2)
     onCountryChange(country)
     onStateChange('') // Reset state when country changes
     setShowCountry(false)
     setSearchQuery('')
-  }
+  }, [onCountryChange, onStateChange, setShowCountry])
 
-  const handleStateSelect = (state: string) => {
+  const handleStateSelect = useCallback((state: string) => {
     console.log('🏛️ State selected:', state)
     onStateChange(state)
     setShowState(false)
     setSearchQuery('')
-  }
+  }, [onStateChange, setShowState])
 
   return (
     <>
@@ -238,6 +254,11 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
             <FlatList
               data={filteredCountries}
               keyExtractor={(item) => item.cca2}
+              initialNumToRender={10}
+              maxToRenderPerBatch={5}
+              windowSize={10}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={50}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   onPress={() => handleCountrySelect(item)}
@@ -310,6 +331,11 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
             <FlatList
               data={filteredStates}
               keyExtractor={(item) => item}
+              initialNumToRender={10}
+              maxToRenderPerBatch={5}
+              windowSize={10}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={50}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   onPress={() => handleStateSelect(item)}

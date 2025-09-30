@@ -26,6 +26,7 @@ import PaymentMethodModal from "@/components/modals/PaymentMethodModal";
 import { routes } from "@/constants/routes";
 import CartItemCard from "@/components/cards/CartItemCard";
 import { useCart, useUpdateCartItem, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
+import { useCheckout } from "@/hooks/useProducts";
 import { getErrorMessage } from "@/utils/errorMessages";
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -45,6 +46,7 @@ const Cart = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [loadingItems, setLoadingItems] = useState<Set<number>>(new Set());
 
   // Cart API hooks
   const { 
@@ -57,6 +59,7 @@ const Cart = () => {
   const updateCartItemMutation = useUpdateCartItem();
   const removeFromCartMutation = useRemoveFromCart();
   const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
+  const checkoutMutation = useCheckout();
 
   // Transform API data to local format for compatibility
   const cartItems: CartItem[] = (() => {
@@ -161,20 +164,6 @@ const Cart = () => {
   }, []);
 
   const updateQuantity = (id: number, change: number) => {
-    // Bounce animation for quantity change
-    Animated.sequence([
-      Animated.timing(bounceAnims[id], {
-        toValue: 1.2,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnims[id], {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
     // Find the cart item and determine action
     const cartItem = cartItems.find(item => item.id === id);
     if (cartItem) {
@@ -183,14 +172,47 @@ const Cart = () => {
       const canDecrement = change < 0 && cartItem.quantity > 1;
       
       if ((change > 0 && canIncrement) || (change < 0 && canDecrement)) {
-        // Find the original API item ID
+        // Add item to loading state
+        setLoadingItems(prev => new Set(prev).add(id));
+        
+        // Find the original API item and get the product ID
         const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
-        if (apiItem) {
-          // Use the new increment/decrement API
-          // Note: Using cart item ID as product_id since the cart API doesn't provide product_id
+        if (apiItem && apiItem.product?.id) {
+          // Use the product ID from the product object
           updateCartItemQuantityMutation.mutate({
-            productId: apiItem.id, // Using cart item ID as product_id
+            productId: apiItem.product.id, // Using actual product ID
             action: change > 0 ? "increment" : "decrement"
+          }, {
+            onSuccess: () => {
+              // Remove from loading state on success
+              setLoadingItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+              });
+              
+              // Bounce animation for quantity change
+              Animated.sequence([
+                Animated.timing(bounceAnims[id], {
+                  toValue: 1.2,
+                  duration: 150,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(bounceAnims[id], {
+                  toValue: 1,
+                  duration: 150,
+                  useNativeDriver: true,
+                }),
+              ]).start();
+            },
+            onError: () => {
+              // Remove from loading state on error
+              setLoadingItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+              });
+            }
           });
         }
       }
@@ -198,30 +220,50 @@ const Cart = () => {
   };
 
   const removeItem = (id: number) => {
-    // Slide out animation
-    Animated.parallel([
-      Animated.timing(slideAnims[id], {
-        toValue: -screenWidth,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnims[id], {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Find the original API item ID and remove from API
-      const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
-      if (apiItem) {
-        // Using cart item ID as product_id since the cart API doesn't provide product_id
-        removeFromCartMutation.mutate(apiItem.id);
-      }
-      
-      // Reset animations for future use
-      slideAnims[id].setValue(0);
-      fadeAnims[id].setValue(1);
-    });
+    // Add item to loading state
+    setLoadingItems(prev => new Set(prev).add(id));
+    
+    // Find the original API item and get the product ID
+    const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
+    if (apiItem && apiItem.product?.id) {
+      // Use the product ID from the product object
+      removeFromCartMutation.mutate(apiItem.product.id, {
+        onSuccess: () => {
+          // Remove from loading state on success
+          setLoadingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+          
+          // Start delete animation after successful API call
+          Animated.parallel([
+            Animated.timing(slideAnims[id], {
+              toValue: -screenWidth,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnims[id], {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            // Reset animations for future use
+            slideAnims[id].setValue(0);
+            fadeAnims[id].setValue(1);
+          });
+        },
+        onError: () => {
+          // Remove from loading state on error
+          setLoadingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+        }
+      });
+    }
   };
 
   // Only calculate for selected items
@@ -286,27 +328,73 @@ const Cart = () => {
   const handlePaymentMethodSelect = (paymentMethod: string) => {
     setShowPaymentModal(false);
 
-    setIsLoading(true);
-
-    // Simulate payment processing
-
-    setTimeout(() => {
-      setIsLoading(false);
-
-      if (paymentMethod === "transfer") {
-        // Handle cash payment
-
-        console.log("Processing cash payment...");
-
-        router.push(routes?.bankTransfer);
-      } else {
-        // Handle card payment
-
-        console.log("Processing card payment...");
-
-        router.push(routes?.cardPayment);
-      }
-    }, 1500);
+    if (paymentMethod === "online") {
+      
+      checkoutMutation.mutate(paymentMethod, {
+        onSuccess: (response) => {
+          setIsLoading(false);
+          
+          // Trigger cart refresh after successful checkout
+          refetchCart();
+          
+          // Check if payment_url exists in response
+          if (response?.data?.payment_url) {
+            // Navigate to payment screen with WebView
+            router.push({
+              pathname: "/(root)/(screens)/(user)/payment",
+              params: {
+                paymentUrl: response.data.payment_url,
+                orderId: response.data.id,
+                totalAmount: response.data.total_amount,
+                paymentReference: response.data.payment_reference
+              }
+            });
+          } else {
+            // Fallback if no payment URL
+            alert("Payment initialized successfully!");
+          }
+        },
+        onError: (error) => {
+          console.error("❌ Online payment failed:", error);
+          setIsLoading(false);
+          // Show error message
+          alert("Payment failed. Please try again.");
+        }
+      });
+    } else if (paymentMethod === "cash_on_delivery") {
+      // Handle cash on delivery with API call
+      console.log("🔄 Processing cash on delivery...");
+      
+      checkoutMutation.mutate(paymentMethod, {
+        onSuccess: (response) => {
+          console.log("✅ Cash on delivery successful:", response);
+          setIsLoading(false);
+          
+          // Trigger cart refresh after successful checkout
+          refetchCart();
+          
+          // Show success message but don't navigate yet
+          alert("Cash on delivery order created successfully!");
+        },
+        onError: (error) => {
+          console.error("❌ Cash on delivery failed:", error);
+          setIsLoading(false);
+          // Show error message
+          alert("Order creation failed. Please try again.");
+        }
+      });
+    } else {
+      // Handle legacy payment methods (if any)
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        if (paymentMethod === "transfer") {
+          router.push(routes?.bankTransfer);
+        } else {
+          router.push(routes?.cardPayment);
+        }
+      }, 1500);
+    }
   };
 
   const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => (
@@ -317,6 +405,7 @@ const Cart = () => {
       fadeAnim={fadeAnims[item.id]}
       slideAnim={slideAnims[item.id]}
       bounceAnim={bounceAnims[item.id]}
+      isLoading={loadingItems.has(item.id)}
       onSelect={(id) => {
         setSelectedItems((prev) =>
           prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]

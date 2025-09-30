@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import {
   View,
   KeyboardAvoidingView,
@@ -23,6 +24,16 @@ import SelectField from "@/components/forms/SelectField";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
 
 const MechanicStep1 = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset any stuck states on component mount
+  useEffect(() => {
+    setIsSubmitting(false);
+    
+    return () => {
+      setIsSubmitting(false);
+    };
+  }, []);
 
   const countries = [
     { label: "Nigeria", value: "Nigeria" },
@@ -57,8 +68,21 @@ const MechanicStep1 = () => {
 
   const handleStep1Submit = (values: any, { setSubmitting }: any) => {
     console.log("Step 1 values:", values);
+    setIsSubmitting(true);
     setSubmitting(false);
-    router.push(mechanicRoutes?.step2);
+    
+    try {
+      router.push(mechanicRoutes?.step2);
+      console.log('✅ Mechanic navigation successful');
+    } catch (error) {
+      console.error('❌ Mechanic navigation failed:', error);
+      setIsSubmitting(false);
+    } finally {
+      // Reset state after a delay
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 1000);
+    }
   };
 
   return (
@@ -204,7 +228,13 @@ const MechanicStep1 = () => {
 
                   <View style={{ height: 20 }} />
 
-                  <FormikButton title="Verify Account" className="py-4 mb-2" />
+                  <FormikButton 
+                    title="Verify Account" 
+                    className="py-4 mb-2"
+                    disabled={isSubmitting}
+                    loading={isSubmitting}
+                    loadingText="Processing..."
+                  />
 
                   <AuthNavigateLink
                     onPress={() => router.push(routes.signIn)}

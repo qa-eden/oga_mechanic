@@ -43,6 +43,14 @@ export const mechanicAPI = {
     return response.data;
   },
 
+  // Get mechanic details (new endpoint)
+  getMechanicDetail: async (mechanicId: string): Promise<any> => {
+    console.log('🔧 Fetching mechanic detail for ID:', mechanicId);
+    const response = await api.get(SERVICE_ENDPOINTS.MECHANIC_DETAIL(mechanicId));
+    console.log('✅ Mechanic detail response:', response.data);
+    return response.data;
+  },
+
   // Get nearby mechanics
   getNearbyMechanics: async (latitude: number, longitude: number, radius: number = 10): Promise<Mechanic[]> => {
     const response = await api.get(SERVICE_ENDPOINTS.MECHANICS_NEARBY, {

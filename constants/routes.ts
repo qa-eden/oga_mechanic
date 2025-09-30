@@ -32,12 +32,15 @@ export const routes = {
   //screens
   ProductDetail: "/(root)/(screens)/(user)/product-detail",
   cart: "/(root)/(screens)/(user)/cart",
+  paymentResult: "/(root)/(screens)/(user)/payment-result",
+  orderConfirmation: "/(root)/(screens)/(user)/order-confirmation",
   chatSeller: "/(root)/(screens)/(user)/chat-seller",
   carDetails: "/(root)/(screens)/(user)/car-detail",
   AllMechanic: "/(root)/(screens)/(mechanicScreens)/all-mechanic",
   mechanicProfile: "/(root)/(screens)/(mechanicScreens)/mechanic-profile",
   chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
   findMechanic: "/(root)/(screens)/(user)/(ordermechanic)/find-mechanic",
+  orderMechanic: "/(root)/(screens)/(user)/(ordermechanic)/order-mechanic",
 
 
   //calls

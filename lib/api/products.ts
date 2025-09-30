@@ -366,15 +366,60 @@ export const productsAPI = {
   },
 
   updateCartItemQuantity: async (productId: string, action: "increment" | "decrement"): Promise<UpdateCartItemResponse> => {
-    const payload: UpdateCartItemRequest = {
-      requestType: "update_cart_item",
-      data: {
-        product_id: productId,
-        action: action
-      }
+    const payload = {
+      product_id: productId,
+      action: action
     };
     const response = await api.patch<UpdateCartItemResponse>(SERVICE_ENDPOINTS.CART, payload);
     console.log(`🔄 ${action} cart item API response:`, response.data);
+    return response.data;
+  },
+
+  // Add product to favorites
+  addToFavorites: async (productId: string): Promise<{ message: string; status: boolean }> => {
+    console.log('❤️ addToFavorites API called with productId:', productId);
+    console.log('❤️ Using endpoint:', SERVICE_ENDPOINTS.FAVORITE_PRODUCT);
+    
+    const payload = {
+      product_id: productId
+    };
+    console.log('❤️ Payload being sent:', payload);
+    
+    const response = await api.post<{ message: string; status: boolean }>(SERVICE_ENDPOINTS.FAVORITE_PRODUCT, payload);
+    console.log('❤️ Add to favorites API response:', response.data);
+    return response.data;
+  },
+
+  // Remove product from favorites
+  removeFromFavorites: async (productId: string): Promise<{ message: string; status: boolean }> => {
+    console.log('💔 removeFromFavorites API called with productId:', productId);
+    console.log('💔 Using endpoint:', `${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}?product_id=${productId}`);
+    
+    const response = await api.delete<{ message: string; status: boolean }>(`${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}?product_id=${productId}`);
+    console.log('💔 Remove from favorites API response:', response.data);
+    return response.data;
+  },
+
+  // Toggle favorite (add if not favorited, remove if favorited)
+  toggleFavorite: async (productId: string, isCurrentlyFavorited: boolean): Promise<{ message: string; status: boolean }> => {
+    console.log('🔄 toggleFavorite called - productId:', productId, 'isCurrentlyFavorited:', isCurrentlyFavorited);
+    
+    if (isCurrentlyFavorited) {
+      return await productsAPI.removeFromFavorites(productId);
+    } else {
+      return await productsAPI.addToFavorites(productId);
+    }
+  },
+
+  // Checkout with payment method
+  checkout: async (paymentMethod: string): Promise<{ message: string; status: boolean; data?: any }> => {
+    console.log('🔄 checkout called - paymentMethod:', paymentMethod);
+    
+    const response = await api.post(SERVICE_ENDPOINTS.CHECKOUT, {
+      payment_method: paymentMethod
+    });
+    
+    console.log('✅ checkout response:', response.data);
     return response.data;
   },
 };

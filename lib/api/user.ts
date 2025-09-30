@@ -1,5 +1,5 @@
 import api from '../axios';
-import { USER_ENDPOINTS } from '../endpoints';
+import { USER_ENDPOINTS, BASE_URL } from '../endpoints';
 
 // Types
 export interface LoginCredentials {
@@ -186,21 +186,42 @@ export const userAPI = {
   },
 
   // Dynamic step-by-step registration
-  registerStep: async (stepId: number, stepData: any): Promise<any> => {
+  registerStep: async (stepId: number, stepData: any, config?: any): Promise<any> => {
     const endpoint = USER_ENDPOINTS.REGISTER_STEP(stepId);
     console.log(`=== STEP ${stepId} REGISTRATION API REQUEST ===`);
     console.log('Endpoint:', endpoint);
-    console.log('Request data:', JSON.stringify(stepData, null, 2));
+    console.log('Full URL:', `${BASE_URL}${endpoint}`);
+    console.log('Request data type:', typeof stepData);
+    console.log('Request data is FormData:', stepData instanceof FormData);
+    
+    if (stepData instanceof FormData) {
+      console.log('FormData _parts:', (stepData as any)._parts);
+      console.log('FormData entries:');
+      for (let [key, value] of (stepData as any)._parts) {
+        console.log(`  ${key}:`, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    } else {
+      console.log('Request data:', JSON.stringify(stepData, null, 2));
+    }
     console.log('===============================================');
     
-    const response = await api.post(endpoint, stepData);
-    
-    console.log(`=== STEP ${stepId} API RESPONSE ===`);
-    console.log('Status:', response.status);
-    console.log('Response data:', JSON.stringify(response.data, null, 2));
-    console.log('===================================');
-    
-    return response.data;
+    try {
+      const response = await api.post(endpoint, stepData, config);
+      
+      console.log(`=== STEP ${stepId} API RESPONSE ===`);
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('===================================');
+      
+      return response.data;
+    } catch (error) {
+      console.log(`=== STEP ${stepId} API ERROR ===`);
+      console.log('Error:', error);
+      console.log('Error response:', error?.response?.data);
+      console.log('Error status:', error?.response?.status);
+      console.log('===============================');
+      throw error;
+    }
   },
 
   registerVehicle: async (vehicleData: RegisterStep3VehicleData): Promise<any> => {

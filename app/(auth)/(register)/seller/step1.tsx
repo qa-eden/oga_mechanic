@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
     View,
+    Text,
     SafeAreaView,
     StatusBar,
     KeyboardAvoidingView,
@@ -17,6 +18,8 @@ import ProgressBar from '@/components/ProgressBar'
 import HeaderAndDescTextCenter from '@/components/HeaderAndDescTextCenter'
 import FormikButton from '@/components/forms/FormikButton'
 import AuthNavigateLink from '@/components/AuthNavigateLink'
+import { userAPI } from '@/lib/api/user'
+import CustomAlert from '@/components/CustomAlert'
 
 // Validation schema
 const validationSchema = Yup.object().shape({
@@ -40,6 +43,36 @@ const validationSchema = Yup.object().shape({
 })
 
 const Step1 = () => {
+    // Initialize state with proper typing
+    const [showAlert, setShowAlert] = useState<boolean>(false)
+    const [alertConfig, setAlertConfig] = useState<{
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        title: '',
+        message: '',
+        type: 'error'
+    })
+
+    // Direct API call instead of hook to avoid React issues
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
+    // Reset any stuck states on component mount
+    useEffect(() => {
+        console.log('🔄 Seller step1 component mounted, resetting states');
+        
+        // Reset states
+        setShowAlert(false);
+        setIsSubmitting(false);
+        
+        return () => {
+            console.log('🧹 Seller step1 component unmounting, cleanup');
+            setShowAlert(false);
+            setIsSubmitting(false);
+        };
+    }, []);
+
     const initialValues = {
         firstName: '',
         lastName: '',
@@ -47,18 +80,82 @@ const Step1 = () => {
         phoneNumber: ''
     }
 
-    const handleSubmit = (values: typeof initialValues) => {
-        // Navigate to next step with form data
-        console.log('Form submitted with values:', values)
-        router.push({
-            pathname: sellerRoutes.step2,
-            params: {
-                email: values.email,
-                firstName: values.firstName,
-                lastName: values.lastName,
-                phoneNumber: values.phoneNumber
+    const handleSubmit = async (values: typeof initialValues, { setSubmitting }: any) => {
+        console.log('📤 Posting seller personal details to step 2 endpoint...')
+        
+        // Prevent multiple submissions
+        if (isSubmitting) {
+            console.log('⚠️ Already submitting, ignoring');
+            return;
+        }
+        
+        setIsSubmitting(true);
+        
+        try {
+            const response = await userAPI.registerStep(2, {
+                email: values.email.trim(),
+                first_name: values.firstName.trim(),
+                last_name: values.lastName.trim(),
+                phone_number: values.phoneNumber.trim(),
+                // role_id: 3 // Seller role ID
+            });
+            
+            console.log('✅ Seller step 2 response:', response);
+            setSubmitting(false);
+            setIsSubmitting(false);
+            
+            // Navigate to next step
+            router.push({
+                pathname: sellerRoutes.step2,
+                params: {
+                    email: values.email,
+                    firstName: values.firstName,
+                    lastName: values.lastName,
+                    phoneNumber: values.phoneNumber,
+                    sessionId: response.sessionId || response.session_id
+                }
+            });
+            
+        } catch (error: any) {
+            console.error('❌ Error posting seller step 2 data:', error);
+            setSubmitting(false);
+            setIsSubmitting(false);
+            
+            // Extract error message from API response
+            let errorMessage = 'An error occurred. Please try again.';
+            
+            if (error?.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                if (errors.email && errors.email.length > 0) {
+                    errorMessage = errors.email[0];
+                } else if (errors.first_name && errors.first_name.length > 0) {
+                    errorMessage = errors.first_name[0];
+                } else if (errors.last_name && errors.last_name.length > 0) {
+                    errorMessage = errors.last_name[0];
+                } else if (errors.phone_number && errors.phone_number.length > 0) {
+                    errorMessage = errors.phone_number[0];
+                } else if (errors.message) {
+                    errorMessage = errors.message;
+                }
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
             }
-        })
+            
+            // Show error alert
+            setAlertConfig({
+                title: 'Registration Error',
+                message: errorMessage,
+                type: 'error'
+            });
+            setShowAlert(true);
+            
+            // Auto-hide error after 3 seconds
+            setTimeout(() => {
+                setShowAlert(false);
+            }, 3000);
+        }
     }
 
     return (
@@ -100,7 +197,7 @@ const Step1 = () => {
                             validationSchema={validationSchema}
                             onSubmit={handleSubmit}
                         >
-                            {({ handleSubmit: formikHandleSubmit, isValid, dirty }) => (
+                            {({ handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting }) => (
                                 <View className="space-y-6">
                                     {/* First Name */}
                                     <FormikInput
@@ -138,11 +235,20 @@ const Step1 = () => {
                                     <View className="pt-6">
 
                                         <FormikButton
-                                            title="Proceed"
+                                            title={isSubmitting ? "Processing..." : "Proceed"}
                                             type="submit"
-                                            onPress={() => formikHandleSubmit()}
-                                            disabled={!isValid || !dirty}
-                                            loading={false}
+                                            onPress={() => {
+                                                console.log('🖱️ Form submit button pressed');
+                                                console.log('📊 Submit state:', {
+                                                    isSubmitting: isSubmitting,
+                                                    isValid: isValid,
+                                                    dirty: dirty
+                                                });
+                                                formikHandleSubmit();
+                                            }}
+                                            disabled={!isValid || !dirty || isSubmitting}
+                                            loading={isSubmitting}
+                                            loadingText="Processing..."
                                         />
 
                                         <AuthNavigateLink
@@ -158,6 +264,15 @@ const Step1 = () => {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Error Alert Modal */}
+            <CustomAlert
+                visible={showAlert}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={() => setShowAlert(false)}
+            />
         </SafeAreaView>
     )
 }

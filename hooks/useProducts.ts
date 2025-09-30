@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsAPI, HomeProductsResponse, ProductDetailResponse, ProductListResponse, CategoryResponse, ProductListAPIResponse } from '../lib/api/products';
 
 // Query keys
@@ -93,5 +93,37 @@ export const useProductSearch = (
     enabled: enabled, // Simple boolean value only
     staleTime: 2 * 60 * 1000, // 2 minutes (search results can be more dynamic)
     gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Toggle favorite product mutation
+export const useToggleFavorite = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ productId, isCurrentlyFavorited }: { productId: string; isCurrentlyFavorited: boolean }) => 
+      productsAPI.toggleFavorite(productId, isCurrentlyFavorited),
+    onSuccess: () => {
+      // Invalidate product queries to refresh data
+      queryClient.invalidateQueries({ queryKey: productKeys.all });
+    },
+    onError: (error) => {
+      console.error('Toggle favorite error:', error);
+    },
+  });
+};
+
+export const useCheckout = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (paymentMethod: string) => productsAPI.checkout(paymentMethod),
+    onSuccess: () => {
+      // Invalidate cart and product queries to refresh data
+      queryClient.invalidateQueries({ queryKey: productKeys.all });
+    },
+    onError: (error) => {
+      console.error('Checkout error:', error);
+    },
   });
 };

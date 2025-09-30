@@ -22,6 +22,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoles } from "@/hooks/useRoles";
 import { userAPI } from "@/lib/api/user";
 import { useRegistrationStore } from "@/stores/registrationStore";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 const { height } = Dimensions.get("window");
 
@@ -29,6 +30,31 @@ const SignUp = () => {
   const router = useRouter();
   const { setStepByStepData, setStepByStepMode, setCurrentStep } = useRegistrationStore();
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // Reset navigation state on component mount to prevent stuck state
+  useEffect(() => {
+    setIsNavigating(false);
+    
+    // Additional cleanup on unmount
+    return () => {
+      setIsNavigating(false);
+    };
+  }, []);
+
+  // Reset navigation state when component becomes visible again
+  useEffect(() => {
+    // Reset state periodically to prevent stuck state
+    const interval = setInterval(() => {
+      if (isNavigating) {
+        console.log('🔄 Resetting stuck navigation state');
+        setIsNavigating(false);
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isNavigating]);
   
   // Use TanStack Query hook for roles
   const { 
@@ -97,10 +123,12 @@ const SignUp = () => {
       router.replace(role?.route as any);
     } catch (error) {
       console.error('❌ Error during role selection:', error);
+      // Reset navigation state immediately on error
+      setIsNavigating(false);
       // Still navigate even if API call fails
       router.replace(role?.route as any);
     } finally {
-      // Reset navigation state after a delay
+      // Ensure navigation state is always reset
       setTimeout(() => {
         setIsNavigating(false);
       }, 1000);
@@ -457,16 +485,11 @@ const SignUp = () => {
         </Animated.View>
         
         {/* Loading Overlay */}
-        {isNavigating && (
-          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-            <View className="bg-white rounded-2xl p-6 items-center">
-              <ActivityIndicator size="large" color="#D30309" />
-              <Text className="text-gray-700 font-NunitoMedium mt-3">
-                Loading...
-              </Text>
-            </View>
-          </View>
-        )}
+        <LoadingOverlay
+          visible={isNavigating}
+          title="Setting up your account..."
+          subtitle="Please wait while we prepare everything for you"
+        />
       </View>
     </KeyboardAvoidingView>
   );

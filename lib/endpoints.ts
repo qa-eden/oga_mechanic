@@ -108,6 +108,7 @@ export const SERVICE_ENDPOINTS = {
   MECHANICS_NEARBY: '/mechanics/nearby',
   MECHANICS_AVAILABLE: '/mechanics/available-mechanics/',
   MECHANIC_PROFILE: (id: string) => `/mechanics/${id}`,
+  MECHANIC_DETAIL: (id: string) => `/mechanics/mechanics/${id}/`,
   MECHANIC_REVIEWS: (id: string) => `/mechanics/${id}/reviews`,
   RIDES_CREATE: '/rides',
   RIDES_NEARBY_DRIVERS: '/rides/nearby-drivers',
@@ -133,6 +134,10 @@ export const SERVICE_ENDPOINTS = {
   UPDATE_CART_ITEM: '/products/cart/',
   REMOVE_FROM_CART: '/products/cart',
   CLEAR_CART: '/products/cart/clear/',
+  // Favorites endpoints
+  FAVORITE_PRODUCT: '/products/favorite-product/',
+  // Checkout endpoints
+  CHECKOUT: '/products/checkout/',
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_FAQ: '/support/faq',
   SUPPORT_TICKETS: '/support/tickets',

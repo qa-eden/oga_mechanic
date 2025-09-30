@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, Animated, Image } from "react-native";
+import { View, Text, TouchableOpacity, Animated, Image, ActivityIndicator } from "react-native";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { TrashIcon, CheckIcon, PlusIcon, MinusIcon } from "react-native-heroicons/outline";
 
@@ -21,6 +21,7 @@ interface CartItemCardProps {
   fadeAnim: Animated.Value;
   slideAnim: Animated.Value;
   bounceAnim: Animated.Value;
+  isLoading?: boolean;
   onSelect: (id: number) => void;
   onRemove: (id: number) => void;
   onUpdateQuantity: (id: number, change: number) => void;
@@ -33,6 +34,7 @@ const CartItemCard = memo(({
   fadeAnim,
   slideAnim,
   bounceAnim,
+  isLoading = false,
   onSelect,
   onRemove,
   onUpdateQuantity,
@@ -118,8 +120,14 @@ const CartItemCard = memo(({
           <TouchableOpacity
             onPress={() => onRemove(item.id)}
             className="w-8 h-8 bg-red-50 rounded-full items-center justify-center mb-5"
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.5 : 1 }}
           >
-            <TrashIcon size={18} color="#EF4444" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <TrashIcon size={18} color="#EF4444" />
+            )}
           </TouchableOpacity>
 
           {/* Quantity Controls */}
@@ -128,19 +136,27 @@ const CartItemCard = memo(({
               <TouchableOpacity
                 onPress={() => onUpdateQuantity(item.id, -1)}
                 className="w-8 h-8 bg-gray-400 rounded-full items-center justify-center"
-                disabled={item.quantity <= 1}
-                style={{ opacity: item.quantity <= 1 ? 0.5 : 1 }}
+                disabled={item.quantity <= 1 || isLoading}
+                style={{ opacity: item.quantity <= 1 || isLoading ? 0.5 : 1 }}
               >
                 <MinusIcon color={"#fff"} />
               </TouchableOpacity>
-              <Text className="mx-2 text-sm font-NunitoBold text-gray-900 min-w-[16px] text-center">
-                {item.quantity}
-              </Text>
+              
+              {isLoading ? (
+                <View className="mx-2 min-w-[16px] items-center justify-center">
+                  <ActivityIndicator size="small" color="#D30309" />
+                </View>
+              ) : (
+                <Text className="mx-2 text-sm font-NunitoBold text-gray-900 min-w-[16px] text-center">
+                  {item.quantity}
+                </Text>
+              )}
+              
               <TouchableOpacity
                 onPress={() => onUpdateQuantity(item.id, 1)}
                 className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center"
-                disabled={item.quantity >= item.stock}
-                style={{ opacity: item.quantity >= item.stock ? 0.5 : 1 }}
+                disabled={item.quantity >= item.stock || isLoading}
+                style={{ opacity: item.quantity >= item.stock || isLoading ? 0.5 : 1 }}
               >
                 <PlusIcon color={"#fff"} />
               </TouchableOpacity>

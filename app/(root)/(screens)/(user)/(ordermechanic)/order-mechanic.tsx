@@ -7,7 +7,7 @@ import TextArea from '@/components/forms/TextArea';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import { useFindMechanics } from '@/hooks/useMechanic';
 
-const FindMechanic = () => {
+const OrderMechanic = () => {
   const [carSelection, setCarSelection] = useState<'Yes' | 'No'>('Yes');
   const [selectedCar, setSelectedCar] = useState('');
   const [carIssue, setCarIssue] = useState('');
@@ -90,7 +90,7 @@ const FindMechanic = () => {
       <BackArrowBtn />
         
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Find mechanic
+          Order mechanic
         </Text>
         
         <View className="w-10" />
@@ -99,14 +99,14 @@ const FindMechanic = () => {
       <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
         {/* Instruction Text */}
         <Text className="text-base text-gray-600 font-NunitoMedium mb-8 text-center">
-          Fill in the details below to find a mechanic
+          Fill in the Details below to Order a Mechanic
         </Text>
 
         {/* Car Selection Dropdown */}
         <View className="mb-6">
           <SelectField
             name="carSelection"
-            label="Are you selecting from your list of cars?"
+            label="Are you Selecting from your List of Cars?"
             placeholder="Select an option"
             options={carSelectionOptions}
             value={carSelection}
@@ -133,7 +133,7 @@ const FindMechanic = () => {
             <View className="mb-6">
               <SelectField
                 name="carModel"
-                label="Car model"
+                label="Car Model"
                 placeholder="Select a car model"
                 options={carModelOptions}
                 value={carModel}
@@ -144,7 +144,7 @@ const FindMechanic = () => {
             <View className="mb-6">
               <SelectField
                 name="carYear"
-                label="Car year"
+                label="Car Year"
                 placeholder="Select car year"
                 options={carYearOptions}
                 value={carYear}
@@ -199,4 +199,4 @@ const FindMechanic = () => {
   );
 };
 
-export default FindMechanic;
+export default OrderMechanic;

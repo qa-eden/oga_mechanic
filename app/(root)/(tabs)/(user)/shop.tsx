@@ -251,6 +251,8 @@ const Shop = () => {
         name={item.name}
         reviewCount={0} // API doesn't provide review count yet
         price={parseFloat(item.price)}
+        isFavorite={item.is_in_favorite_list}
+        productId={item.id}
         showLove={true}
         love={false} // Default to false, can be enhanced later
         onPress={() => {

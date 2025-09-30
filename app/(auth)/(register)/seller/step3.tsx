@@ -1,8 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
     View,
-    Text,
-    TouchableOpacity,
     SafeAreaView,
     StatusBar,
     KeyboardAvoidingView,
@@ -15,7 +13,6 @@ import * as DocumentPicker from 'expo-document-picker'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
-import { Country } from 'react-native-country-picker-modal'
 import { routes, sellerRoutes } from '@/constants/routes'
 import FormikInput from '@/components/forms/FormikInput'
 import AddressInput from '@/components/forms/AddressInput'
@@ -25,14 +22,13 @@ import ProgressBar from '@/components/ProgressBar'
 import HeaderAndDescTextCenter from '@/components/HeaderAndDescTextCenter'
 import FormikButton from '@/components/forms/FormikButton'
 import AuthNavigateLink from '@/components/AuthNavigateLink'
-import CountryStatePicker from '@/components/CountryStatePicker'
-import LGAPicker from '@/components/LGAPicker'
+import SelectField from '@/components/forms/SelectField'
+import { userAPI } from '@/lib/api/user'
+import CustomAlert from '@/components/CustomAlert'
+import { getStates, getLGAs } from '@/constants/nigeriaData'
 
 // Validation schema
 const validationSchema = Yup.object().shape({
-    country: Yup.string()
-        .trim()
-        .required('Country is required'),
     state: Yup.string()
         .trim()
         .required('State is required'),
@@ -54,15 +50,35 @@ const validationSchema = Yup.object().shape({
 
 const Step3 = () => {
     const params = useLocalSearchParams()
-    const [selectedCountry, setSelectedCountry] = useState<Country | null>(null)
-    const [selectedState, setSelectedState] = useState('')
-    const [selectedLGA, setSelectedLGA] = useState('')
-    const [showCountryPicker, setShowCountryPicker] = useState(false)
-    const [showStatePicker, setShowStatePicker] = useState(false)
-    const [showLGAPicker, setShowLGAPicker] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [showAlert, setShowAlert] = useState(false)
+    const [alertConfig, setAlertConfig] = useState({
+        title: '',
+        message: '',
+        type: 'error' as 'success' | 'error' | 'warning' | 'info'
+    })
+
+    // Get Nigerian states and create options
+    const stateOptions = useMemo(() => {
+        const states = getStates()
+        return states.map((state: string) => ({
+            label: state,
+            value: state
+        }))
+    }, [])
+
+    // Get LGAs for selected state
+    const getLGAOptions = (selectedState: string) => {
+        if (!selectedState) return []
+        const lgas = getLGAs(selectedState)
+        return lgas.map((lga: string) => ({
+            label: lga,
+            value: lga
+        }))
+    }
 
     const initialValues = {
-        country: '',
+        country: 'Nigeria',
         state: '',
         lga: '',
         address: '',
@@ -70,17 +86,62 @@ const Step3 = () => {
         cacDocument: null as any
     }
 
-    const handleSubmit = (values: typeof initialValues) => {
-        // Navigate to next step with all form data
-        console.log('Step 3 submitted with values:', values)
-        console.log('Previous step data:', params)
-        router.push({
-            pathname: sellerRoutes.step4,
-            params: {
+    const handleSubmit = async (values: typeof initialValues) => {
+        console.log('📤 Moving to step 4 with business details...')
+        
+        // Prevent multiple submissions
+        if (isSubmitting) {
+            console.log('⚠️ Already submitting, ignoring');
+            return;
+        }
+        
+        setIsSubmitting(true);
+        
+        try {
+            // Debug: Log what we're about to pass
+            console.log('🔍 Step 3 - CAC Document value:', values.cacDocument);
+            console.log('🔍 Step 3 - CAC Document URI:', values.cacDocument?.uri);
+            console.log('🔍 Step 3 - CAC Document type:', typeof values.cacDocument);
+            console.log('🔍 Step 3 - CAC Document keys:', values.cacDocument ? Object.keys(values.cacDocument) : 'null');
+            console.log('🔍 Step 3 - CAC Document stringified:', JSON.stringify(values.cacDocument));
+            
+            // Just navigate to next step without API call
+            // API call will be made in step 4 with both CAC document and selfie
+            const navigationParams = {
                 ...params,
-                ...values
-            }
-        })
+                // Pass individual values to avoid object serialization issues
+                state: values.state,
+                lga: values.lga,
+                address: values.address,
+                cacNumber: values.cacNumber,
+                // Only pass the URI string, not the entire object
+                cacDocumentUri: values.cacDocument?.uri || values.cacDocument?.path || null
+            };
+            
+            console.log('🔍 Step 3 - Navigation params:', navigationParams);
+            
+            router.push({
+                pathname: sellerRoutes.step4,
+                params: navigationParams
+            });
+            
+        } catch (error: any) {
+            console.error('❌ Error navigating to step 4:', error);
+            setIsSubmitting(false);
+            
+            // Show error alert
+            setAlertConfig({
+                title: 'Navigation Error',
+                message: 'Unable to proceed to next step. Please try again.',
+                type: 'error'
+            });
+            setShowAlert(true);
+            
+            // Auto-hide error after 3 seconds
+            setTimeout(() => {
+                setShowAlert(false);
+            }, 3000);
+        }
     }
 
     const handleDocumentUpload = async (setFieldValue: any) => {
@@ -186,32 +247,6 @@ const Step3 = () => {
         )
     }
 
-    const handleCountryChange = (country: Country, setFieldValue?: (field: string, value: any) => void) => {
-        setSelectedCountry(country)
-        setSelectedState('') // Reset state when country changes
-        setSelectedLGA('') // Reset LGA when country changes
-        if (setFieldValue) {
-            setFieldValue('country', country.name)
-            setFieldValue('state', '')
-            setFieldValue('lga', '')
-        }
-    }
-
-    const handleStateChange = (state: string, setFieldValue?: (field: string, value: any) => void) => {
-        setSelectedState(state)
-        setSelectedLGA('') // Reset LGA when state changes
-        if (setFieldValue) {
-            setFieldValue('state', state)
-            setFieldValue('lga', '')
-        }
-    }
-
-    const handleLGAChange = (lga: string, setFieldValue?: (field: string, value: any) => void) => {
-        setSelectedLGA(lga)
-        if (setFieldValue) {
-            setFieldValue('lga', lga)
-        }
-    }
 
   return (
         <SafeAreaView className="flex-1 bg-white">
@@ -254,80 +289,34 @@ const Step3 = () => {
                                 console.log('Form state:', { isValid, dirty, values, errors })
                                 return (
                                 <View className="space-y-6">
-                                    {/* Country Picker */}
-                                    <View>
-                                        <Text className="text-sm font-NunitoMedium text-gray-700 mb-2">
-                                            Country
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => setShowCountryPicker(true)}
-                                            className="w-full px-4 py-4 bg-gray-100 rounded-xl border border-gray-200 flex-row items-center justify-between"
-                                        >
-                                            <Text className={`text-base font-NunitoMedium ${
-                                                values.country ? 'text-gray-900' : 'text-gray-500'
-                                            }`}>
-                                                {values.country || 'Select country'}
-                                            </Text>
-                                            <Text className="text-gray-400 text-lg">▼</Text>
-                                        </TouchableOpacity>
-                                        {errors.country && touched.country && (
-                                            <Text className="text-red-500 text-sm font-NunitoMedium mt-1">
-                                                {String(errors.country)}
-                                            </Text>
-                                        )}
-                                    </View>
+                                    {/* State Select */}
+                                    <SelectField
+                                        name="state"
+                                        label="State"
+                                        placeholder="Select state"
+                                        options={stateOptions}
+                                        value={values.state}
+                                        onValueChange={(value) => {
+                                            setFieldValue('state', value)
+                                            setFieldValue('lga', '') // Reset LGA when state changes
+                                        }}
+                                        error={errors.state}
+                                        touched={touched.state}
+                                        required
+                                    />
 
-                                    {/* State Picker */}
-                                    <View>
-                                        <Text className="text-sm font-NunitoMedium text-gray-700 mb-2">
-                                            State
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => setShowStatePicker(true)}
-                                            disabled={!values.country}
-                                            className={`w-full px-4 py-4 bg-gray-100 rounded-xl border border-gray-200 flex-row items-center justify-between ${
-                                                !values.country ? 'opacity-50' : ''
-                                            }`}
-                                        >
-                                            <Text className={`text-base font-NunitoMedium ${
-                                                values.state ? 'text-gray-900' : 'text-gray-500'
-                                            }`}>
-                                                {values.state || 'Select state'}
-                                            </Text>
-                                            <Text className="text-gray-400 text-lg">▼</Text>
-                                        </TouchableOpacity>
-                                        {errors.state && touched.state && (
-                                            <Text className="text-red-500 text-sm font-NunitoMedium mt-1">
-                                                {String(errors.state)}
-                                            </Text>
-                                        )}
-                                    </View>
-
-                                    {/* LGA Picker */}
-    <View>
-                                        <Text className="text-sm font-NunitoMedium text-gray-700 mb-2">
-                                            LGA
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => setShowLGAPicker(true)}
-                                            disabled={!values.state}
-                                            className={`w-full px-4 py-4 bg-gray-100 rounded-xl border border-gray-200 flex-row items-center justify-between ${
-                                                !values.state ? 'opacity-50' : ''
-                                            }`}
-                                        >
-                                            <Text className={`text-base font-NunitoMedium ${
-                                                values.lga ? 'text-gray-900' : 'text-gray-500'
-                                            }`}>
-                                                {values.lga || 'Select local government area'}
-                                            </Text>
-                                            <Text className="text-gray-400 text-lg">▼</Text>
-                                        </TouchableOpacity>
-                                        {errors.lga && touched.lga && (
-                                            <Text className="text-red-500 text-sm font-NunitoMedium mt-1">
-                                                {String(errors.lga)}
-                                            </Text>
-                                        )}
-                                    </View>
+                                    {/* LGA Select */}
+                                    <SelectField
+                                        name="lga"
+                                        label="LGA"
+                                        placeholder={values.state ? "Select local government area" : "Select state first"}
+                                        options={getLGAOptions(values.state)}
+                                        value={values.lga}
+                                        onValueChange={(value) => setFieldValue('lga', value)}
+                                        error={errors.lga}
+                                        touched={touched.lga}
+                                        required
+                                    />
 
                                     {/* Address */}
                                     <AddressInput
@@ -361,14 +350,14 @@ const Step3 = () => {
 
                                     {/* Bottom Actions */}
                                     <View className="pt-6">
-                                        <TouchableOpacity
+                                        <FormikButton
+                                            title={isSubmitting ? "Processing..." : "Proceed"}
+                                            type="submit"
                                             onPress={() => formikHandleSubmit()}
-                                            className="w-full bg-[#D30309] rounded-full py-5 px-2 flex flex-row justify-center items-center"
-                                        >
-                                            <Text className="text-[1.1rem] font-bold text-white">
-                                                Proceed
-                                            </Text>
-                                        </TouchableOpacity>
+                                            disabled={!isValid || !dirty || isSubmitting}
+                                            loading={isSubmitting}
+                                            loadingText="Processing..."
+                                        />
 
                                         <AuthNavigateLink
                                             onPress={() => router.push(routes.signIn)}
@@ -378,27 +367,6 @@ const Step3 = () => {
                                         />
                                     </View>
 
-                                    {/* Country State Picker Modal */}
-                                    <CountryStatePicker
-                                        selectedCountry={selectedCountry}
-                                        selectedState={values.state}
-                                        onCountryChange={(country) => handleCountryChange(country, setFieldValue)}
-                                        onStateChange={(state) => handleStateChange(state, setFieldValue)}
-                                        showCountryPicker={showCountryPicker}
-                                        showStatePicker={showStatePicker}
-                                        onCountryPickerToggle={setShowCountryPicker}
-                                        onStatePickerToggle={setShowStatePicker}
-                                    />
-
-                                    {/* LGA Picker Modal */}
-                                    <LGAPicker
-                                        selectedLGA={values.lga}
-                                        onLGAChange={(lga) => handleLGAChange(lga, setFieldValue)}
-                                        showLGAPicker={showLGAPicker}
-                                        onLGAPickerToggle={setShowLGAPicker}
-                                        state={values.state}
-                                        country={selectedCountry?.cca2}
-                                    />
                                 </View>
                                 )
                             }}
@@ -406,6 +374,15 @@ const Step3 = () => {
     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+            
+            {/* Error Alert Modal */}
+            <CustomAlert
+                visible={showAlert}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={() => setShowAlert(false)}
+            />
         </SafeAreaView>
   )
 }

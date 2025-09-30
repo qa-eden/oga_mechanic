@@ -8,24 +8,26 @@ import {
   FlatList,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
 import { useCallback } from "react";
 import MechanicCard from "@/components/cards/MechanicCard";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import { useGetAvailableMechanics } from "@/hooks/useMechanics";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 interface Mechanic {
   id: number;
+  userId: string;
   name: string;
   rating: number;
   reviewCount: number;
-  image: any;
+  image: string | null;
   isVip?: boolean;
   specialization?: string;
   location?: string;
@@ -37,82 +39,61 @@ const AllMechanic = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
 
-  // Mock mechanics data
-  const mechanics: Mechanic[] = [
-    {
-      id: 1,
-      name: "Fatai Sule",
-      rating: 4.5,
-      reviewCount: 30,
-      image: images?.mechanic1,
-      specialization: "Engine Specialist",
-      location: "Lagos",
-      isOnline: true,
-    },
-    {
-      id: 2,
-      name: "Easther Emeka",
-      rating: 5.0,
-      reviewCount: 30,
-      image: images?.mechanic3,
-      isVip: true,
-      specialization: "Transmission Expert",
-      location: "Abuja",
-      isOnline: true,
-    },
-    {
-      id: 3,
-      name: "Lukman Saheed",
-      rating: 4.5,
-      reviewCount: 35,
-      image: images?.lookman,
-      specialization: "Brake Specialist",
-      location: "Kano",
-      isOnline: false,
-    },
-    {
-      id: 4,
-      name: "Otunba Lamba",
-      rating: 3.5,
-      reviewCount: 30,
-      image: images?.otunba,
-      specialization: "Electrical Systems",
-      location: "Ibadan",
-      isOnline: true,
-    },
-    {
-      id: 5,
-      name: "Salisu Samlary",
-      rating: 4.0,
-      reviewCount: 44,
-      image: images?.salisu,
-      specialization: "Diagnostic Expert",
-      location: "Port Harcourt",
-      isOnline: true,
-    },
-    {
-      id: 6,
-      name: "Fatai Sule",
-      rating: 4.5,
-      reviewCount: 30,
-      image: images?.mechanic1,
-      specialization: "General Repair",
-      location: "Lagos",
-      isOnline: false,
-    },
-  ];
+  // Fetch available mechanics from API
+  const { 
+    data: mechanicsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useGetAvailableMechanics();
+
+  // Transform API data to local format
+  const mechanics: Mechanic[] = (() => {
+    try {
+      if (!mechanicsData?.data) {
+        console.log('🔧 No mechanics data available');
+        return [];
+      }
+      
+      if (!Array.isArray(mechanicsData.data)) {
+        console.log('🔧 Mechanics data is not an array:', mechanicsData.data);
+        return [];
+      }
+      
+      return mechanicsData.data.map((mechanic: any) => ({
+        id: mechanic.id || 0,
+        userId: mechanic.user?.id || '', // Add user.id for navigation
+        name: mechanic.user ? `${mechanic.user.first_name} ${mechanic.user.last_name}`.trim() : `Mechanic ${mechanic.id}`,
+        rating: mechanic.rating || 0, // Use rating from API
+        reviewCount: 0, // Not provided in API response
+        image: mechanic.selfie || null, // Use selfie URL from API
+        specialization: 'General Repair', // Not provided in API response
+        location: mechanic.location || 'Location not available', // Use location from API
+        isOnline: mechanic.is_approved || false,
+        isVip: false, // Not provided in API response
+      }));
+    } catch (error) {
+      console.error('❌ Error transforming mechanics data:', error);
+      return [];
+    }
+  })();
+
+  // Debug: Log mechanics data
+  console.log('🔧 Mechanics API Response:', mechanicsData);
+  console.log('🔧 Transformed Mechanics:', mechanics);
 
   const filteredMechanics = mechanics.filter(
     (mechanic) =>
       mechanic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mechanic.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
+      mechanic.specialization?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      mechanic.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleMechanicPress = (mechanic: Mechanic) => {
     router.push({
       pathname: routes.mechanicProfile,
       params: {
-        mechanicId: mechanic.id,
+        mechanicId: mechanic.userId, // Use user.id instead of mechanic id
         mechanicName: mechanic.name,
         mechanicRating: mechanic.rating,
         mechanicImage: mechanic.image,
@@ -135,7 +116,7 @@ const AllMechanic = () => {
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
         <BackArrowBtn />
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Chat mechanic
+          All Mechanics
         </Text>
        <View className="w-8" />
       </View>
@@ -159,18 +140,18 @@ const AllMechanic = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveTab("All chats")}
+          onPress={() => setActiveTab("All orders")}
           className={`flex-1 py-3 rounded-lg ml-2 ${
-            activeTab === "All chats" ? "bg-primary-500" : "bg-gray-100"
+            activeTab === "All orders" ? "bg-primary-500" : "bg-gray-100"
           }`}
           activeOpacity={0.8}
         >
           <Text
             className={`text-center font-NunitoBold text-base ${
-              activeTab === "All chats" ? "text-white" : "text-gray-600"
+              activeTab === "All orders" ? "text-white" : "text-gray-600"
             }`}
           >
-            All chats
+            All orders
           </Text>
         </TouchableOpacity>
       </View>
@@ -208,36 +189,79 @@ const AllMechanic = () => {
       {/* Content */}
       <View className="flex-1">
         {activeTab === "Mechanics" ? (
-          <FlatList
-            data={filteredMechanics}
-            renderItem={renderMechanicCard}
-            keyExtractor={item => item.id.toString()}
-            numColumns={2}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-            columnWrapperStyle={{
-              justifyContent: "space-between",
-              paddingHorizontal: 20,
-            }}
-            contentContainerStyle={{
-              paddingTop: 20,
-              paddingBottom: 100,
-            }}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
-          />
+          <>
+            {/* Loading State */}
+            {isLoading && (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color="#D30309" />
+                <Text className="text-gray-600 mt-4">Loading mechanics...</Text>
+              </View>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <View className="flex-1 items-center justify-center px-5">
+                <Text className="text-red-500 text-center text-lg mb-4">
+                  Failed to load mechanics
+                </Text>
+                <TouchableOpacity
+                  onPress={() => refetch()}
+                  className="bg-primary-500 px-6 py-3 rounded-lg"
+                >
+                  <Text className="text-white font-NunitoBold">Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !error && filteredMechanics.length === 0 && (
+              <View className="flex-1 justify-center items-center px-5">
+                <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
+                  <Text className="text-4xl">🔧</Text>
+                </View>
+                <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
+                  No mechanics found
+                </Text>
+                <Text className="text-gray-500 text-center font-NunitoMedium">
+                  {searchQuery ? 'Try adjusting your search terms' : 'No mechanics are currently available'}
+                </Text>
+              </View>
+            )}
+
+            {/* Mechanics List */}
+            {!isLoading && !error && filteredMechanics.length > 0 && (
+              <FlatList
+                data={filteredMechanics}
+                renderItem={renderMechanicCard}
+                keyExtractor={item => item.id.toString()}
+                numColumns={2}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={7}
+                removeClippedSubviews={true}
+                columnWrapperStyle={{
+                  justifyContent: "space-between",
+                  paddingHorizontal: 20,
+                }}
+                contentContainerStyle={{
+                  paddingTop: 20,
+                  paddingBottom: 100,
+                }}
+                showsVerticalScrollIndicator={false}
+                ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
+              />
+            )}
+          </>
         ) : (
           <View className="flex-1 justify-center items-center px-5">
             <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
-              <Text className="text-4xl">💬</Text>
+              <Text className="text-4xl">📋</Text>
             </View>
             <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              No chats yet
+              No orders yet
             </Text>
             <Text className="text-gray-500 text-center font-NunitoMedium">
-              Start a conversation with a mechanic to see your chats here
+              Order a mechanic to see your orders here
             </Text>
           </View>
         )}

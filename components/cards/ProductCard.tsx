@@ -18,8 +18,9 @@ interface ProductCardProps {
   onLovePress?: () => void;
   isLoading?: boolean;
   containerStyle?: string;
-  productId?: number;
+  productId?: number | string;
   showAddToCart?: boolean;
+  isFavorite?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -38,6 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   containerStyle,
   productId,
   showAddToCart = true,
+  isFavorite = false,
 }) => {
   const cartItem: Omit<CartItem, 'quantity'> = {
     id: productId || 1,
@@ -65,6 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         isLoading={isLoading}
         containerStyle={containerStyle}
         productId={productId}
+        isFavorite={isFavorite}
       />
       
       {showAddToCart && price && price > 0 && (

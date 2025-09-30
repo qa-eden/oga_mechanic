@@ -1,20 +1,48 @@
-import { Toast } from 'toastify-react-native';
+import Toast from 'react-native-toast-message';
 
-// Custom toast utility with proper icon handling
+// Custom toast utility with proper mobile styling
 export const showToast = {
   success: (message: string) => {
-    Toast.success(message);
+    Toast.show({
+      type: 'success',
+      text1: message,
+      position: 'top',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 60,
+    });
   },
 
   error: (message: string) => {
-    Toast.error(message);
+    Toast.show({
+      type: 'error',
+      text1: message,
+      position: 'top',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 60,
+    });
   },
 
   info: (message: string) => {
-    Toast.info(message);
+    Toast.show({
+      type: 'info',
+      text1: message,
+      position: 'top',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 60,
+    });
   },
 
   warn: (message: string) => {
-    Toast.warn(message);
+    Toast.show({
+      type: 'info',
+      text1: message,
+      position: 'top',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 60,
+    });
   },
 };

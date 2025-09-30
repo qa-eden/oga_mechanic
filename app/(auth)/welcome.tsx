@@ -20,6 +20,7 @@ import React from "react";
 import type { ComponentType } from "react";
 import { useRoles } from "@/hooks/useRoles";
 import { ActivityIndicator } from "react-native";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 type RenderImageProps = {
   source: ImageSourcePropType | ComponentType<any>;
@@ -54,17 +55,33 @@ const overlayImgHeight = Math.round(screenHeight * 0.32); // 32% of screen heigh
 const slides = [
   {
     key: "1",
-    source: images.welcomeImg1,
-    header: "EVERYTHING AUTOMOBILE",
-    text: "Buy & sell cars, find expert mechanics, and book rides all in one place.",
+    header: "DRIVE, EARN & REPEAT",
+    text: "Turn your Car into an Income Stream by giving People Safe, Reliable Rides Whenever suits You.",
   },
   {
     key: "2",
-    source: images.welcomeImg2,
-    header: "YOUR CAR, YOUR CONTROL",
-    text: "Stay connected, drive with ease, and manage everything on the go all in one powerful app.",
+    header: "KEEP YOUR CAR RUNNING",
+    text: "Our Trusted Mechanics are just a tap away offering Reliable Diagnostics, Quick Repairs.",
+  },
+  {
+    key: "3",
+    header: "BUY AND SELL CARS",
+    text: "Either you’re Buying or Selling, our Platform Connects you with Verified Transparent Prices,",
+  },
+  {
+    key: "4",
+    header: "FAST, RELIABLE, DELIVERY",
+    text: "Get your Packages, Meals, and Essentials Delivered without Stress.",
   },
   // Add more slides if needed
+];
+
+// Background slides - duplicate the background image 4 times
+const backgroundSlides = [
+  { key: "bg1", source: images.welcomeImg1 },
+  { key: "bg2", source: images.welcomeImg2 },
+  { key: "bg3", source: images.welcomeImg3 },
+  { key: "bg4", source: images.welcomeImg4 },
 ];
 
 const Welcome = () => {
@@ -73,6 +90,7 @@ const Welcome = () => {
   const imageAnim = useRef(new Animated.Value(0)).current;
   const textAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
+  const bgFlatListRef = useRef<FlatList>(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -90,7 +108,6 @@ const Welcome = () => {
       setIsNavigating(true);
       router.replace(routes?.signUp as any);
     } catch (error) {
-      console.error('Sign up navigation error:', error);
       setIsNavigating(false);
     }
   };
@@ -101,7 +118,6 @@ const Welcome = () => {
       setIsNavigating(true);
       router.replace(routes?.signIn as any);
     } catch (error) {
-      console.error('Sign in navigation error:', error);
       setIsNavigating(false);
     }
   };
@@ -118,14 +134,22 @@ const Welcome = () => {
 
   // Infinite auto-slide animation
   useEffect(() => {
-    if (!flatListRef.current) return;
+    if (!flatListRef.current || !bgFlatListRef.current) return;
     const interval = setInterval(() => {
       setActiveIndex((prev) => {
         const nextIndex = (prev + 1) % slides.length;
+        
+        // Scroll both FlatLists simultaneously
         flatListRef.current?.scrollToOffset({
           offset: nextIndex * bgWidth,
           animated: true,
         });
+        
+        bgFlatListRef.current?.scrollToOffset({
+          offset: nextIndex * bgWidth,
+          animated: true,
+        });
+        
         return nextIndex;
       });
     }, 7000); // slower slide (7 seconds)
@@ -211,6 +235,7 @@ const Welcome = () => {
                   color: "#000",
                   marginBottom: 8,
                 }}
+                className="line-clamp-1"
               >
                 {slides[activeIndex]?.header}
               </Text>
@@ -220,6 +245,7 @@ const Welcome = () => {
                   fontFamily: "Nunito-Medium",
                   color: "#666",
                 }}
+                className="clamp-2 line-clamp-2"
               >
                 {slides[activeIndex]?.text}
               </Text>
@@ -242,12 +268,42 @@ const Welcome = () => {
                   justifyContent: "center",
                 }}
               >
-                {/* Constant background */}
-                <RenderImage
-                  source={images.welcomeBG}
-                  width={bgWidth}
-                  height={Math.round(screenHeight * 0.45)}
-                  resizeMode="cover"
+                {/* Sliding background - 4 duplicated images */}
+                <FlatList
+                  ref={bgFlatListRef}
+                  data={backgroundSlides}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item.key}
+                  scrollEnabled={false} // Disable direct scrolling, controlled by overlay FlatList
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: bgWidth,
+                    height: Math.round(screenHeight * 0.45),
+                  }}
+                  contentContainerStyle={{
+                    alignItems: "center",
+                  }}
+                  renderItem={({ item }) => (
+                    <View
+                      style={{
+                        width: bgWidth,
+                        height: Math.round(screenHeight * 0.45),
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <RenderImage
+                        source={item.source}
+                        width={bgWidth}
+                        height={Math.round(screenHeight )}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  )}
                 />
 
                 {/* Swiping overlays */}
@@ -273,6 +329,12 @@ const Welcome = () => {
                       e.nativeEvent.contentOffset.x / bgWidth
                     );
                     setActiveIndex(index);
+                    
+                    // Sync background FlatList with overlay FlatList
+                    bgFlatListRef.current?.scrollToOffset({
+                      offset: index * bgWidth,
+                      animated: true,
+                    });
                   }}
                   renderItem={({ item, index }) => (
                     <View
@@ -283,30 +345,7 @@ const Welcome = () => {
                         justifyContent: "center",
                       }}
                     >
-                      {index === activeIndex ? (
-                        <Animated.View
-                          style={{
-                            opacity: overlayFadeAnim,
-                            transform: [{ scale: overlayScaleAnim }],
-                          }}
-                        >
-                          <RenderImage
-                            source={item.source}
-                            width={overlayImgWidth}
-                            height={overlayImgHeight}
-                            resizeMode="contain"
-                          />
-                        </Animated.View>
-                      ) : (
-                        <View style={{ opacity: 0.01 }}>
-                          <RenderImage
-                            source={item.source}
-                            width={overlayImgWidth}
-                            height={overlayImgHeight}
-                            resizeMode="contain"
-                          />
-                        </View>
-                      )}
+                      {/* No overlay images - just background slides */}
                     </View>
                   )}
                 />
@@ -374,16 +413,11 @@ const Welcome = () => {
         </View>
         
         {/* Loading Overlay */}
-        {isNavigating && (
-          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-            <View className="bg-white rounded-2xl p-6 items-center">
-              <ActivityIndicator size="large" color="#D30309" />
-              <Text className="text-gray-700 font-NunitoMedium mt-3">
-                Loading...
-              </Text>
-            </View>
-          </View>
-        )}
+        <LoadingOverlay
+          visible={isNavigating}
+          title="Loading..."
+          subtitle="Please wait a moment"
+        />
       </SafeAreaView>
     </View>
   );

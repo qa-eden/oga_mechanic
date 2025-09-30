@@ -19,7 +19,7 @@ const PaymentMethodModal = ({
   onSelectPayment,
   totalAmount,
 }: PaymentMethodModalProps) => {
-  const [selectedMethod, setSelectedMethod] = useState<string>("transfer");
+  const [selectedMethod, setSelectedMethod] = useState<string>("online");
 
   const handleSelectMethod = (method: string) => {
     setSelectedMethod(method);
@@ -44,7 +44,7 @@ const PaymentMethodModal = ({
           {/* Header */}
           <View className="flex-row items-center justify-between p-6 pb-4 border-b border-gray-100">
             <Text className="text-xl font-NunitoBold text-gray-900">
-              Select Payment method
+              Select Payment Method
             </Text>
             <TouchableOpacity
               onPress={onClose}
@@ -56,23 +56,21 @@ const PaymentMethodModal = ({
 
           {/* Payment Methods */}
           <View className="p-6">
-            {/* transfer Option */}
+            {/* Online Payment Option */}
             <TouchableOpacity
-              onPress={() => handleSelectMethod("transfer")}
+              onPress={() => handleSelectMethod("online")}
               className="flex-row items-center justify-between py-4"
             >
               <View className="flex-row items-center ">
-                {/* <Text className="text-2xl mr-4">💵</Text> */}
                 <View className="bg-gray-100 p-2 rounded-full mr-3">
                   <icons.bankIcon
                     width={30}
                     height={30}
-                    // style={{ marginRight: 16 }}
                   />
                 </View>
                 <View>
                   <Text className="text-lg font-NunitoBold text-gray-900">
-                    Bank Transfer
+                    Online Payment
                   </Text>
                   <NairaCurrency
                     value={totalAmount}
@@ -81,22 +79,22 @@ const PaymentMethodModal = ({
                 </View>
               </View>
               <View className="w-6 h-6 rounded-full border-2 border-gray-300 items-center justify-center">
-                {selectedMethod === "transfer" && (
+                {selectedMethod === "online" && (
                   <View className="w-4 h-4 bg-red-500 rounded-full" />
                 )}
               </View>
             </TouchableOpacity>
 
-            {/* Card Option */}
+            {/* Cash on Delivery Option */}
             <TouchableOpacity
-              onPress={() => handleSelectMethod("card")}
+              onPress={() => handleSelectMethod("cash_on_delivery")}
               className="flex-row items-center justify-between py-4"
             >
               <View className="flex-row items-center">
-                <Text className="text-2xl mr-3 bg-gray-100 p-2 rounded-full">💳</Text>
+                <Text className="text-2xl mr-3 bg-gray-100 p-2 rounded-full">💰</Text>
                 <View>
                   <Text className="text-lg font-NunitoBold text-gray-900">
-                    Card
+                    Cash on Delivery
                   </Text>
                   <NairaCurrency
                     value={totalAmount}
@@ -105,7 +103,7 @@ const PaymentMethodModal = ({
                 </View>
               </View>
               <View className="w-6 h-6 rounded-full border-2 border-gray-300 items-center justify-center">
-                {selectedMethod === "card" && (
+                {selectedMethod === "cash_on_delivery" && (
                   <View className="w-4 h-4 bg-red-500 rounded-full" />
                 )}
               </View>

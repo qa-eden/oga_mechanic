@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import ToastManager from "toastify-react-native";
+import Toast from 'react-native-toast-message';
 
 // Import your global CSS file
 import "../global.css";
@@ -70,26 +70,7 @@ export default function RootLayout() {
           <LocationProvider>
             <View className="flex-1">
               <StatusBar style="light" />
-              <ToastManager
-                position="top"
-                width={toastWidth}
-                duration={3000}
-                animationIn="fadeIn"
-                animationOut="fadeOut"
-                showProgressBar={false}
-                textStyle={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: '#FFFFFF',
-                }}
-                style={{
-                  backgroundColor: '#1F2937',
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  marginTop: 50,
-                }}
-              />
+              <Toast />
               <Stack>
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="(root)" options={{ headerShown: false }} />

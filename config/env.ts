@@ -3,7 +3,7 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://c5b9af7136b9.ngrok-free.app/api/v1',
+  API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://8a5e334c6c19.ngrok-free.app/api/v1',
   API_KEY: process.env.EXPO_PUBLIC_API_KEY || 'DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq',
   
   // Environment

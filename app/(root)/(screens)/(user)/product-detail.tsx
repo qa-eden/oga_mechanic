@@ -12,6 +12,7 @@ import {
   Animated,
   StatusBar,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,7 +28,8 @@ import { routes } from "@/constants/routes";
 import { useCart } from "@/contexts/CartContext";
 import AddToCartButton from "@/components/AddToCartButton";
 import ImageGalleryModal from "@/components/ImageGalleryModal";
-import { useProductDetail } from "@/hooks/useProducts";
+import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
+import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
 import { useAddToCart, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
 
@@ -45,12 +47,17 @@ const ProductDetail = () => {
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
+  const [showFavoriteSuccess, setShowFavoriteSuccess] = useState(false);
   const { addToCart, isInCart, getItemQuantity } = useCart();
   
   // Cart API hooks
   const addToCartMutation = useAddToCart();
   const removeFromCartMutation = useRemoveFromCart();
   const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
+  
+  // Favorite API hook
+  const toggleFavoriteMutation = useToggleFavorite();
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -59,9 +66,17 @@ const ProductDetail = () => {
   const bounceAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const imageScaleAnim = useRef(new Animated.Value(1)).current;
   
   // Fetch product detail from API
   const { data: product, isLoading, error, refetch } = useProductDetail(productId || '');
+  
+  // Debug: Log the API response
+  console.log('🔍 Product Detail Debug:');
+  console.log('  productId:', productId);
+  console.log('  isLoading:', isLoading);
+  console.log('  error:', error);
+  console.log('  product:', product);
 
   // Animation effects
   useEffect(() => {
@@ -204,7 +219,7 @@ const ProductDetail = () => {
         </View>
         <View className="flex-1 items-center justify-center">
           <Text className="text-lg font-NunitoMedium text-gray-600">
-            Product not found
+            {error ? 'Error loading product' : 'Product not found'}
           </Text>
         </View>
       </SafeAreaView>
@@ -292,8 +307,73 @@ const ProductDetail = () => {
     router.push(routes?.chatSeller);
   };
 
+  const handleToggleFavorite = async () => {
+    console.log('❤️ Favorite button clicked!');
+    console.log('❤️ Product ID:', product.id);
+    console.log('❤️ Current favorite status:', (product as any).is_in_favorite_list);
+    
+    const isCurrentlyFavorited = (product as any).is_in_favorite_list || false;
+    
+    try {
+      console.log('❤️ Calling toggleFavorite API...');
+      const result = await toggleFavoriteMutation.mutateAsync({
+        productId: product.id,
+        isCurrentlyFavorited
+      });
+      console.log('❤️ Toggle favorite API result:', result);
+      
+      // Show success toast
+      if (isCurrentlyFavorited) {
+        showToast.success('Removed from favorites');
+      } else {
+        showToast.success('Added to favorites');
+      }
+      
+      // Show success feedback
+      setShowFavoriteSuccess(true);
+      
+      // Refetch product detail to update favorite status
+      console.log('❤️ Refetching product detail...');
+      await refetch();
+      console.log('❤️ Product detail refetched successfully');
+      
+      // Hide success feedback after 2 seconds
+      setTimeout(() => {
+        setShowFavoriteSuccess(false);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Toggle favorite error:', error);
+      setShowFavoriteSuccess(false);
+      
+      // Show error toast
+      showToast.error('Failed to update favorites. Please try again.');
+    }
+  };
+
   const handleImageError = (index: number) => {
     setImageErrors(prev => new Set(prev).add(index));
+  };
+
+  const handleImageExpand = () => {
+    if (isImageExpanded) {
+      // Collapse image
+      Animated.timing(imageScaleAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsImageExpanded(false);
+      });
+    } else {
+      // Expand image
+      setIsImageExpanded(true);
+      Animated.timing(imageScaleAnim, {
+        toValue: 1.5,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
   const renderImageThumbnail = ({
@@ -376,29 +456,38 @@ const ProductDetail = () => {
         >
           {/* Main Hero Image */}
           <View className="relative">
-            <TouchableOpacity 
-              onPress={() => setIsImageModalVisible(true)}
+            <Animated.View
               className="w-full bg-white"
-              style={{ height: screenWidth * 1.1 }}
+              style={{ 
+                height: screenWidth * 1.1,
+                transform: [{ scale: imageScaleAnim }]
+              }}
             >
-              {product.images && product.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
-              <Image
-                source={{ uri: product.images[selectedImageIndex]?.image }}
-                  className="w-full h-full"
-                  style={{ resizeMode: 'contain' }}
-                  onError={() => handleImageError(selectedImageIndex)}
-              />
-            ) : (
-                <View className="w-full h-full items-center justify-center bg-gray-50">
-              <images.ProductImg
+              <TouchableOpacity 
+                onPress={handleImageExpand}
+                className="w-full h-full"
+                activeOpacity={0.9}
+                disabled={!product.images || product.images.length === 0}
+              >
+                {product.images && product.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
+                  <Image
+                    source={{ uri: product.images[selectedImageIndex]?.image }}
                     className="w-full h-full"
+                    style={{ resizeMode: 'contain' }}
+                    onError={() => handleImageError(selectedImageIndex)}
                   />
-                  {imageErrors.has(selectedImageIndex) && (
+                ) : (
+                  <View className="w-full h-full items-center justify-center bg-gray-50">
+                    <images.ProductImg
+                      className="w-full h-full"
+                    />
+                    {imageErrors.has(selectedImageIndex) && (
                     <Text className="text-sm text-gray-500 mt-2">Image failed to load</Text>
                   )}
                 </View>
               )}
             </TouchableOpacity>
+            </Animated.View>
 
             {/* Image Counter Badge */}
             {/* {product.images && product.images.length > 1 && (
@@ -409,10 +498,16 @@ const ProductDetail = () => {
               </View>
             )} */}
 
-            {/* Zoom Indicator */}
-            <View className="absolute bottom-6 right-4 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full items-center justify-center shadow-lg">
-              <Text className="text-gray-700 text-lg">🔍</Text>
-            </View>
+            {/* Search/Zoom Button */}
+            {/* <TouchableOpacity 
+              onPress={handleImageExpand}
+              className="absolute bottom-6 right-4 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full items-center justify-center shadow-lg"
+              activeOpacity={0.7}
+            >
+              <Text className="text-gray-700 text-lg">
+                {isImageExpanded ? '✕' : '🔍'}
+              </Text>
+            </TouchableOpacity> */}
 
             {/* Image Navigation Dots */}
             {product.images && product.images.length > 1 && (
@@ -752,62 +847,94 @@ const ProductDetail = () => {
         </View> */}
 
         {/* Action Buttons */}
-        <View className="px-2 py-4 flex-row gap-2 space-x-3">
-          <TouchableOpacity
+        <View className="px-2 py-4 flex-row items-center gap-2 space-x-3">
+          {/* <TouchableOpacity
             onPress={handleChatSeller}
             className="w-14 h-14 bg-gray-100 rounded-2xl items-center justify-center"
           >
             <Text className="text-lg">💬</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           
-          <TouchableOpacity className="w-14 h-14 bg-gray-100 rounded-2xl items-center justify-center">
-            <Text className="text-lg">❤️</Text>
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('❤️ TouchableOpacity onPress triggered!');
+              handleToggleFavorite();
+            }}
+            disabled={toggleFavoriteMutation.isPending}
+            className={`w-14 h-14 rounded-2xl items-center justify-center ${
+              showFavoriteSuccess ? 'bg-green-100' : (product as any).is_in_favorite_list ? 'bg-red-100' : 'bg-gray-100'
+            }`}
+            style={{ opacity: toggleFavoriteMutation.isPending ? 0.6 : 1 }}
+          >
+            {toggleFavoriteMutation.isPending ? (
+               <ActivityIndicator size="small" className="text-primary-500" />
+            ) : showFavoriteSuccess ? (
+              <Text className="text-xl text-green-500">✓</Text>
+            ) : (
+              <Text className={` ${(product as any).is_in_favorite_list ? 'text-red-500 text-xl' : 'text-gray-400 text-3xl'}`}>
+                {(product as any).is_in_favorite_list ? '❤️' : '♡'}
+              </Text>
+            )}
           </TouchableOpacity>
           
           <View className="flex-1">
             {(product as any).is_in_cart ? (
               // Cart item controls
-              <View className="flex-row gap-2 items-center justify-between bg-gray-100 rounded-2xl px-2 py-2">
+              <View className="flex-row gap-3 items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
+                {/* Remove Button */}
                 <TouchableOpacity
                   onPress={handleRemoveFromCart}
                   disabled={removeFromCartMutation.isPending}
-                  className="bg-primary-500 px-4 py-3 rounded-xl items-center justify-center"
+                  className="bg-red-500 px-4 py-2.5 rounded-xl items-center justify-center min-w-[100px]"
+                  style={{ opacity: removeFromCartMutation.isPending ? 0.6 : 1 }}
                 >
                   {removeFromCartMutation.isPending ? (
                     <Text className="text-white text-sm font-NunitoMedium">Removing...</Text>
                   ) : (
-                    <Text className="text-white text-sm font-NunitoMedium">Remove from cart</Text>
+                    <Text className="text-white text-sm font-NunitoMedium">Remove from Cart</Text>
                   )}
                 </TouchableOpacity>
                 
-                <View className="flex-row items-center bg-white rounded-xl px-2">
+                {/* Quantity Controls */}
+                <View className="flex-row items-center bg-white rounded-xl shadow-sm border border-gray-200">
+                  {/* Decrement Button */}
                   <TouchableOpacity
                     onPress={handleDecrementQuantity}
                     disabled={updateCartItemQuantityMutation.isPending || quantity <= 1}
-                    className="w-8 h-8 items-center justify-center"
+                    className="w-10 h-10 items-center justify-center rounded-l-xl"
+                    style={{ 
+                      backgroundColor: quantity <= 1 ? '#f3f4f6' : '#f9fafb',
+                      opacity: (updateCartItemQuantityMutation.isPending || quantity <= 1) ? 0.5 : 1 
+                    }}
                   >
                     {updateCartItemQuantityMutation.isPending ? (
-                      <Text className="text-gray-400 text-sm">...</Text>
+                      <Text className="text-gray-400 text-lg">⋯</Text>
                     ) : (
-                      <Text className="text-gray-600 text-4xl">-</Text>
+                      <Text className="text-gray-700 text-xl font-NunitoBold">−</Text>
                     )}
                   </TouchableOpacity>
                   
-                  <View className="px-3 py-2">
-                    <Text className="text-base font-NunitoBold text-gray-900">
+                  {/* Quantity Display */}
+                  <View className="px-4 py-2 min-w-[50px] items-center justify-center">
+                    <Text className="text-lg font-NunitoBold text-gray-900">
                       {quantity}
                     </Text>
                   </View>
                   
+                  {/* Increment Button */}
                   <TouchableOpacity
                     onPress={handleIncrementQuantity}
                     disabled={updateCartItemQuantityMutation.isPending || quantity >= ((product as any).stock)}
-                    className="w-8 h-8 items-center justify-center"
+                    className="w-10 h-10 items-center justify-center rounded-r-xl"
+                    style={{ 
+                      backgroundColor: quantity >= ((product as any).stock) ? '#f3f4f6' : '#f9fafb',
+                      opacity: (updateCartItemQuantityMutation.isPending || quantity >= ((product as any).stock)) ? 0.5 : 1 
+                    }}
                   >
                     {updateCartItemQuantityMutation.isPending ? (
-                      <Text className="text-gray-400 text-sm">...</Text>
+                      <Text className="text-gray-400 text-lg">⋯</Text>
                     ) : (
-                      <Text className="text-gray-600 text-4xl">+</Text>
+                      <Text className="text-gray-700 text-xl font-NunitoBold">+</Text>
                     )}
                   </TouchableOpacity>
                 </View>

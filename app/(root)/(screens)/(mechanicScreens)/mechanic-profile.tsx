@@ -1,11 +1,12 @@
-import { View, Text, ScrollView, Image } from "react-native";
+import { View, Text, ScrollView, Image, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import Rating from "@/components/Rating";
 import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
-import { images } from "@/constants";
+import { useGetMechanicDetail } from "@/hooks/useMechanics";
+import { getErrorMessage } from "@/utils/errorMessages";
 
 interface MechanicProfile {
   id: number;
@@ -26,49 +27,57 @@ interface MechanicProfile {
 
 const MechanicProfile = () => {
   const params = useLocalSearchParams();
+  const mechanicId = params.mechanicId as string;
 
-  // Get mechanic image based on ID
-  const getMechanicImage = (id: number) => {
-    switch (id) {
-      case 1:
-        return images.mechanic1;
-      case 2:
-        return images.mechanic3;
-      case 3:
-        return images.lookman;
-      case 4:
-        return images.otunba;
-      case 5:
-        return images.salisu;
-      case 6:
-        return images.mechanic1;
-      default:
-        return images.mechanic1;
+
+  // Fetch mechanic details from API
+  const { 
+    data: mechanicData, 
+    isLoading, 
+    error 
+  } = useGetMechanicDetail(mechanicId);
+
+  // Transform API data to component format
+  const mechanic: MechanicProfile = (() => {
+    if (!mechanicData?.data) {
+      return {
+        id: 0,
+        name: "Loading...",
+        rating: 0,
+        reviewCount: 0,
+        image: null,
+        bio: "",
+        specialty: [],
+        yearsOfExperience: 0,
+        locationCoverage: "",
+        languages: [],
+        availability: "",
+        paymentMethods: [],
+        isOnline: false,
+      };
     }
-  };
 
-  const mechanicId = Number.parseInt(params.mechanicId as string) || 1;
+    const apiMechanic = mechanicData.data;
+    return {
+      id: apiMechanic.id || 0,
+      name: apiMechanic.user ? `${apiMechanic.user.first_name} ${apiMechanic.user.last_name}`.trim() : "Unknown Mechanic",
+      rating: apiMechanic.rating || 0,
+      reviewCount: 0,
+      image: apiMechanic.selfie || null, // Use selfie URL from API
+      bio: apiMechanic.bio || "",
+      specialty: [], // Not provided in API
+      yearsOfExperience: 0, // Not provided in API
+      locationCoverage: apiMechanic.location || "",
+      languages: [], // Not provided in API
+      availability: "", // Not provided in API
+      paymentMethods: [], // Not provided in API
+      isOnline: apiMechanic.is_approved || false,
+    };
+  })();
 
-  // Mock mechanic data - in real app, this would come from API based on mechanicId
-  const mechanic: MechanicProfile = {
-    id: mechanicId,
-    name: (params.mechanicName as string) || "Fatai Sule",
-    rating: Number.parseFloat(params.mechanicRating as string) || 4.5,
-    reviewCount: 30,
-    image: getMechanicImage(mechanicId),
-    bio: "I'm a certified auto mechanic with over 10 years of hands-on experience fixing cars of all kinds — from compact rides to heavy-duty SUVs. I specialize in engine repair, brake systems, and vehicle diagnostics. Whether it's a funny noise, a breakdown, or a routine checkup, I'm here to help. I also sell quality spare parts and can come to your location if needed.",
-    specialty: ["Engine Repair", "Brake Systems", "Vehicle Diagnostics"],
-    yearsOfExperience: 12,
-    locationCoverage: "Lagos Mainland & Island",
-    languages: ["English", "Hausa"],
-    availability: "Online 24/7",
-    paymentMethods: ["Cash", "Bank Transfer"],
-    isOnline: true,
-  };
-
-  const handleChatPress = () => {
+  const handleOrderPress = () => {
     router.push({
-      pathname: routes.chatMechanic,
+      pathname: routes.orderMechanic,
       params: {
         mechanicId: mechanic.id,
         mechanicName: mechanic.name,
@@ -101,13 +110,55 @@ const MechanicProfile = () => {
     </View>
   );
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+          <BackArrowBtn />
+          <Text className="text-xl font-NunitoBold text-gray-900">
+            Mechanics
+          </Text>
+          <View className="w-10" />
+        </View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#D30309" />
+          <Text className="text-gray-600 text-lg mt-4">Loading mechanic details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+          <BackArrowBtn />
+          <Text className="text-xl font-NunitoBold text-gray-900">
+            Mechanics
+          </Text>
+          <View className="w-10" />
+        </View>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-red-500 text-center text-lg mb-4">
+            {getErrorMessage(error)}
+          </Text>
+          <Text className="text-gray-600 text-center">
+            Failed to load mechanic details
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
         <BackArrowBtn />
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Chat mechanic
+           Mechanics
         </Text>
         <View className="w-10" />
       </View>
@@ -123,7 +174,17 @@ const MechanicProfile = () => {
             {/* Profile Image */}
             <View className="relative">
               <View className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                <mechanic.image width={80} height={80} />
+                {mechanic.image ? (
+                  <Image
+                    source={{ uri: mechanic.image }}
+                    style={{ width: 80, height: 80 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center">
+                    <Text className="text-gray-500 text-2xl">👤</Text>
+                  </View>
+                )}
               </View>
               {/* Online Status */}
               {mechanic.isOnline && (
@@ -161,42 +222,48 @@ const MechanicProfile = () => {
         {/* Profile Details */}
         <View className="px-5 py-6">
           {/* Bio */}
-          <InfoSection title="Bio" content={mechanic.bio} />
+          {mechanic.bio && <InfoSection title="Bio" content={mechanic.bio} />}
 
           {/* Specialty */}
-          <InfoSection title="Specialty" content={mechanic.specialty} />
+          {mechanic.specialty.length > 0 && <InfoSection title="Specialty" content={mechanic.specialty} />}
 
           {/* Years of Experience */}
-          <InfoSection
-            title="Years of experience"
-            content={`${mechanic.yearsOfExperience} years`}
-          />
+          {mechanic.yearsOfExperience > 0 && (
+            <InfoSection
+              title="Years of experience"
+              content={`${mechanic.yearsOfExperience} years`}
+            />
+          )}
 
           {/* Location Coverage */}
-          <InfoSection
-            title="Location coverage"
-            content={mechanic.locationCoverage}
-          />
+          {mechanic.locationCoverage && (
+            <InfoSection
+              title="Location coverage"
+              content={mechanic.locationCoverage}
+            />
+          )}
 
           {/* Languages */}
-          <InfoSection title="Languages" content={mechanic.languages} />
+          {mechanic.languages.length > 0 && <InfoSection title="Languages" content={mechanic.languages} />}
 
           {/* Availability */}
-          <InfoSection title="Availability" content={mechanic.availability} />
+          {mechanic.availability && <InfoSection title="Availability" content={mechanic.availability} />}
 
           {/* Payment Methods */}
-          <InfoSection
-            title="Payment method"
-            content={mechanic.paymentMethods}
-          />
+          {mechanic.paymentMethods.length > 0 && (
+            <InfoSection
+              title="Payment method"
+              content={mechanic.paymentMethods}
+            />
+          )}
         </View>
       </ScrollView>
 
-      {/* Bottom Chat Button */}
+      {/* Bottom Order Button */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-4 pb-8">
         <CustomButton
-          title="Chat"
-          onPress={handleChatPress}
+          title="Order Mechanic"
+          onPress={handleOrderPress}
         //   className="bg-primary-500"
         //   textVariant="primary"
         />

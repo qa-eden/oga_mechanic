@@ -59,17 +59,23 @@ const Step1 = () => {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showTermsModal, setShowTermsModal] = useState(false)
 
-    const handleSubmit = (values: any) => {
-        router.push(driverRoutes.step2)
+    // Reset any stuck states on component mount
+    useEffect(() => {
+        setIsSubmitting(false);
+        
+        return () => {
+            setIsSubmitting(false);
+        };
+    }, []);
 
+    const handleSubmit = (values: any) => {
         setIsSubmitting(true) // Start loading immediately
 
         try {
-            // Try the router.push method first
-
-            console.log('✅ Navigation successful')
+            router.push(driverRoutes.step2)
+            console.log('✅ Driver navigation successful')
         } catch (error) {
-            console.error('❌ Navigation failed:', error)
+            console.error('❌ Driver navigation failed:', error)
             // Fallback: try direct navigation
             try {
                 router.push('/(auth)/(register)/driver/step2')
@@ -78,6 +84,11 @@ const Step1 = () => {
                 console.error('❌ Fallback navigation also failed:', fallbackError)
                 setIsSubmitting(false) // Stop loading if navigation fails
             }
+        } finally {
+            // Reset state after a delay
+            setTimeout(() => {
+                setIsSubmitting(false);
+            }, 1000);
         }
     }
 

@@ -125,15 +125,17 @@ const HomePage = memo(() => {
     return (
       <View style={{ width: CARD_WIDTH }}>
         <Card1
-          Images={item.image || item.avatar || require('@/assets/icons/mechanic.png')} // Use API image or fallback
+          Images={item.image || item.avatar} // Use API image or fallback
           rating={item?.rating || 0} // Default rating if not provided
           name={getName()} // Use extracted name
+          address={item?.location || 'Location not available'} // Add location as address
           reviewCount={item?.reviewCount || 0} // Default review count
+          isFavorite={item?.is_in_favorite_list} // Default isFavorite if not provided
           onPress={() => {
             router.push({
               pathname: routes.mechanicProfile,
               params: {
-                mechanicId: item.id,
+                mechanicId: item.user.id,
                 mechanicName: getName(),
                 mechanicRating: item.rating || 0,
               },
@@ -147,11 +149,13 @@ const HomePage = memo(() => {
   const renderCarItem = useCallback(({ item }: { item: any }) => (
     <View style={{ width: CARD_WIDTH }}>
       <Card1
-        Images={item.images?.[0]?.image || item.image || require('@/assets/images/car.svg')} // Use first image from API or fallback
-        rating={item?.rating || 4.5} // Default rating if not provided
-        name={item?.name || 'Car'} // Use name from API
+        Images={item.images?.[0]?.image || item.image} // Use first image from API or fallback
+        rating={item?.rating} // Default rating if not provided
+        name={item?.name} // Use name from API
         price={item?.price || '0'} // Use price from API
         reviewCount={item?.reviewCount || 0} // Default review count
+        isFavorite={item?.is_in_favorite_list} // Default isFavorite if not provided
+        productId={item?.id} // Add productId for favorite functionality
         showLove={true}
         onPress={() => {
           router.push({
@@ -170,11 +174,13 @@ const HomePage = memo(() => {
   const renderSparePartItem = useCallback(({ item }: { item: any }) => (
     <View style={{ width: CARD_WIDTH }}>
       <Card1
-        Images={item.images?.[0]?.image || item.image || require('@/assets/images/sparePart.svg')} // Use first image from API or fallback
-        rating={item?.rating || 4.5} // Default rating if not provided
-        name={item?.name || 'Spare Part'} // Use name from API
+        Images={item.images?.[0]?.image || item.image} // Use first image from API or fallback
+        rating={item?.rating} // Default rating if not provided
+        name={item?.name} // Use name from API
         reviewCount={item?.reviewCount || 0} // Default review count
         price={item?.price || '0'} // Use price from API
+        isFavorite={item?.is_in_favorite_list} // Default isFavorite if not provided
+        productId={item?.id} // Add productId for favorite functionality
         showLove={true}
         onPress={() => {
           router.push({

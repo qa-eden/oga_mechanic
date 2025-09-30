@@ -1,6 +1,6 @@
 "use client";
 
-import { View, Text, TouchableOpacity, Platform, Animated, Image } from "react-native";
+import { View, Text, TouchableOpacity, Platform, Animated, Image, ActivityIndicator } from "react-native";
 import type { SvgProps } from "react-native-svg";
 import { type FC, useRef, memo } from "react";
 import Rating from "../Rating";
@@ -9,6 +9,8 @@ import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { HeartIcon } from "react-native-heroicons/outline";
+import { useToggleFavorite } from "@/hooks/useProducts";
+import { showToast } from "@/utils/toastUtils";
 
 interface Props {
   Images: FC<SvgProps> | number | { uri: string };
@@ -23,7 +25,8 @@ interface Props {
   onLovePress?: () => void;
   isLoading?: boolean;
   containerStyle?: string;
-  productId?: number;
+  productId?: number | string;
+  isFavorite?: boolean;
 }
 
 const Card1 = memo(({
@@ -40,9 +43,13 @@ const Card1 = memo(({
   isLoading = false,
   containerStyle,
   productId,
+  isFavorite = false,
 }: Props) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const heartAnim = useRef(new Animated.Value(1)).current;
+
+  // Favorite API hook
+  const toggleFavoriteMutation = useToggleFavorite();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -62,7 +69,8 @@ const Card1 = memo(({
     }).start();
   };
 
-  const handleLovePress = () => {
+  const handleLovePress = async () => {
+    // Trigger heart animation
     Animated.sequence([
       Animated.timing(heartAnim, {
         toValue: 1.2,
@@ -76,7 +84,28 @@ const Card1 = memo(({
       }),
     ]).start();
 
-    onLovePress?.();
+    // Call custom onLovePress if provided, otherwise use API
+    if (onLovePress) {
+      onLovePress();
+    } else if (productId) {
+      try {
+        console.log('❤️ Card favorite button clicked - productId:', productId, 'isFavorite:', isFavorite);
+        await toggleFavoriteMutation.mutateAsync({
+          productId: productId.toString(),
+          isCurrentlyFavorited: isFavorite
+        });
+
+        // Show success toast
+        if (isFavorite) {
+          showToast.success('Removed from favorites');
+        } else {
+          showToast.success('Added to favorites');
+        }
+      } catch (error) {
+        console.error('❌ Card favorite error:', error);
+        showToast.error('Failed to update favorites. Please try again.');
+      }
+    }
   };
 
   const handleCardPress = () => {
@@ -87,8 +116,8 @@ const Card1 = memo(({
       router.push({
         pathname: routes?.ProductDetail,
         params: {
-          productId: productId || 1,
-          name: name || "Product",
+          productId: productId,
+          name: name,
           price: price || 0,
         },
       });
@@ -144,8 +173,11 @@ const Card1 = memo(({
             >
               <TouchableOpacity
                 onPress={handleLovePress}
-                className="w-8 h-8 rounded-full items-center justify-center"
+                disabled={toggleFavoriteMutation.isPending}
+                className={`w-8 h-8 rounded-full items-center justify-center ${isFavorite ? 'bg-red-100' : 'bg-black/20'
+                  }`}
                 style={{
+                  opacity: toggleFavoriteMutation.isPending ? 0.6 : 1,
                   ...Platform.select({
                     ios: {
                       shadowColor: "#000",
@@ -159,7 +191,21 @@ const Card1 = memo(({
                   }),
                 }}
               >
-                <HeartIcon color={"white"} size={20} />
+                {toggleFavoriteMutation.isPending ? (
+                  <ActivityIndicator size="small" className="text-primary-500" />
+                ) : isFavorite ? (
+                  <HeartIcon
+                    color="red"
+                    size={20}
+                    fill="red"
+                  />
+                ) : (
+                  <HeartIcon
+                    color="white"
+                    size={20}
+                    fill="none"
+                  />
+                )}
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -181,6 +227,18 @@ const Card1 = memo(({
               <Rating rating={rating} size={12} />
               <Text className="text-sm font-NunitoMedium text-gray-700 ml-1">
                 {rating.toFixed(1)} ({reviewCount || 0})
+              </Text>
+            </View>
+          )}
+
+          {/* Address/Location */}
+          {address && (
+            <View className="flex-row items-center bg-gray-50 rounded-lg px-2 py-1.5">
+              <View className="w-4 h-4 bg-primary-100 rounded-full items-center justify-center mr-2">
+                <Text className="text-xs text-primary-600">📍</Text>
+              </View>
+              <Text className="text-xs text-gray-600 font-NunitoMedium flex-1" numberOfLines={1}>
+                {address}
               </Text>
             </View>
           )}

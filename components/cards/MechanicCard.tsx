@@ -69,9 +69,19 @@ const MechanicCard: React.FC<MechanicCardProps> = React.memo(({ item, onPress, c
         </Text>
       </View>
       {item.specialization && (
-        <Text className="text-xs text-gray-500 font-NunitoMedium" numberOfLines={1}>
+        <Text className="text-xs text-gray-500 font-NunitoMedium mb-1" numberOfLines={1}>
           {item.specialization}
         </Text>
+      )}
+      {item.location && (
+        <View className="flex-row items-center bg-gray-50 rounded-lg px-2 py-1.5">
+          <View className="w-4 h-4 bg-primary-100 rounded-full items-center justify-center mr-2">
+            <Text className="text-xs text-primary-600">📍</Text>
+          </View>
+          <Text className="text-xs text-gray-600 font-NunitoMedium flex-1" numberOfLines={1}>
+            {item.location}
+          </Text>
+        </View>
       )}
     </View>
   </TouchableOpacity>

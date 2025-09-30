@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, memo, useEffect } from 'react'
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native'
 import { XMarkIcon, CheckCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 
@@ -21,6 +21,16 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
 }) => {
   const [localShowLGAPicker, setLocalShowLGAPicker] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const isControlled = onLGAPickerToggle !== undefined
 
@@ -247,16 +257,19 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
     ]
   }, [state, country])
 
-  const filteredLGAs = lgas.filter((lga: string) => 
-    lga.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredLGAs = useMemo(() => {
+    if (!debouncedSearchQuery) return lgas.slice(0, 20) // Limit initial load for better performance
+    return lgas.filter((lga: string) => 
+      lga.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    )
+  }, [lgas, debouncedSearchQuery])
 
-  const handleLGASelect = (lga: string) => {
+  const handleLGASelect = useCallback((lga: string) => {
     console.log('🏙️ LGA selected:', lga)
     onLGAChange(lga)
     setShowLGA(false)
     setSearchQuery('')
-  }
+  }, [onLGAChange, setShowLGA])
 
   return (
     <Modal
@@ -294,6 +307,11 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
           <FlatList
             data={filteredLGAs}
             keyExtractor={(item) => item}
+            initialNumToRender={10}
+            maxToRenderPerBatch={5}
+            windowSize={10}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => handleLGASelect(item)}

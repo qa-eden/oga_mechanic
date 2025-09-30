@@ -6,7 +6,7 @@ import { ENV_CONFIG } from '../config/env';
 // Create axios instance
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for file uploads
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -28,24 +28,53 @@ api.interceptors.request.use(
       } else {
         console.log(`❌ No token found for ${config.method?.toUpperCase()} ${config.url}`);
       }
-      
+
       // Add requestType: "inbound" only to POST/PUT/PATCH requests
       if (config.method === 'post' || config.method === 'put' || config.method === 'patch') {
-        // For POST, PUT, PATCH requests, wrap data in the new format
-        const originalData = config.data || {};
-        config.data = {
-          requestType: "inbound",
-          data: originalData
-        };
-        console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
+        // Skip ALL processing for registration step 4 - using fetch API directly
+        if (config.url?.includes('/register/step/4/')) {
+          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Step 4 endpoint, skipping ALL interceptor processing`);
+          return config; // Return config unchanged
+        } else if (config.data instanceof FormData) {
+          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - FormData detected, wrapping in data structure`);
+          console.log(`📤 FormData _parts:`, (config.data as any)._parts);
+
+          // Create a new FormData with the proper nested structure
+          const wrappedData = new FormData();
+          
+          // Copy all FormData parts with 'data.' prefix to create nested structure
+          for (const [key, value] of (config.data as any)._parts) {
+            wrappedData.append(`data.${key}`, value);
+          }
+          
+          // Add requestType at the top level
+          wrappedData.append('requestType', 'inbound');
+          
+          config.data = wrappedData;
+          console.log(`📤 Wrapped FormData in data structure with requestType`);
+          console.log(`📤 New FormData _parts:`, (config.data as any)._parts);
+
+          // Let axios set Content-Type for FormData to include boundary
+          delete config.headers['Content-Type'];
+          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Removed Content-Type header for FormData`);
+          console.log(`📤 Final headers:`, config.headers);
+        } else {
+          // For non-FormData, wrap in { data, requestType }
+          const originalData = config.data || {};
+          config.data = {
+            requestType: 'inbound',
+            data: originalData,
+          };
+          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
+        }
       }
-      // Note: GET/DELETE requests don't need requestType parameter
     } catch (error) {
-      console.error('Error getting auth token:', error);
+      console.error('Error in request interceptor:', error);
     }
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -53,6 +82,10 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log(`📥 Response for ${response.config.method?.toUpperCase()} ${response.config.url}:`, {
+      status: response.status,
+      data: JSON.stringify(response.data, null, 2),
+    });
     return response;
   },
   async (error) => {
@@ -63,7 +96,6 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        // Try to refresh token
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         if (refreshToken) {
           const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, { refresh_token: refreshToken });
@@ -75,12 +107,17 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, redirect to login
+        console.error('Token refresh failed:', refreshError);
         await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user_data']);
-        // You can add navigation logic here
+        // Add navigation to login screen if needed
       }
     }
 
+    console.error(`📥 Error for ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}:`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     return Promise.reject(error);
   }
 );

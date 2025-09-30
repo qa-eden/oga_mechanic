@@ -5,6 +5,8 @@ import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import onboarding2 from "@/assets/images/auth/onboarding2.svg";
 import welcomeImg1 from "@/assets/images/auth/welcomeImg1.svg";
 import welcomeImg2 from "@/assets/images/auth/welcomeImg2.svg";
+import welcomeImg3 from "@/assets/images/auth/welcomeImg3.svg";
+import welcomeImg4 from "@/assets/images/auth/welcomeImg4.svg";
 import welcomeBG from "@/assets/images/auth/welcomeBG.svg";
 import background1 from "@/assets/images/auth/background1.png";
 import background2 from "@/assets/images/auth/background2.png";
@@ -117,6 +119,8 @@ export const images = {
   onboarding2,
   welcomeImg1,
   welcomeImg2,
+  welcomeImg3,
+  welcomeImg4,
   welcomeBG,
   background1,
   background2,
