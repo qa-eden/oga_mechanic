@@ -123,10 +123,23 @@ export const useUserStore = create<UserState>()(
 
       logout: async () => {
         try {
-          // Clear tokens from AsyncStorage
+          // Call /users/roles/ endpoint before clearing auth data
+          try {
+            console.log('🔄 Fetching user roles before logout...');
+            const rolesResponse = await userAPI.getUserRoles();
+            console.log('✅ User roles fetched:', rolesResponse);
+            
+            // Store roles data in local storage
+            await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
+            console.log('✅ User roles data stored in AsyncStorage');
+          } catch (rolesError) {
+            console.error('❌ Failed to fetch roles during logout:', rolesError);
+          }
+          
+          // Clear auth tokens from AsyncStorage (but keep roles data)
           await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user_data']);
         } catch (error) {
-          console.error('Error clearing storage:', error);
+          console.error('Error during logout process:', error);
         }
         
         // Clear state

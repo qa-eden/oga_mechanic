@@ -84,6 +84,9 @@ export const getRoleHomeRoute = (role: string): string => {
       return routes?.mechanicHome || '/(root)/(tabs)/(mechanic)/home';
     case 'rider':
       return routes?.riderHome || '/(root)/(tabs)/(rider)/home';
+    case 'merchant':
+    case 'seller':
+      return '/(root)/(tabs)/(sellers)/home';
     default:
       return routes?.userHome || '/(root)/(tabs)/(user)/home';
   }

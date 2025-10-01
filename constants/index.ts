@@ -566,7 +566,7 @@ export const ProfileSettings = {
     },
     {
       id: 3,
-      name: "Switch user",
+      name: "Switch User",
       image: switch1,
       route: "editProfile",
     },
@@ -608,7 +608,7 @@ export const MechanicProfileSettings = {
     },
     {
       id: 5,
-      name: "Switch user",
+      name: "Switch User",
       image: switch1,
       route: "editProfile",
     },

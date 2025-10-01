@@ -24,9 +24,9 @@ export const USER_ENDPOINTS = {
   REGISTER_STEP: (stepId: number) => `/users/register/step/${stepId}/`,
   REGISTER_VEHICLE: '/users/register/vehicle/',
   ROLES: '/users/roles/',
-  PROFILE: '/user/profile',
+  PROFILE: '/users/profile/primary/',
   PRIMARY_PROFILE: '/users/profile/primary/',
-  UPDATE_PROFILE: '/user/profile',
+  UPDATE_PROFILE: '/users/profile/primary/',
   CARS: '/user/cars',
   ADD_CAR: '/user/cars',
   UPDATE_CAR: (id: string) => `/user/cars/${id}`,
@@ -83,7 +83,7 @@ export const DRIVER_ENDPOINTS = {
 
 // Merchant endpoints (shop owners)
 export const MERCHANT_ENDPOINTS = {
-  PROFILE: '/merchant/profile',
+  PROFILE: 'users/profile/merchant/',
   UPDATE_PROFILE: '/merchant/profile',
   SHOPS: '/merchant/shops',
   CREATE_SHOP: '/merchant/shops',
@@ -99,7 +99,7 @@ export const MERCHANT_ENDPOINTS = {
   UPDATE_INVENTORY: (id: string) => `/merchant/inventory/${id}`,
   EARNINGS: '/merchant/earnings',
   WITHDRAW: '/merchant/earnings/withdraw',
-  ANALYTICS: '/merchant/analytics',
+  ANALYTICS: '/products/merchant/analytics/',
 } as const;
 
 // Common service endpoints (used by multiple roles)

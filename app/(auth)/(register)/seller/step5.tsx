@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Formik } from "formik";
@@ -20,25 +21,94 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { resetPasswordSchema } from "@/utils/validationSchemas";
 import { routes, sellerRoutes } from "@/constants/routes";
+import { userAPI } from "@/lib/api/user";
+import { useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Step5 = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleStep5Submit = (values: any, { setSubmitting }: any) => {
-    setSubmitting(false);
-    // Navigate to completion with all form data
-    console.log('Step 5 submitted with values:', values);
-    console.log('Previous step data:', params);
-    
-    // Navigate to main home with all collected data
-    router.push({
-      pathname: sellerRoutes.accountCreated,
-      params: {
-        ...params,
-        ...values
+  const handleStep5Submit = async (values: any, { setSubmitting }: any) => {
+
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitting(true);
+
+    try {
+      const response = await userAPI.registerStep(5, {
+        password: values.password,
+        password_confirm: values.confirmPassword,
+      });
+
+      // Handle registration response structure (data is nested)
+      const responseData = response.data || response;
+      
+      // Store user data to AsyncStorage
+      const userData = {
+        access_token: responseData.access,
+        refresh_token: responseData.refresh,
+        user_id: responseData.user_id,
+        email: responseData.email,
+        role: responseData.role,
+        message: response.message,
+        referenceId: response.referenceId
+      };
+      
+      // Store tokens and user data
+      try {
+        await AsyncStorage.setItem('auth_token', responseData.access);
+        await AsyncStorage.setItem('refresh_token', responseData.refresh);
+        await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+        await AsyncStorage.setItem('is_logged_in', 'true');
+        
+        // Call /users/roles/ endpoint after successful registration
+        try {
+          console.log('🔄 Fetching user roles after seller registration...');
+          const rolesResponse = await userAPI.getUserRoles();
+          console.log('✅ User roles fetched after seller registration:', rolesResponse);
+          
+          // Store roles data in local storage
+          await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
+          console.log('✅ User roles data stored in AsyncStorage after seller registration');
+        } catch (rolesError) {
+          console.error('❌ Failed to fetch roles after seller registration:', rolesError);
+          // Continue with registration even if roles fetch fails
+        }
+      } catch (storageError) {
+        console.error('Error storing user data:', storageError);
+        // Continue with navigation even if storage fails
       }
-    });
+
+      // Navigate to success page with all collected data
+      router.push({
+        pathname: sellerRoutes.accountCreated,
+        params: {
+          ...params,
+          ...values
+        }
+      });
+
+    } catch (error: any) {
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Registration failed. Please try again.';
+
+      Alert.alert(
+        'Registration Error',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -109,8 +179,9 @@ const Step5 = () => {
                     <View style={{ height: 40 }} />
 
                     <FormikButton
-                      title="Create account"
+                      title={isSubmitting ? "Creating account..." : "Create account"}
                       className="py-4 mb-2"
+                      disabled={isSubmitting}
                     />
 
                     <AuthNavigateLink

@@ -16,6 +16,7 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
@@ -23,12 +24,16 @@ import { router } from "expo-router";
 import { routes, riderRoutes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
 import LogoutModal from "@/components/modals/LogoutModal";
+import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
 
 const RiderProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
+  
+  // Use centralized logout hook
+  const { logout, isLoggingOut } = useCentralizedLogout();
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -43,9 +48,9 @@ const RiderProfile = () => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setShowLogoutModal(false);
-    router?.push(routes?.signIn);
+    await logout();
   };
 
   const cancelLogout = () => {
@@ -224,10 +229,16 @@ const RiderProfile = () => {
         <View className="py-3">
           <TouchableOpacity
             onPress={handleLogout}
-            className="flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5"
+            disabled={isLoggingOut}
+            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${
+              isLoggingOut ? 'opacity-50' : ''
+            }`}
           >
+            {isLoggingOut && (
+              <ActivityIndicator size="small" color="#D30309" />
+            )}
             <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
-              Logout
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
             </Text>
           </TouchableOpacity>
         </View>

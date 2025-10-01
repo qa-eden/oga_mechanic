@@ -33,22 +33,13 @@ const Step4 = () => {
   const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
 
   const handleStepSubmit = async (values: any, { setSubmitting }: any) => {
-    console.log("Step 4 values:", values);
     
     // Use TanStack Query mutation for step 4
-    console.log('📤 Posting password to step 4 endpoint...');
     registerStep4Mutation.mutate({
       password: values.password,
       password_confirm: values.confirmPassword
     }, {
       onSuccess: async (response) => {
-        console.log('✅ Step 4 response:', response);
-        console.log('🔍 Registration response structure check:');
-        console.log('- response.access:', response.access ? 'exists' : 'missing');
-        console.log('- response.refresh:', response.refresh ? 'exists' : 'missing');
-        console.log('- response.data:', response.data ? 'exists' : 'missing');
-        console.log('- response.data.access:', response.data?.access ? 'exists' : 'missing');
-        console.log('- response.data.refresh:', response.data?.refresh ? 'exists' : 'missing');
         setSubmitting(false);
         
         try {
@@ -72,7 +63,20 @@ const Step4 = () => {
           await AsyncStorage.setItem('user_data', JSON.stringify(userData));
           await AsyncStorage.setItem('is_logged_in', 'true');
           
-          console.log('✅ User data stored successfully');
+          // Call /users/roles/ endpoint after successful registration
+          try {
+            console.log('🔄 Fetching user roles after registration...');
+            const { userAPI } = await import('@/lib/api/user');
+            const rolesResponse = await userAPI.getUserRoles();
+            console.log('✅ User roles fetched after registration:', rolesResponse);
+            
+            // Store roles data in local storage
+            await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
+            console.log('✅ User roles data stored in AsyncStorage after registration');
+          } catch (rolesError) {
+            console.error('❌ Failed to fetch roles after registration:', rolesError);
+            // Continue with registration even if roles fetch fails
+          }
           
           // Show success message
           showSuccess(
@@ -86,7 +90,7 @@ const Step4 = () => {
             
             // Navigate based on user role
             const role = responseData.role || 'primary_user';
-            let targetRoute: string = routes?.userHome || '/(root)/(tabs)/(user)/home';
+            let targetRoute: string = routes?.userHome;
             
             switch (role) {
               case 'primary_user':
@@ -105,19 +109,15 @@ const Step4 = () => {
                 targetRoute = routes?.userHome;
             }
             
-            console.log('🚀 Navigating to role-specific home:', targetRoute);
             router.replace(targetRoute as any);
           }, 2000);
           
         } catch (storageError) {
-          console.error('❌ Error storing user data:', storageError);
-          // Still navigate even if storage fails
           clearStepByStepData();
           router.replace(routes?.userHome);
         }
       },
       onError: (error: any) => {
-        console.error('❌ Error posting password data:', error);
         setSubmitting(false);
         
         // Extract error message from API response

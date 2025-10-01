@@ -18,11 +18,11 @@ const accountCreated = () => {
             visible={showSuccessModal}
             onClose={handleModalClose}
             header="Account Created Successfully!"
-            text="Your account has been created successfully and you can now proceed to sign in to your dashboard to see your details."
-            buttonText="Continue"
+            text="Your account has been created successfully and you can now proceed to your dashboard to start selling."
+            buttonText="Go to Dashboard"
         />
     </View>
   )
 }
 
-export default accountCreated
+export default accountCreated 

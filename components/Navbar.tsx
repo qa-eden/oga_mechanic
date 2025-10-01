@@ -32,8 +32,10 @@ const getTimeOfDay = () => {
 
 const Navbar = () => {
   const { label, icon } = getTimeOfDay();
+  
+  // Use primary profile for all roles (no more role-specific endpoints)
   const { data: profileData, isLoading } = usePrimaryUserProfile();
-
+  
   // Get user data from API or fallback to static data
   const userData = profileData?.data;
   const displayName = userData?.first_name || 'User';

@@ -268,7 +268,7 @@ const Profile = () => {
                 text={item.name}
                 iconLeft={(props) => item?.image && item.image(props)}
                 onPress={() => {
-                  if (item.name === "Switch user") {
+                  if (item.name === "Switch User") {
                     setShowSwitchUserModal(true);
                   }
                   // Add other navigation logic here for other items

@@ -1,5 +1,5 @@
 import api from '../axios';
-import { SERVICE_ENDPOINTS } from '../endpoints';
+import { SERVICE_ENDPOINTS, MERCHANT_ENDPOINTS } from '../endpoints';
 
 // Types
 export interface Product {
@@ -223,6 +223,49 @@ export interface CategoriesAPIResponse {
   status: boolean;
 }
 
+// Merchant Analytics Types
+export interface MerchantAnalytics {
+  total_sales: number;
+  total_orders: number;
+  total_products: number;
+  total_revenue: number;
+  average_order_value: number;
+  conversion_rate: number;
+  top_selling_products: Array<{
+    id: string;
+    name: string;
+    quantity_sold: number;
+    revenue: number;
+  }>;
+  recent_orders: Array<{
+    id: string;
+    product_name: string;
+    order_date: string;
+    price: number;
+    status: string;
+  }>;
+  sales_by_period: Array<{
+    period: string;
+    sales: number;
+    orders: number;
+  }>;
+  customer_ratings: Array<{
+    stars: number;
+    count: number;
+    percentage: number;
+    color: string;
+  }>;
+}
+
+export interface MerchantAnalyticsResponse {
+  data: MerchantAnalytics;
+  message: string;
+  referenceId: string;
+  requestTime: string;
+  requestType: string;
+  status: boolean;
+}
+
 // API Functions
 export const productsAPI = {
   // Get home products (cars and spare parts)
@@ -421,5 +464,15 @@ export const productsAPI = {
     
     console.log('✅ checkout response:', response.data);
     return response.data;
+  },
+
+  // Get merchant analytics
+  getMerchantAnalytics: async (): Promise<MerchantAnalytics> => {
+    console.log('📊 Fetching merchant analytics...');
+    
+    const response = await api.get<MerchantAnalyticsResponse>(MERCHANT_ENDPOINTS.ANALYTICS);
+    console.log('📊 Merchant analytics response:', response.data);
+    
+    return response.data.data;
   },
 };

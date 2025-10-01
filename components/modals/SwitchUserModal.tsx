@@ -18,6 +18,8 @@ import { router } from "expo-router";
 import { routes, mechanicRoutes, driverRoutes, sellerRoutes } from "@/constants/routes";
 import CustomAlert from "../CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
+import { userAPI } from "@/lib/api/user";
+import { useQueryClient } from "@tanstack/react-query";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -36,6 +38,8 @@ interface UserOption {
   isActive?: boolean;
   isDisabled?: boolean;
   hasAccess?: boolean;
+  roleName?: string; // Original role name for reference
+  roleId?: number; // Role ID for API calls
 }
 
 const SwitchUserModal = ({
@@ -44,7 +48,9 @@ const SwitchUserModal = ({
   onSwitchUser,
 }: SwitchUserModalProps) => {
   const [selectedUser, setSelectedUser] = useState<string>("");
+  const [isSwitching, setIsSwitching] = useState(false);
   const { showError, hideAlert, visible, alertConfig } = useCustomAlert();
+  const queryClient = useQueryClient();
 
   // Fetch user roles from API
   const {
@@ -103,34 +109,40 @@ const SwitchUserModal = ({
 
   // Map role names to icons and descriptions
   const getRoleInfo = (roleName: string) => {
-    const roleMap: Record<string, { icon: React.ComponentType<any>, iconName?: string, description: string }> = {
+    const roleMap: Record<string, { icon: React.ComponentType<any>, iconName?: string, description: string, displayName: string }> = {
       driver: {
         icon: MaterialIcons,
         iconName: "local-taxi",
-        description: "Drive and earn money"
+        description: "Drive and earn money",
+        displayName: "Driver"
       },
       rider: {
         icon: MaterialIcons,
         iconName: "pedal-bike",
-        description: "Book rides and travel"
+        description: "Book rides and travel",
+        displayName: "Rider"
       },
       mechanic: {
         icon: WrenchScrewdriverIcon,
-        description: "Provide repair services"
+        description: "Provide repair services",
+        displayName: "Mechanic"
       },
       merchant: {
         icon: ShoppingBagIcon,
-        description: "Sell products and services"
+        description: "Sell products and services",
+        displayName: "Merchant"
       },
       primary_user: {
         icon: UsersIcon,
-        description: "Main user account"
+        description: "Main user account",
+        displayName: "Primary User"
       }
     };
 
     return roleMap[roleName] || {
       icon: UsersIcon,
-      description: "User account"
+      description: "User account",
+      displayName: roleName.charAt(0).toUpperCase() + roleName.slice(1).replace('_', ' ')
     };
   };
 
@@ -145,24 +157,41 @@ const SwitchUserModal = ({
     // Filter out developer role and active role
     const filteredRoles = allRoles.filter(role => {
       const isNotDeveloper = role.name !== 'developer';
-      const isNotActive = role.name !== activeRole;
+      const isNotActive = role.name !== activeRole?.name; // Compare with activeRole.name since activeRole is an object
       return isNotDeveloper && isNotActive;
     });
 
-    return filteredRoles.map((role) => {
+    const mappedRoles = filteredRoles.map((role) => {
       const roleInfo = getRoleInfo(role.name);
       const hasRole = userRoleNames.includes(role.name);
 
       return {
         id: role.name,
-        name: role.title || role.name,
+        name: roleInfo.displayName, // Use displayName instead of role.title or role.name
         icon: roleInfo.icon,
         iconName: roleInfo.iconName,
         description: role.description || roleInfo.description,
         isActive: false, // No active role in the list
         isDisabled: false, // No disabled roles
-        hasAccess: hasRole
+        hasAccess: hasRole,
+        roleName: role.name, // Keep original role name for reference
+        roleId: role.id // Role ID for API calls
       };
+    });
+
+    // Sort roles to put registered roles first, then unregistered roles
+    // Within each group, put primary_user at the top, then others alphabetically
+    return mappedRoles.sort((a, b) => {
+      // First priority: registered roles (hasAccess: true) come before unregistered
+      if (a.hasAccess && !b.hasAccess) return -1;
+      if (!a.hasAccess && b.hasAccess) return 1;
+      
+      // Second priority: within same access level, primary_user comes first
+      if (a.roleName === 'primary_user' && b.roleName !== 'primary_user') return -1;
+      if (b.roleName === 'primary_user' && a.roleName !== 'primary_user') return 1;
+      
+      // Third priority: alphabetical order
+      return a.name.localeCompare(b.name);
     });
   }, [rolesData, allRoles]);
 
@@ -172,37 +201,87 @@ const SwitchUserModal = ({
     setSelectedUser(userType);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedUser) {
       // Find the selected option to check if user has access
       const selectedOption = userOptions.find(option => option.id === selectedUser);
       const hasAccess = selectedOption?.hasAccess || false;
+      const roleName = selectedOption?.roleName || selectedUser; // Use original role name for navigation
+      const roleId = selectedOption?.roleId;
 
-      if (hasAccess) {
-        // User has this role, log them in directly
-        onSwitchUser(selectedUser);
+      if (hasAccess && roleId) {
+        try {
+          setIsSwitching(true);
+          
+          await userAPI.switchRole(roleId);
+          
+          // Invalidate user roles query to trigger refetch
+          queryClient.invalidateQueries({ queryKey: ['userProfile', 'roles'] });
+          
+          // Invalidate all roles query to trigger refetch
+          queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
+          
+          // Wait a moment for queries to refetch
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          
+          // User has this role, log them in directly
+          onSwitchUser(roleName);
+          
+          // Navigate to role-specific home page
+          let targetRoute: string = routes?.userHome;
+          switch (roleName) {
+            case 'primary_user': targetRoute = routes?.userHome; break;
+            case 'driver': targetRoute = routes?.driverHome; break;
+            case 'mechanic': targetRoute = routes?.mechanicHome; break;
+            case 'rider': targetRoute = routes?.riderHome; break;
+            case 'merchant': 
+            case 'seller': 
+              targetRoute = '/(root)/(tabs)/(sellers)/home'; 
+              break;
+            default: targetRoute = routes?.userHome;
+          }
+          router.replace(targetRoute as any);
+          
+          // Small delay to show the animation before closing
+          setTimeout(() => {
+            onClose();
+          }, 100);
+        } catch (error) {
+          showError(
+            "Switch Failed",
+            "Failed to switch role. Please try again."
+          );
+        } finally {
+          setIsSwitching(false);
+        }
+      } else if (hasAccess && !roleId) {
+        onSwitchUser(roleName);
+        
         // Navigate to role-specific home page
         let targetRoute: string = routes?.userHome;
-        switch (selectedUser) {
+        switch (roleName) {
           case 'primary_user': targetRoute = routes?.userHome; break;
           case 'driver': targetRoute = routes?.driverHome; break;
           case 'mechanic': targetRoute = routes?.mechanicHome; break;
           case 'rider': targetRoute = routes?.riderHome; break;
-          case 'merchant': targetRoute = routes?.userHome; break; // Use userHome for merchant
+          case 'merchant': 
+          case 'seller': 
+            targetRoute = '/(root)/(tabs)/(sellers)/home'; 
+            break;
           default: targetRoute = routes?.userHome;
         }
         router.replace(targetRoute as any);
         
-        // Small delay to show the animation before closing
         setTimeout(() => {
           onClose();
         }, 100);
       } else {
         // User doesn't have this role, show alert with signup option
-        const roleName = selectedOption?.name || selectedUser;
+        const displayName = selectedOption?.name || selectedUser;
         showError(
           "Role Not Available",
-          `You haven't signed up for the ${roleName} role yet. The app will redirect you to sign up for this role.`
+          `You haven't signed up for the ${displayName} role yet. The app will redirect you to sign up for this role.`
         );
         
         // After showing the alert, navigate to signup after a delay
@@ -217,10 +296,14 @@ const SwitchUserModal = ({
     hideAlert();
     onClose(); // Close the switch modal first
     
+    // Get the original role name for navigation
+    const selectedOption = userOptions.find(option => option.id === selectedUser);
+    const roleName = selectedOption?.roleName || selectedUser;
+    
     // Navigate to the specific role's step 1 registration page
     let targetRoute: string = routes?.signUp; // fallback
     
-    switch (selectedUser) {
+    switch (roleName) {
       case 'primary_user': 
         targetRoute = routes?.userStep1; 
         break;
@@ -274,7 +357,7 @@ const SwitchUserModal = ({
                 <UsersIcon size={32} color="#EF4444" />
               </View>
               <Text className="text-2xl font-NunitoBold text-gray-900 text-center mb-2">
-                Switch user
+                Switch User
               </Text>
               <Text className="text-gray-600 text-center font-NunitoMedium">
                 Seamlessly switch between accounts without logging out
@@ -307,50 +390,47 @@ const SwitchUserModal = ({
                 </View>
               ) : (
                 userOptions.map((option) => (
-                  <View key={option.id}>
-                    {!option?.hasAccess && <TouchableOpacity
-                      onPress={() => handleSelectUser(option.id)}
-                      className="flex-row items-center justify-between py-4 border-b border-gray-100 last:border-b-0"
-                      activeOpacity={0.7}
-                    >
-                      <View className="flex-row items-center gap-3">
-                        <View className="w-10 h-10 items-center justify-center">
-
-
-                          <option.icon
-                            name={option.iconName}
-                            size={24}
-                            color={"#374151"}
-                          />
-                        </View>
-                        <View>
-                          <View className="flex-row items-center gap-2">
-                            <Text className={`text-base font-NunitoBold text-gray-900`}>
-                              {option.name}
-                            </Text>
-                            {/* {!option.hasAccess && (
-                              <View className="bg-orange-100 px-2 py-0.5 rounded-full">
-                                <Text className="text-orange-800 text-xs font-NunitoMedium">
-                                  Login Required
-                                </Text>
-                              </View>
-                            )} */}
-                          </View>
-                          <Text className={`text-sm font-NunitoMedium ${option.hasAccess ? 'text-gray-500' : 'text-gray-400'
-                            }`}>
-                            {option.description}
+                  <TouchableOpacity
+                    key={option.id}
+                    onPress={() => handleSelectUser(option.id)}
+                    className="flex-row items-center justify-between py-4 border-b border-gray-100 last:border-b-0"
+                    activeOpacity={0.7}
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <View className="w-10 h-10 items-center justify-center">
+                        <option.icon
+                          name={option.iconName}
+                          size={24}
+                          color={"#374151"}
+                        />
+                      </View>
+                      <View>
+                        <View className="flex-row items-center gap-2">
+                          <Text className={`text-base font-NunitoBold text-gray-900`}>
+                            {option.name}
                           </Text>
+                          {option.hasAccess && (
+                            <View className="bg-green-100 px-2 py-0.5 rounded-full">
+                              <Text className="text-green-800 text-xs font-NunitoMedium">
+                                Available
+                              </Text>
+                            </View>
+                          )}
                         </View>
+                        <Text className={`text-sm font-NunitoMedium ${option.hasAccess ? 'text-gray-500' : 'text-gray-400'
+                          }`}>
+                          {option.description}
+                        </Text>
                       </View>
+                    </View>
 
-                      {/* Radio Button */}
-                      <View className="w-5 h-5 border-2 border-gray-300 rounded-full items-center justify-center">
-                        {selectedUser === option.id && (
-                          <View className="w-2.5 h-2.5 bg-red-500 rounded-full" />
-                        )}
-                      </View>
-                    </TouchableOpacity>}
-                  </View>
+                    {/* Radio Button */}
+                    <View className="w-5 h-5 border-2 border-gray-300 rounded-full items-center justify-center">
+                      {selectedUser === option.id && (
+                        <View className="w-2.5 h-2.5 bg-red-500 rounded-full" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
                 ))
               )}
             </ScrollView>
@@ -361,18 +441,20 @@ const SwitchUserModal = ({
 
               <CustomButton
                 title={
-                  selectedUser
+                  isSwitching
+                    ? "Switching..."
+                    : selectedUser
                     ? (() => {
-                      const selectedOption = userOptions.find(u => u.id === selectedUser);
-                      const hasAccess = selectedOption?.hasAccess || false;
-                      const roleName = selectedOption?.name || selectedUser;
-                      return hasAccess ? `Switch to ${roleName}` : `Sign up for ${roleName}`;
-                    })()
+                        const selectedOption = userOptions.find(u => u.id === selectedUser);
+                        const hasAccess = selectedOption?.hasAccess || false;
+                        const roleName = selectedOption?.name || selectedUser;
+                        return hasAccess ? `Switch to ${roleName}` : `Sign up for ${roleName}`;
+                      })()
                     : "Select a role"
                 }
                 onPress={handleConfirm}
-                disabled={!selectedUser || isLoadingUserRoles || isLoadingAllRoles}
-
+                disabled={!selectedUser || isLoadingUserRoles || isLoadingAllRoles || isSwitching}
+                loading={isSwitching}
               />
 
               <CustomButton

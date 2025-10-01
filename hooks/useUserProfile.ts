@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userAPI, PrimaryUserProfileResponse, UserRolesResponse } from '@/lib/api/user';
+import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse } from '@/lib/api/user';
 
 // Query key factory
 export const userProfileKeys = {
@@ -26,6 +26,17 @@ export const useUserProfile = () => {
     queryFn: userAPI.getProfile,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
+  });
+};
+
+// Hook to get role-specific user profile (now uses primary profile for all roles)
+export const useRoleUserProfile = (role?: string) => {
+  return useQuery<UserProfile | MerchantProfileResponse>({
+    queryKey: [...userProfileKeys.profile(), 'primary'], // Use 'primary' instead of role
+    queryFn: () => userAPI.getRoleProfile(role),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    // Remove enabled condition since we always want to fetch profile
   });
 };
 

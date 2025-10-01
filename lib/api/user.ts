@@ -1,5 +1,5 @@
 import api from '../axios';
-import { USER_ENDPOINTS, BASE_URL } from '../endpoints';
+import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL } from '../endpoints';
 
 // Types
 export interface LoginCredentials {
@@ -27,7 +27,7 @@ export interface UserRolesResponse {
   message: string;
   data: {
     roles: Role[];
-    active_role: string | null;
+    active_role: Role | null;
   };
 }
 
@@ -83,6 +83,14 @@ export interface UserProfile {
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  active_role?: string;
+  car_make?: string | null;
+  car_model?: string | null;
+  car_year?: string | null;
+  license_plate?: string | null;
+  date_joined?: string;
+  last_login?: string | null;
+  phone_number?: string;
 }
 
 export interface PrimaryUserProfileData {
@@ -113,10 +121,75 @@ export interface PrimaryUserProfileResponse {
 }
 
 export interface LoginResponse {
-  user: UserProfile;
-  accessToken: string;
-  refreshToken: string;
+  data?: {
+    access: string;
+    refresh: string;
+    user: UserProfile & {
+      active_role: string;
+    };
+    id?: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+  access?: string;
+  refresh?: string;
+  user?: UserProfile & {
+    active_role: string;
+  };
+  id?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
   message: string;
+  requestTime: string;
+  requestType: string;
+  status: boolean;
+  referenceId: string;
+}
+
+// Merchant Profile specific interfaces
+export interface MerchantProfile {
+  id: number;
+  business_address: string;
+  cac_document: string;
+  cac_number: string;
+  created_at: string;
+  is_approved: boolean;
+  lga: string;
+  location: string;
+  profile_picture: string | null;
+  selfie: string;
+  updated_at: string;
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
+// Merchant Profile API Response
+export interface MerchantProfileResponse {
+  requestTime: string;
+  requestType: string;
+  message: string;
+  referenceId: string;
+  status: boolean;
+  data: MerchantProfile;
+  // Additional user fields at top level (merged from user object)
+  active_role: string;
+  car_make: string | null;
+  car_model: string | null;
+  car_year: string | null;
+  created_at: string;
+  date_joined: string;
+  email: string;
+  first_name: string;
+  id: string;
+  last_login: string | null;
+  last_name: string;
+  license_plate: string | null;
+  phone_number: string;
+  updated_at: string;
 }
 
 export interface RegisterResponse {
@@ -133,35 +206,19 @@ export interface RegisterResponse {
 export const userAPI = {
   // User login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    console.log('=== LOGIN API REQUEST ===');
-    console.log('Endpoint:', USER_ENDPOINTS.LOGIN);
-    console.log('Request data:', JSON.stringify(credentials, null, 2));
     console.log('=========================');
-    
+
     const response = await api.post(USER_ENDPOINTS.LOGIN, credentials);
-    
-    console.log('=== LOGIN API RESPONSE ===');
-    console.log('Status:', response.status);
-    console.log('Response data:', JSON.stringify(response.data, null, 2));
-    console.log('==========================');
-    
+
     return response.data;
   },
 
   // User logout
   logout: async (credentials: LogoutCredentials): Promise<any> => {
-    console.log('=== LOGOUT API REQUEST ===');
-    console.log('Endpoint:', USER_ENDPOINTS.LOGOUT);
-    console.log('Request data:', JSON.stringify(credentials, null, 2));
-    console.log('==========================');
-    
+
     const response = await api.post(USER_ENDPOINTS.LOGOUT, credentials);
-    
-    console.log('=== LOGOUT API RESPONSE ===');
-    console.log('Status:', response.status);
-    console.log('Response data:', JSON.stringify(response.data, null, 2));
-    console.log('===========================');
-    
+
+
     return response.data;
   },
 
@@ -171,9 +228,9 @@ export const userAPI = {
     console.log('Endpoint:', USER_ENDPOINTS.REGISTER);
     console.log('Request data:', JSON.stringify(userData, null, 2));
     console.log('================================');
-    
+
     const response = await api.post(USER_ENDPOINTS.REGISTER, userData);
-    
+
     console.log('=== RAW API RESPONSE ===');
     console.log('Status:', response.status);
     console.log('Status text:', response.statusText);
@@ -181,7 +238,7 @@ export const userAPI = {
     console.log('Full response object:', response);
     console.log('Response data:', JSON.stringify(response.data, null, 2));
     console.log('========================');
-    
+
     return response.data;
   },
 
@@ -193,7 +250,7 @@ export const userAPI = {
     console.log('Full URL:', `${BASE_URL}${endpoint}`);
     console.log('Request data type:', typeof stepData);
     console.log('Request data is FormData:', stepData instanceof FormData);
-    
+
     if (stepData instanceof FormData) {
       console.log('FormData _parts:', (stepData as any)._parts);
       console.log('FormData entries:');
@@ -204,17 +261,17 @@ export const userAPI = {
       console.log('Request data:', JSON.stringify(stepData, null, 2));
     }
     console.log('===============================================');
-    
+
     try {
       const response = await api.post(endpoint, stepData, config);
-      
+
       console.log(`=== STEP ${stepId} API RESPONSE ===`);
       console.log('Status:', response.status);
       console.log('Response data:', JSON.stringify(response.data, null, 2));
       console.log('===================================');
-      
+
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`=== STEP ${stepId} API ERROR ===`);
       console.log('Error:', error);
       console.log('Error response:', error?.response?.data);
@@ -229,14 +286,14 @@ export const userAPI = {
     console.log('Endpoint:', USER_ENDPOINTS.REGISTER_VEHICLE);
     console.log('Request data:', JSON.stringify(vehicleData, null, 2));
     console.log('========================================');
-    
+
     const response = await api.post(USER_ENDPOINTS.REGISTER_VEHICLE, vehicleData);
-    
+
     console.log('=== VEHICLE API RESPONSE ===');
     console.log('Status:', response.status);
     console.log('Response data:', JSON.stringify(response.data, null, 2));
     console.log('============================');
-    
+
     return response.data;
   },
 
@@ -246,12 +303,20 @@ export const userAPI = {
     return response.data;
   },
 
+  // Get role-specific profile (now uses primary profile for all roles)
+  getRoleProfile: async (role?: string): Promise<UserProfile | MerchantProfileResponse> => {
+    // Use primary profile endpoint for all roles
+    console.log('👤 Using primary profile endpoint for all roles:', USER_ENDPOINTS.PROFILE);
+    const response = await api.get<UserProfile | MerchantProfileResponse>(USER_ENDPOINTS.PROFILE);
+    return response.data;
+  },
+
   // Get primary user profile
   getPrimaryProfile: async (): Promise<PrimaryUserProfileResponse> => {
     console.log('=== PRIMARY PROFILE API REQUEST ===');
     console.log('Endpoint:', USER_ENDPOINTS.PRIMARY_PROFILE);
     console.log('===================================');
-    
+
     try {
       const response = await api.get(USER_ENDPOINTS.PRIMARY_PROFILE);
       console.log('=== PRIMARY PROFILE API RESPONSE ===');
@@ -288,6 +353,55 @@ export const userAPI = {
       console.log('Error data:', JSON.stringify(error.response?.data, null, 2));
       console.log('Error message:', error.message);
       console.log('=============================');
+      throw error;
+    }
+  },
+
+  // Switch active role
+  switchRole: async (activeRoleId: number): Promise<any> => {
+    console.log('=== SWITCH ROLE API REQUEST ===');
+    console.log('Endpoint:', USER_ENDPOINTS.ROLES);
+    console.log('Active Role ID:', activeRoleId);
+    console.log('================================');
+    
+    try {
+      const response = await api.put(USER_ENDPOINTS.ROLES, {
+        active_role_id: activeRoleId
+      });
+      console.log('=== SWITCH ROLE API RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('=================================');
+      return response.data;
+    } catch (error: any) {
+      console.log('=== SWITCH ROLE API ERROR ===');
+      console.log('Error status:', error?.response?.status);
+      console.log('Error data:', JSON.stringify(error?.response?.data, null, 2));
+      console.log('Error message:', error?.message);
+      console.log('==============================');
+      throw error;
+    }
+  },
+
+  // Get all available roles
+  getAllRoles: async (): Promise<any> => {
+    console.log('=== GET ALL ROLES API REQUEST ===');
+    console.log('Endpoint:', AUTH_ENDPOINTS.ALL_ROLES);
+    console.log('==================================');
+    
+    try {
+      const response = await api.get(AUTH_ENDPOINTS.ALL_ROLES);
+      console.log('=== GET ALL ROLES API RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('===================================');
+      return response.data;
+    } catch (error: any) {
+      console.log('=== GET ALL ROLES API ERROR ===');
+      console.log('Error status:', error?.response?.status);
+      console.log('Error data:', JSON.stringify(error?.response?.data, null, 2));
+      console.log('Error message:', error?.message);
+      console.log('================================');
       throw error;
     }
   },

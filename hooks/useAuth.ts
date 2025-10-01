@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { routes } from '@/constants/routes';
+import { userAPI } from '@/lib/api/user';
 
 interface UserData {
   access_token: string;
@@ -33,7 +34,7 @@ export const useAuth = () => {
       
       // Small delay to prevent navigation conflicts
       const timer = setTimeout(() => {
-        router.replace(navigationTarget);
+        router.replace(navigationTarget as any);
         setShouldNavigate(false);
         setNavigationTarget(null);
       }, 100);
@@ -56,22 +57,44 @@ export const useAuth = () => {
         setUserData(userData);
         setIsAuthenticated(true);
         
-        // Set navigation target for role-specific home page
-        const targetRoute = getRoleHomeRoute(userData.role);
-        setNavigationTarget(targetRoute);
-        setShouldNavigate(true);
+        // Get current active role from server
+        try {
+          console.log('🔍 Fetching current user roles from server...');
+          const rolesResponse = await userAPI.getUserRoles();
+          const activeRole = rolesResponse.data.active_role;
+          
+          console.log('✅ Current active role:', activeRole);
+          
+          // Set navigation target for role-specific home page using server role
+          if (activeRole && activeRole.name) {
+            const targetRoute = getRoleHomeRoute(activeRole.name);
+            setNavigationTarget(targetRoute as any);
+            setShouldNavigate(true);
+          } else {
+            // Fallback to stored role if active role is not available
+            const targetRoute = getRoleHomeRoute(userData.role);
+            setNavigationTarget(targetRoute as any);
+            setShouldNavigate(true);
+          }
+        } catch (rolesError) {
+          console.error('❌ Error fetching user roles, using stored role:', rolesError);
+          // Fallback to stored role if API fails
+          const targetRoute = getRoleHomeRoute(userData.role);
+          setNavigationTarget(targetRoute as any);
+          setShouldNavigate(true);
+        }
       } else {
         setIsAuthenticated(false);
         setUserData(null);
         // Set navigation target for login/register flow
-        setNavigationTarget(routes?.signIn || '/sign-in');
+        setNavigationTarget(routes?.signIn as any || '/sign-in');
         setShouldNavigate(true);
       }
     } catch (error) {
       console.error('❌ Error checking auth status:', error);
       setIsAuthenticated(false);
       setUserData(null);
-      setNavigationTarget(routes?.signIn || '/sign-in');
+      setNavigationTarget(routes?.signIn as any || '/sign-in');
       setShouldNavigate(true);
     } finally {
       setIsLoading(false);
@@ -90,6 +113,9 @@ export const useAuth = () => {
         return routes?.mechanicHome || '/(root)/(tabs)/(mechanic)/home';
       case 'rider':
         return routes?.riderHome || '/(root)/(tabs)/(rider)/home';
+      case 'merchant':
+      case 'seller':
+        return '/(root)/(tabs)/(sellers)/home';
       default:
         console.warn('⚠️ Unknown role:', role);
         return routes?.userHome || '/(root)/(tabs)/(user)/home';
@@ -112,7 +138,21 @@ export const useAuth = () => {
         }
       }
       
-      // Clear all stored data
+      // Call /users/roles/ endpoint before clearing auth data
+      try {
+        console.log('🔄 Fetching user roles before logout...');
+        const { userAPI } = await import('@/lib/api/user');
+        const rolesResponse = await userAPI.getUserRoles();
+        console.log('✅ User roles fetched:', rolesResponse);
+        
+        // Store roles data in local storage
+        await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
+        console.log('✅ User roles data stored in AsyncStorage');
+      } catch (rolesError) {
+        console.error('❌ Failed to fetch roles during logout:', rolesError);
+      }
+      
+      // Clear all stored auth data (but keep roles data)
       await AsyncStorage.multiRemove([
         'auth_token',
         'refresh_token',
@@ -124,7 +164,7 @@ export const useAuth = () => {
       setUserData(null);
       
       // Navigate to login
-      setNavigationTarget(routes?.signIn || '/sign-in');
+      setNavigationTarget(routes?.signIn as any || '/sign-in');
       setShouldNavigate(true);
       
       console.log('✅ Logout successful');
