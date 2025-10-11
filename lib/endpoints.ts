@@ -60,6 +60,7 @@ export const MECHANIC_ENDPOINTS = {
   SET_AVAILABILITY: '/mechanic/availability',
   REVIEWS: '/mechanic/reviews',
   SCHEDULE: '/mechanic/schedule',
+  VEHICLE_MAKES: '/mechanics/vehicle-makes/',
 } as const;
 
 // Driver endpoints (transportation providers)
@@ -124,6 +125,7 @@ export const SERVICE_ENDPOINTS = {
   SHOP_SEARCH: '/shop/search',
   PRODUCTS_HOME: '/products/home/',
   PRODUCTS_LIST: '/products/products/',
+  PRODUCTS_BY_MERCHANT: (merchantId: string) => `/products/products/${merchantId}/`,
   PRODUCTS_SEARCH: '/products/products/search/',
   PRODUCT_DETAIL: (id: string) => `/products/products/${id}/`,
   PRODUCTS_CATEGORIES: '/products/categories/',

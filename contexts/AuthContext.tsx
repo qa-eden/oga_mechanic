@@ -22,20 +22,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const auth = useAuth();
 
-  // Show loading screen while checking authentication
-  if (auth.isLoading) {
-    return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: '#ffffff'
-      }}>
-        <ActivityIndicator size="large" color="#D30309" />
-      </View>
-    );
-  }
-
+  // No need for separate loading screen - splash screen handles it
   return (
     <AuthContext.Provider value={auth}>
       {children}

@@ -46,7 +46,8 @@ export const useCentralizedLogout = () => {
         'auth_token',
         'refresh_token',
         'user_data',
-        'is_logged_in'
+        'is_logged_in',
+        'current_active_role' // Clear the stored active role on logout
       ]);
       
       console.log('✅ All auth data cleared from AsyncStorage (roles data preserved)');
@@ -65,7 +66,8 @@ export const useCentralizedLogout = () => {
           'auth_token',
           'refresh_token',
           'user_data',
-          'is_logged_in'
+          'is_logged_in',
+          'current_active_role'
         ]);
         router.replace(routes?.signIn as any);
       } catch (fallbackError) {

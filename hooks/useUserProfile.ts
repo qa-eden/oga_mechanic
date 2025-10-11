@@ -5,6 +5,7 @@ import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, Me
 export const userProfileKeys = {
   all: ['userProfile'] as const,
   primary: () => [...userProfileKeys.all, 'primary'] as const,
+  merchant: () => [...userProfileKeys.all, 'merchant'] as const,
   profile: () => [...userProfileKeys.all, 'profile'] as const,
   roles: () => [...userProfileKeys.all, 'roles'] as const,
 };
@@ -17,6 +18,58 @@ export const usePrimaryUserProfile = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
+};
+
+// Hook to get merchant profile (only when enabled)
+export const useMerchantProfile = (enabled: boolean = true) => {
+  return useQuery<MerchantProfileResponse>({
+    queryKey: userProfileKeys.merchant(),
+    queryFn: userAPI.getMerchantProfile,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to get the appropriate profile based on active role
+export const useActiveRoleProfile = () => {
+  // First, get primary profile to check active role
+  const primaryProfile = usePrimaryUserProfile();
+  const activeRole = primaryProfile.data?.data?.active_role;
+
+  // Only fetch merchant profile if role is merchant
+  const isMerchant = activeRole === 'merchant';
+  const merchantProfile = useMerchantProfile(isMerchant);
+
+  console.log('🔍 useActiveRoleProfile - Active Role:', activeRole);
+  console.log('🔍 useActiveRoleProfile - Is Merchant:', isMerchant);
+  console.log('🔍 useActiveRoleProfile - Merchant Profile Loading:', merchantProfile.isLoading);
+  console.log('🔍 useActiveRoleProfile - Merchant Profile Data:', merchantProfile.data);
+
+  // Return the appropriate profile based on active role
+  if (isMerchant && merchantProfile.data && !merchantProfile.isLoading) {
+    console.log('✅ Returning MERCHANT profile data');
+    return {
+      data: merchantProfile.data,
+      isLoading: primaryProfile.isLoading || merchantProfile.isLoading,
+      error: merchantProfile.error || primaryProfile.error,
+      refetch: async () => {
+        await primaryProfile.refetch();
+        await merchantProfile.refetch();
+      },
+      activeRole: activeRole,
+    };
+  }
+
+  // Default to primary profile (or while loading merchant profile)
+  console.log('✅ Returning PRIMARY profile data');
+  return {
+    data: primaryProfile.data,
+    isLoading: primaryProfile.isLoading || (isMerchant && merchantProfile.isLoading),
+    error: primaryProfile.error,
+    refetch: primaryProfile.refetch,
+    activeRole: activeRole,
+  };
 };
 
 // Hook to get user profile

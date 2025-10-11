@@ -185,7 +185,7 @@ const Profile = () => {
 
           <View className="flex-row items-center gap-2 pt-3">
             <Text className="font-NunitoBold text-primary-800 text-[1.5rem]">
-              {displayName}
+              {displayName || 'User'}
             </Text>
             {isVerified && (
               <View className="bg-green-100 px-2 py-1 rounded-full">

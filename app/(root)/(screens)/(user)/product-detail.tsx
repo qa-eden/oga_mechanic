@@ -25,13 +25,13 @@ import React from "react";
 import CartIconBtn from "@/components/CartIconBtn";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
-import { useCart } from "@/contexts/CartContext";
+import { useCart as useCartContext } from "@/contexts/CartContext";
 import AddToCartButton from "@/components/AddToCartButton";
 import ImageGalleryModal from "@/components/ImageGalleryModal";
 import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
-import { useAddToCart, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
+import { useCart, useAddToCart, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -49,12 +49,16 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const [showFavoriteSuccess, setShowFavoriteSuccess] = useState(false);
-  const { addToCart, isInCart, getItemQuantity } = useCart();
+  const { addToCart, isInCart, getItemQuantity } = useCartContext();
   
-  // Cart API hooks
+  // Cart API hooks - fetches and mutations
+  const { data: cartData, isLoading: isCartLoading, refetch: refetchCart } = useCart();
   const addToCartMutation = useAddToCart();
   const removeFromCartMutation = useRemoveFromCart();
   const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
+
+  // Log cart data for debugging
+  console.log('🛒 Cart Data:', cartData);
   
   // Favorite API hook
   const toggleFavoriteMutation = useToggleFavorite();
@@ -248,39 +252,45 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     try {
+      console.log('🛒 Adding to cart...');
       await addToCartMutation.mutateAsync({
         productId: product.id,
         quantity: quantity
       });
-      // Refetch product detail to update is_in_cart status
-      await refetch();
+      // Refetch cart data and product detail
+      await Promise.all([refetchCart(), refetch()]);
+      console.log('✅ Cart updated successfully');
     } catch (error) {
-      console.error('Add to cart error:', error);
+      console.error('❌ Add to cart error:', error);
     }
   };
 
   const handleRemoveFromCart = async () => {
     try {
+      console.log('🛒 Removing from cart...');
       await removeFromCartMutation.mutateAsync(product.id);
-      // Refetch product detail to update is_in_cart status
-      await refetch();
+      // Refetch cart data and product detail
+      await Promise.all([refetchCart(), refetch()]);
+      console.log('✅ Cart updated successfully');
     } catch (error) {
-      console.error('Remove from cart error:', error);
+      console.error('❌ Remove from cart error:', error);
     }
   };
 
   const handleIncrementQuantity = async () => {
     if (quantity < ((product as any).stock || 10)) {
       try {
+        console.log('🛒 Incrementing quantity...');
         await updateCartItemQuantityMutation.mutateAsync({
           productId: product.id,
           action: "increment"
         });
         setQuantity(prev => prev + 1);
-        // Refetch product detail to ensure UI stays in sync
-        await refetch();
+        // Refetch cart data and product detail
+        await Promise.all([refetchCart(), refetch()]);
+        console.log('✅ Cart updated successfully');
       } catch (error) {
-        console.error('Increment quantity error:', error);
+        console.error('❌ Increment quantity error:', error);
       }
     }
   };
@@ -288,15 +298,17 @@ const ProductDetail = () => {
   const handleDecrementQuantity = async () => {
     if (quantity > 1) {
       try {
+        console.log('🛒 Decrementing quantity...');
         await updateCartItemQuantityMutation.mutateAsync({
           productId: product.id,
           action: "decrement"
         });
         setQuantity(prev => prev - 1);
-        // Refetch product detail to ensure UI stays in sync
-        await refetch();
+        // Refetch cart data and product detail
+        await Promise.all([refetchCart(), refetch()]);
+        console.log('✅ Cart updated successfully');
       } catch (error) {
-        console.error('Decrement quantity error:', error);
+        console.error('❌ Decrement quantity error:', error);
       }
     }
   };
@@ -572,8 +584,19 @@ const ProductDetail = () => {
               </View>
             </View>
             
-            <View className="flex-row items-center">
-              <View className="w-14 h-14 rounded-2xl overflow-hidden mr-4 bg-gradient-to-br from-primary-100 to-primary-200 items-center justify-center">
+            <TouchableOpacity 
+              className="flex-row items-center" 
+              onPress={() => router.push({
+                pathname: routes.merchantProfile as any,
+                params: {
+                  merchantId: typeof product.merchant === 'string' 
+                    ? product.merchant 
+                    : product.merchant?.id
+                }
+              })}
+              activeOpacity={0.7}
+            >
+              <View className="w-14 h-14 rounded-2xl overflow-hidden mr-4 bg-gray-200 items-center justify-center">
                 <Text className="text-xl font-NunitoBold text-primary-700">
                   {typeof product.merchant === 'string' 
                     ? product.merchant.charAt(0).toUpperCase() 
@@ -587,24 +610,26 @@ const ProductDetail = () => {
                     ? 'Merchant Store' 
                     : `${product.merchant?.first_name || ''} ${product.merchant?.last_name || ''}`.trim() || 'Merchant Store'}
               </Text>
-                <Text className="text-sm text-gray-500 mb-2">
+                {/* <Text className="text-sm text-gray-500 mb-2">
                   {typeof product.merchant === 'string' 
                     ? `Store ID: ${product.merchant.slice(0, 8)}...` 
                     : `Contact: ${product.merchant?.email || 'N/A'}`}
-                </Text>
+                </Text> */}
                 
                 <View className="flex-row items-center gap-2 space-x-4">
                   <View className="flex-row items-center">
                     <Text className="text-xs text-gray-500 mr-1">Rating:</Text>
-                    <Text className="text-xs font-NunitoBold text-gray-900">4.8</Text>
+                    <Text className="text-xs font-NunitoBold text-gray-900">
+                      {(product as any).merchant_rating ? (product as any).merchant_rating.toFixed(1) : 'N/A'}
+                    </Text>
                   </View>
                   <View className="flex-row items-center">
                     <Text className="text-xs text-gray-500 mr-1">Sales:</Text>
-                    <Text className="text-xs font-NunitoBold text-gray-900">{(product as any).purchased_count || 'N/A'}</Text>
+                    <Text className="text-xs font-NunitoBold text-gray-900">{(product as any).purchased_count || '0'}</Text>
                   </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </Animated.View>
 
@@ -672,11 +697,11 @@ const ProductDetail = () => {
             <View className="flex-row items-center justify-between py-3 border-t border-gray-100">
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Available:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{(product as any).stock} units</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{(product as any).stock || 0} units</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Sold:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{(product as any).purchased_count || 'N/A'}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{(product as any).purchased_count || 0}</Text>
               </View>
             </View>
           </View>
@@ -728,47 +753,260 @@ const ProductDetail = () => {
             </Text>
 
             <View className="space-y-3">
+              {/* Product ID */}
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Product ID</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).id.slice(-12)}</Text>
               </View>
 
+              {/* Category */}
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Category</Text>
                 <Text className="text-sm font-NunitoBold text-primary-600">{product.category?.name || 'N/A'}</Text>
-          </View>
+              </View>
 
+              {/* Transmission */}
+              {(product as any).transmission && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Transmission</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900 capitalize">{(product as any).transmission}</Text>
+                </View>
+              )}
+
+              {/* Fuel Type */}
+              {(product as any).fuel_type && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Fuel Type</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900 capitalize">{(product as any).fuel_type}</Text>
+                </View>
+              )}
+
+              {/* Engine Size */}
+              {(product as any).engine_size && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Engine Size</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).engine_size}</Text>
+                </View>
+              )}
+
+              {/* Mileage */}
+              {(product as any).mileage && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Mileage</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">
+                    {(product as any).mileage.toLocaleString()} {(product as any).mileage_unit || 'km'}
+                  </Text>
+                </View>
+              )}
+
+              {/* Exterior Color */}
+              {(product as any).exterior_color && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Exterior Color</Text>
+                  <View className="flex-row items-center">
+                    <View 
+                      className="w-4 h-4 rounded-full mr-2 border border-gray-300"
+                      style={{ backgroundColor: (product as any).exterior_color.toLowerCase() }}
+                    />
+                    <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).exterior_color}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Interior Color */}
+              {(product as any).interior_color && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Interior Color</Text>
+                  <View className="flex-row items-center">
+                    <View 
+                      className="w-4 h-4 rounded-full mr-2 border border-gray-300"
+                      style={{ backgroundColor: (product as any).interior_color.toLowerCase() }}
+                    />
+                    <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).interior_color}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Number of Doors */}
+              {(product as any).number_of_doors && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Doors</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).number_of_doors}</Text>
+                </View>
+              )}
+
+              {/* Number of Seats */}
+              {(product as any).number_of_seats && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Seats</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).number_of_seats}</Text>
+                </View>
+              )}
+
+              {/* Body Type */}
+              {(product as any).body_type && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Body Type</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900 uppercase">{(product as any).body_type}</Text>
+                </View>
+              )}
+
+              {/* Rental Option */}
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Rental Option</Text>
                 <View className={`px-2 py-1 rounded-full ${(product as any).is_rental ? 'bg-green-100' : 'bg-gray-100'}`}>
                   <Text className={`text-xs font-NunitoBold ${(product as any).is_rental ? 'text-green-700' : 'text-gray-600'}`}>
                     {product.is_rental ? 'Available' : 'Not Available'}
-            </Text>
-          </View>
-        </View>
+                  </Text>
+                </View>
+              </View>
 
+              {/* Condition */}
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Condition</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).condition || 'N/A'}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 capitalize">{(product as any).condition || 'N/A'}</Text>
               </View>
 
-              <View className="flex-row justify-between items-center py-2">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Warranty</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).warranty || 'N/A'}</Text>
-              </View>
+              {/* Warranty */}
+              {(product as any).warranty && (
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Warranty</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{(product as any).warranty}</Text>
+                </View>
+              )}
 
+              {/* Listed Date */}
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Listed</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">
                   {new Date((product as any).created_at).toLocaleDateString('en-US', {
                     month: 'short',
-                    day: 'numeric'
+                    day: 'numeric',
+                    year: 'numeric'
                   })}
-            </Text>
+                </Text>
               </View>
             </View>
           </View>
         </Animated.View>
+
+        {/* Car Features & Amenities */}
+        {((product as any).air_conditioning || (product as any).leather_seats || (product as any).navigation_system || 
+          (product as any).bluetooth || (product as any).parking_sensors || (product as any).cruise_control || 
+          (product as any).keyless_entry || (product as any).sunroof || (product as any).alloy_wheels ||
+          (product as any).airbags || (product as any).abs || (product as any).traction_control ||
+          (product as any).lane_assist || (product as any).blind_spot_monitor) && (
+          <Animated.View 
+            style={{ 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="mx-4 mb-4"
+          >
+            <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+              style={{ 
+                shadowColor: '#000', 
+                shadowOffset: { width: 0, height: 2 }, 
+                shadowOpacity: 0.05, 
+                shadowRadius: 10, 
+                elevation: 5 
+              }}>
+              <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+                Features & Amenities
+              </Text>
+
+              <View className="flex-row flex-wrap gap-2">
+                {/* Comfort Features */}
+                {(product as any).air_conditioning && (
+                  <View className="bg-blue-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-blue-700">Air Conditioning</Text>
+                  </View>
+                )}
+                
+                {(product as any).leather_seats && (
+                  <View className="bg-amber-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-amber-700">Leather Seats</Text>
+                  </View>
+                )}
+
+                {(product as any).sunroof && (
+                  <View className="bg-sky-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-sky-700">Sunroof</Text>
+                  </View>
+                )}
+
+                {/* Technology Features */}
+                {(product as any).navigation_system && (
+                  <View className="bg-indigo-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-indigo-700">Navigation</Text>
+                  </View>
+                )}
+
+                {(product as any).bluetooth && (
+                  <View className="bg-purple-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-purple-700">Bluetooth</Text>
+                  </View>
+                )}
+
+                {/* Safety Features */}
+                {(product as any).airbags && (
+                  <View className="bg-red-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-red-700">Airbags</Text>
+                  </View>
+                )}
+
+                {(product as any).abs && (
+                  <View className="bg-orange-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-orange-700">ABS</Text>
+                  </View>
+                )}
+
+                {(product as any).traction_control && (
+                  <View className="bg-green-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-green-700">Traction Control</Text>
+                  </View>
+                )}
+
+                {(product as any).lane_assist && (
+                  <View className="bg-teal-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-teal-700">Lane Assist</Text>
+                  </View>
+                )}
+
+                {(product as any).blind_spot_monitor && (
+                  <View className="bg-cyan-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-cyan-700">Blind Spot Monitor</Text>
+                  </View>
+                )}
+
+                {/* Convenience Features */}
+                {(product as any).parking_sensors && (
+                  <View className="bg-violet-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-violet-700">Parking Sensors</Text>
+                  </View>
+                )}
+
+                {(product as any).cruise_control && (
+                  <View className="bg-pink-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-pink-700">Cruise Control</Text>
+                  </View>
+                )}
+
+                {(product as any).keyless_entry && (
+                  <View className="bg-rose-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-rose-700">Keyless Entry</Text>
+                  </View>
+                )}
+
+                {(product as any).alloy_wheels && (
+                  <View className="bg-slate-50 px-4 py-2.5 rounded-full">
+                    <Text className="text-sm font-NunitoMedium text-slate-700">Alloy Wheels</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Product Reviews Section */}
         <Animated.View 
@@ -797,10 +1035,12 @@ const ProductDetail = () => {
 
             <View className="flex-row items-center mb-4">
               <View className="flex-row items-center mr-4">
-                <Text className="text-3xl font-NunitoExtraBold text-gray-900 mr-2">{(product as any).rating || 0}</Text>
+                <Text className="text-3xl font-NunitoExtraBold text-gray-900 mr-2">
+                  {(product as any).rating ? (product as any).rating.toFixed(1) : '0.0'}
+                </Text>
                 <Rating rating={(product as any).rating || 0} size={16} />
               </View>
-              <Text className="text-sm text-gray-600">Based on {(product as any).reviews?.length || 0 } reviews</Text>
+              <Text className="text-sm text-gray-600">Based on {(product as any).reviews?.length || 0} reviews</Text>
             </View>
 
             <View className="bg-gray-50 rounded-xl p-4">
@@ -812,7 +1052,7 @@ const ProductDetail = () => {
         </Animated.View>
 
         {/* Bottom spacing for fixed buttons */}
-        <View className="h-32 pb-4" />
+        <View className="h-[130px] pb-4" />
       </ScrollView>
 
       {/* Premium Floating Action Bar */}
@@ -828,23 +1068,6 @@ const ProductDetail = () => {
         }}
         className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100">
         
-        {/* Quantity Selector */}
-        {/* <View className="px-4 py-3 border-b border-gray-100">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-NunitoMedium text-gray-700">Quantity</Text>
-            <View className="flex-row items-center bg-gray-100 rounded-xl">
-              <TouchableOpacity className="p-3">
-                <Text className="text-lg font-NunitoBold text-gray-600">-</Text>
-              </TouchableOpacity>
-              <View className="px-4 py-3">
-                <Text className="text-base font-NunitoBold text-gray-900">1</Text>
-              </View>
-              <TouchableOpacity className="p-3">
-                <Text className="text-lg font-NunitoBold text-gray-600">+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View> */}
 
         {/* Action Buttons */}
         <View className="px-2 py-4 flex-row items-center gap-2 space-x-3">
@@ -879,29 +1102,15 @@ const ProductDetail = () => {
           
           <View className="flex-1">
             {(product as any).is_in_cart ? (
-              // Cart item controls
-              <View className="flex-row gap-3 items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
-                {/* Remove Button */}
-                <TouchableOpacity
-                  onPress={handleRemoveFromCart}
-                  disabled={removeFromCartMutation.isPending}
-                  className="bg-red-500 px-4 py-2.5 rounded-xl items-center justify-center min-w-[100px]"
-                  style={{ opacity: removeFromCartMutation.isPending ? 0.6 : 1 }}
-                >
-                  {removeFromCartMutation.isPending ? (
-                    <Text className="text-white text-sm font-NunitoMedium">Removing...</Text>
-                  ) : (
-                    <Text className="text-white text-sm font-NunitoMedium">Remove from Cart</Text>
-                  )}
-                </TouchableOpacity>
-                
+              // Cart item controls - Vertical layout
+              <View className="space-y-3">
                 {/* Quantity Controls */}
-                <View className="flex-row items-center bg-white rounded-xl shadow-sm border border-gray-200">
+                <View className="flex-row items-center justify-center overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200">
                   {/* Decrement Button */}
                   <TouchableOpacity
                     onPress={handleDecrementQuantity}
                     disabled={updateCartItemQuantityMutation.isPending || quantity <= 1}
-                    className="w-10 h-10 items-center justify-center rounded-l-xl"
+                    className="flex-1 py-2 items-center justify-center"
                     style={{ 
                       backgroundColor: quantity <= 1 ? '#f3f4f6' : '#f9fafb',
                       opacity: (updateCartItemQuantityMutation.isPending || quantity <= 1) ? 0.5 : 1 
@@ -915,7 +1124,7 @@ const ProductDetail = () => {
                   </TouchableOpacity>
                   
                   {/* Quantity Display */}
-                  <View className="px-4 py-2 min-w-[50px] items-center justify-center">
+                  <View className="flex-1 py-2 items-center justify-center border-x border-gray-200">
                     <Text className="text-lg font-NunitoBold text-gray-900">
                       {quantity}
                     </Text>
@@ -925,43 +1134,45 @@ const ProductDetail = () => {
                   <TouchableOpacity
                     onPress={handleIncrementQuantity}
                     disabled={updateCartItemQuantityMutation.isPending || quantity >= ((product as any).stock)}
-                    className="w-10 h-10 items-center justify-center rounded-r-xl"
+                    className="flex-1 py-2 items-center justify-center mb-1"
                     style={{ 
                       backgroundColor: quantity >= ((product as any).stock) ? '#f3f4f6' : '#f9fafb',
                       opacity: (updateCartItemQuantityMutation.isPending || quantity >= ((product as any).stock)) ? 0.5 : 1 
                     }}
                   >
                     {updateCartItemQuantityMutation.isPending ? (
-                      <Text className="text-gray-400 text-lg">⋯</Text>
+                      <Text className="text-gray-400 text-lg">...</Text>
                     ) : (
                       <Text className="text-gray-700 text-xl font-NunitoBold">+</Text>
                     )}
                   </TouchableOpacity>
                 </View>
+
+                {/* Remove Button */}
+                <CustomButton
+                  title="Remove from Cart"
+                  onPress={handleRemoveFromCart}
+                  disabled={removeFromCartMutation.isPending}
+                  loading={removeFromCartMutation.isPending}
+                  loadingText="Removing from Cart"
+                  className="mt-2"
+                />
               </View>
             ) : (
-              // Add to cart button
-              <TouchableOpacity
+
+              <CustomButton
+                title="Add to Cart"
                 onPress={handleAddToCart}
                 disabled={addToCartMutation.isPending}
-                className="bg-primary-600 py-4 px-6 rounded-2xl items-center justify-center"
-              >
-                {addToCartMutation.isPending ? (
-                  <Text className="text-white text-lg font-NunitoBold">
-                    Adding...
-                  </Text>
-                ) : (
-                  <Text className="text-white text-lg font-NunitoBold">
-                    Add to Cart
-                  </Text>
-                )}
-              </TouchableOpacity>
+                loading={addToCartMutation.isPending}
+                loadingText="Adding"
+              />
             )}
           </View>
         </View>
 
         {/* Safe Area Bottom */}
-        <View className="h-8 bg-white" />
+        <View className="h-6 bg-white" />
       </Animated.View>
 
       {/* Image Gallery Modal */}

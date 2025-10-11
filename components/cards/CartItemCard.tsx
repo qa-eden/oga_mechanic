@@ -25,6 +25,7 @@ interface CartItemCardProps {
   onSelect: (id: number) => void;
   onRemove: (id: number) => void;
   onUpdateQuantity: (id: number, change: number) => void;
+  onPress?: () => void;
 }
 
 const CartItemCard = memo(({
@@ -38,6 +39,7 @@ const CartItemCard = memo(({
   onSelect,
   onRemove,
   onUpdateQuantity,
+  onPress,
 }: CartItemCardProps) => (
   <Animated.View
     style={{
@@ -75,44 +77,52 @@ const CartItemCard = memo(({
           {isSelected && <CheckIcon size={14} color="#fff" />}
         </TouchableOpacity>
 
-        {/* Product Image */}
-        <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3">
-          {typeof item.image === "function" ? (
-            <item.image width={70} height={80} />
-          ) : (
-            <Image
-              source={typeof item.image === "string" ? { uri: item.image } : item.image}
-              style={{ width: 70, height: 80, resizeMode: "cover" }}
-            />
-          )}
-        </View>
-
-        {/* Product Info */}
-        <View className="flex-1 mr-2">
-          <Text
-            className="text-sm font-NunitoBold text-gray-900 mb-1"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.name}
-          </Text>
-          <Text className="text-xs text-green-600 font-NunitoMedium">
-            ✓ {item.stock} in stock
-          </Text>
-
-          {/* Price */}
-          <View className="flex-row items-center mt-1">
-            <NairaCurrency
-              value={item.price}
-              className="text-sm font-NunitoBold text-gray-900"
-            />
-            {item.originalPrice && (
-              <Text className="text-xs text-gray-400 line-through ml-2">
-                ₦{item.originalPrice.toLocaleString()}
-              </Text>
+        {/* Clickable Product Section */}
+        <TouchableOpacity 
+          onPress={onPress}
+          className="flex-1 flex-row items-center"
+          activeOpacity={0.7}
+          disabled={!onPress}
+        >
+          {/* Product Image */}
+          <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3">
+            {typeof item.image === "function" ? (
+              <item.image width={70} height={80} />
+            ) : (
+              <Image
+                source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                style={{ width: 70, height: 80, resizeMode: "cover" }}
+              />
             )}
           </View>
-        </View>
+
+          {/* Product Info */}
+          <View className="flex-1 mr-2">
+            <Text
+              className="text-sm font-NunitoBold text-gray-900 mb-1"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.name}
+            </Text>
+            <Text className="text-xs text-green-600 font-NunitoMedium">
+              ✓ {item.stock} in stock
+            </Text>
+
+            {/* Price */}
+            <View className="flex-row items-center mt-1">
+              <NairaCurrency
+                value={item.price}
+                className="text-sm font-NunitoBold text-gray-900"
+              />
+              {item.originalPrice && (
+                <Text className="text-xs text-gray-400 line-through ml-2">
+                  ₦{item.originalPrice.toLocaleString()}
+                </Text>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* Controls */}
         <View className="items-end">

@@ -14,12 +14,32 @@ interface FormikInputProps extends InputFieldProps {
 }
 
 function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikInputProps) {
-  const { values, handleChange, handleBlur, errors, touched, setFieldTouched } = useFormikContext<{
+  const { values, handleChange, handleBlur, errors, touched, setFieldTouched, setFieldValue } = useFormikContext<{
     [key: string]: any
   }>()
 
   const isPassword = type === "password" || secureTextEntry
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+
+  // Format number with thousand separators
+  const formatNumberWithCommas = (value: string | number): string => {
+    if (!value && value !== 0) return ''
+    // Remove all non-digit characters
+    const numericValue = value.toString().replace(/\D/g, '')
+    if (!numericValue) return ''
+    // Add commas for thousands
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  }
+
+  // Remove commas from formatted number
+  const removeCommas = (value: string): string => {
+    return value.replace(/,/g, '')
+  }
+
+  // Check if field should be formatted with thousand separators
+  const shouldFormatNumber = (fieldName: string) => {
+    return fieldName === 'mileage' || fieldName === 'price'
+  }
 
   // Enhanced blur handler to ensure proper state management
   const handleFieldBlur = () => {
@@ -32,8 +52,28 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
     if (!touched[name]) {
       setFieldTouched(name, true, false)
     }
-    // Trim the text before setting the value
-    handleChange(name)(text.trim())
+    
+    // Handle formatting for numeric fields with thousand separators
+    if (shouldFormatNumber(name)) {
+      // Remove commas and non-numeric characters
+      const numericValue = removeCommas(text)
+      // Store the unformatted number in Formik
+      setFieldValue(name, numericValue)
+      return
+    }
+    
+    // Only trim for specific field types, allow spaces for car names, makes, models, etc.
+    const shouldTrim = type === "email" || name === "stock"
+    handleChange(name)(shouldTrim ? text.trim() : text)
+  }
+
+  // Get display value with formatting if applicable
+  const getDisplayValue = () => {
+    const value = values[name] || ''
+    if (shouldFormatNumber(name) && value) {
+      return formatNumberWithCommas(value)
+    }
+    return value
   }
 
   // Memoize keyboard type to prevent changes during re-renders
@@ -69,7 +109,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
   if (isPassword) {
     return (
       <InputFieldPassword
-        value={values[name] || ""}
+        value={getDisplayValue()}
         onChangeText={handleFieldChange}
         onBlur={handleFieldBlur}
         error={typeof errors[name] === "string" && touched[name] ? errors[name] : undefined}
@@ -87,7 +127,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
 
   return (
     <InputField
-      value={values[name] || ""}
+      value={getDisplayValue()}
       onChangeText={handleFieldChange}
       onBlur={handleFieldBlur}
       error={typeof errors[name] === "string" && touched[name] ? errors[name] : undefined}

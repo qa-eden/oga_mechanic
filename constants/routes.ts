@@ -41,6 +41,7 @@ export const routes = {
   chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
   findMechanic: "/(root)/(screens)/(user)/(ordermechanic)/find-mechanic",
   orderMechanic: "/(root)/(screens)/(user)/(ordermechanic)/order-mechanic",
+  merchantProfile: "/(root)/(screens)/(user)/merchant-profile",
 
 
   //calls
@@ -162,6 +163,9 @@ export const sellerRoutes = {
   WithdrawalHistory: "/(root)/(screens)/(seller)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(seller)/editProfile",
   uploadProducts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/uploadProducts",
+  editProduct: "/(root)/(screens)/(seller)/(products)/(editProduct)/editProduct",
+  editImage: "/(root)/(screens)/(seller)/(products)/(editProduct)/editImage",
+  uploadCarImages: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/uploadCarImages",
   uploadSpareParts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/upload-sparePart",
   uploadCarToRent: "/(root)/(screens)/(seller)/(products)/(uploadCarRent)/uploadCarToRent",
   successfulPage: "/(root)/(screens)/(seller)/(products)/SuccessfulPage",

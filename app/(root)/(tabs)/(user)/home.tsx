@@ -59,6 +59,14 @@ const HomePage = memo(() => {
   // Fetch home products from API (includes mechanics, cars, and spare parts)
   const { data: homeProducts, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useHomeProducts();
 
+  // Debug: Log home products data
+  console.log('🏠 Home Products Data:', homeProducts);
+  console.log('🏠 Is Loading:', productsLoading);
+  console.log('🏠 Error:', productsError);
+  console.log('🏠 Mechanics:', homeProducts?.data?.mechanics?.length || 0);
+  console.log('🏠 Cars:', homeProducts?.data?.best_selling_cars?.length || 0);
+  console.log('🏠 Spare Parts:', homeProducts?.data?.best_selling_spare_parts?.length || 0);
+
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {
@@ -125,7 +133,7 @@ const HomePage = memo(() => {
     return (
       <View style={{ width: CARD_WIDTH }}>
         <Card1
-          Images={item.image || item.avatar} // Use API image or fallback
+          Images={item.selfie || item.image || item.avatar} // Use selfie from API
           rating={item?.rating || 0} // Default rating if not provided
           name={getName()} // Use extracted name
           address={item?.location || 'Location not available'} // Add location as address
@@ -370,7 +378,13 @@ const HomePage = memo(() => {
             name="Best Selling Cars"
             onPress={() => {
               setIsNavigating(true);
-              router?.push(routes?.shop);
+              router?.push({
+                pathname: routes?.shop,
+                params: {
+                  category: 'Car',
+                  categoryId: '23', // Car category ID
+                }
+              });
             }}
             isLoading={isNavigating}
           />
@@ -418,7 +432,13 @@ const HomePage = memo(() => {
             name="Best Selling Spare Parts"
             onPress={() => {
               setIsNavigating(true);
-              router?.push(routes?.shop);
+              router?.push({
+                pathname: routes?.shop,
+                params: {
+                  category: 'Spare Part',
+                  categoryId: '24', // Spare Part category ID
+                }
+              });
             }}
             isLoading={isNavigating}
           />

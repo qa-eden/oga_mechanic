@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native'
-import { ArrowLeftIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
+import { MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 import OrderItemCard from '@/components/cards/OrderItemCard'
 
 const Orders = () => {

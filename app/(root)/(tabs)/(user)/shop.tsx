@@ -8,7 +8,7 @@ import BackArrowBtn from "@/components/BackArrowBtn"
 import { LAYOUT } from "@/constants/units"
 import SearchBarWithCategories from "@/components/SearchBarWithCategories"
 import ProfileHeader from "@/components/ProfileHeader"
-import { useRouter } from "expo-router"
+import { useRouter, useLocalSearchParams } from "expo-router"
 import { routes } from "@/constants/routes"
 import CartIconBtn from "@/components/CartIconBtn"
 import { useProducts, useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
@@ -19,13 +19,30 @@ import usePullToRefresh from "@/hooks/usePullToRefresh"
 const Shop = () => {
   const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
   const router = useRouter();
+  const params = useLocalSearchParams<{ category?: string; categoryId?: string }>();
 
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState(params.category || "All")
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    params.categoryId ? parseInt(params.categoryId) : null
+  )
   const [inputQuery, setInputQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
+
+  // Apply category filter from URL params on mount
+  useEffect(() => {
+    if (params.categoryId && params.category) {
+      const categoryId = parseInt(params.categoryId);
+      console.log('🏷️ Applying category filter from params:', params.category, categoryId);
+      
+      // Update both selected and applied states
+      setSelectedCategory(params.category);
+      setSelectedCategoryId(categoryId);
+      setAppliedCategoryId(categoryId);
+      setFiltersApplied(true);
+    }
+  }, [params.categoryId, params.category]);
 
   // Debounce search query
   useEffect(() => {

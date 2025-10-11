@@ -39,8 +39,17 @@ export const useLogin = () => {
             try {
               const rolesResponse = await userAPI.getUserRoles();
               await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
+              
+              // Store the current active role for fallback purposes
+              if (active_role) {
+                await AsyncStorage.setItem('current_active_role', active_role);
+              }
             } catch (rolesError) {
               console.error('Failed to fetch roles after login:', rolesError);
+              // Still store the active role from login response as fallback
+              if (active_role) {
+                await AsyncStorage.setItem('current_active_role', active_role);
+              }
             }
             
             // Navigate based on user role (use active_role from login response)

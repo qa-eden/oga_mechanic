@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Image, ScrollView, Dimensions, Animated } from 'react-native'
+import { View, Text, TouchableOpacity, Image, ScrollView, Dimensions, Animated, ActivityIndicator, Platform, Modal, FlatList, GestureResponderEvent } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ArrowLeftIcon, DocumentTextIcon, ChevronRightIcon } from 'react-native-heroicons/outline'
-import { images } from '@/constants'
+import { ArrowLeftIcon, DocumentTextIcon, ChevronRightIcon, ExclamationTriangleIcon } from 'react-native-heroicons/outline'
+import { icons } from '@/constants'
 import { router, useLocalSearchParams } from 'expo-router'
 import { NairaCurrency } from '@/utils/useCurrencyFormatter'
 import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal'
 import { sellerRoutes } from '@/constants/routes'
+import { productsAPI } from '@/lib/api/products'
+import CustomButton from '@/components/CustomButton'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -20,58 +23,46 @@ const ProductDetailsDetailed = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set());
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [imageCache, setImageCache] = useState<Map<number, any>>(new Map());
+  const [showDeleteDrawer, setShowDeleteDrawer] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // Sample product data - in real app, this would come from API based on productId
-  const productData = {
-    id: productId || "1",
-    name: productType === 'car' ? "Escalade (2024)" : "Toyota Corolla 2015 Back Tyre (Pair)",
-    year: productType === 'car' ? "2024" : "2015",
-    price: productType === 'car' ? 105000000 : 7000,
-    rating: 5.0,
-    reviewCount: 30,
-    stock: 12,
-    images: [
-      { id: 1, image: productType === 'car' ? images.car1 : images.sparePart },
-      { id: 2, image: productType === 'car' ? images.benz : images.carEngine },
-      { id: 3, image: productType === 'car' ? images.car1 : images.sparePart }
-    ],
-    description: productType === 'car' 
-      ? "Luxury Escalade 2024 in excellent condition. Perfect for family trips or business use. Features include leather seats, premium sound system, and advanced safety features."
-      : "I'm a certified auto mechanic with over 10 years of hands-on experience fixing cars of all kinds — from compact rides to heavy-duty SUVs. I specialize in engine repair, brake systems, and vehicle diagnostics.",
-    sellerRating: 5.0,
-    sellerReviewCount: 30,
-    shippingSpeed: "Excellent",
-    estimatedDelivery: "2-3 days",
-    shippingFeeWithin: 700,
-    shippingFeeOutside: 7000,
-    totalOrders: 2,
-    type: productType || 'sparePart',
-    merchant: {
-      first_name: "John",
-      last_name: "Mechanic",
-      email: "john@mechanic.com",
-      phone_number: "08056432765"
-    },
-    category: {
-      name: productType === 'car' ? "Cars" : "Spare Parts"
-    },
-    condition: "New",
-    warranty: "1 Year",
-    created_at: "2024-01-15",
-    is_rental: false,
-    purchased_count: 15,
-    views: 245,
-    likes: 12,
-    status: "Active"
-  };
-
-  // Animation effects
+  // Fetch product details from API
   useEffect(() => {
+    const fetchProductDetails = async () => {
+      if (!productId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await productsAPI.getProductById(productId);
+        setProductData(response.data);
+        console.log('Fetched product details:', response.data);
+      } catch (err) {
+        console.error('Error fetching product details:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch product details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [productId]);
+
+  // Animation effects - only start when data is loaded
+  useEffect(() => {
+    if (productData && !loading) {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -90,11 +81,106 @@ const ProductDetailsDetailed = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+    }
+  }, [productData, loading]);
 
   const handleImageError = (index: number) => {
     setImageErrors(prev => new Set(prev).add(index));
   };
+
+  const handleImageLoad = (index: number) => {
+    setImageLoadingStates(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
+    setLoadedImages(prev => new Set(prev).add(index));
+    
+    // Store in cache for ultra-fast future access
+    if (productData?.images?.[index]) {
+      setImageCache(prev => new Map(prev).set(index, productData.images[index]));
+    }
+  };
+
+  const handleImageLoadStart = (index: number) => {
+    // Only show skeleton loading if image hasn't been preloaded
+    if (!loadedImages.has(index)) {
+      setImageLoadingStates(prev => new Set(prev).add(index));
+    }
+  };
+
+  const handleImageChange = (index: number) => {
+    // Clear any previous loading states for this image
+    setImageLoadingStates(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
+    // Clear any previous error states for this image
+    setImageErrors(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
+    setSelectedImageIndex(index);
+  };
+
+  // Shimmer animation for skeleton loading
+  useEffect(() => {
+    const shimmerAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmerAnimation.start();
+    
+    return () => shimmerAnimation.stop();
+  }, [shimmerAnim]);
+
+  // Background preloading for all images
+  useEffect(() => {
+    if (productData?.images) {
+      // Preload all images in parallel
+      productData.images.forEach((imageItem: any, index: number) => {
+        if (imageItem.image) {
+          Image.prefetch(imageItem.image)
+            .then(() => {
+              setLoadedImages(prev => new Set(prev).add(index));
+            })
+            .catch(() => setImageErrors(prev => new Set(prev).add(index)));
+        }
+      });
+    }
+  }, [productData]);
+
+  // Skeleton Loading Component
+  const SkeletonLoader = () => (
+    <View className="absolute inset-0 bg-gray-200">
+      <Animated.View
+        className="w-full h-full bg-gray-200 relative overflow-hidden"
+        style={{
+          opacity: shimmerAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.3, 0.7],
+          }),
+        }}
+      >
+        <View className="w-full h-full bg-gray-300" />
+        <View className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <View className="w-20 h-20 bg-gray-400 rounded-full" />
+        </View>
+      </Animated.View>
+    </View>
+  );
 
   const renderStars = (rating: number) => {
     const stars = []
@@ -118,21 +204,29 @@ const ProductDetailsDetailed = () => {
   }
 
   const handleEdit = () => {
-    // Navigate to edit page based on product type with product data
-    if (productData.type === 'sparePart') {
+    if (!productData) return;
+    
+    console.log('🔍 DEBUG: handleEdit called with productData:', productData);
+    console.log('🔍 DEBUG: productData.id:', productData.id);
+    console.log('🔍 DEBUG: productData.category?.name:', productData.category?.name);
+    
+    // Navigate to edit page based on product type
+    if (productData.category?.name?.toLowerCase().includes('spare')) {
       router.push({
-        pathname: '/upload-sparePart' as any,
+        pathname: sellerRoutes.editProduct,
         params: {
           editMode: 'true',
           productId: productData.id,
           productData: JSON.stringify(productData)
         }
       });
-    } else if (productData.type === 'car') {
+    } else if (productData.category?.name?.toLowerCase().includes('car')) {
+      // Navigate to the new dedicated edit page
+      console.log('🔍 DEBUG: Navigating to dedicated edit page with productId:', productData.id);
+
       router.push({
-        pathname: '/uploadProducts' as any,
+        pathname: sellerRoutes.editProduct,
         params: {
-          editMode: 'true',
           productId: productData.id,
           productData: JSON.stringify(productData)
         }
@@ -141,27 +235,161 @@ const ProductDetailsDetailed = () => {
   };
 
   const handleDelete = () => {
-    setShowDeleteModal(true);
+    setShowDeleteDrawer(true);
   };
 
-  const handleConfirmDelete = () => {
-    setShowDeleteModal(false);
-    // In real app, call delete API here
-    console.log('Deleting product:', productData.id);
+  const handleConfirmDelete = async () => {
+    if (!productId) return;
     
-    // Navigate to success page
-    setTimeout(() => {
-      router.push({
-        pathname: sellerRoutes.deleteSuccess as any,
-        params: { itemType: productData.type }
-      });
-    }, 300);
+    setIsDeleting(true);
+    try {
+      // Call the DELETE endpoint
+      await productsAPI.deleteProduct(productId);
+      
+      // Close drawer and navigate back
+      setShowDeleteDrawer(false);
+      router.back();
+      
+      // Show success message or handle success
+      console.log('Product deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      // Handle error - maybe show an alert
+    } finally {
+      setIsDeleting(false);
+    }
   };
+
+  const handleCancelDelete = () => {
+    setShowDeleteDrawer(false);
+  };
+
 
   const handleViewOrders = () => {
     // Navigate to orders page
     router.push('/(root)/(tabs)/(sellers)/orders' as any);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* Loading Content */}
+        <LoadingSpinner 
+          message="Loading product details..."
+          subMessage="Please wait while we fetch the information"
+          size="medium"
+          logoSize={32}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* Error Content */}
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-red-50 rounded-3xl p-8 items-center">
+            <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+              <Text className="text-red-500 text-2xl">⚠️</Text>
+            </View>
+            <Text className="text-red-700 font-NunitoBold text-lg mb-2">Error Loading Product</Text>
+            <Text className="text-red-600 text-center mb-4">{error}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setError(null);
+                setLoading(true);
+                // Retry fetch
+                const fetchProductDetails = async () => {
+                  if (!productId) return;
+                  
+                  try {
+                    const response = await productsAPI.getProductById(productId);
+                    setProductData(response.data);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to fetch Product details');
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                fetchProductDetails();
+              }}
+              className="bg-red-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show content if no product data
+  if (!productData) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* No Data Content */}
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-white rounded-3xl p-8 items-center">
+            <View className="w-20 h-20 bg-gray-200 rounded-full items-center justify-center mb-6">
+              <icons.empty width={40} height={40} />
+            </View>
+            <Text className="text-gray-700 font-NunitoBold text-lg mb-2">Product Not Found</Text>
+            <Text className="text-gray-500 text-center mb-6">
+              The product you're looking for doesn't exist or has been removed.
+            </Text>
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              className="bg-primary-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -180,7 +408,7 @@ const ProductDetailsDetailed = () => {
         </TouchableOpacity>
         <View className="flex-1 items-center">
           <Text className="text-lg font-NunitoBold text-gray-900">
-            {productData.type === 'sparePart' ? 'Spare part details' : 'Car details'}
+            {productData.category?.name?.toLowerCase().includes('spare') ? 'Spare part details' : 'Car details'}
           </Text>
         </View>
         <View className="w-6" />
@@ -195,47 +423,80 @@ const ProductDetailsDetailed = () => {
           }}
           className="relative"
         >
-          {/* Main Hero Image */}
+
+          {/* Main Hero Image - Swipeable */}
           <View className="relative">
             <View 
               className="w-full bg-gray-100 overflow-hidden"
               style={{ height: screenWidth * 0.8 }}
             >
               {productData.images && productData.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
-                typeof productData.images[selectedImageIndex].image === 'function' ? (
-                  <View className="w-full h-full items-center justify-center bg-gray-50">
-                    {React.createElement(productData.images[selectedImageIndex].image, { width: 250, height: 250 })}
-                  </View>
-                ) : (
-                  <Image
-                    source={{ uri: productData.images[selectedImageIndex].image }}
+                <View className="w-full h-full relative">
+                  <TouchableOpacity 
+                    activeOpacity={1}
+                    onPress={() => {
+                      // Cycle through images on tap
+                      if (productData.images.length > 1) {
+                        const nextIndex = (selectedImageIndex + 1) % productData.images.length;
+                        handleImageChange(nextIndex);
+                      }
+                    }}
                     className="w-full h-full"
-                    style={{ resizeMode: 'cover' }}
-                    onError={() => handleImageError(selectedImageIndex)}
-                  />
-                )
+                  >
+                    <Image
+                      key={`main-image-${selectedImageIndex}-${productData.images[selectedImageIndex].id}`}
+                      source={{ 
+                        uri: productData.images[selectedImageIndex].image,
+                        cache: 'force-cache'
+                      }}
+                      className="w-full h-full"
+                      style={{ resizeMode: 'cover' }}
+                      onError={() => handleImageError(selectedImageIndex)}
+                      onLoadStart={() => handleImageLoadStart(selectedImageIndex)}
+                      onLoad={() => handleImageLoad(selectedImageIndex)}
+                      fadeDuration={loadedImages.has(selectedImageIndex) ? 0 : 50}
+                    />
+                  </TouchableOpacity>
+                  {imageLoadingStates.has(selectedImageIndex) && <SkeletonLoader />}
+                </View>
               ) : (
                 <View className="w-full h-full items-center justify-center bg-gray-50">
-                  <images.ProductImg width={200} height={200} />
-                  {imageErrors.has(selectedImageIndex) && (
-                    <Text className="text-sm text-gray-500 mt-2">Image failed to load</Text>
-                  )}
+                  <icons.empty width={200} height={200} />
+                  <Text className="text-sm text-gray-500 mt-2">No Image Available</Text>
                 </View>
               )}
             </View>
 
-            {/* Image Navigation Dots */}
+            {/* Image Navigation Dots - Scrollable */}
             {productData.images && productData.images.length > 1 && (
-              <View className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex-row space-x-2">
-                {productData.images.map((_, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => setSelectedImageIndex(index)}
-                    className={`w-2 h-2 rounded-full ${
-                      index === selectedImageIndex ? 'bg-primary-500' : 'bg-white/50'
-                    }`}
-                  />
-                ))}
+              <View className="absolute bottom-6 left-0 right-0">
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ 
+                    alignItems: 'center',
+                    paddingHorizontal: 20
+                  }}
+                  className="flex-row"
+                >
+                  {productData.images.map((_: any, index: number) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => handleImageChange(index)}
+                      className={`w-3 h-3 rounded-full relative mx-1 ${
+                        index === selectedImageIndex ? 'bg-primary-500' : 'bg-white/70'
+                      }`}
+                      style={{ 
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 2,
+                        elevation: 3
+                      }}
+                    >
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -243,25 +504,32 @@ const ProductDetailsDetailed = () => {
           {/* Thumbnail Images */}
           {productData.images && productData.images.length > 1 && (
             <View className="flex-row justify-center mt-3 space-x-2 px-4">
-              {productData.images.map((imageItem, index) => (
+              {productData.images.map((imageItem: any, index: number) => (
                 <TouchableOpacity
                   key={index}
-                  onPress={() => setSelectedImageIndex(index)}
-                  className={`w-12 h-12 rounded-lg overflow-hidden ${
+                  onPress={() => handleImageChange(index)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden ${
                     selectedImageIndex === index ? 'border-2 border-primary-500' : 'border border-gray-300'
                   }`}
+                  style={{
+                    shadowColor: selectedImageIndex === index ? '#3B82F6' : '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: selectedImageIndex === index ? 0.3 : 0.1,
+                    shadowRadius: 2,
+                    elevation: selectedImageIndex === index ? 3 : 1
+                  }}
                 >
-                  {typeof imageItem.image === 'function' ? (
-                    <View className="w-full h-full items-center justify-center bg-gray-100">
-                      {React.createElement(imageItem.image, { width: 30, height: 30 })}
-                    </View>
-                  ) : (
-                    <Image 
-                      source={{ uri: imageItem.image }} 
-                      className="w-full h-full"
-                      style={{ resizeMode: 'cover' }}
-                    />
-                  )}
+                  <Image 
+                    key={`thumb-image-${index}-${imageItem.id}`}
+                    source={{ 
+                      uri: imageItem.image,
+                      cache: 'force-cache'
+                    }} 
+                    className="w-full h-full"
+                    style={{ resizeMode: 'cover' }}
+                    onError={() => handleImageError(index)}
+                    fadeDuration={0}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -293,7 +561,7 @@ const ProductDetailsDetailed = () => {
             {/* Price and Stock Status */}
             <View className="flex-row items-center justify-between my-4">
               <NairaCurrency
-                value={productData.price}
+                value={parseFloat(productData.price)}
                 className="text-3xl font-NunitoExtraBold text-primary-500"
               />
               <View className="flex-row items-center bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
@@ -321,15 +589,15 @@ const ProductDetailsDetailed = () => {
             <View className="flex-row items-center justify-between py-3 border-t border-gray-100">
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Views:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.views}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.views || 0}</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Likes:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.likes}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.likes || 0}</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Sold:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.purchased_count}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.purchased_count || 0}</Text>
               </View>
             </View>
           </View>
@@ -380,9 +648,9 @@ const ProductDetailsDetailed = () => {
               Product performance
             </Text>
             <View className="flex-row items-center mb-3">
-              {renderStars(productData.rating)}
+              {renderStars(productData.rating || 0)}
               <Text className="text-gray-600 ml-2 font-NunitoMedium">
-                {productData.rating} ({productData.reviewCount} reviews)
+                {productData.rating || 0} ({productData.reviews?.length || 0} reviews)
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
@@ -394,13 +662,13 @@ const ProductDetailsDetailed = () => {
                   <Text className={`text-xs font-NunitoBold ${
                     productData.status === 'Active' ? 'text-green-700' : 'text-gray-600'
                   }`}>
-                    {productData.status}
+                    {productData.status || 'Active'}
                   </Text>
                 </View>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Stock:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.stock} units</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.stock || 0} units</Text>
               </View>
             </View>
           </View>
@@ -429,34 +697,40 @@ const ProductDetailsDetailed = () => {
             <View className="space-y-3">
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Category</Text>
-                <Text className="text-sm font-NunitoBold text-primary-600">{productData.category.name}</Text>
+                <Text className="text-sm font-NunitoBold text-primary-600">{productData.category?.name || 'N/A'}</Text>
               </View>
 
+              {productData.condition && (
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Condition</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">{productData.condition}</Text>
               </View>
+              )}
 
+              {productData.warranty && (
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Warranty</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">{productData.warranty}</Text>
               </View>
+              )}
 
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Listed on</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">
-                  {new Date(productData.created_at).toLocaleDateString('en-US', {
+                  {productData.created_at ? new Date(productData.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
-                  })}
+                  }) : 'N/A'}
                 </Text>
               </View>
 
+              {productData.estimatedDelivery && (
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Delivery time</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">{productData.estimatedDelivery}</Text>
               </View>
+              )}
             </View>
           </View>
         </Animated.View>
@@ -487,7 +761,7 @@ const ProductDetailsDetailed = () => {
                   Orders for this product
                 </Text>
                 <Text className="text-gray-500 text-sm">
-                  {productData.totalOrders} orders placed
+                  {productData.totalOrders || 0} orders placed
                 </Text>
               </View>
             </View>
@@ -538,9 +812,56 @@ const ProductDetailsDetailed = () => {
         visible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDelete}
-        itemType={productData.type}
-        itemName={productData.name}
+        itemType={productData?.category?.name?.toLowerCase().includes('car') ? 'car' : 'sparePart'}
+        itemName={productData?.name || ''}
       />
+
+      {/* Bottom Delete Warning Drawer */}
+      <Modal
+        visible={showDeleteDrawer}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelDelete}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-3xl p-6">
+            {/* Warning Icon and Title */}
+            <View className="items-center mb-6">
+              <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+                <ExclamationTriangleIcon size={32} color="#EF4444" />
+              </View>
+              <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
+                Delete Product?
+              </Text>
+              <Text className="text-gray-600 text-center leading-6">
+                Are you sure you want to delete "{productData?.name}"? This action cannot be undone and will permanently remove this product from your listings.
+              </Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View className="space-y-3">
+              <CustomButton 
+                title="Delete" 
+                onPress={handleConfirmDelete}
+                loading={isDeleting}
+                disabled={isDeleting}
+              />
+
+              <CustomButton 
+                title="Cancel" 
+                onPress={handleCancelDelete} 
+                bgVariant="outline" 
+                textVariant="outline" 
+                className="mt-2"
+                disabled={isDeleting}
+              />
+            </View>
+
+            {/* Safe Area Bottom */}
+            <View className="h-8" />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }

@@ -1,5 +1,5 @@
 import api from '../axios';
-import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL } from '../endpoints';
+import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS } from '../endpoints';
 
 // Types
 export interface LoginCredentials {
@@ -330,6 +330,29 @@ export const userAPI = {
       console.log('Error data:', JSON.stringify(error.response?.data, null, 2));
       console.log('Error message:', error.message);
       console.log('=================================');
+      throw error;
+    }
+  },
+
+  // Get merchant profile
+  getMerchantProfile: async (): Promise<MerchantProfileResponse> => {
+    console.log('=== MERCHANT PROFILE API REQUEST ===');
+    console.log('Endpoint:', MERCHANT_ENDPOINTS.PROFILE);
+    console.log('====================================');
+
+    try {
+      const response = await api.get(MERCHANT_ENDPOINTS.PROFILE);
+      console.log('=== MERCHANT PROFILE API RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('=====================================');
+      return response.data;
+    } catch (error: any) {
+      console.log('=== MERCHANT PROFILE API ERROR ===');
+      console.log('Error status:', error.response?.status);
+      console.log('Error data:', JSON.stringify(error.response?.data, null, 2));
+      console.log('Error message:', error.message);
+      console.log('==================================');
       throw error;
     }
   },

@@ -301,3 +301,127 @@ export const BankNameLogo = [
         logo: "https://nigerianbanks.xyz/logo/zenith-bank.png",
     },
 ];
+
+export const deliveryOptions = [
+    { label: 'Pickup', value: 'pickup' },
+    { label: 'Nationwide', value: 'nationwide' },
+    { label: 'International', value: 'international' },
+]
+
+export const currencyOptions = [
+    { label: 'Nigerian Naira (₦)', value: 'NGN' },
+    { label: 'US Dollar ($)', value: 'USD' },
+]
+
+export const engineSizeOptions = [
+    { label: '1.0L', value: '1.0L' },
+    { label: '1.2L', value: '1.2L' },
+    { label: '1.4L', value: '1.4L' },
+    { label: '1.5L', value: '1.5L' },
+    { label: '1.6L', value: '1.6L' },
+    { label: '1.8L', value: '1.8L' },
+    { label: '2.0L', value: '2.0L' },
+    { label: '2.2L', value: '2.2L' },
+    { label: '2.4L', value: '2.4L' },
+    { label: '2.5L', value: '2.5L' },
+    { label: '2.7L', value: '2.7L' },
+    { label: '3.0L', value: '3.0L' },
+    { label: '3.2L', value: '3.2L' },
+    { label: '3.5L', value: '3.5L' },
+    { label: '3.6L', value: '3.6L' },
+    { label: '4.0L', value: '4.0L' },
+    { label: '4.2L', value: '4.2L' },
+    { label: '4.6L', value: '4.6L' },
+    { label: '5.0L', value: '5.0L' },
+    { label: '5.7L', value: '5.7L' },
+    { label: '6.0L', value: '6.0L' },
+    { label: '6.2L', value: '6.2L' },
+    { label: '6.4L', value: '6.4L' },
+    { label: '7.0L', value: '7.0L' },
+    { label: '8.0L', value: '8.0L' },
+    // V6 Engines
+    { label: '2.0L V6', value: '2.0L V6' },
+    { label: '2.5L V6', value: '2.5L V6' },
+    { label: '3.0L V6', value: '3.0L V6' },
+    { label: '3.2L V6', value: '3.2L V6' },
+    { label: '3.5L V6', value: '3.5L V6' },
+    { label: '3.6L V6', value: '3.6L V6' },
+    { label: '4.0L V6', value: '4.0L V6' },
+    // V8 Engines
+    { label: '4.6L V8', value: '4.6L V8' },
+    { label: '5.0L V8', value: '5.0L V8' },
+    { label: '5.7L V8', value: '5.7L V8' },
+    { label: '6.0L V8', value: '6.0L V8' },
+    { label: '6.2L V8', value: '6.2L V8' },
+    { label: '6.4L V8', value: '6.4L V8' },
+    { label: '7.0L V8', value: '7.0L V8' },
+    // V12 Engines
+    { label: '6.0L V12', value: '6.0L V12' },
+    { label: '6.5L V12', value: '6.5L V12' },
+    // Electric/Hybrid
+    { label: 'Electric', value: 'Electric' },
+    { label: 'Hybrid', value: 'Hybrid' },
+    { label: 'Plug-in Hybrid', value: 'Plug-in Hybrid' },
+]
+
+export const bodyTypeOptions = [
+    { label: 'Sedan', value: 'sedan' },
+    { label: 'SUV', value: 'suv' },
+    { label: 'Hatchback', value: 'hatchback' },
+    { label: 'Coupe', value: 'coupe' },
+    { label: 'Convertible', value: 'convertible' },
+    { label: 'Truck', value: 'truck' },
+    { label: 'Van', value: 'van' },
+]
+
+export const fuelTypeOptions = [
+    { label: 'Petrol', value: 'petrol' },
+    { label: 'Diesel', value: 'diesel' },
+    { label: 'Hybrid', value: 'hybrid' },
+    { label: 'Electric', value: 'electric' },
+    { label: 'LPG', value: 'lpg' },
+    { label: 'CNG', value: 'cng' },
+]
+
+export const conditionOptions = [
+    { label: 'New', value: 'new' },
+    { label: 'Used', value: 'used' },
+    { label: 'Certified', value: 'certified' },
+    { label: 'Other', value: 'other' },
+]
+
+export const transmissionOptions = [
+    { label: 'Automatic', value: 'automatic' },
+    { label: 'Manual', value: 'manual' },
+    { label: 'Semi-Automatic', value: 'semi_automatic' },
+    { label: 'CVT', value: 'cvt' },
+    { label: 'Other', value: 'other' },
+]
+
+export const mileageUnitOptions = [
+    { label: 'Kilometers (km)', value: 'km' },
+    { label: 'Miles', value: 'mi' },
+]
+
+export const availabilityOptions = [
+    { label: 'In Stock', value: 'in_stock' },
+    { label: 'Reserved', value: 'reserved' },
+    { label: 'Sold', value: 'sold' },
+]
+
+export const featureOptions = [
+    'Air Conditioning',
+    'Leather Seats', 
+    'Navigation System',
+    'Bluetooth',
+    'Parking Sensors',
+    'Cruise Control',
+    'Keyless Entry',
+    'Sunroof',
+    'Alloy Wheels',
+    'Airbags',
+    'ABS',
+    'Traction Control',
+    'Lane Assist',
+    'Blind Spot Monitor'
+]

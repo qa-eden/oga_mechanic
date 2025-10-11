@@ -1,15 +1,19 @@
 import React, { useState, useCallback } from 'react'
-import { View, Text, TouchableOpacity, Image, ScrollView, FlatList, Dimensions } from 'react-native'
+import { View, Text, TouchableOpacity, Image, ScrollView, FlatList, Dimensions, RefreshControl } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ArrowLeftIcon, PlusIcon } from 'react-native-heroicons/outline'
-import { images } from '@/constants'
+import { images, icons } from '@/constants'
 import { router } from 'expo-router'
 import { LAYOUT } from '@/constants/units'
 import { sellerRoutes } from '@/constants/routes'
 import Card1 from '@/components/cards/Card1'
 import SearchBarWithCategories from '@/components/SearchBarWithCategories'
 import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal'
+import LoadingSpinner from '@/components/LoadingSpinner'
+import { useQuery } from '@tanstack/react-query'
+import { productsAPI } from '@/lib/api/products'
+import { useActiveRoleProfile } from '@/hooks/useUserProfile'
 
 const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
 
@@ -20,6 +24,7 @@ const AllSpareParts = () => {
   const [maxPrice, setMaxPrice] = useState("")
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [refreshing, setRefreshing] = useState(false)
   
   const categoryOptions = [
     { name: "All", id: null },
@@ -28,14 +33,62 @@ const AllSpareParts = () => {
     { name: "Hyundai", id: 3 }
   ]
   
-  const spareParts = [
-    { id: "1", name: "Car Wheel", image: images.sparePart, rating: 5.0, reviewCount: 30, price: 150000 },
-    { id: "2", name: "Engine Oil", image: images.carEngine, rating: 4.5, reviewCount: 30, price: 7000 },
-    { id: "3", name: "Brake Pad", image: images.sparePart, rating: 4.8, reviewCount: 25, price: 25000 },
-    { id: "4", name: "Air Filter", image: images.carEngine, rating: 4.2, reviewCount: 20, price: 12000 },
-    { id: "5", name: "Spark Plug", image: images.sparePart, rating: 4.7, reviewCount: 35, price: 5000 },
-    { id: "6", name: "Oil Filter", image: images.carEngine, rating: 4.6, reviewCount: 28, price: 8000 },
-  ]
+  // Fetch user profile based on active role to get merchant ID
+  const { data: profileData, activeRole } = useActiveRoleProfile();
+  
+  // Extract merchant ID safely from different profile structures
+  const merchantId = activeRole === 'merchant' 
+    ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
+    : (profileData?.data as any)?.user_id;
+  
+  console.log('🔍 Active Role:', activeRole, 'Merchant ID:', merchantId);
+  
+  // Fetch spare parts using TanStack Query with merchant_id filter
+  const {
+    data: spareParts = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['products', merchantId, 'spareParts'], // Unique key for spare parts only
+    queryFn: async () => {
+      const response = await productsAPI.getProducts(
+        undefined, // categoryId
+        undefined, // minPrice
+        undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        merchantId  // merchantId
+      )
+      // Filter for spare parts only
+      const sparePartProducts = (response.data.results || []).filter((product: any) => 
+        product.category?.name?.toLowerCase().includes('spare') || 
+        product.category?.name?.toLowerCase().includes('part')
+      )
+      console.log('Fetched spare parts for merchant:', merchantId, sparePartProducts)
+      return sparePartProducts
+    },
+    enabled: !!merchantId, // Only fetch when we have merchantId
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Pull-to-refresh functionality
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      console.log('🔄 Pull-to-refresh triggered - refetching spare parts...')
+      await refetch()
+      console.log('✅ Spare parts refreshed successfully')
+    } catch (error) {
+      console.error('❌ Error during refresh:', error)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refetch])
 
   const handleSearchChange = useCallback((text: string) => {
     setInputQuery(text);
@@ -87,27 +140,49 @@ const AllSpareParts = () => {
     }, 300);
   };
 
-  const renderSparePartCard = ({ item, index }: { item: any; index: number }) => (
-    <View className="w-1/2 px-2 mb-4">
-      <Card1
-        Images={item.image}
-        rating={item.rating}
-        name={item.name}
-        reviewCount={item.reviewCount}
-        price={item.price}
-        showLove={false}
-            onPress={() => {
-              router.push({
-                pathname: sellerRoutes.productDetailsDetailed as any,
-                params: { 
-                  productType: 'sparePart',
-                  productId: item.id 
-                }
-              });
-            }}
-      />
-    </View>
-  )
+  const renderSparePartCard = ({ item, index }: { item: any; index: number }) => {
+    const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
+    
+    return (
+      <View className="w-1/2 px-2 mb-4">
+        <TouchableOpacity 
+          className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm"
+          onPress={() => {
+            router.push({
+              pathname: sellerRoutes.productDetailsDetailed as any,
+              params: { 
+                productType: 'sparePart',
+                productId: item.id 
+              }
+            });
+          }}
+        >
+          <View className="w-full h-[160px]">
+            {productImage ? (
+              <Image source={{ uri: productImage }} className="w-full h-full" resizeMode="cover" />
+            ) : (
+              <View className="w-full h-full bg-gray-200 items-center justify-center">
+                <icons.empty width={60} height={60} />
+                <Text className="text-gray-500 text-xs mt-2">No Image</Text>
+              </View>
+            )}
+          </View>
+          <View className="p-3">
+            <Text className="font-NunitoBold text-gray-900 text-sm mb-1" numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View className="flex-row items-center mb-2">
+              <Text className="text-yellow-400 text-sm">★</Text>
+              <Text className="text-gray-500 text-xs ml-1">({item.reviews?.length || 0})</Text>
+            </View>
+            <Text className="font-NunitoBold text-gray-900">
+              NGN {parseFloat(item.price).toLocaleString()}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
@@ -143,21 +218,76 @@ const AllSpareParts = () => {
       />
 
       {/* Products Grid */}
-      <FlatList
-        data={spareParts}
-        renderItem={renderSparePartCard}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: CARD_PADDING,
-          paddingBottom: SCROLL_PADDING_BOTTOM,
-        }}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews={true}
-          />
+      {loading ? (
+        <LoadingSpinner 
+          message="Loading Spare Parts"
+          subMessage="Fetching your uploaded spare parts..."
+          size="medium"
+          logoSize={32}
+        />
+      ) : error ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-red-50 rounded-3xl p-8 items-center">
+            <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+              <Text className="text-red-500 text-2xl">⚠️</Text>
+            </View>
+            <Text className="text-red-700 font-NunitoBold text-lg mb-2">Error Loading Spare Parts</Text>
+            <Text className="text-red-600 text-center mb-4">
+              {error instanceof Error ? error.message : 'Failed to fetch spare parts'}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => refetch()}
+              className="bg-red-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : spareParts.length > 0 ? (
+        <FlatList
+          data={spareParts}
+          renderItem={renderSparePartCard}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#0A6DEE"
+              colors={['#0A6DEE']}
+              title="Pull to refresh"
+              titleColor="#6B7280"
+            />
+          }
+          contentContainerStyle={{
+            paddingHorizontal: CARD_PADDING,
+            paddingBottom: SCROLL_PADDING_BOTTOM,
+          }}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={true}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-gray-50 rounded-3xl p-8 items-center">
+            <View className="w-20 h-20 bg-gray-200 rounded-full items-center justify-center mb-6">
+              <icons.empty width={40} height={40} />
+            </View>
+            <Text className="text-gray-700 font-NunitoBold text-lg mb-2">No Spare Parts Uploaded</Text>
+            <Text className="text-gray-500 text-center mb-6">
+              You haven't uploaded any spare parts yet. Start by adding your first spare part listing.
+            </Text>
+            <TouchableOpacity 
+              onPress={() => router.push(sellerRoutes.uploadSpareParts)}
+              className="bg-primary-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Upload Your First Spare Part</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
           {/* Delete Confirmation Modal */}
           <DeleteConfirmationModal

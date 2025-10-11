@@ -11,6 +11,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Api-Key': ENV_CONFIG.API_KEY,
+    'ngrok-skip-browser-warning': 'true', // Bypass ngrok browser warning
   },
 });
 

@@ -413,6 +413,17 @@ const Cart = () => {
       }}
       onRemove={removeItem}
       onUpdateQuantity={updateQuantity}
+      onPress={() => {
+        const apiItem = cartData?.data?.items?.find(i => parseInt(i.id) === item.id);
+        if (apiItem?.product?.id) {
+          router.push({
+            pathname: routes.ProductDetail,
+            params: {
+              productId: apiItem.product.id.toString(),
+            },
+          });
+        }
+      }}
     />
   );
 

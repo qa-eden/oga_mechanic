@@ -58,7 +58,7 @@ const Navbar = () => {
 
         <View>
           <View className="flex flex-row items-center gap-1">
-            <Text className="font-NunitoBold text-[1.2rem]">Hi, {displayName}</Text>
+            <Text className="font-NunitoBold text-[1.2rem]">Hi, {displayName || 'User'}</Text>
             {icon}
             {/* {isVerified && (
               <View className="bg-green-100 px-1 py-0.5 rounded-full ml-1">

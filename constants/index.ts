@@ -47,6 +47,7 @@ import cartImg from "@/assets/images/dummy/cartImg.svg";
 //icons
 import logo from "@/assets/icons/logo.svg";
 import logoBlack from "@/assets/icons/logo_black.svg";
+import logoBox from "@/assets/icons/box_logo.svg";
 import splash from "@/assets/icons/logo2.svg";
 import backBtn from "@/assets/icons/backBtn.svg";
 import tick1 from "@/assets/icons/tick1.svg";
@@ -157,6 +158,7 @@ export const images = {
 export const icons = {
   logo,
   logoBlack,
+  logoBox,
   eyeClosed,
   eyeOpen,
   tick1,

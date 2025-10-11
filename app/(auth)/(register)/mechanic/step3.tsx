@@ -98,7 +98,7 @@ const MechanicStep3 = () => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 10],
         quality: 0.8,
@@ -128,7 +128,7 @@ const MechanicStep3 = () => {
   const pickFromLibrary = async (type: "front" | "back") => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 10],
         quality: 0.8,

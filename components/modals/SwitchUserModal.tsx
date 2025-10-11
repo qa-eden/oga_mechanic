@@ -20,6 +20,7 @@ import CustomAlert from "../CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import { userAPI } from "@/lib/api/user";
 import { useQueryClient } from "@tanstack/react-query";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -130,7 +131,7 @@ const SwitchUserModal = ({
       merchant: {
         icon: ShoppingBagIcon,
         description: "Sell products and services",
-        displayName: "Merchant"
+        displayName: "Seller"
       },
       primary_user: {
         icon: UsersIcon,
@@ -215,6 +216,9 @@ const SwitchUserModal = ({
           
           await userAPI.switchRole(roleId);
           
+          // Store the new active role for fallback purposes
+          await AsyncStorage.setItem('current_active_role', roleName);
+          
           // Invalidate user roles query to trigger refetch
           queryClient.invalidateQueries({ queryKey: ['userProfile', 'roles'] });
           
@@ -281,7 +285,7 @@ const SwitchUserModal = ({
         const displayName = selectedOption?.name || selectedUser;
         showError(
           "Role Not Available",
-          `You haven't signed up for the ${displayName} role yet. The app will redirect you to sign up for this role.`
+          `You haven't signed up for the ${displayName ?? 'User'} role yet. The app will redirect you to sign up for this role.`
         );
         
         // After showing the alert, navigate to signup after a delay

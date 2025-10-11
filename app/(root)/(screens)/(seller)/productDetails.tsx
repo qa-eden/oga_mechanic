@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Image, ScrollView, Dimensions, Animated, Linking } from 'react-native'
+import { View, Text, TouchableOpacity, Image, ScrollView, Dimensions, Animated, Linking, ActivityIndicator } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ArrowLeftIcon, DocumentTextIcon, ChevronRightIcon, PhoneIcon } from 'react-native-heroicons/outline'
-import { images } from '@/constants'
+import { images, icons } from '@/constants'
 import { router, useLocalSearchParams } from 'expo-router'
 import { NairaCurrency } from '@/utils/useCurrencyFormatter'
 import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal'
 import { sellerRoutes } from '@/constants/routes'
+import { productsAPI } from '@/lib/api/products'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -20,72 +21,40 @@ const ProductDetails = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-  // Sample product data - in real app, this would come from API based on productId
-  const productData = {
-    id: productId || "1",
-    name: productType === 'rentedCar' ? "BMW 328" : productType === 'car' ? "Escalade (2024)" : "Toyota Corolla 2015 Back Tyre (Pair)",
-    year: productType === 'rentedCar' ? "2019" : productType === 'car' ? "2024" : "2015",
-    price: productType === 'rentedCar' ? 400000 : productType === 'car' ? 105000000 : 7000,
-    rating: 5.0,
-    reviewCount: 30,
-    stock: 12,
-    images: [
-      { id: 1, image: productType === 'rentedCar' ? images.car1 : productType === 'car' ? images.car1 : images.sparePart },
-      { id: 2, image: productType === 'rentedCar' ? images.benz : productType === 'car' ? images.benz : images.carEngine },
-      { id: 3, image: productType === 'rentedCar' ? images.car1 : productType === 'car' ? images.car1 : images.sparePart }
-    ],
-    description: productType === 'rentedCar' 
-      ? "Premium BMW 328 available for daily rental. Well-maintained vehicle with automatic transmission, perfect for business trips or special occasions. Includes full insurance coverage and 24/7 roadside assistance."
-      : productType === 'car' 
-      ? "Luxury Escalade 2024 in excellent condition. Perfect for family trips or business use. Features include leather seats, premium sound system, and advanced safety features."
-      : "I'm a certified auto mechanic with over 10 years of hands-on experience fixing cars of all kinds — from compact rides to heavy-duty SUVs. I specialize in engine repair, brake systems, and vehicle diagnostics.",
-    sellerRating: 5.0,
-    sellerReviewCount: 30,
-    shippingSpeed: "Excellent",
-    estimatedDelivery: "2-3 days",
-    shippingFeeWithin: 700,
-    shippingFeeOutside: 7000,
-    totalOrders: 2,
-    type: productType || 'sparePart',
-    merchant: {
-      first_name: "Micheal",
-      last_name: "Adenuga",
-      email: "micheal@mechanic.com",
-      phone_number: "08056432765"
-    },
-    category: {
-      name: productType === 'rentedCar' ? "Car Rental" : productType === 'car' ? "Cars" : "Spare Parts"
-    },
-    condition: "New",
-    warranty: "1 Year",
-    created_at: "2024-01-15",
-    is_rental: productType === 'rentedCar',
-    purchased_count: 15,
-    views: 245,
-    likes: 12,
-    status: "Active",
-    // Car rental specific features
-    features: productType === 'rentedCar' ? {
-      speed: "350km/hr",
-      transmission: "Automatic",
-      fuel: "Fuel",
-      seats: "4 Seats"
-    } : productType === 'car' ? {
-      speed: "250km/hr",
-      transmission: "Automatic", 
-      fuel: "Premium",
-      seats: "7 Seats"
-    } : null
-  };
-
-  // Animation effects
+  // Fetch product details from API
   useEffect(() => {
+    const fetchProductDetails = async () => {
+      if (!productId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await productsAPI.getProductById(productId);
+        setProductData(response.data);
+        console.log('Fetched product details:', response.data);
+      } catch (err) {
+        console.error('Error fetching product details:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch product details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [productId]);
+
+  // Animation effects - only start when data is loaded
+  useEffect(() => {
+    if (productData && !loading) {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -104,7 +73,8 @@ const ProductDetails = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+    }
+  }, [productData, loading]);
 
   const handleImageError = (index: number) => {
     setImageErrors(prev => new Set(prev).add(index));
@@ -132,14 +102,26 @@ const ProductDetails = () => {
   }
 
   const handleEdit = () => {
+    if (!productData) return;
+    
     // Navigate to edit page based on product type with product data
-    if (productData.type === 'rentedCar') {
+    if (productData.is_rental) {
       router.push({
         pathname: '/uploadCarToRent' as any,
         params: {
           editMode: 'true',
           productId: productData.id,
           productData: JSON.stringify(productData)
+        }
+      });
+    } else if (productData.category?.name?.toLowerCase().includes('car')) {
+      router.push({
+        pathname: sellerRoutes.uploadProducts,
+        params: {
+          editMode: 'true',
+          isEditing: 'true',
+          productId: productData.id,
+          formData: JSON.stringify(productData)
         }
       });
     }
@@ -152,13 +134,13 @@ const ProductDetails = () => {
   const handleConfirmDelete = () => {
     setShowDeleteModal(false);
     // In real app, call delete API here
-    console.log('Deleting product:', productData.id);
+    console.log('Deleting product:', productData?.id);
     
     // Navigate to success page
     setTimeout(() => {
       router.push({
         pathname: sellerRoutes.deleteSuccess as any,
-        params: { itemType: productData.type }
+        params: { itemType: productData?.category?.name?.toLowerCase().includes('car') ? 'car' : 'sparePart' }
       });
     }, 300);
   };
@@ -169,10 +151,132 @@ const ProductDetails = () => {
   };
 
   const handleCallSeller = () => {
-    if (productData.merchant.phone_number) {
+    if (productData?.merchant?.phone_number) {
       Linking.openURL(`tel:${productData.merchant.phone_number}`);
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* Loading Content */}
+        <View className="flex-1 items-center justify-center">
+          <View className="bg-white rounded-3xl p-8 items-center shadow-lg">
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text className="text-gray-600 font-NunitoMedium mt-4">Loading product details...</Text>
+            <Text className="text-gray-400 text-sm mt-2">Please wait while we fetch the information</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* Error Content */}
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-red-50 rounded-3xl p-8 items-center">
+            <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+              <Text className="text-red-500 text-2xl">⚠️</Text>
+            </View>
+            <Text className="text-red-700 font-NunitoBold text-lg mb-2">Error Loading Product</Text>
+            <Text className="text-red-600 text-center mb-4">{error}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setError(null);
+                setLoading(true);
+                // Retry fetch
+                const fetchProductDetails = async () => {
+                  if (!productId) return;
+                  
+                  try {
+                    const response = await productsAPI.getProductById(productId);
+                    setProductData(response.data);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to fetch product details');
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                fetchProductDetails();
+              }}
+              className="bg-red-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show content if no product data
+  if (!productData) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <StatusBar style="dark" />
+        
+        {/* Header */}
+        <View className="flex-row items-center justify-between bg-white px-6 py-5 shadow-sm">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color="#000" />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-NunitoBold text-gray-900">Product Details</Text>
+          </View>
+          <View className="w-6" />
+        </View>
+
+        {/* No Data Content */}
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="bg-gray-50 rounded-3xl p-8 items-center">
+            <View className="w-20 h-20 bg-gray-200 rounded-full items-center justify-center mb-6">
+              <icons.empty width={40} height={40} />
+            </View>
+            <Text className="text-gray-700 font-NunitoBold text-lg mb-2">Product Not Found</Text>
+            <Text className="text-gray-500 text-center mb-6">
+              The product you're looking for doesn't exist or has been removed.
+            </Text>
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              className="bg-primary-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoMedium">Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -191,14 +295,14 @@ const ProductDetails = () => {
         </TouchableOpacity>
         <View className="flex-1 items-center">
           <Text className="text-lg font-NunitoBold text-gray-900">
-            {productData.type === 'sparePart' ? 'Spare part details' : productData.type === 'rentedCar' ? 'Car details' : 'Car details'}
+            {productData.category?.name?.toLowerCase().includes('spare') ? 'Spare part details' : 'Car details'}
           </Text>
         </View>
         <View className="w-6" />
       </Animated.View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Car Name and Year */}
+        {/* Product Name and Year */}
         <Animated.View 
           style={{ 
             opacity: fadeAnim,
@@ -209,9 +313,11 @@ const ProductDetails = () => {
           <Text className="text-2xl font-NunitoBold text-gray-900 mb-1">
             {productData.name}
           </Text>
-          <Text className="text-lg text-gray-600">
-            {productData.year}
-          </Text>
+          {productData.year && (
+            <Text className="text-lg text-gray-600">
+              {productData.year}
+            </Text>
+          )}
         </Animated.View>
 
         {/* Hero Product Showcase */}
@@ -229,24 +335,16 @@ const ProductDetails = () => {
               style={{ height: screenWidth * 0.8 }}
             >
               {productData.images && productData.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
-                typeof productData.images[selectedImageIndex].image === 'function' ? (
-                  <View className="w-full h-full items-center justify-center bg-gray-50">
-                    {React.createElement(productData.images[selectedImageIndex].image, { width: 250, height: 250 })}
-                  </View>
-                ) : (
-                  <Image
-                    source={{ uri: productData.images[selectedImageIndex].image }}
-                    className="w-full h-full"
-                    style={{ resizeMode: 'cover' }}
-                    onError={() => handleImageError(selectedImageIndex)}
-                  />
-                )
+                <Image
+                  source={{ uri: productData.images[selectedImageIndex].image }}
+                  className="w-full h-full"
+                  style={{ resizeMode: 'cover' }}
+                  onError={() => handleImageError(selectedImageIndex)}
+                />
               ) : (
                 <View className="w-full h-full items-center justify-center bg-gray-50">
-                  <images.ProductImg width={200} height={200} />
-                  {imageErrors.has(selectedImageIndex) && (
-                    <Text className="text-sm text-gray-500 mt-2">Image failed to load</Text>
-                  )}
+                  <icons.empty width={200} height={200} />
+                  <Text className="text-sm text-gray-500 mt-2">No Image Available</Text>
                 </View>
               )}
             </View>
@@ -284,19 +382,21 @@ const ProductDetails = () => {
             <View className="flex-row items-center mb-6">
               <View className="w-16 h-16 bg-gray-700 rounded-full items-center justify-center mr-4">
                 <Text className="text-white text-xl font-NunitoBold">
-                  {productData.merchant.first_name.charAt(0).toUpperCase()}
+                  {productData.merchant?.first_name?.charAt(0).toUpperCase() || 'S'}
                 </Text>
               </View>
               <View className="flex-1">
                 <Text className="text-white text-lg font-NunitoBold mb-1">
-                  {productData.merchant.first_name} {productData.merchant.last_name}
+                  {productData.merchant?.first_name} {productData.merchant?.last_name}
                 </Text>
-                <View className="flex-row items-center">
-                  <PhoneIcon size={16} color="#9CA3AF" />
-                  <Text className="text-gray-400 text-sm ml-2">
-                    {productData.merchant.phone_number}
-                  </Text>
-                </View>
+                {productData.merchant?.phone_number && (
+                  <View className="flex-row items-center">
+                    <PhoneIcon size={16} color="#9CA3AF" />
+                    <Text className="text-gray-400 text-sm ml-2">
+                      {productData.merchant.phone_number}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -304,7 +404,7 @@ const ProductDetails = () => {
             <View className="mb-6">
               <Text className="text-white text-lg font-NunitoBold mb-2">Overview</Text>
               <NairaCurrency
-                value={productData.price}
+                value={parseFloat(productData.price)}
                 className="text-2xl font-NunitoExtraBold text-white"
               />
               {productData.is_rental && (
@@ -312,27 +412,45 @@ const ProductDetails = () => {
               )}
             </View>
 
-            {/* Car Features Grid */}
-            {productData.features && (
+            {/* Product Features Grid - Only show for cars */}
+            {productData.category?.name?.toLowerCase().includes('car') && (
               <View className="mb-8">
                 <View className="flex-row flex-wrap gap-4">
-                  <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
-                    <Text className="text-gray-400 text-sm mb-1">Speed</Text>
-                    <Text className="text-white font-NunitoBold">{productData.features.speed}</Text>
-                  </View>
-                  <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
-                    <Text className="text-gray-400 text-sm mb-1">Transmission</Text>
-                    <Text className="text-white font-NunitoBold">{productData.features.transmission}</Text>
-                  </View>
-                  <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
-                    <Text className="text-gray-400 text-sm mb-1">Fuel</Text>
-                    <Text className="text-white font-NunitoBold">{productData.features.fuel}</Text>
-                  </View>
-                  <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
-                    <Text className="text-gray-400 text-sm mb-1">Seats</Text>
-                    <Text className="text-white font-NunitoBold">{productData.features.seats}</Text>
-                  </View>
+                  {productData.transmission && (
+                    <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
+                      <Text className="text-gray-400 text-sm mb-1">Transmission</Text>
+                      <Text className="text-white font-NunitoBold">{productData.transmission}</Text>
+                    </View>
+                  )}
+                  {productData.fuel_type && (
+                    <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
+                      <Text className="text-gray-400 text-sm mb-1">Fuel Type</Text>
+                      <Text className="text-white font-NunitoBold">{productData.fuel_type}</Text>
+                    </View>
+                  )}
+                  {productData.engine_size && (
+                    <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
+                      <Text className="text-gray-400 text-sm mb-1">Engine Size</Text>
+                      <Text className="text-white font-NunitoBold">{productData.engine_size}</Text>
+                    </View>
+                  )}
+                  {productData.number_of_seats && (
+                    <View className="bg-gray-800 rounded-xl p-4 flex-1 min-w-[45%]">
+                      <Text className="text-gray-400 text-sm mb-1">Seats</Text>
+                      <Text className="text-white font-NunitoBold">{productData.number_of_seats} Seats</Text>
+                    </View>
+                  )}
                 </View>
+              </View>
+            )}
+
+            {/* Product Description */}
+            {productData.description && (
+              <View className="mb-8">
+                <Text className="text-white text-lg font-NunitoBold mb-3">Description</Text>
+                <Text className="text-gray-300 leading-6">
+                  {productData.description}
+                </Text>
               </View>
             )}
 
@@ -364,8 +482,8 @@ const ProductDetails = () => {
             visible={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
             onConfirm={handleConfirmDelete}
-            itemType={productData.type}
-            itemName={productData.name}
+            itemType={productData?.category?.name?.toLowerCase().includes('car') ? 'car' : 'sparePart'}
+            itemName={productData?.name || ''}
           />
         </SafeAreaView>
       )

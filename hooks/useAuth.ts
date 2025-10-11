@@ -67,6 +67,9 @@ export const useAuth = () => {
           
           // Set navigation target for role-specific home page using server role
           if (activeRole && activeRole.name) {
+            // Store the current active role for future fallback
+            await AsyncStorage.setItem('current_active_role', activeRole.name);
+            
             const targetRoute = getRoleHomeRoute(activeRole.name);
             setNavigationTarget(targetRoute as any);
             setShouldNavigate(true);
@@ -77,11 +80,23 @@ export const useAuth = () => {
             setShouldNavigate(true);
           }
         } catch (rolesError) {
-          console.error('❌ Error fetching user roles, using stored role:', rolesError);
-          // Fallback to stored role if API fails
-          const targetRoute = getRoleHomeRoute(userData.role);
-          setNavigationTarget(targetRoute as any);
-          setShouldNavigate(true);
+          console.error('❌ Error fetching user roles, using stored active role as fallback:', rolesError);
+          
+          // Try to get the last known active role from AsyncStorage
+          const storedActiveRole = await AsyncStorage.getItem('current_active_role');
+          
+          if (storedActiveRole) {
+            console.log('🔄 Using stored active role as fallback:', storedActiveRole);
+            const targetRoute = getRoleHomeRoute(storedActiveRole);
+            setNavigationTarget(targetRoute as any);
+            setShouldNavigate(true);
+          } else {
+            // Final fallback to userData.role
+            console.log('🔄 Using userData.role as final fallback:', userData.role);
+            const targetRoute = getRoleHomeRoute(userData.role);
+            setNavigationTarget(targetRoute as any);
+            setShouldNavigate(true);
+          }
         }
       } else {
         setIsAuthenticated(false);

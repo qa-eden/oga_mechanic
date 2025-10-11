@@ -176,37 +176,38 @@ const SearchBarWithCategories = ({
 
   // No auto-rotating suggestions - use real search
 
-  useEffect(() => {
-    if (!isUserScrolling && containerWidth && selectedCategory) {
-      const selectedIndex = categories.findIndex(cat => cat.name === selectedCategory);
-      if (selectedIndex !== -1) {
-        const itemWidth = 100;
-        const gap = 0;
-        const totalItemWidth = itemWidth + gap;
-        const itemStartX = selectedIndex * totalItemWidth;
+  // Auto-scroll animation disabled per user request
+  // useEffect(() => {
+  //   if (!isUserScrolling && containerWidth && selectedCategory) {
+  //     const selectedIndex = categories.findIndex(cat => cat.name === selectedCategory);
+  //     if (selectedIndex !== -1) {
+  //       const itemWidth = 100;
+  //       const gap = 0;
+  //       const totalItemWidth = itemWidth + gap;
+  //       const itemStartX = selectedIndex * totalItemWidth;
 
-        // Calculate the target scroll position to center the item
-        const targetScrollX = Math.max(
-          0,
-          itemStartX - (containerWidth - itemWidth) / 2
-        );
+  //       // Calculate the target scroll position to center the item
+  //       const targetScrollX = Math.max(
+  //         0,
+  //         itemStartX - (containerWidth - itemWidth) / 2
+  //       );
 
-        // Only scroll if the item is not properly centered and we're not currently scrolling
-        const tolerance = 10; // 10px tolerance
-        if (Math.abs(currentScrollX - targetScrollX) > tolerance) {
-          // Add a small delay to prevent interference with manual scrolling
-          setTimeout(() => {
-            if (!isUserScrolling) {
-              flatListRef.current?.scrollToOffset({
-                offset: targetScrollX,
-                animated: false,
-              });
-            }
-          }, 100);
-        }
-      }
-    }
-  }, [selectedCategory, containerWidth, categories, isUserScrolling]);
+  //       // Only scroll if the item is not properly centered and we're not currently scrolling
+  //       const tolerance = 10; // 10px tolerance
+  //       if (Math.abs(currentScrollX - targetScrollX) > tolerance) {
+  //         // Add a small delay to prevent interference with manual scrolling
+  //         setTimeout(() => {
+  //           if (!isUserScrolling) {
+  //             flatListRef.current?.scrollToOffset({
+  //               offset: targetScrollX,
+  //               animated: false,
+  //             });
+  //           }
+  //         }, 100);
+  //       }
+  //     }
+  //   }
+  // }, [selectedCategory, containerWidth, categories, isUserScrolling]);
 
   // Animate dropdown
   useEffect(() => {

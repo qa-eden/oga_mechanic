@@ -46,7 +46,7 @@ const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
     default:
       return "text-white";
   }
-};  
+};
 
 const getLoadingColor = (
   variant: ButtonProps["bgVariant"],
@@ -191,14 +191,14 @@ const CustomButton = ({
   const textColor = textColorClass.includes("text-white")
     ? "#FFFFFF"
     : textColorClass.includes("text-black")
-    ? "#000000"
-    : textColorClass.includes("text-[#141414]")
-    ? "#141414"
-    : textColorClass.includes("text-red-100")
-    ? "#FEE2E2"
-    : textColorClass.includes("text-green-100")
-    ? "#DCFCE7"
-    : "#FFFFFF";
+      ? "#000000"
+      : textColorClass.includes("text-[#141414]")
+        ? "#141414"
+        : textColorClass.includes("text-red-100")
+          ? "#FEE2E2"
+          : textColorClass.includes("text-green-100")
+            ? "#DCFCE7"
+            : "#FFFFFF";
 
   return (
     <TouchableOpacity
@@ -230,9 +230,9 @@ const CustomButton = ({
           </View>
         </View>
       ) : (
-        <>
+        <View className="flex-row items-center justify-center gap-2">
           {/* Left Icon */}
-          {IconLeft && <IconLeft />}
+          {IconLeft && <IconLeft size={20} color={getLoadingColor(bgVariant, textVariant)} />}
 
           {/* Button Text */}
           <Text
@@ -244,8 +244,8 @@ const CustomButton = ({
           </Text>
 
           {/* Right Icon */}
-          {IconRight && <IconRight />}
-        </>
+          {IconRight && <IconRight size={20} color={getLoadingColor(bgVariant, textVariant)} />}
+        </View>
       )}
     </TouchableOpacity>
   );

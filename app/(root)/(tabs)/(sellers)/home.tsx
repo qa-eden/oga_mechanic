@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -15,75 +16,65 @@ import { CalendarIcon, ChevronDownIcon, ChevronRightIcon } from "react-native-he
 // import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
-import CustomerReviewCard from "@/components/CustomerReviewCard";
 import OrderItemCard from "@/components/cards/OrderItemCard";
+import RentalAnalyticsChart from "@/components/charts/RentalAnalyticsChart";
+import CustomerInsightsChart from "@/components/charts/CustomerInsightsChart";
+import ProductPerformanceChart from "@/components/charts/ProductPerformanceChart";
 import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { useActiveRoleProfile } from "@/hooks/useUserProfile";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch merchant profile based on active role
+  const { data: profileData, activeRole, isLoading: isProfileLoading, refetch: refetchProfile } = useActiveRoleProfile();
+  
   // Fetch merchant analytics data
-  const { data: analyticsData, isLoading, error } = useMerchantAnalytics();
+  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics();
+
+  // Debug: Log profile data
+  React.useEffect(() => {
+    if (profileData) {
+      console.log('👤 Seller Home - Profile Data:', profileData);
+      console.log('👤 Seller Home - Active Role:', activeRole);
+      console.log('👤 Seller Home - Is Merchant Profile:', activeRole === 'merchant');
+    }
+    if (isProfileLoading) {
+      console.log('⏳ Seller Home - Loading profile...');
+    }
+  }, [profileData, activeRole, isProfileLoading]);
+
+  // Add error handling for missing user data
+  React.useEffect(() => {
+    if (error) {
+      console.error('❌ Analytics Error:', error);
+      // If it's a 401 or 403 error, the user might be deleted
+      if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
+        console.log('🔐 User authentication failed - redirecting to login');
+        // You can add a logout function here or redirect to login
+      }
+    }
+  }, [error]);
 
   // Transform analytics data to match OrderItem interface with new design fields
-  const recentOrders = analyticsData?.recent_orders?.map(order => ({
-    id: order.id,
-    productName: order.product_name,
-    orderDate: order.order_date,
-    price: order.price,
-    status: order.status,
-    quantity: 1, // Default quantity
+  const recentOrders = analyticsData?.best_selling_products?.map((product, index) => ({
+    id: product.id || `product-${index}`,
+    productName: product.name,
+    orderDate: new Date().toISOString().split('T')[0],
+    price: product.revenue,
+    status: "Delivered",
+    quantity: product.quantity_sold,
     image: null, // Will show placeholder if no image
-    deliveryDate: order.order_date, // Use order date as delivery date
-    paymentStatus: order.status.toLowerCase() === 'delivered' ? 'Paid' : order.status,
-  })) || [
-    {
-      id: "1",
-      productName: "Toyota Corolla Tire",
-      orderDate: "03-02-2025",
-      price: 45000.00,
-      status: "Delivered",
-      quantity: 1,
-      image: null,
-      deliveryDate: "May 30, 2025",
-      paymentStatus: "Paid",
-    },
-    {
-      id: "2",
-      productName: "Honda Civic Brake Pads",
-      orderDate: "02-02-2025",
-      price: 25000.00,
-      status: "Processing",
-      quantity: 2,
-      image: null,
-      deliveryDate: "June 1, 2025",
-      paymentStatus: "Paid",
-    },
-    {
-      id: "3",
-      productName: "Ford Focus Air Filter",
-      orderDate: "01-02-2025",
-      price: 15000.00,
-      status: "Delivered",
-      quantity: 1,
-      image: null,
-      deliveryDate: "May 28, 2025",
-      paymentStatus: "Paid",
-    },
-  ];
-
-  const ratingData = analyticsData?.customer_ratings || [
-    { stars: 5, count: 900, percentage: 90, color: 'bg-green-500' },
-    { stars: 4, count: 50, percentage: 5, color: 'bg-purple-500' },
-    { stars: 3, count: 25, percentage: 2.5, color: 'bg-blue-500' },
-    { stars: 2, count: 15, percentage: 1.5, color: 'bg-yellow-500' },
-    { stars: 1, count: 15, percentage: 1.5, color: 'bg-red-500' },
-  ];
+    deliveryDate: new Date().toISOString().split('T')[0],
+    paymentStatus: "Paid",
+  })) || [];
 
   // Extract analytics data with fallbacks
-  const totalSales = analyticsData?.total_sales || 90.2;
-  const totalOrders = analyticsData?.total_orders || 132;
-  const totalProducts = analyticsData?.total_products || 5;
+  const totalSales = analyticsData?.total_sales || 0;
+  const totalOrders = analyticsData?.order_count || 0;
+  const totalProducts = analyticsData?.product_count || 0;
 
   // Debug: Log analytics data (not rendered)
   React.useEffect(() => {
@@ -98,11 +89,41 @@ const SellerHome = () => {
     }
   }, [analyticsData, error, isLoading]);
 
+  // Pull-to-refresh functionality
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      console.log('🔄 Pull-to-refresh triggered - refetching analytics and profile...');
+      await Promise.all([
+        refetchAnalytics(),
+        refetchProfile()
+      ]);
+      console.log('✅ Analytics and profile refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error during refresh:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchAnalytics, refetchProfile]);
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1 px-5" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0A6DEE"
+            colors={['#0A6DEE']}
+            title="Pull to refresh"
+            titleColor="#6B7280"
+          />
+        }
+      >
 
         <Navbar />
 
@@ -113,8 +134,8 @@ const SellerHome = () => {
               Total Sales
             </Text>
             <View className="flex-row items-end justify-between">
-              <Text className="text-3xl font-NunitoBold text-gray-900">
-                ₦{analyticsData?.total_revenue?.toLocaleString() || '90,200.00'}
+              <Text className="text-[1.8rem] font-NunitoBold text-gray-900">
+                ₦{analyticsData?.total_sales?.toLocaleString() || '0.00'}
               </Text>
               <TouchableOpacity
                 className="flex-row items-center border border-gray-300  bg-gray-100 px-3 py-2 rounded-[.4rem]"
@@ -137,7 +158,7 @@ const SellerHome = () => {
               Orders
             </Text>
             <Text className="text-2xl font-NunitoBold text-gray-800">
-              {analyticsData?.total_orders || 132}
+              {analyticsData?.order_count || 0}
             </Text>
           </View>
           <View className="flex-1 bg-[#D3C8E4] rounded-xl p-4">
@@ -145,22 +166,54 @@ const SellerHome = () => {
               Products sold
             </Text>
             <Text className="text-2xl font-NunitoBold text-gray-800">
-              {analyticsData?.total_products || 5}
+              {analyticsData?.product_count || 0}
             </Text>
           </View>
         </View>
 
         <View className="">
-          {/* Customer Reviews */}
-          <CustomerReviewCard
-            totalReviews="1K"
-            averageRating={5}
-            ratingData={ratingData}
-          />
+          {/* Loading State */}
+          {isLoading && (
+            <View className="mb-6">
+              <LoadingSpinner 
+                message="Loading Analytics"
+                subMessage="Fetching your business insights..."
+                size="medium"
+                logoSize={40}
+              />
+            </View>
+          )}
+
+          {/* Customer Insights Chart */}
+          {!isLoading && analyticsData?.customer_insights && (
+            <CustomerInsightsChart data={analyticsData.customer_insights} />
+          )}
+
+          {/* Product Performance Chart */}
+          {!isLoading && analyticsData?.product_performance && (
+            <ProductPerformanceChart data={analyticsData.product_performance} />
+          )}
+
+          {/* Rental Analytics Chart */}
+          {!isLoading && analyticsData?.rental_analytics && (
+            <RentalAnalyticsChart data={analyticsData.rental_analytics} />
+          )}
+
+          {/* Error State */}
+          {!isLoading && error && (
+            <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+              <Text className="text-red-800 font-NunitoBold text-center">
+                Unable to load analytics data
+              </Text>
+              <Text className="text-red-600 font-NunitoMedium text-center mt-1">
+                Please check your connection or try logging in again
+              </Text>
+            </View>
+          )}
 
           {/* Recent Orders */}
           <View className="">
-            <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center justify-between my-4">
               <Text className="text-lg font-NunitoBold text-gray-900">
                 Recent Orders
               </Text>
@@ -172,7 +225,7 @@ const SellerHome = () => {
               </TouchableOpacity>
             </View>
 
-            {recentOrders.map((order) => (
+            {recentOrders?.slice(0, 3)?.map((order) => (
               <OrderItemCard
                 key={order.id}
                 order={order}

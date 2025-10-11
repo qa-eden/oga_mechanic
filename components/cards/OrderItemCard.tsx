@@ -19,6 +19,11 @@ interface OrderItemCardProps {
 }
 
 const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
+  // Add safety checks for order data
+  if (!order) {
+    return null;
+  }
+
   // Helper function to get status color
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -72,12 +77,12 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
           
           {/* Product Name */}
           <Text className="text-gray-900 text-start font-NunitoBold text-base mb-1" numberOfLines={1}>
-            {order.productName}
+            {order.productName || 'Unknown Product'}
           </Text>
           
           {/* Quantity */}
           <Text className="text-gray-500 text-start text-sm font-NunitoMedium">
-            {order.quantity || 1} piece{order.quantity && order.quantity > 1 ? 's' : ''}
+            {order.quantity || 1} piece{(order.quantity || 1) > 1 ? 's' : ''}
           </Text>
         </View>
 
@@ -90,7 +95,7 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
             </View>
             <View className="flex-1">
               <Text className="text-gray-900 text-sm font-NunitoMedium">
-                Date delivered: {order.deliveryDate || order.orderDate}
+                Date delivered: {order.deliveryDate || order.orderDate || 'N/A'}
               </Text>
             </View>
           </View>
@@ -102,9 +107,9 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
             </View>
             <View className="flex-1">
               <Text className="text-gray-900 text-sm font-NunitoMedium">
-                Payment: ₦{order.price.toLocaleString()} • 
-                <Text className={`${getPaymentStatusColor(order.paymentStatus || order.status)} ml-1`}>
-                  {order.paymentStatus || (order.status.toLowerCase() === 'delivered' ? 'Paid' : order.status)}
+                Payment: ₦{(order.price || 0).toLocaleString()} • 
+                <Text className={`${getPaymentStatusColor(order.paymentStatus || order.status || 'unknown')} ml-1`}>
+                  {order.paymentStatus || (order.status && order.status.toLowerCase() === 'delivered' ? 'Paid' : order.status || 'Unknown')}
                 </Text>
               </Text>
             </View>
@@ -118,8 +123,8 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
             <View className="flex-1">
               <Text className="text-gray-900 text-sm font-NunitoMedium">
                 Status: 
-                <Text className={`${getStatusColor(order.status)} ml-1 capitalize`}>
-                  {order.status}
+                <Text className={`${getStatusColor(order.status || 'unknown')} ml-1 capitalize`}>
+                  {order.status || 'Unknown'}
                 </Text>
               </Text>
             </View>

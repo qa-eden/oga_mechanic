@@ -10,12 +10,45 @@ import { Dimensions, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AnimatedSplash from "../components/AnimatedSplash"; // <-- Add this
+import AnimatedSplash from "../components/AnimatedSplash";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+// Component that handles the main app logic
+function AppContent() {
+  const auth = useAuthContext();
+
+  // Show splash screen while auth is loading
+  if (auth.isLoading) {
+    return (
+      <AnimatedSplash 
+        onAnimationEnd={() => {
+          // Animation done, but keep showing splash until auth is complete
+        }} 
+      />
+    );
+  }
+
+  const screenWidth = Dimensions.get("window").width;
+
+  return (
+    <CartProvider>
+      <LocationProvider>
+        <View className="flex-1">
+          <StatusBar style="light" />
+          <Toast />
+          <Stack>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(root)" options={{ headerShown: false }} />
+          </Stack>
+        </View>
+      </LocationProvider>
+    </CartProvider>
+  );
+}
 
 export default function RootLayout() {
   // Create a client
@@ -38,8 +71,6 @@ export default function RootLayout() {
     "Nunito-SemiBold": require("../assets/fonts/nunito/Nunito-SemiBold.ttf"),
   });
 
-  const [splashDone, setSplashDone] = useState(false);
-
   useEffect(() => {
     if (error) {
       console.error('Font loading error:', error);
@@ -51,33 +82,17 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  // Show animated splash until both fonts are loaded and animation is done
-  if (!loaded || !splashDone) {
+  // Show animated splash until fonts are loaded
+  if (!loaded) {
     return (
-      <AnimatedSplash onAnimationEnd={() => setSplashDone(true)} />
+      <AnimatedSplash onAnimationEnd={() => {}} />
     );
   }
-
-  const screenWidth = Dimensions.get("window").width;
-
-  // Set toast width to a percentage of screen width
-  const toastWidth = screenWidth * 0.9;
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <LocationProvider>
-            <View className="flex-1">
-              <StatusBar style="light" />
-              <Toast />
-              <Stack>
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(root)" options={{ headerShown: false }} />
-              </Stack>
-            </View>
-          </LocationProvider>
-        </CartProvider>
+        <AppContent />
       </AuthProvider>
     </QueryClientProvider>
   );

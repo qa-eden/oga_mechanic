@@ -1,5 +1,5 @@
 import api from '../axios';
-import { SERVICE_ENDPOINTS, MERCHANT_ENDPOINTS } from '../endpoints';
+import { SERVICE_ENDPOINTS, MERCHANT_ENDPOINTS, MECHANIC_ENDPOINTS } from '../endpoints';
 
 // Types
 export interface Product {
@@ -223,38 +223,82 @@ export interface CategoriesAPIResponse {
   status: boolean;
 }
 
+// Vehicle Makes Types
+export interface VehicleModel {
+  id: number;
+  name: string;
+  parent_make: number;
+  description: string;
+  is_active: boolean;
+  models: any[]; // Empty array for models
+}
+
+export interface VehicleMake {
+  id: number;
+  name: string;
+  parent_make: number | null;
+  description: string;
+  is_active: boolean;
+  models: VehicleModel[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface VehicleMakesAPIResponse {
+  data: VehicleMake[];
+  message: string;
+  referenceId: string;
+  requestTime: string;
+  requestType: string;
+  status: boolean;
+}
+
 // Merchant Analytics Types
 export interface MerchantAnalytics {
   total_sales: number;
-  total_orders: number;
-  total_products: number;
-  total_revenue: number;
-  average_order_value: number;
-  conversion_rate: number;
-  top_selling_products: Array<{
+  order_count: number;
+  order_status_counts: Record<string, number>;
+  product_count: number;
+  rental_products: number;
+  best_selling_products: Array<{
     id: string;
     name: string;
     quantity_sold: number;
     revenue: number;
   }>;
-  recent_orders: Array<{
-    id: string;
-    product_name: string;
-    order_date: string;
-    price: number;
-    status: string;
-  }>;
-  sales_by_period: Array<{
-    period: string;
-    sales: number;
-    orders: number;
-  }>;
-  customer_ratings: Array<{
-    stars: number;
-    count: number;
-    percentage: number;
-    color: string;
-  }>;
+  customer_insights: {
+    unique_customers: number;
+    repeat_customers: number;
+    avg_order_value: number;
+    retention_rate: number;
+    repeat_customer_rate: number;
+  };
+  product_performance: {
+    products_with_reviews: number;
+    avg_rating: number;
+    top_performing_products: Array<{
+      id: string;
+      name: string;
+      rating: number;
+      review_count: number;
+    }>;
+    total_products: number;
+  };
+  rental_analytics: {
+    total_rentals: number;
+    completed_rentals: Array<any>;
+    active_rentals: number;
+    pending_rentals: number;
+    rental_revenue: number;
+    avg_rental_duration: number;
+    completion_rate: number;
+  };
+  revenue_by_month: Record<string, number>;
+  message: string;
+  referenceId: string;
+  requestTime: string;
+  requestType: string;
+  status: boolean;
 }
 
 export interface MerchantAnalyticsResponse {
@@ -270,8 +314,42 @@ export interface MerchantAnalyticsResponse {
 export const productsAPI = {
   // Get home products (cars and spare parts)
   getHomeProducts: async (): Promise<HomeProductsResponse> => {
-    const response = await api.get(SERVICE_ENDPOINTS.PRODUCTS_HOME);
-    return response.data;
+    try {
+      // Make three separate API calls for each data type
+      const [mechanicsResponse, carsResponse, sparePartsResponse] = await Promise.all([
+        api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=mechanics`),
+        api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=best_selling_cars`),
+        api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=best_selling_spare_parts`),
+      ]);
+
+      console.log('🏠 Home API - Mechanics Response:', mechanicsResponse.data);
+      console.log('🏠 Home API - Cars Response:', carsResponse.data);
+      console.log('🏠 Home API - Spare Parts Response:', sparePartsResponse.data);
+
+      // Extract the actual data arrays from nested structure
+      const mechanicsData = mechanicsResponse.data?.data?.mechanics || [];
+      const carsData = carsResponse.data?.data?.best_selling_cars || [];
+      const sparePartsData = sparePartsResponse.data?.data?.best_selling_spare_parts || 
+                             sparePartsResponse.data?.data?.mechanics || []; // Fallback for backend bug
+
+      console.log('🏠 Extracted - Mechanics:', mechanicsData.length);
+      console.log('🏠 Extracted - Cars:', carsData.length);
+      console.log('🏠 Extracted - Spare Parts:', sparePartsData.length);
+
+      // Combine the responses
+      return {
+        data: {
+          mechanics: mechanicsData,
+          best_selling_cars: carsData,
+          best_selling_spare_parts: sparePartsData,
+        },
+        message: 'Home products fetched successfully',
+        status: true,
+      };
+    } catch (error) {
+      console.error('Error fetching home products:', error);
+      throw error;
+    }
   },
   
   // Get product detail by ID
@@ -304,7 +382,8 @@ export const productsAPI = {
     minPrice?: string,
     maxPrice?: string,
     offset?: number,
-    limit?: number
+    limit?: number,
+    merchantId?: string
   ): Promise<ProductListAPIResponse> => {
     const params = new URLSearchParams();
     if (categoryId) {
@@ -322,11 +401,15 @@ export const productsAPI = {
     if (limit !== undefined) {
       params.append('limit', limit.toString());
     }
+    if (merchantId) {
+      params.append('merchant', merchantId);
+    }
     
     const url = params.toString() 
       ? `${SERVICE_ENDPOINTS.PRODUCTS_LIST}?${params.toString()}`
       : SERVICE_ENDPOINTS.PRODUCTS_LIST;
     
+    console.log('🛍️ Products API URL:', url);
     const response = await api.get<ProductListAPIResponse>(url);
     console.log('🛍️ Products API response:', response.data);
     return response.data; // Return full paginated response
@@ -474,5 +557,35 @@ export const productsAPI = {
     console.log('📊 Merchant analytics response:', response.data);
     
     return response.data.data;
+  },
+
+  // Get vehicle makes
+  getVehicleMakes: async (): Promise<VehicleMake[]> => {
+    console.log('🚗 Fetching vehicle makes...');
+    
+    const response = await api.get<VehicleMakesAPIResponse>(MECHANIC_ENDPOINTS.VEHICLE_MAKES);
+    console.log('🚗 Vehicle makes response:', response.data);
+    
+    return response.data.data;
+  },
+
+  // Get product by ID (for seller product details)
+  getProductById: async (id: string): Promise<ProductDetailAPIResponse> => {
+    console.log('🔍 Fetching product by ID:', id);
+    
+    const response = await api.get<ProductDetailAPIResponse>(`${SERVICE_ENDPOINTS.PRODUCTS_LIST}${id}/`);
+    console.log('🔍 Product by ID response:', response.data);
+    
+    return response.data;
+  },
+
+  // Delete product by ID
+  deleteProduct: async (id: string): Promise<any> => {
+    console.log('🗑️ Deleting product with ID:', id);
+    
+    const response = await api.delete(`${SERVICE_ENDPOINTS.PRODUCTS_LIST}${id}/`);
+    console.log('🗑️ Product delete response:', response.data);
+    
+    return response.data;
   },
 };
