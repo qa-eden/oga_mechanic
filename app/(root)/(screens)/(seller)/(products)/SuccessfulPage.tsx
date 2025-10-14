@@ -1,6 +1,6 @@
 import SuccessModal from '@/components/SuccessModal';
 import { sellerRoutes } from '@/constants/routes';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react'
 import { View } from 'react-native'
 
@@ -14,8 +14,7 @@ const SuccessfulPage = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    // Always navigate to the products page when "View Products" button is clicked
-    router.push(sellerRoutes.products as any);
+    // The SuccessModal component will handle navigation to the route
   };
 
   return (

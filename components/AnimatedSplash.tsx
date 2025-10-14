@@ -105,4 +105,3 @@ export default function AnimatedSplash({ onAnimationEnd }: { onAnimationEnd: () 
     </Animated.View>
   );
 }
-

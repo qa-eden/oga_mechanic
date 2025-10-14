@@ -144,18 +144,18 @@ const AllSpareParts = () => {
     const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
     
     return (
-      <View className="w-1/2 px-2 mb-4">
+    <View className="w-1/2 px-2 mb-4">
         <TouchableOpacity 
           className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm"
-          onPress={() => {
-            router.push({
-              pathname: sellerRoutes.productDetailsDetailed as any,
-              params: { 
-                productType: 'sparePart',
-                productId: item.id 
-              }
-            });
-          }}
+            onPress={() => {
+              router.push({
+                pathname: sellerRoutes.productDetailsDetailed as any,
+                params: { 
+                  productType: 'sparePart',
+                  productId: item.id 
+                }
+              });
+            }}
         >
           <View className="w-full h-[160px]">
             {productImage ? (
@@ -180,7 +180,7 @@ const AllSpareParts = () => {
             </Text>
           </View>
         </TouchableOpacity>
-      </View>
+    </View>
     );
   }
 
@@ -244,12 +244,12 @@ const AllSpareParts = () => {
           </View>
         </View>
       ) : spareParts.length > 0 ? (
-        <FlatList
-          data={spareParts}
-          renderItem={renderSparePartCard}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          showsVerticalScrollIndicator={false}
+      <FlatList
+        data={spareParts}
+        renderItem={renderSparePartCard}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -260,15 +260,15 @@ const AllSpareParts = () => {
               titleColor="#6B7280"
             />
           }
-          contentContainerStyle={{
-            paddingHorizontal: CARD_PADDING,
-            paddingBottom: SCROLL_PADDING_BOTTOM,
-          }}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews={true}
-        />
+        contentContainerStyle={{
+          paddingHorizontal: CARD_PADDING,
+          paddingBottom: SCROLL_PADDING_BOTTOM,
+        }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={true}
+          />
       ) : (
         <View className="flex-1 items-center justify-center px-8">
           <View className="bg-gray-50 rounded-3xl p-8 items-center">

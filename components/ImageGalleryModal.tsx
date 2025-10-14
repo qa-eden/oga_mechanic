@@ -88,16 +88,19 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                 onError={() => onImageError?.(selectedIndex)}
               />
             ) : (
-              <View className="items-center justify-center">
-                <images.ProductImg
-                  style={{ 
-                    width: screenWidth - 48, 
-                    height: (screenWidth - 48) * 0.8
-                  }}
-                />
-                {imageErrors.has(selectedIndex) && (
-                  <Text className="text-white text-lg mt-4">Image failed to load</Text>
-                )}
+              <View 
+                className="items-center justify-center bg-gray-800"
+                style={{ 
+                  width: screenWidth - 48, 
+                  height: (screenWidth - 48) * 0.8
+                }}
+              >
+                <View className="w-32 h-32 bg-gray-700 rounded-full items-center justify-center">
+                  <Text className="text-gray-500 text-4xl">📷</Text>
+                </View>
+                <Text className="text-white text-lg mt-4">
+                  {imageErrors.has(selectedIndex) ? 'Image failed to load' : 'No image available'}
+                </Text>
               </View>
             )}
           </View>

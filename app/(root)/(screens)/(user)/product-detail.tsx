@@ -32,6 +32,7 @@ import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
 import { useCart, useAddToCart, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
+import { PhotoIcon } from "react-native-heroicons/outline";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -49,6 +50,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const [showFavoriteSuccess, setShowFavoriteSuccess] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const { addToCart, isInCart, getItemQuantity } = useCartContext();
   
   // Cart API hooks - fetches and mutations
@@ -116,6 +118,17 @@ const ProductDetail = () => {
       }
     }
   }, [product, getItemQuantity]);
+
+  // Reset image loading state when selected image changes
+  useEffect(() => {
+    setImageLoading(true);
+    // Set a timeout to hide loading spinner after 5 seconds
+    const timeout = setTimeout(() => {
+      setImageLoading(false);
+    }, 5000);
+    
+    return () => clearTimeout(timeout);
+  }, [selectedImageIndex, product?.images]);
 
   // Pull to refresh function
   const onRefresh = useCallback(async () => {
@@ -241,13 +254,11 @@ const ProductDetail = () => {
   // };
 
   const cartItem = {
-    id: product.id, // Convert string ID to number
+    id: product.id,
     name: product.name,
     price: parseFloat(product.price),
-    stock: (product as any).stock || 10,
-    image: product.images?.[0]?.image || "sparePart",
-    originalPrice: parseFloat(product.price),
-    discount: 15,
+    stock: (product as any).stock || 0,
+    image: product.images?.[0]?.image || null,
   };
 
   const handleAddToCart = async () => {
@@ -412,7 +423,7 @@ const ProductDetail = () => {
     >
       {imageErrors.has(index) ? (
         <View className="w-full h-full bg-gray-200 items-center justify-center rounded-xl">
-          <Text className="text-xs text-gray-500">Failed</Text>
+          <PhotoIcon size={24} color="#9CA3AF" />
         </View>
       ) : (
       <Image
@@ -482,20 +493,39 @@ const ProductDetail = () => {
                 disabled={!product.images || product.images.length === 0}
               >
                 {product.images && product.images.length > 0 && !imageErrors.has(selectedImageIndex) ? (
-                  <Image
-                    source={{ uri: product.images[selectedImageIndex]?.image }}
-                    className="w-full h-full"
-                    style={{ resizeMode: 'contain' }}
-                    onError={() => handleImageError(selectedImageIndex)}
-                  />
-                ) : (
-                  <View className="w-full h-full items-center justify-center bg-gray-50">
-                    <images.ProductImg
+                  <>
+                    {imageLoading && (
+                      <View className="absolute w-full h-full items-center justify-center bg-gray-50 z-10">
+                        <ActivityIndicator size="large" color="#D30309" />
+                        <Text className="text-sm text-gray-500 mt-4">Loading image...</Text>
+                      </View>
+                    )}
+                    <Image
+                      source={{ uri: product.images[selectedImageIndex]?.image }}
                       className="w-full h-full"
+                      style={{ resizeMode: 'contain' }}
+                      onError={() => {
+                        setImageLoading(false);
+                        handleImageError(selectedImageIndex);
+                      }}
+                      onLoadStart={() => setImageLoading(true)}
+                      onLoadEnd={() => setImageLoading(false)}
+                      onLoad={() => setImageLoading(false)}
                     />
-                    {imageErrors.has(selectedImageIndex) && (
-                    <Text className="text-sm text-gray-500 mt-2">Image failed to load</Text>
-                  )}
+                  </>
+                ) : (
+                  <View className="w-full h-full items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
+                    <View className="items-center justify-center">
+                      <View className="w-32 h-32 bg-white rounded-full items-center justify-center mb-6 shadow-sm">
+                        <PhotoIcon size={64} color="#9CA3AF" />
+                      </View>
+                      <Text className="text-lg font-NunitoBold text-gray-700 mb-2">
+                        {imageErrors.has(selectedImageIndex) ? 'Image failed to load' : 'No image available'}
+                      </Text>
+                      <Text className="text-sm text-gray-500">
+                        Product image not found
+                      </Text>
+                    </View>
                 </View>
               )}
             </TouchableOpacity>
@@ -680,18 +710,6 @@ const ProductDetail = () => {
         </View>
             </View> */}
 
-            {/* Key Features */}
-            <View className="flex-row flex-wrap gap-2 mb-6">
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Premium Quality</Text>
-              </View>
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Fast Shipping</Text>
-              </View>
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Warranty Included</Text>
-              </View>
-            </View>
 
             {/* Stock Information */}
             <View className="flex-row items-center justify-between py-3 border-t border-gray-100">

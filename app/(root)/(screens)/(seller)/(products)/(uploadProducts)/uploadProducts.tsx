@@ -14,9 +14,9 @@ import FeatureBadges from '@/components/forms/FeatureBadges'
 import { sellerRoutes } from '@/constants/routes'
 import { useCategories } from '@/hooks/useProducts'
 import { useVehicleMakes } from '@/hooks/useVehicleMakes'
-import { 
-  deliveryOptions, 
-  engineSizeOptions, 
+import {
+  deliveryOptions,
+  engineSizeOptions,
   bodyTypeOptions,
   fuelTypeOptions,
   conditionOptions,
@@ -69,7 +69,7 @@ const UploadProducts = () => {
   useEffect(() => {
     if (isEditMode && parsedProductData) {
       const features: string[] = [];
-      
+
       if (parsedProductData.air_conditioning) features.push('Air Conditioning');
       if (parsedProductData.leather_seats) features.push('Leather Seats');
       if (parsedProductData.navigation_system) features.push('Navigation System');
@@ -84,7 +84,7 @@ const UploadProducts = () => {
       if (parsedProductData.traction_control) features.push('Traction Control');
       if (parsedProductData.lane_assist) features.push('Lane Assist');
       if (parsedProductData.blind_spot_monitor) features.push('Blind Spot Monitor');
-      
+
       setSelectedFeatures(features);
     }
   }, [isEditMode, parsedProductData]);
@@ -141,8 +141,8 @@ const UploadProducts = () => {
   }
 
   const handleFeatureToggle = (feature: string) => {
-    setSelectedFeatures(prev => 
-      prev.includes(feature) 
+    setSelectedFeatures(prev =>
+      prev.includes(feature)
         ? prev.filter(f => f !== feature)
         : [...prev, feature]
     )
@@ -153,28 +153,28 @@ const UploadProducts = () => {
     try {
       const isEditing = isEditMode || isEditingMode;
       console.log('🔍 DEBUG: Starting handleSubmit for', isEditing ? 'editing' : 'creating', 'car')
-      
-    // Create feature object from selected features
-    const features = {
-      air_conditioning: selectedFeatures.includes('Air Conditioning'),
-      leather_seats: selectedFeatures.includes('Leather Seats'),
-      navigation_system: selectedFeatures.includes('Navigation System'),
-      bluetooth: selectedFeatures.includes('Bluetooth'),
-      parking_sensors: selectedFeatures.includes('Parking Sensors'),
-      cruise_control: selectedFeatures.includes('Cruise Control'),
-      keyless_entry: selectedFeatures.includes('Keyless Entry'),
-      sunroof: selectedFeatures.includes('Sunroof'),
-      alloy_wheels: selectedFeatures.includes('Alloy Wheels'),
+
+      // Create feature object from selected features
+      const features = {
+        air_conditioning: selectedFeatures.includes('Air Conditioning'),
+        leather_seats: selectedFeatures.includes('Leather Seats'),
+        navigation_system: selectedFeatures.includes('Navigation System'),
+        bluetooth: selectedFeatures.includes('Bluetooth'),
+        parking_sensors: selectedFeatures.includes('Parking Sensors'),
+        cruise_control: selectedFeatures.includes('Cruise Control'),
+        keyless_entry: selectedFeatures.includes('Keyless Entry'),
+        sunroof: selectedFeatures.includes('Sunroof'),
+        alloy_wheels: selectedFeatures.includes('Alloy Wheels'),
         airbags: selectedFeatures.includes('Airbags'),
         abs: selectedFeatures.includes('ABS'),
         traction_control: selectedFeatures.includes('Traction Control'),
         lane_assist: selectedFeatures.includes('Lane Assist'),
         blind_spot_monitor: selectedFeatures.includes('Blind Spot Monitor'),
-    }
+      }
 
-    const payload = {
+      const payload = {
         data: {
-      category_id: carCategoryId,
+          category_id: carCategoryId,
           name: values.name,
           make: parseInt(values.make),
           model: parseInt(values.model),
@@ -221,11 +221,11 @@ const UploadProducts = () => {
 
       // Determine endpoint and method based on edit mode
       const finalProductId = productId || parsedProductData?.id;
-      const endpoint = isEditing 
+      const endpoint = isEditing
         ? `${process.env.EXPO_PUBLIC_API_URL}/products/products/${finalProductId}/`
         : `${process.env.EXPO_PUBLIC_API_URL}/products/products/`;
       const method = isEditing ? 'PUT' : 'POST';
-      
+
       console.log('🔍 DEBUG:', isEditing ? 'Updating' : 'Creating', 'product:', endpoint, 'Method:', method);
 
       // Call the products API endpoint
@@ -253,8 +253,8 @@ const UploadProducts = () => {
       if (isEditing) {
         // For editing, show success alert with options
         Alert.alert('Success', 'Car details updated successfully!', [
-          { 
-            text: 'Continue to Edit Images', 
+          {
+            text: 'Continue to Edit Images',
             onPress: () => router.push({
               pathname: sellerRoutes.editImage as any,
               params: {
@@ -284,16 +284,16 @@ const UploadProducts = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
-        </TouchableOpacity>
+          </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
               {isEditMode ? 'Edit Car Details' : 'Car Details'}
@@ -321,40 +321,40 @@ const UploadProducts = () => {
             flexGrow: 1
           }}
         >
-        {/* Form Fields */}
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
-            <View className="space-y-6">
-              {/* Basic Information */}
+          {/* Form Fields */}
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
+              <View className="space-y-6">
+                {/* Basic Information */}
                 <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
                       <Text className="text-white font-NunitoBold text-sm">1</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Basic Information</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Tell us about your car
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Basic Information</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                      Tell us about your car
-                    </Text>
-                  </View>
-                </View>
-                
-              {/* Name of car */}
-              <FormikInput
-                  name="name"
-                label="Name of Car"
-                    placeholder="e.g., Toyota Camry LE"
-                type="text"
-              />
 
-              {/* Make */}
+                  {/* Name of car */}
+                  <FormikInput
+                    name="name"
+                    label="Name of Car"
+                    placeholder="e.g., Toyota Camry LE"
+                    type="text"
+                  />
+
+                  {/* Make */}
                   <SelectField
-                name="make"
-                label="Make"
+                    name="make"
+                    label="Make"
                     placeholder={vehicleMakesLoading ? "Loading makes..." : "Select make"}
                     options={makeOptions}
                     value={values.make}
@@ -365,12 +365,12 @@ const UploadProducts = () => {
                     }}
                     error={errors.make as string}
                     touched={touched.make as boolean}
-              />
+                  />
 
-                {/* Model */}
+                  {/* Model */}
                   <SelectField
-                  name="model"
-                  label="Model"
+                    name="model"
+                    label="Model"
                     placeholder={values.make ? "Select model" : "Select make first"}
                     options={getModelsForSelectedMake(values.make).map(model => ({
                       label: model.name,
@@ -380,368 +380,368 @@ const UploadProducts = () => {
                     onValueChange={(value) => setFieldValue('model', value)}
                     error={errors.model as string}
                     touched={touched.model as boolean}
-                />
+                  />
 
-                {/* Year */}
-                <FormikInput
-                  name="year"
-                  label="Year"
+                  {/* Year */}
+                  <FormikInput
+                    name="year"
+                    label="Year"
                     placeholder="e.g., 2023"
-                  keyboardType="numeric"
-                  type="text"
-                />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
-                {/* Condition */}
-                <SelectField
-                  name="condition"
-                  label="Condition"
-                  placeholder="Select condition"
-                  options={conditionOptions}
-                  value={values.condition}
-                  onValueChange={(value) => setFieldValue('condition', value)}
-                  error={errors.condition as string}
-                  touched={touched.condition as boolean}
-                />
-              </View>
-
-              {/* Vehicle Details */}
-              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-green-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">2</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Details</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                      Technical specifications
-                    </Text>
-                  </View>
+                  {/* Condition */}
+                  <SelectField
+                    name="condition"
+                    label="Condition"
+                    placeholder="Select condition"
+                    options={conditionOptions}
+                    value={values.condition}
+                    onValueChange={(value) => setFieldValue('condition', value)}
+                    error={errors.condition as string}
+                    touched={touched.condition as boolean}
+                  />
                 </View>
-                
-                {/* Body type */}
-                <SelectField
-                  name="body_type"
-                  label="Body Type"
-                  placeholder="Select body type"
-                  options={bodyTypeOptions}
-                  value={values.body_type}
-                  onValueChange={(value) => setFieldValue('body_type', value)}
-                  error={errors.body_type as string}
-                  touched={touched.body_type as boolean}
-              />
 
-              {/* Mileage */}
-                <View className="mb-4">
-                  <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                    Mileage
-                  </Text>
-                  <View className="flex-row gap-3">
-                    <View className="flex-1">
-              <FormikInput
-                name="mileage"
-                        label=""
-                          placeholder="e.g., 50,000"
-                        keyboardType="numeric"
-                type="text"
-              />
+                {/* Vehicle Details */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-green-500 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-NunitoBold text-sm">2</Text>
                     </View>
-                    <View className="w-32">
-                      <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                        Unit
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Details</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Technical specifications
                       </Text>
-                      <View className="flex-row bg-gray-100 rounded-lg p-1">
-                        <TouchableOpacity
-                          onPress={() => setFieldValue('mileage_unit', 'km')}
+                    </View>
+                  </View>
+
+                  {/* Body type */}
+                  <SelectField
+                    name="body_type"
+                    label="Body Type"
+                    placeholder="Select body type"
+                    options={bodyTypeOptions}
+                    value={values.body_type}
+                    onValueChange={(value) => setFieldValue('body_type', value)}
+                    error={errors.body_type as string}
+                    touched={touched.body_type as boolean}
+                  />
+
+                  {/* Mileage */}
+                  <View className="mb-4">
+                    <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
+                      Mileage
+                    </Text>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormikInput
+                          name="mileage"
+                          label=""
+                          placeholder="e.g., 50,000"
+                          keyboardType="numeric"
+                          type="text"
+                        />
+                      </View>
+                      <View className="w-32">
+                        <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
+                          Unit
+                        </Text>
+                        <View className="flex-row bg-gray-100 rounded-lg p-1">
+                          <TouchableOpacity
+                            onPress={() => setFieldValue('mileage_unit', 'km')}
                             className={`flex-1 py-2 px-3 rounded-md ${values.mileage_unit === 'km'
-                              ? 'bg-white' 
+                              ? 'bg-white'
                               : 'bg-transparent'
-                          }`}
-                        >
+                              }`}
+                          >
                             <Text className={`text-xs font-NunitoSemiBold text-center ${values.mileage_unit === 'km'
-                              ? 'text-gray-900' 
+                              ? 'text-gray-900'
                               : 'text-gray-500'
-                          }`}>
-                            km
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => setFieldValue('mileage_unit', 'miles')}
+                              }`}>
+                              km
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setFieldValue('mileage_unit', 'miles')}
                             className={`flex-1 py-2 px-3 rounded-md ${values.mileage_unit === 'miles'
-                              ? 'bg-white' 
+                              ? 'bg-white'
                               : 'bg-transparent'
-                          }`}
-                        >
+                              }`}
+                          >
                             <Text className={`text-xs font-NunitoSemiBold text-center ${values.mileage_unit === 'miles'
-                              ? 'text-gray-900' 
+                              ? 'text-gray-900'
                               : 'text-gray-500'
-                          }`}>
-                            miles
-                          </Text>
-                        </TouchableOpacity>
+                              }`}>
+                              miles
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                   </View>
-                </View>
 
-                {/* Transmission */}
-              <SelectField
-                  name="transmission"
-                  label="Transmission"
-                  placeholder="Select transmission"
-                  options={transmissionOptions}
-                  value={values.transmission}
-                  onValueChange={(value) => setFieldValue('transmission', value)}
-                  error={errors.transmission as string}
-                  touched={touched.transmission as boolean}
-              />
-
-              {/* Fuel type */}
-              <SelectField
-                  name="fuel_type"
-                label="Fuel Type"
-                placeholder="Select fuel type"
-                options={fuelTypeOptions}
-                  value={values.fuel_type}
-                  onValueChange={(value) => setFieldValue('fuel_type', value)}
-                  error={errors.fuel_type as string}
-                  touched={touched.fuel_type as boolean}
-                />
-
-                {/* Engine size */}
+                  {/* Transmission */}
                   <SelectField
-                  name="engine_size"
-                  label="Engine Size"
+                    name="transmission"
+                    label="Transmission"
+                    placeholder="Select transmission"
+                    options={transmissionOptions}
+                    value={values.transmission}
+                    onValueChange={(value) => setFieldValue('transmission', value)}
+                    error={errors.transmission as string}
+                    touched={touched.transmission as boolean}
+                  />
+
+                  {/* Fuel type */}
+                  <SelectField
+                    name="fuel_type"
+                    label="Fuel Type"
+                    placeholder="Select fuel type"
+                    options={fuelTypeOptions}
+                    value={values.fuel_type}
+                    onValueChange={(value) => setFieldValue('fuel_type', value)}
+                    error={errors.fuel_type as string}
+                    touched={touched.fuel_type as boolean}
+                  />
+
+                  {/* Engine size */}
+                  <SelectField
+                    name="engine_size"
+                    label="Engine Size"
                     placeholder="Select engine size"
                     options={engineSizeOptions}
                     value={values.engine_size}
                     onValueChange={(value) => setFieldValue('engine_size', value)}
                     error={errors.engine_size as string}
                     touched={touched.engine_size as boolean}
-                />
-              </View>
+                  />
+                </View>
 
-              {/* Appearance */}
-              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
+                {/* Appearance */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
                       <Text className="text-white font-NunitoBold text-sm">3</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Appearance</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Colors and styling
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Appearance</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                      Colors and styling
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* Exterior color */}
-                <FormikInput
-                  name="exterior_color"
-                  label="Exterior Color"
+
+                  {/* Exterior color */}
+                  <FormikInput
+                    name="exterior_color"
+                    label="Exterior Color"
                     placeholder="e.g., Black, White, Silver, Red"
-                  type="text"
-                />
+                    type="text"
+                  />
 
-                {/* Interior color */}
-              <FormikInput
-                  name="interior_color"
-                  label="Interior Color"
+                  {/* Interior color */}
+                  <FormikInput
+                    name="interior_color"
+                    label="Interior Color"
                     placeholder="e.g., Black, Beige, Brown, Gray"
-                type="text"
-              />
+                    type="text"
+                  />
 
-                {/* Number of doors and seats */}
-                <View className="flex-row gap-3">
-                  <View className="flex-1">
-                    <FormikInput
-                      name="number_of_doors"
-                      label="Number of Doors"
-                        placeholder="e.g., 2, 4, 5"
-                      keyboardType="numeric"
-                      type="text"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <FormikInput
-                      name="number_of_seats"
-                      label="Number of Seats"
-                        placeholder="e.g., 4, 5, 7"
-                      keyboardType="numeric"
-                      type="text"
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Features */}
-              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-orange-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">4</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Features</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Car Amenities and Safety
-                    </Text>
-                  </View>
-                </View>
-                
-                <FeatureBadges
-                  features={featureOptions}
-                  selectedFeatures={selectedFeatures}
-                  onFeatureToggle={handleFeatureToggle}
-                  label="Car Features"
-                />
-              </View>
-
-              {/* Description */}
-              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-indigo-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">5</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Tell Customers about your Car
-                    </Text>
-                  </View>
-                </View>
-                
-                <FormikInput
-                  name="description"
-                  label="Description"
-                    placeholder="e.g., Well maintained car with regular service history. Perfect for daily commuting with excellent fuel economy."
-                  type="text"
-                  multiline={true}
-                  numberOfLines={4}
-                />
-              </View>
-
-              {/* Pricing & Availability */}
-              <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-emerald-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">6</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-NunitoBold text-gray-900">Pricing & Availability</Text>
-                    <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Set your Price and Availability
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* Price and Currency */}
-                <View className="mb-4">
-                  <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                    Price
-                  </Text>
+                  {/* Number of doors and seats */}
                   <View className="flex-row gap-3">
                     <View className="flex-1">
                       <FormikInput
-                        name="price"
-                        label=""
-                          placeholder="e.g., 2,500,000"
+                        name="number_of_doors"
+                        label="Number of Doors"
+                        placeholder="e.g., 2, 4, 5"
                         keyboardType="numeric"
                         type="text"
                       />
                     </View>
-                    <View className="w-32">
-                      <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                        Currency
-                      </Text>
-                      <View className="flex-row bg-gray-100 rounded-lg p-1">
-                        <TouchableOpacity
-                          onPress={() => setFieldValue('currency', 'NGN')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN'
-                              ? 'bg-white' 
-                              : 'bg-transparent'
-                          }`}
-                        >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN'
-                              ? 'text-gray-900' 
-                              : 'text-gray-500'
-                          }`}>
-                            ₦
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => setFieldValue('currency', 'USD')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD'
-                              ? 'bg-white' 
-                              : 'bg-transparent'
-                          }`}
-                        >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD'
-                              ? 'text-gray-900' 
-                              : 'text-gray-500'
-                          }`}>
-                            $
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                    <View className="flex-1">
+                      <FormikInput
+                        name="number_of_seats"
+                        label="Number of Seats"
+                        placeholder="e.g., 4, 5, 7"
+                        keyboardType="numeric"
+                        type="text"
+                      />
                     </View>
                   </View>
                 </View>
 
-                {/* Stock */}
-              <FormikInput
-                  name="stock"
-                  label="Stock Quantity"
+                {/* Features */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-orange-500 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-NunitoBold text-sm">4</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Features</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Car Amenities and Safety
+                      </Text>
+                    </View>
+                  </View>
+
+                  <FeatureBadges
+                    features={featureOptions}
+                    selectedFeatures={selectedFeatures}
+                    onFeatureToggle={handleFeatureToggle}
+                    label="Car Features"
+                  />
+                </View>
+
+                {/* Description */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-indigo-500 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-NunitoBold text-sm">5</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Tell Customers about your Car
+                      </Text>
+                    </View>
+                  </View>
+
+                  <FormikInput
+                    name="description"
+                    label="Description"
+                    placeholder="e.g., Well maintained car with regular service history. Perfect for daily commuting with excellent fuel economy."
+                    type="text"
+                    multiline={true}
+                    numberOfLines={4}
+                  />
+                </View>
+
+                {/* Pricing & Availability */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-emerald-500 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-NunitoBold text-sm">6</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Pricing & Availability</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Set your Price and Availability
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Price and Currency */}
+                  <View className="mb-4">
+                    <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
+                      Price
+                    </Text>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <FormikInput
+                          name="price"
+                          label=""
+                          placeholder="e.g., 2,500,000"
+                          keyboardType="numeric"
+                          type="text"
+                        />
+                      </View>
+                      <View className="w-32">
+                        <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
+                          Currency
+                        </Text>
+                        <View className="flex-row bg-gray-100 rounded-lg p-1">
+                          <TouchableOpacity
+                            onPress={() => setFieldValue('currency', 'NGN')}
+                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN'
+                              ? 'bg-white'
+                              : 'bg-transparent'
+                              }`}
+                          >
+                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN'
+                              ? 'text-gray-900'
+                              : 'text-gray-500'
+                              }`}>
+                              ₦
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setFieldValue('currency', 'USD')}
+                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD'
+                              ? 'bg-white'
+                              : 'bg-transparent'
+                              }`}
+                          >
+                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD'
+                              ? 'text-gray-900'
+                              : 'text-gray-500'
+                              }`}>
+                              $
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Stock */}
+                  <FormikInput
+                    name="stock"
+                    label="Stock Quantity"
                     placeholder="e.g., 1, 2, 5"
-                keyboardType="numeric"
-                type="text"
-              />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
-                {/* Availability */}
-                <SelectField
-                  name="availability"
-                  label="Availability"
-                  placeholder="Select availability"
-                  options={availabilityOptions}
-                  value={values.availability}
-                  onValueChange={(value) => setFieldValue('availability', value)}
-                  error={errors.availability as string}
-                  touched={touched.availability as boolean}
-                />
+                  {/* Availability */}
+                  <SelectField
+                    name="availability"
+                    label="Availability"
+                    placeholder="Select availability"
+                    options={availabilityOptions}
+                    value={values.availability}
+                    onValueChange={(value) => setFieldValue('availability', value)}
+                    error={errors.availability as string}
+                    touched={touched.availability as boolean}
+                  />
 
-                {/* Delivery option */}
-                <SelectField
-                  name="delivery_option"
-                  label="Delivery Option"
-                  placeholder="Select delivery option"
-                  options={deliveryOptions}
-                  value={values.delivery_option}
-                  onValueChange={(value) => setFieldValue('delivery_option', value)}
-                  error={errors.delivery_option as string}
-                  touched={touched.delivery_option as boolean}
-                />
-              </View>
+                  {/* Delivery option */}
+                  <SelectField
+                    name="delivery_option"
+                    label="Delivery Option"
+                    placeholder="Select delivery option"
+                    options={deliveryOptions}
+                    value={values.delivery_option}
+                    onValueChange={(value) => setFieldValue('delivery_option', value)}
+                    error={errors.delivery_option as string}
+                    touched={touched.delivery_option as boolean}
+                  />
+                </View>
 
                 {/* Continue Button */}
                 <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
-                <FormikButton
+                  <FormikButton
                     title={isEditMode ? "Update Car Details" : "Continue to Images"}
-                  type="submit"
-                  onPress={formikHandleSubmit}
-                  disabled={!isValid || !dirty || isSubmitting}
-                  loading={isSubmitting}
+                    type="submit"
+                    onPress={formikHandleSubmit}
+                    disabled={!isValid || !dirty || isSubmitting}
+                    loading={isSubmitting}
                     loadingText="Processing..."
-                  className="mb-3"
-                />
-                <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
-                  {isEditMode 
-                    ? "Your car details will be updated" 
-                    : "Next: Upload car images to complete your listing"
-                  }
-                </Text>
+                    className="mb-3"
+                  />
+                  <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
+                    {isEditMode
+                      ? "Your car details will be updated"
+                      : "Next: Upload car images to complete your listing"
+                    }
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
-        </Formik>
-      </ScrollView>
+            )}
+          </Formik>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

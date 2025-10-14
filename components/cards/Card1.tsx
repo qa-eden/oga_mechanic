@@ -232,7 +232,7 @@ const Card1 = memo(({
           )}
 
           {/* Address/Location */}
-          {address && (
+          {address && typeof address === 'string' && (
             <View className="flex-row items-center bg-gray-50 rounded-lg px-2 py-1.5">
               <View className="w-4 h-4 bg-primary-100 rounded-full items-center justify-center mr-2">
                 <Text className="text-xs text-primary-600">📍</Text>

@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, Image, ActivityIndicator } from "react-native";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import { TrashIcon, CheckIcon, PlusIcon, MinusIcon } from "react-native-heroicons/outline";
+import { TrashIcon, CheckIcon, PlusIcon, MinusIcon, PhotoIcon } from "react-native-heroicons/outline";
 
 interface CartItem {
   id: number;
@@ -40,7 +40,11 @@ const CartItemCard = memo(({
   onRemove,
   onUpdateQuantity,
   onPress,
-}: CartItemCardProps) => (
+}: CartItemCardProps) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  return (
   <Animated.View
     style={{
       opacity: fadeAnim,
@@ -85,14 +89,32 @@ const CartItemCard = memo(({
           disabled={!onPress}
         >
           {/* Product Image */}
-          <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3">
-            {typeof item.image === "function" ? (
+          <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3 bg-gray-100">
+            {!item.image || imageError ? (
+              // Placeholder when no image or error
+              <View className="w-full h-full items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200">
+                <View className="w-10 h-10 bg-white rounded-full items-center justify-center mb-1">
+                  <PhotoIcon size={20} color="#9CA3AF" />
+                </View>
+                <Text className="text-[10px] text-gray-400 font-NunitoMedium">No Image</Text>
+              </View>
+            ) : typeof item.image === "function" ? (
               <item.image width={70} height={80} />
             ) : (
-              <Image
-                source={typeof item.image === "string" ? { uri: item.image } : item.image}
-                style={{ width: 70, height: 80, resizeMode: "cover" }}
-              />
+              <>
+                <Image
+                  source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                  style={{ width: 70, height: 80, resizeMode: "cover" }}
+                  onError={() => setImageError(true)}
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoadEnd={() => setImageLoading(false)}
+                />
+                {imageLoading && (
+                  <View className="absolute w-full h-full items-center justify-center bg-gray-100">
+                    <ActivityIndicator size="small" color="#D30309" />
+                  </View>
+                )}
+              </>
             )}
           </View>
 
@@ -176,6 +198,7 @@ const CartItemCard = memo(({
       </View>
     </View>
   </Animated.View>
-));
+  );
+});
 
 export default CartItemCard; 

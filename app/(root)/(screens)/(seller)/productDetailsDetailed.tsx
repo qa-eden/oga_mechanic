@@ -9,6 +9,7 @@ import { NairaCurrency } from '@/utils/useCurrencyFormatter'
 import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal'
 import { sellerRoutes } from '@/constants/routes'
 import { productsAPI } from '@/lib/api/products'
+import { useVehicleMakes } from '@/hooks/useVehicleMakes'
 import CustomButton from '@/components/CustomButton'
 import LoadingSpinner from '@/components/LoadingSpinner'
 
@@ -31,6 +32,9 @@ const ProductDetailsDetailed = () => {
   const [imageCache, setImageCache] = useState<Map<number, any>>(new Map());
   const [showDeleteDrawer, setShowDeleteDrawer] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Fetch vehicle makes for name lookup
+  const { data: vehicleMakes } = useVehicleMakes();
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -203,6 +207,20 @@ const ProductDetailsDetailed = () => {
     return stars
   }
 
+  // Helper functions to get make and model names
+  const getMakeName = (makeId: number) => {
+    if (!vehicleMakes || !makeId) return 'N/A';
+    const make = vehicleMakes.find(m => m.id === makeId);
+    return make?.name || 'N/A';
+  };
+
+  const getModelName = (makeId: number, modelId: number) => {
+    if (!vehicleMakes || !makeId || !modelId) return 'N/A';
+    const make = vehicleMakes.find(m => m.id === makeId);
+    const model = make?.models?.find(m => m.id === modelId);
+    return model?.name || 'N/A';
+  };
+
   const handleEdit = () => {
     if (!productData) return;
     
@@ -210,20 +228,24 @@ const ProductDetailsDetailed = () => {
     console.log('🔍 DEBUG: productData.id:', productData.id);
     console.log('🔍 DEBUG: productData.category?.name:', productData.category?.name);
     
-    // Navigate to edit page based on product type
-    if (productData.category?.name?.toLowerCase().includes('spare')) {
+    // Determine if it's a spare part (not a car)
+    const isSparePart = !productData.category?.name?.toLowerCase().includes('car');
+
+    console.log('🔍 DEBUG: Is spare part?', isSparePart);
+
+    if (isSparePart) {
+      // Navigate to spare part edit page
+      console.log('🔍 DEBUG: Navigating to spare part edit page');
       router.push({
-        pathname: sellerRoutes.editProduct,
+        pathname: sellerRoutes.editSparePart,
         params: {
-          editMode: 'true',
           productId: productData.id,
           productData: JSON.stringify(productData)
         }
       });
-    } else if (productData.category?.name?.toLowerCase().includes('car')) {
-      // Navigate to the new dedicated edit page
-      console.log('🔍 DEBUG: Navigating to dedicated edit page with productId:', productData.id);
-
+    } else {
+      // Navigate to car edit page
+      console.log('🔍 DEBUG: Navigating to car edit page');
       router.push({
         pathname: sellerRoutes.editProduct,
         params: {
@@ -408,7 +430,7 @@ const ProductDetailsDetailed = () => {
         </TouchableOpacity>
         <View className="flex-1 items-center">
           <Text className="text-lg font-NunitoBold text-gray-900">
-            {productData.category?.name?.toLowerCase().includes('spare') ? 'Spare part details' : 'Car details'}
+            {!productData.category?.name?.toLowerCase().includes('car') ? 'Spare Part Details' : 'Car Details'}
           </Text>
         </View>
         <View className="w-6" />
@@ -483,8 +505,7 @@ const ProductDetailsDetailed = () => {
                     <TouchableOpacity
                       key={index}
                       onPress={() => handleImageChange(index)}
-                      className={`w-3 h-3 rounded-full relative mx-1 ${
-                        index === selectedImageIndex ? 'bg-primary-500' : 'bg-white/70'
+                      className={`w-3 h-3 rounded-full relative mx-1 ${index === selectedImageIndex ? 'bg-primary-500' : 'bg-white/70'
                       }`}
                       style={{ 
                         shadowColor: '#000',
@@ -508,8 +529,7 @@ const ProductDetailsDetailed = () => {
                 <TouchableOpacity
                   key={index}
                   onPress={() => handleImageChange(index)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden ${
-                    selectedImageIndex === index ? 'border-2 border-primary-500' : 'border border-gray-300'
+                  className={`w-16 h-16 rounded-lg overflow-hidden ${selectedImageIndex === index ? 'border-2 border-primary-500' : 'border border-gray-300'
                   }`}
                   style={{
                     shadowColor: selectedImageIndex === index ? '#3B82F6' : '#000',
@@ -572,32 +592,38 @@ const ProductDetailsDetailed = () => {
               </View>
             </View>
 
-            {/* Key Features */}
+            {/* Key Features - Show important ones only */}
             <View className="flex-row flex-wrap gap-2 mb-6">
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Premium Quality</Text>
+              {productData.condition && (
+                <View className="bg-blue-100 px-3 py-1.5 rounded-full">
+                  <Text className="text-xs font-NunitoMedium text-blue-700 capitalize">{productData.condition}</Text>
               </View>
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Fast Shipping</Text>
+              )}
+              {productData.negotiable && (
+                <View className="bg-green-100 px-3 py-1.5 rounded-full">
+                  <Text className="text-xs font-NunitoMedium text-green-700">Negotiable</Text>
               </View>
-              <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-                <Text className="text-xs font-NunitoMedium text-gray-700">Warranty Included</Text>
+              )}
+              {productData.stock > 0 && (
+                <View className="bg-emerald-100 px-3 py-1.5 rounded-full">
+                  <Text className="text-xs font-NunitoMedium text-emerald-700">In Stock</Text>
               </View>
+              )}
             </View>
 
-            {/* Product Analytics */}
+            {/* Product Analytics - Important metrics only */}
             <View className="flex-row items-center justify-between py-3 border-t border-gray-100">
               <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Views:</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.views || 0}</Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Likes:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.likes || 0}</Text>
-              </View>
-              <View className="flex-row items-center">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Sold:</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.purchased_count || 0}</Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Rating:</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.rating || 'N/A'}</Text>
               </View>
             </View>
           </View>
@@ -628,53 +654,8 @@ const ProductDetailsDetailed = () => {
           </View>
         </Animated.View>
 
-        {/* Product Performance */}
-        <Animated.View 
-          style={{ 
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }}
-          className="mx-4 mb-4"
-        >
-          <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
-            style={{ 
-              shadowColor: '#000', 
-              shadowOffset: { width: 0, height: 2 }, 
-              shadowOpacity: 0.05, 
-              shadowRadius: 10, 
-              elevation: 5 
-            }}>
-            <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-              Product performance
-            </Text>
-            <View className="flex-row items-center mb-3">
-              {renderStars(productData.rating || 0)}
-              <Text className="text-gray-600 ml-2 font-NunitoMedium">
-                {productData.rating || 0} ({productData.reviews?.length || 0} reviews)
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Status:</Text>
-                <View className={`ml-2 px-2 py-1 rounded-full ${
-                  productData.status === 'Active' ? 'bg-green-100' : 'bg-gray-100'
-                }`}>
-                  <Text className={`text-xs font-NunitoBold ${
-                    productData.status === 'Active' ? 'text-green-700' : 'text-gray-600'
-                  }`}>
-                    {productData.status || 'Active'}
-                  </Text>
-                </View>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Stock:</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">{productData.stock || 0} units</Text>
-              </View>
-            </View>
-          </View>
-        </Animated.View>
 
-        {/* Product Details */}
+        {/* Important Product Details */}
         <Animated.View 
           style={{ 
             opacity: fadeAnim,
@@ -691,7 +672,7 @@ const ProductDetailsDetailed = () => {
               elevation: 5 
             }}>
             <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-              Product details
+              Product Information
             </Text>
             
             <View className="space-y-3">
@@ -700,40 +681,352 @@ const ProductDetailsDetailed = () => {
                 <Text className="text-sm font-NunitoBold text-primary-600">{productData.category?.name || 'N/A'}</Text>
               </View>
 
-              {productData.condition && (
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-sm text-gray-600 font-NunitoMedium">Condition</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">{productData.condition}</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.condition || 'N/A'}</Text>
               </View>
-              )}
-
-              {productData.warranty && (
-              <View className="flex-row justify-between items-center py-2">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Warranty</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">{productData.warranty}</Text>
-              </View>
-              )}
 
               <View className="flex-row justify-between items-center py-2">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Listed on</Text>
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Stock Available</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.stock || 0} units</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Delivery</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900 capitalize">{productData.delivery_option || 'N/A'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Listed Date</Text>
                 <Text className="text-sm font-NunitoBold text-gray-900">
                   {productData.created_at ? new Date(productData.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
                   }) : 'N/A'}
-                </Text>
-              </View>
-
-              {productData.estimatedDelivery && (
-              <View className="flex-row justify-between items-center py-2">
-                <Text className="text-sm text-gray-600 font-NunitoMedium">Delivery time</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">{productData.estimatedDelivery}</Text>
-              </View>
-              )}
+              </Text>
+            </View>
             </View>
           </View>
         </Animated.View>
+
+        {/* Car-Specific Details */}
+        {!productData.category?.name?.toLowerCase().includes('car') ? null : (
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="mx-4 mb-4"
+          >
+            <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 5
+              }}>
+              <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+                Vehicle Specifications
+                  </Text>
+              
+              <View className="space-y-3">
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Make</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{getMakeName(productData.make)}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Model</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{getModelName(productData.make, productData.model)}</Text>
+              </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Year</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.year || 'N/A'}</Text>
+              </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Body Type</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.body_type || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Mileage</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.mileage || 'N/A'} {productData.mileage_unit || ''}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Transmission</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.transmission || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Fuel Type</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.fuel_type || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Engine Size</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.engine_size || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Exterior Color</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.exterior_color || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Interior Color</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.interior_color || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Number of Doors</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.number_of_doors || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Number of Seats</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.number_of_seats || 'N/A'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Is Rental</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.is_rental ? 'Yes' : 'No'}</Text>
+                </View>
+            </View>
+          </View>
+        </Animated.View>
+        )}
+
+        {/* Features & Amenities */}
+        {!productData.category?.name?.toLowerCase().includes('car') ? null : (
+        <Animated.View 
+          style={{ 
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+          className="mx-4 mb-4"
+        >
+          <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+            style={{ 
+              shadowColor: '#000', 
+              shadowOffset: { width: 0, height: 2 }, 
+              shadowOpacity: 0.05, 
+              shadowRadius: 10, 
+              elevation: 5 
+            }}>
+            <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+                Features & Amenities
+            </Text>
+            
+            <View className="space-y-3">
+              <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Air Conditioning</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.air_conditioning ? 'Yes' : 'No'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Leather Seats</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.leather_seats ? 'Yes' : 'No'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Navigation System</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.navigation_system ? 'Yes' : 'No'}</Text>
+              </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Bluetooth</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.bluetooth ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Parking Sensors</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.parking_sensors ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Cruise Control</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.cruise_control ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Keyless Entry</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.keyless_entry ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Sunroof</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.sunroof ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Alloy Wheels</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.alloy_wheels ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Airbags</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.airbags ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">ABS</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.abs ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Traction Control</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.traction_control ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Lane Assist</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.lane_assist ? 'Yes' : 'No'}</Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Blind Spot Monitor</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.blind_spot_monitor ? 'Yes' : 'No'}</Text>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Merchant Information */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+          className="mx-4 mb-4"
+        >
+          <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              elevation: 5
+            }}>
+            <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+              Merchant Details
+            </Text>
+            
+            <View className="space-y-3">
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Merchant Name</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.merchant?.first_name} {productData.merchant?.last_name}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Email</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.merchant?.email || 'N/A'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Phone</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.merchant?.phone_number || 'N/A'}</Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Important Analytics */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+          className="mx-4 mb-4"
+        >
+          <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              elevation: 5
+            }}>
+            <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+              Performance Metrics
+                </Text>
+            
+            <View className="space-y-3">
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Product Rating</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.rating || 'No ratings yet'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Times Sold</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.purchased_count || 0}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Total Views</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.views || 0}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-sm text-gray-600 font-NunitoMedium">Merchant Rating</Text>
+                <Text className="text-sm font-NunitoBold text-gray-900">{productData.merchant_rating || 'N/A'}</Text>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Vehicle Compatibility */}
+        {productData.vehicle_compatibility && productData.vehicle_compatibility.length > 0 && (
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="mx-4 mb-4"
+          >
+            <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 5
+              }}>
+              <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+                Vehicle Compatibility
+              </Text>
+              
+              <View className="space-y-3">
+                {productData.vehicle_compatibility.map((compat: any, index: number) => (
+                  <View key={index} className="border border-gray-200 rounded-lg p-3">
+                    <Text className="text-sm font-NunitoBold text-gray-900 mb-2">Compatibility {index + 1}</Text>
+                    <View className="space-y-2">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-xs text-gray-600 font-NunitoMedium">Make</Text>
+                        <Text className="text-xs font-NunitoBold text-gray-900">{getMakeName(compat.make)}</Text>
+                      </View>
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-xs text-gray-600 font-NunitoMedium">Models</Text>
+                        <Text className="text-xs font-NunitoBold text-gray-900">
+                          {Array.isArray(compat.model) 
+                            ? compat.model.map((modelId: number) => getModelName(compat.make, modelId)).join(', ')
+                            : getModelName(compat.make, compat.model)
+                          }
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
 
         {/* Product Orders */}
         <Animated.View 
@@ -812,7 +1105,7 @@ const ProductDetailsDetailed = () => {
         visible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDelete}
-        itemType={productData?.category?.name?.toLowerCase().includes('car') ? 'car' : 'sparePart'}
+        itemType={!productData?.category?.name?.toLowerCase().includes('car') ? 'sparePart' : 'car'}
         itemName={productData?.name || ''}
       />
 

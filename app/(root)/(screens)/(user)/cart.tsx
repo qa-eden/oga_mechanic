@@ -23,6 +23,7 @@ import { useState as useLocalState } from "react";
 import CustomButton from "@/components/CustomButton";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import PaymentMethodModal from "@/components/modals/PaymentMethodModal";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { routes } from "@/constants/routes";
 import CartItemCard from "@/components/cards/CartItemCard";
 import { useCart, useUpdateCartItem, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
@@ -446,9 +447,11 @@ const Cart = () => {
             <View className="w-12" />
           </View>
         </LinearGradient>
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-gray-600 text-lg">Loading cart...</Text>
-        </View>
+        <LoadingSpinner 
+          message="Loading your cart" 
+          subMessage="Please wait while we fetch your items"
+          size="medium"
+        />
       </SafeAreaView>
     );
   }
@@ -550,7 +553,7 @@ const Cart = () => {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 50 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

@@ -7,20 +7,28 @@ import { router, useLocalSearchParams } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import ImageUploadSection from '@/components/ImageUploadSection'
 import { sellerRoutes } from '@/constants/routes'
+import CustomButton from '@/components/CustomButton'
 
 const UploadCarImages = () => {
   const [images, setImages] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadStep, setUploadStep] = useState<'idle' | 'uploading-details' | 'uploading-images' | 'complete'>('idle')
   
-  const { formData, editMode, productId } = useLocalSearchParams<{
+  const { formData, editMode, productId, productType } = useLocalSearchParams<{
     formData?: string;
     editMode?: string;
     productId?: string;
+    productType?: string;
   }>();
 
   const isEditMode = editMode === 'true';
   const parsedFormData = formData ? JSON.parse(formData) : null;
+  const type = productType || 'car'; // Default to 'car' for backward compatibility
+  const isSparePart = type === 'spare-part';
+  
+  // Dynamic text based on product type
+  const productLabel = isSparePart ? 'Spare Part' : 'Car';
+  const productLabelLower = isSparePart ? 'spare part' : 'car';
 
   // Get make and model names for display
   const getMakeName = (makeId: number) => {
@@ -70,7 +78,7 @@ const UploadCarImages = () => {
 
   const handleSubmit = async () => {
     if (images.length === 0) {
-      Alert.alert('Images Required', 'Please upload at least one image of your car.')
+      Alert.alert('Images Required', `Please upload at least one image of your ${productLabelLower}.`)
       return
     }
 
@@ -78,12 +86,12 @@ const UploadCarImages = () => {
     setUploadStep('uploading-images')
 
     try {
-      // The car details have already been created in the previous step
+      // The product details have already been created in the previous step
       // We now need to upload images using the product ID
       const currentProductId = productId || parsedFormData?.id
       
       if (!currentProductId) {
-        throw new Error('Product ID not found. Please try creating the car listing again.')
+        throw new Error(`Product ID not found. Please try creating the ${productLabelLower} listing again.`)
       }
 
       console.log('Uploading images for product ID:', currentProductId)
@@ -96,7 +104,7 @@ const UploadCarImages = () => {
         formData.append('images', {
           uri: imageUri,
           type: 'image/jpeg',
-          name: `car_image_${index + 1}.jpg`,
+          name: `${type}_image_${index + 1}.jpg`,
         } as any)
       })
 
@@ -125,8 +133,8 @@ const UploadCarImages = () => {
       router.push({
         pathname: sellerRoutes.successfulPage as any,
         params: {
-          title: "Car Uploaded Successfully!",
-          message: `Your ${parsedFormData?.data?.name && parsedFormData.data.name?.toUpperCase()} has been Uploaded Successfully and is now Available in your Car Catalog. Customers can now View and Purchase your Car.`,
+          title: `${productLabel} Uploaded Successfully!`,
+          message: `Your ${parsedFormData?.data?.name?.toUpperCase()} has been uploaded successfully and is now available in your ${productLabelLower} catalog. Customers can now view and purchase this ${productLabelLower}.`,
           route: sellerRoutes.products
         }
       })
@@ -141,13 +149,15 @@ const UploadCarImages = () => {
 
   const handleBack = () => {
     // Go back to the form page with the form data preserved for editing
+    const backRoute = isSparePart ? sellerRoutes.uploadSpareParts : sellerRoutes.uploadProducts;
+    
     router.push({
-      pathname: sellerRoutes.uploadProducts as any,
+      pathname: backRoute as any,
       params: {
         formData: formData,
-        editMode: 'true', // Set to edit mode when going back
+        editMode: 'true',
         productId: productId,
-        isEditing: 'true', // Flag to indicate we're editing
+        isEditing: 'true',
       }
     })
   }
@@ -167,10 +177,10 @@ const UploadCarImages = () => {
           </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
-              {isEditMode ? 'Edit Car Images' : 'Upload Car Images'}
+              {isEditMode ? `Edit ${productLabel} Images` : `Upload ${productLabel} Images`}
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
-              {isEditMode ? 'Update your car images' : 'Add images to complete your listing'}
+              {isEditMode ? `Update your ${productLabelLower} images` : 'Add images to complete your listing'}
             </Text>
           </View>
           <View className="w-10" />
@@ -184,36 +194,50 @@ const UploadCarImages = () => {
             <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-2">
               <Text className="text-white font-NunitoBold text-sm">✓</Text>
             </View>
-            <Text className="text-green-600 font-NunitoSemiBold text-sm mr-4">Car Details</Text>
+            <Text className="text-green-600 font-NunitoSemiBold text-sm mr-4">{productLabel} Details</Text>
             
-            <View className="w-8 h-8 bg-red-500 rounded-full items-center justify-center mr-2">
+            <View className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center mr-2">
               <Text className="text-white font-NunitoBold text-sm">2</Text>
             </View>
-            <Text className="text-red-600 font-NunitoSemiBold text-sm">Images</Text>
+            <Text className="text-primary-600 font-NunitoSemiBold text-sm">Images</Text>
           </View>
         </View>
 
-        {/* Car Summary */}
+        {/* Product Summary */}
         {parsedFormData && (
           <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
             <View className="flex-row items-center mb-3">
               <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
                 <Text className="text-white font-NunitoBold text-sm">ℹ</Text>
               </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">Car Summary</Text>
+              <Text className="text-lg font-NunitoBold text-gray-900">{productLabel} Summary</Text>
             </View>
             <View className="bg-gray-50 rounded-xl p-4">
               <Text className="text-base font-NunitoSemiBold text-gray-900 mb-2">
-                {parsedFormData?.data?.name} - {getMakeName(parsedFormData?.data?.make)} {getModelName(parsedFormData?.data?.model)}
+                {parsedFormData?.data?.name}
               </Text>
+              
+              {/* Car-specific details */}
+              {!isSparePart && parsedFormData?.data?.make && (
+                <>
+                  <Text className="text-sm text-gray-600 mb-1">
+                    {getMakeName(parsedFormData?.data?.make)} {getModelName(parsedFormData?.data?.model)}
+                  </Text>
+                  <Text className="text-sm text-gray-600 mb-1">
+                    Year: {parsedFormData?.data?.year} • {parsedFormData?.data?.condition}
+                  </Text>
+                  <Text className="text-sm text-gray-600 mb-1">
+                    {parsedFormData?.data?.mileage} {parsedFormData?.data?.mileage_unit} • {parsedFormData?.data?.transmission}
+                  </Text>
+                  <Text className="text-sm text-gray-600 mb-1">
+                    {parsedFormData?.data?.fuel_type} • {parsedFormData?.data?.body_type}
+                  </Text>
+                </>
+              )}
+              
+              {/* Common details */}
               <Text className="text-sm text-gray-600 mb-1">
-                Year: {parsedFormData?.data?.year} • {parsedFormData?.data?.condition}
-              </Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {parsedFormData?.data?.mileage} {parsedFormData?.data?.mileage_unit} • {parsedFormData?.data?.transmission}
-              </Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {parsedFormData?.data?.fuel_type} • {parsedFormData?.data?.body_type}
+                Condition: {parsedFormData?.data?.condition} • Stock: {parsedFormData?.data?.stock}
               </Text>
               <Text className="text-sm font-NunitoSemiBold text-green-600">
                 Price: {parsedFormData?.data?.currency === 'NGN' ? '₦' : '$'}{parseFloat(parsedFormData?.data?.price || '0').toLocaleString()}
@@ -225,11 +249,11 @@ const UploadCarImages = () => {
         {/* Upload Image Section */}
         <View className="bg-white rounded-2xl mb-4 border border-gray-200">
           <View className="flex-row items-center p-4">
-            <View className="w-8 h-8 bg-red-500 rounded-lg items-center justify-center mr-3">
+            <View className="w-8 h-8 bg-primary-500 rounded-lg items-center justify-center mr-3">
               <Text className="text-white font-NunitoBold text-sm">1</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-NunitoBold text-gray-900">Car Images</Text>
+              <Text className="text-lg font-NunitoBold text-gray-900">{productLabel} Images</Text>
               <Text className="text-xs text-gray-500 font-NunitoMedium">
                 Upload high-quality images (no limit)
               </Text>
@@ -250,11 +274,19 @@ const UploadCarImages = () => {
               💡 <Text className="font-NunitoSemiBold">Tips for better images:</Text>
             </Text>
             <Text className="text-xs text-blue-700 mt-1">
-              • Use good lighting and clear shots{'\n'}
-              • Include exterior views from different angles{'\n'}
-              • Show interior, engine, and key features{'\n'}
-              • Add close-up shots of any damage or special features{'\n'}
-              • Ensure images are well-focused and high quality
+              {isSparePart ? (
+                <>• Use good lighting and clear shots{'\n'}
+                • Show the part from multiple angles{'\n'}
+                • Include packaging and brand labels if available{'\n'}
+                • Add close-up shots of key features{'\n'}
+                • Ensure images are well-focused and high quality</>
+              ) : (
+                <>• Use good lighting and clear shots{'\n'}
+                • Include exterior views from different angles{'\n'}
+                • Show interior, engine, and key features{'\n'}
+                • Add close-up shots of any damage or special features{'\n'}
+                • Ensure images are well-focused and high quality</>
+              )}
             </Text>
           </View>
         </View>
@@ -279,7 +311,7 @@ const UploadCarImages = () => {
               <Text className={`text-sm font-NunitoMedium ${
                 uploadStep === 'uploading-details' ? 'text-blue-600' : 'text-gray-600'
               }`}>
-                Creating Car Listing
+                Creating {productLabel} Listing
               </Text>
               
               <View className={`w-6 h-6 rounded-full items-center justify-center ml-4 mr-2 ${
@@ -303,23 +335,23 @@ const UploadCarImages = () => {
 
         {/* Upload Button */}
         <View className="bg-white rounded-2xl p-5 mb-8 border border-gray-200">
-          <TouchableOpacity 
+
+          <CustomButton
+            title={uploadStep === 'uploading-details' ? `Creating ${productLabel} Listing...` :
+              uploadStep === 'uploading-images' ? 'Uploading Images...' :
+              isSubmitting ? 'Uploading...' :
+              isEditMode ? `Update ${productLabel}` : `Upload ${productLabel}`}
             onPress={handleSubmit}
             disabled={images.length === 0 || isSubmitting}
-            className={`rounded-xl py-4 ${images.length === 0 || isSubmitting ? 'bg-gray-400' : 'bg-red-600'}`}
-          >
-            <Text className="text-white text-center text-lg font-NunitoBold">
-              {uploadStep === 'uploading-details' ? 'Creating Car Listing...' :
-               uploadStep === 'uploading-images' ? 'Uploading Images...' :
-               isSubmitting ? 'Uploading...' : 
-               isEditMode ? 'Update Car' : 'Upload Car'}
-            </Text>
-          </TouchableOpacity>
+            loading={isSubmitting}
+            loadingText="Uploading"
+            className="mt-3"
+          />
           
           <Text className="text-xs text-gray-500 text-center font-NunitoMedium mt-3">
             {isEditMode 
-              ? "Your car will be updated in the catalog with new images" 
-              : "Your car will be added to your catalog and available for customers to view"
+              ? `Your ${productLabelLower} will be updated in the catalog with new images` 
+              : `Your ${productLabelLower} will be added to your catalog and available for customers to view`
             }
           </Text>
         </View>

@@ -383,7 +383,8 @@ export const productsAPI = {
     maxPrice?: string,
     offset?: number,
     limit?: number,
-    merchantId?: string
+    merchantId?: string,
+    isRental?: boolean
   ): Promise<ProductListAPIResponse> => {
     const params = new URLSearchParams();
     if (categoryId) {
@@ -404,11 +405,14 @@ export const productsAPI = {
     if (merchantId) {
       params.append('merchant', merchantId);
     }
-    
-    const url = params.toString() 
+    if (isRental !== undefined) {
+      params.append('is_rental', isRental.toString());
+    }
+
+    const url = params.toString()
       ? `${SERVICE_ENDPOINTS.PRODUCTS_LIST}?${params.toString()}`
       : SERVICE_ENDPOINTS.PRODUCTS_LIST;
-    
+
     console.log('🛍️ Products API URL:', url);
     const response = await api.get<ProductListAPIResponse>(url);
     console.log('🛍️ Products API response:', response.data);
@@ -582,10 +586,30 @@ export const productsAPI = {
   // Delete product by ID
   deleteProduct: async (id: string): Promise<any> => {
     console.log('🗑️ Deleting product with ID:', id);
-    
+
     const response = await api.delete(`${SERVICE_ENDPOINTS.PRODUCTS_LIST}${id}/`);
     console.log('🗑️ Product delete response:', response.data);
-    
+
+    return response.data;
+  },
+
+  // Get merchant orders
+  getMerchantOrders: async (merchantId: string): Promise<any> => {
+    console.log('📦 Fetching merchant orders for ID:', merchantId);
+
+    const response = await api.get(`${SERVICE_ENDPOINTS.ORDERS}?merchant_id=${merchantId}`);
+    console.log('📦 Merchant orders response:', response.data);
+
+    return response.data;
+  },
+
+  // Get specific order by ID
+  getOrderById: async (orderId: string): Promise<any> => {
+    console.log('📦 Fetching order details for ID:', orderId);
+
+    const response = await api.get(SERVICE_ENDPOINTS.ORDER_STATUS(orderId));
+    console.log('📦 Order details response:', response.data);
+
     return response.data;
   },
 };

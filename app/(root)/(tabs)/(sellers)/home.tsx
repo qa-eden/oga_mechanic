@@ -22,7 +22,10 @@ import CustomerInsightsChart from "@/components/charts/CustomerInsightsChart";
 import ProductPerformanceChart from "@/components/charts/ProductPerformanceChart";
 import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import LoadingErrorWrapper from "@/components/LoadingErrorWrapper";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useActiveRoleProfile } from "@/hooks/useUserProfile";
+import { useMerchantOrders } from "@/hooks/useOrders";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
@@ -30,9 +33,22 @@ const SellerHome = () => {
 
   // Fetch merchant profile based on active role
   const { data: profileData, activeRole, isLoading: isProfileLoading, refetch: refetchProfile } = useActiveRoleProfile();
-  
+
+  // Extract merchant ID safely from different profile structures
+  const merchantId = activeRole === 'merchant'
+    ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
+    : (profileData?.data as any)?.user_id;
+
   // Fetch merchant analytics data
   const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics();
+
+  // Fetch merchant orders for recent orders section
+  const {
+    data: ordersResponse,
+    isLoading: isOrdersLoading,
+    error: ordersError,
+    refetch: refetchOrders
+  } = useMerchantOrders(merchantId?.toString() || '');
 
   // Debug: Log profile data
   React.useEffect(() => {
@@ -58,18 +74,40 @@ const SellerHome = () => {
     }
   }, [error]);
 
-  // Transform analytics data to match OrderItem interface with new design fields
-  const recentOrders = analyticsData?.best_selling_products?.map((product, index) => ({
-    id: product.id || `product-${index}`,
-    productName: product.name,
-    orderDate: new Date().toISOString().split('T')[0],
-    price: product.revenue,
-    status: "Delivered",
-    quantity: product.quantity_sold,
-    image: null, // Will show placeholder if no image
-    deliveryDate: new Date().toISOString().split('T')[0],
-    paymentStatus: "Paid",
-  })) || [];
+  // Transform real orders data to match OrderItem interface
+  const transformOrderItem = (order: any, item: any) => ({
+    id: `${order.id}-${item.id}`,
+    productName: item.product?.name || 'Unknown Product',
+    orderDate: new Date(order.created_at).toLocaleDateString('en-GB'),
+    price: parseFloat(item.price || 0),
+    totalAmount: parseFloat(order.total_amount || 0),
+    status: order.status,
+    quantity: item.quantity || 1,
+    image: item.product?.images?.[0]?.image || null,
+    deliveryDate: 'TBD',
+    paymentStatus: ['paid', 'shipped', 'delivered', 'completed'].includes(order.status.toLowerCase()) ? 'Paid' :
+                   order.status === 'cancelled' ? 'Cancelled' :
+                   order.status === 'refunded' ? 'Refunded' : 'Pending',
+    orderId: order.id,
+    itemId: item.id,
+    category: item.product?.category?.name || 'Unknown',
+    merchant_email: item.product?.merchant_email || '',
+  });
+
+  // Process real orders data - flatten items from all orders
+  const orders = ordersResponse?.data || [];
+  const allOrderItems: any[] = [];
+
+  orders.forEach((order: any) => {
+    order.items?.forEach((item: any) => {
+      allOrderItems.push(transformOrderItem(order, item));
+    });
+  });
+
+  // Get recent orders (latest 3) sorted by creation date
+  const recentOrders = allOrderItems
+    .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+    .slice(0, 3);
 
   // Extract analytics data with fallbacks
   const totalSales = analyticsData?.total_sales || 0;
@@ -171,67 +209,67 @@ const SellerHome = () => {
           </View>
         </View>
 
-        <View className="">
-          {/* Loading State */}
-          {isLoading && (
-            <View className="mb-6">
-              <LoadingSpinner 
-                message="Loading Analytics"
-                subMessage="Fetching your business insights..."
-                size="medium"
-                logoSize={40}
-              />
-            </View>
-          )}
+        {/* Analytics Charts with Error Handling */}
+        <LoadingErrorWrapper
+          isLoading={isLoading}
+          error={error}
+          onRetry={refetchAnalytics}
+          loadingMessage="Loading Analytics"
+          loadingSubMessage="Fetching your business insights..."
+          className="mb-6"
+        >
+          <View className="space-y-4">
+            {/* Customer Insights Chart */}
+            {analyticsData?.customer_insights && (
+              <CustomerInsightsChart data={analyticsData.customer_insights} />
+            )}
 
-          {/* Customer Insights Chart */}
-          {!isLoading && analyticsData?.customer_insights && (
-            <CustomerInsightsChart data={analyticsData.customer_insights} />
-          )}
+            {/* Product Performance Chart */}
+            {analyticsData?.product_performance && (
+              <ProductPerformanceChart data={analyticsData.product_performance} />
+            )}
 
-          {/* Product Performance Chart */}
-          {!isLoading && analyticsData?.product_performance && (
-            <ProductPerformanceChart data={analyticsData.product_performance} />
-          )}
-
-          {/* Rental Analytics Chart */}
-          {!isLoading && analyticsData?.rental_analytics && (
-            <RentalAnalyticsChart data={analyticsData.rental_analytics} />
-          )}
-
-          {/* Error State */}
-          {!isLoading && error && (
-            <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-              <Text className="text-red-800 font-NunitoBold text-center">
-                Unable to load analytics data
-              </Text>
-              <Text className="text-red-600 font-NunitoMedium text-center mt-1">
-                Please check your connection or try logging in again
-              </Text>
-            </View>
-          )}
-
-          {/* Recent Orders */}
-          <View className="">
-            <View className="flex-row items-center justify-between my-4">
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Recent Orders
-              </Text>
-              <TouchableOpacity className="flex-row items-center gap-1"
-                onPress={() => router.push("/(root)/(tabs)/(sellers)/?tab=orders" as any)}
-              >
-                <Text className="text-primary-500 font-NunitoMedium flex-row text-lg items-center">See All</Text>
-                <ChevronRightIcon size={20} color="#D30309" />
-              </TouchableOpacity>
-            </View>
-
-            {recentOrders?.slice(0, 3)?.map((order) => (
-              <OrderItemCard
-                key={order.id}
-                order={order}
-              />
-            ))}
+            {/* Rental Analytics Chart */}
+            {analyticsData?.rental_analytics && (
+              <RentalAnalyticsChart data={analyticsData.rental_analytics} />
+            )}
           </View>
+        </LoadingErrorWrapper>
+
+        {/* Recent Orders with Error Handling */}
+        <View className="mb-6">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-lg font-NunitoBold text-gray-900">
+              Recent Orders
+            </Text>
+            <TouchableOpacity className="flex-row items-center gap-1"
+              onPress={() => router.push("/(root)/(tabs)/(sellers)/?tab=orders" as any)}
+            >
+              <Text className="text-primary-500 font-NunitoMedium flex-row text-lg items-center">See All</Text>
+              <ChevronRightIcon size={20} color="#D30309" />
+            </TouchableOpacity>
+          </View>
+
+          <ErrorBoundary
+            error={ordersError}
+            onRetry={refetchOrders}
+            compact={true}
+          >
+            {recentOrders?.length > 0 ? (
+              recentOrders.slice(0, 3).map((order) => (
+                <OrderItemCard
+                  key={order.id}
+                  order={order}
+                />
+              ))
+            ) : (
+              <View className="py-8 items-center">
+                <Text className="text-gray-500 font-NunitoMedium text-center">
+                  No recent orders found.
+                </Text>
+              </View>
+            )}
+          </ErrorBoundary>
         </View>
       </ScrollView>
 

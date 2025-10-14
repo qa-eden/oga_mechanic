@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import { View, Text, TouchableOpacity, TextInput, FlatList } from "react-native"
+import { View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import { images } from "@/constants"
@@ -10,6 +10,9 @@ import { routes } from "@/constants/routes"
 import RentalCarCard from "@/components/cards/RentalCarCard";
 import BackArrowBtn from "@/components/BackArrowBtn"
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline"
+import { useRentalCars } from "@/hooks/useMerchantProducts"
+import { useCategories } from "@/hooks/useProducts"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 interface RentalCar {
   id: string
@@ -21,7 +24,7 @@ interface RentalCar {
 }
 
 interface SectionData {
-  type: 'search' | 'categories' | 'cars' | 'empty';
+  type: 'search' | 'categories' | 'cars' | 'empty' | 'loading' | 'error';
   data?: any;
 }
 
@@ -30,50 +33,62 @@ const RentACarScreen = () => {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [refreshing, setRefreshing] = useState(false)
 
-  const categories = ["All", "Mercedes", "Porsche", "Hyundai", "BMW", "Tesla", "Toyota"]
+  // Fetch categories for filtering
+  const { data: categoriesData } = useCategories();
 
-  const rentalCars: RentalCar[] = [
-    {
-      id: "1",
-      name: "BMW 328",
-      transmission: "Automatic",
-      pricePerDay: 100000,
-      image: images?.brabus,
-      category: "BMW",
-    },
-    {
-      id: "2",
-      name: "Tesla Model S",
-      transmission: "Automatic",
-      pricePerDay: 210000,
-      image: images?.brabus,
-      category: "Tesla",
-    },
-    {
-      id: "3",
-      name: "Toyota Yaris",
-      transmission: "Automatic",
-      pricePerDay: 90000,
-      image: images?.brabus,
-      category: "Toyota",
-    },
-    {
-      id: "4",
-      name: "Brabus G63",
-      transmission: "Automatic",
-      pricePerDay: 400000,
-      image: images?.brabus,
-      category: "Mercedes",
-    },
-  ]
+  // Find car category ID (assuming there's a "Car" category)
+  const carCategory = categoriesData?.find(cat =>
+    cat.name.toLowerCase().includes('car') || cat.name.toLowerCase().includes('vehicle')
+  );
 
-  const filteredCars = useMemo(() => 
+  // Fetch rental cars from API
+  const {
+    data: rentalCarsData = [],
+    isLoading,
+    error,
+    refetch
+  } = useRentalCars(carCategory?.id);
+
+  console.log('🔍 Rental Cars Data:', rentalCarsData);
+  console.log('🔍 Car Category:', carCategory);
+
+  // Transform API data to match component interface
+  const transformRentalCar = (car: any): RentalCar => ({
+    id: car.id,
+    name: car.name || 'Unknown Car',
+    transmission: car.transmission || 'Automatic',
+    pricePerDay: parseFloat(car.price || 0),
+    image: car.images?.[0]?.image || images?.brabus, // Use first image or fallback
+    category: car.make || 'Unknown', // Use make as category
+  });
+
+  // Transform API data
+  const rentalCars: RentalCar[] = rentalCarsData.map(transformRentalCar);
+
+  // Extract unique categories from API data
+  const apiCategories = Array.from(new Set(rentalCars.map(car => car.category).filter(Boolean)));
+  const categories = ["All", ...apiCategories];
+
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Error refreshing rental cars:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
+  const filteredCars = useMemo(() =>
     rentalCars.filter((car) => {
       const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "All" || car.category === selectedCategory
       return matchesSearch && matchesCategory
-    }), 
+    }),
     [rentalCars, searchQuery, selectedCategory]
   )
 
@@ -82,15 +97,19 @@ const RentACarScreen = () => {
       { type: 'search' },
       { type: 'categories', data: categories }
     ]
-    
-    if (filteredCars.length > 0) {
+
+    if (isLoading) {
+      sectionsData.push({ type: 'loading' })
+    } else if (error) {
+      sectionsData.push({ type: 'error' })
+    } else if (filteredCars.length > 0) {
       sectionsData.push({ type: 'cars', data: filteredCars })
     } else {
       sectionsData.push({ type: 'empty' })
     }
-    
+
     return sectionsData
-  }, [categories, filteredCars])
+  }, [categories, filteredCars, isLoading, error])
 
   const renderCategoryTab = useCallback(({ item }: { item: string }) => (
     <TouchableOpacity
@@ -175,6 +194,34 @@ const RentACarScreen = () => {
           </View>
         )
       
+      case 'loading':
+        return (
+          <View className={`${CONTAINER_PADDING} py-12`}>
+            <LoadingSpinner
+              message="Loading rental cars..."
+              subMessage="Please wait while we fetch available cars"
+              size="medium"
+              logoSize={32}
+            />
+          </View>
+        )
+
+      case 'error':
+        return (
+          <View className={`${CONTAINER_PADDING} items-center justify-center py-12`}>
+            <Text className="text-lg font-NunitoBold text-red-500 mb-2">Error Loading Cars</Text>
+            <Text className="text-base font-NunitoMedium text-gray-400 text-center mb-4">
+              Failed to load rental cars. Please try again.
+            </Text>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              className="bg-primary-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoBold">Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )
+
       case 'empty':
         return (
           <View className={`${CONTAINER_PADDING} items-center justify-center py-12`}>
@@ -184,7 +231,7 @@ const RentACarScreen = () => {
             </Text>
           </View>
         )
-      
+
       default:
         return null
     }
@@ -214,6 +261,14 @@ const RentACarScreen = () => {
         maxToRenderPerBatch={3}
         windowSize={5}
         initialNumToRender={3}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']}
+            tintColor="#D30309"
+          />
+        }
       />
     </SafeAreaView>
   )

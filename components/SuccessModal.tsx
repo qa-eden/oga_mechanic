@@ -246,7 +246,13 @@ const SuccessModal = ({
               <CustomButton
                 title={buttonText}
                 className="py-4"
-                onPress={onClose}
+                onPress={() => {
+                  if (route) {
+                    router.replace(route as any);
+                  } else {
+                    onClose();
+                  }
+                }}
               />
             </Animated.View>
           </View>

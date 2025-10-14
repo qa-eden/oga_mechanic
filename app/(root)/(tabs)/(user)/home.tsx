@@ -59,6 +59,10 @@ const HomePage = memo(() => {
   // Fetch home products from API (includes mechanics, cars, and spare parts)
   const { data: homeProducts, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useHomeProducts();
 
+  // Extract category IDs from the actual products
+  const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
+  const sparePartCategoryId = homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.id;
+
   // Debug: Log home products data
   console.log('🏠 Home Products Data:', homeProducts);
   console.log('🏠 Is Loading:', productsLoading);
@@ -66,6 +70,8 @@ const HomePage = memo(() => {
   console.log('🏠 Mechanics:', homeProducts?.data?.mechanics?.length || 0);
   console.log('🏠 Cars:', homeProducts?.data?.best_selling_cars?.length || 0);
   console.log('🏠 Spare Parts:', homeProducts?.data?.best_selling_spare_parts?.length || 0);
+  console.log('🏠 Car Category ID:', carCategoryId);
+  console.log('🏠 Spare Part Category ID:', sparePartCategoryId);
 
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
@@ -378,13 +384,17 @@ const HomePage = memo(() => {
             name="Best Selling Cars"
             onPress={() => {
               setIsNavigating(true);
-              router?.push({
-                pathname: routes?.shop,
-                params: {
-                  category: 'Car',
-                  categoryId: '23', // Car category ID
-                }
-              });
+              if (carCategoryId) {
+                router?.push({
+                  pathname: routes?.shop,
+                  params: {
+                    category: homeProducts?.data?.best_selling_cars?.[0]?.category?.name || 'Car',
+                    categoryId: carCategoryId.toString(),
+                  }
+                });
+              } else {
+                router?.push(routes?.shop);
+              }
             }}
             isLoading={isNavigating}
           />
@@ -432,13 +442,17 @@ const HomePage = memo(() => {
             name="Best Selling Spare Parts"
             onPress={() => {
               setIsNavigating(true);
-              router?.push({
-                pathname: routes?.shop,
-                params: {
-                  category: 'Spare Part',
-                  categoryId: '24', // Spare Part category ID
-                }
-              });
+              if (sparePartCategoryId) {
+                router?.push({
+                  pathname: routes?.shop,
+                  params: {
+                    category: homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.name || 'Spare Part',
+                    categoryId: sparePartCategoryId.toString(),
+                  }
+                });
+              } else {
+                router?.push(routes?.shop);
+              }
             }}
             isLoading={isNavigating}
           />

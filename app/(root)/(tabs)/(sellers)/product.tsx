@@ -8,12 +8,11 @@ import { router } from 'expo-router'
 import { sellerRoutes } from '@/constants/routes'
 import { NairaCurrency } from '@/utils/useCurrencyFormatter'
 import { LAYOUT } from '@/constants/units'
-// import RentedCarCard from '@/components/cards/RentedCarCard'
-// import AsyncStorage from '@react-native-async-storage/async-storage'
 import { productsAPI } from '@/lib/api/products'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useQuery } from '@tanstack/react-query'
 import { useActiveRoleProfile } from '@/hooks/useUserProfile'
+import { useCategories } from '@/hooks/useProducts'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -33,27 +32,41 @@ const Product = () => {
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
-  // Fetch products using TanStack Query with merchant_id filter
+  // Fetch categories to get car and spare parts category IDs
+  const { data: categories } = useCategories();
+  const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
+  const carCategoryId = carCategory?.id;
+  
+  // Get spare parts category ID (exclude cars)
+  const sparePartsCategory = categories?.find(cat => 
+    !cat.name.toLowerCase().includes('car') && 
+    (cat.name.toLowerCase().includes('spare') || 
+     cat.name.toLowerCase().includes('Spare Part'))
+  );
+  const sparePartsCategoryId = sparePartsCategory?.id;
+
+  // Query 1: Fetch ALL products (no category filter)
   const {
-    data: products = [],
-    isLoading: loading,
-    error,
-    refetch,
-    dataUpdatedAt,
+    data: allProducts = [],
+    isLoading: loadingAll,
+    error: errorAll,
+    refetch: refetchAll,
   } = useQuery({
-    queryKey: ['products', merchantId],
+    queryKey: ['products', merchantId, 'all'],
     queryFn: async () => {
+      console.log('🔄 [Query 1] Fetching ALL products for merchant:', merchantId);
       const response = await productsAPI.getProducts(
-        undefined, // categoryId
+        undefined, // categoryId - no filter
         undefined, // minPrice
         undefined, // maxPrice
         undefined, // offset
         undefined, // limit
         merchantId  // merchantId
       )
+      console.log('✅ [Query 1] Fetched ALL products:', response.data.results?.length);
       return response.data.results || []
     },
-    enabled: !!merchantId, // Only fetch when we have merchantId
+    enabled: !!merchantId,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
@@ -61,32 +74,110 @@ const Product = () => {
     refetchOnReconnect: true,
   })
 
-  // Categorize products based on category and rental status
+  // Query 2: Fetch ONLY cars (filtered by car category)
+  const {
+    data: carProducts = [],
+    isLoading: loadingCars,
+    error: errorCars,
+    refetch: refetchCars,
+  } = useQuery({
+    queryKey: ['products', merchantId, 'cars', carCategoryId],
+    queryFn: async () => {
+      console.log('🔄 [Query 2] Fetching CARS ONLY for merchant:', merchantId, 'with category:', carCategoryId);
+      const response = await productsAPI.getProducts(
+        carCategoryId, // categoryId - filter by car category
+        undefined, // minPrice
+        undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        merchantId  // merchantId
+      )
+      console.log('✅ [Query 2] Fetched CAR products:', response.data.results?.length);
+      return response.data.results || []
+    },
+    enabled: !!merchantId && !!carCategoryId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Query 3: Fetch ONLY spare parts (filtered by spare parts category)
+  const {
+    data: sparePartsProducts = [],
+    isLoading: loadingSpareParts,
+    error: errorSpareParts,
+    refetch: refetchSpareParts,
+  } = useQuery({
+    queryKey: ['products', merchantId, 'spareParts', sparePartsCategoryId],
+    queryFn: async () => {
+      console.log('🔄 [Query 3] Fetching SPARE PARTS ONLY for merchant:', merchantId, 'with category:', sparePartsCategoryId);
+      const response = await productsAPI.getProducts(
+        sparePartsCategoryId, // categoryId - filter by spare parts category
+        undefined, // minPrice
+        undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        merchantId  // merchantId
+      )
+      console.log('✅ [Query 3] Fetched SPARE PARTS products:', response.data.results?.length);
+      return response.data.results || []
+    },
+    enabled: !!merchantId && !!sparePartsCategoryId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Combine loading and error states
+  const loading = loadingAll || loadingCars || loadingSpareParts;
+  const error = errorAll || errorCars || errorSpareParts;
+
+  // Use allProducts as the main data source
+  const products = allProducts;
+
+  // Categorize products based on category ID and rental status
   const categorizeProducts = () => {
+    console.log('🔍 Categorizing products with car category ID:', carCategoryId);
     
+    // Spare parts are products where category.id is NOT the car category
     const spareParts = products.filter(product => {
-      const isSparePart = product.category?.name?.toLowerCase().includes('spare') || 
-                         product.category?.name?.toLowerCase().includes('part');
+      const categoryId = product.category?.id;
+      const isSparePart = categoryId !== carCategoryId;
       if (isSparePart) {
+        console.log('✅ Spare Part:', product.name, 'Category ID:', categoryId);
       }
       return isSparePart;
     })
     
+    // Cars are products where category.id IS the car category AND not rental
     const cars = products.filter(product => {
-      const isCar = product.category?.name?.toLowerCase().includes('car') && 
-                    !product.is_rental;
+      const categoryId = product.category?.id;
+      const isCar = categoryId === carCategoryId && !product.is_rental;
       if (isCar) {
+        console.log('🚗 Car:', product.name, 'Category ID:', categoryId);
       }
       return isCar;
     })
     
+    // Rented cars are products where category.id IS the car category AND is rental
     const rentedCars = products.filter(product => {
-      const isRentedCar = product.category?.name?.toLowerCase().includes('car') && 
-                          product.is_rental;
+      const categoryId = product.category?.id;
+      const isRentedCar = categoryId === carCategoryId && product.is_rental;
       if (isRentedCar) {
+        console.log('🚕 Rented Car:', product.name, 'Category ID:', categoryId);
       }
       return isRentedCar;
     })
+
+    console.log('📊 Categorization Results:', {
+      spareParts: spareParts.length,
+      cars: cars.length,
+      rentedCars: rentedCars.length
+    });
 
     return { spareParts, cars, rentedCars }
   }
@@ -300,16 +391,19 @@ const Product = () => {
     </View>
   )
 
-  // Pull-to-refresh functionality
+  // Pull-to-refresh functionality - refetch all three queries
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      await refetch()
+      console.log('🔄 Refreshing all product queries...');
+      await Promise.all([refetchAll(), refetchCars(), refetchSpareParts()])
+      console.log('✅ All product queries refreshed');
     } catch (error) {
+      console.error('❌ Error refreshing:', error);
     } finally {
       setRefreshing(false)
     }
-  }, [refetch])
+  }, [refetchAll, refetchCars, refetchSpareParts])
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>

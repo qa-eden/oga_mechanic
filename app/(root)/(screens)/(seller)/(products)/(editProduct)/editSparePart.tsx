@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platfor
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
-import { ArrowLeftIcon, PlusIcon, XMarkIcon } from 'react-native-heroicons/outline'
+import { ArrowLeftIcon } from 'react-native-heroicons/outline'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
@@ -21,28 +21,28 @@ interface VehicleCompatibility {
   models: number[];
 }
 
-const UploadSparePart = () => {
+const EditSparePart = () => {
   const [vehicleCompatibility, setVehicleCompatibility] = useState<VehicleCompatibility[]>([])
   const [showOtherCategory, setShowOtherCategory] = useState(false)
-
-  const { editMode, productId, productData, formData, isEditing } = useLocalSearchParams<{
-    editMode?: string;
+ 
+  const { productId, productData } = useLocalSearchParams<{
     productId?: string;
     productData?: string;
-    formData?: string;
-    isEditing?: string;
   }>();
 
-  const isEditMode = editMode === 'true' || isEditing === 'true';
   const parsedProductData = productData ? JSON.parse(productData) : null;
-  const parsedFormData = formData ? JSON.parse(formData) : null;
 
-  // Use formData if available (coming back from image upload), otherwise use productData
-  const dataSource = parsedFormData?.data || parsedProductData;
+  // Debug logging
+  useEffect(() => {
+    console.log('🔧 EditSparePart - Product ID:', productId);
+    console.log('🔧 EditSparePart - Parsed Data:', parsedProductData);
+    console.log('🔧 EditSparePart - Category ID:', parsedProductData?.category_id || parsedProductData?.category?.id);
+    console.log('🔧 EditSparePart - Vehicle Compatibility:', parsedProductData?.vehicle_compatibility);
+  }, [productId, parsedProductData]);
 
   // Fetch categories from API
   const { data: categories, isLoading: categoriesLoading } = useCategories();
-
+ 
   // Fetch vehicle makes and models
   const { data: vehicleMakes, loading: makesLoading } = useVehicleMakes();
 
@@ -55,7 +55,7 @@ const UploadSparePart = () => {
     !cat.name.toLowerCase().includes('car')
   ).map(category => ({
     label: category.name,
-    value: category.id.toString() // Use ID as value
+    value: category.id.toString()
   })) || [];
 
   // Add "Other" option
@@ -66,7 +66,11 @@ const UploadSparePart = () => {
 
   const validationSchema = Yup.object().shape({
     category: Yup.string().required('Category is required'),
-    name: Yup.string().required('Product name is required'),
+    custom_category_name: Yup.string().when('category', {
+      is: 'other',
+      then: (schema) => schema.required('Please specify the category name'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
     condition: Yup.string().required('Condition is required'),
     description: Yup.string().required('Description is required'),
     price: Yup.string().required('Price is required'),
@@ -78,75 +82,95 @@ const UploadSparePart = () => {
 
   // Determine if category is "other" and get initial values
   const getCategoryValue = () => {
-    if (!dataSource) return '';
-
-    const categoryId = dataSource.category_id || dataSource.category?.id;
+    if (!parsedProductData) return '';
+ 
+    const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
     if (!categoryId) return '';
-
-    // Check if this category exists in our filtered list (excluding cars)
+ 
     const categoryExists = categories?.some(cat =>
       cat.id === categoryId && !cat.name.toLowerCase().includes('car')
     );
-
+ 
     return categoryExists ? categoryId.toString() : 'other';
+  };
+
+  const getCustomCategoryName = () => {
+    if (!parsedProductData) return '';
+ 
+    const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
+    const categoryExists = categories?.some(cat =>
+      cat.id === categoryId && !cat.name.toLowerCase().includes('car')
+    );
+ 
+    return !categoryExists ? parsedProductData.name || '' : '';
   };
 
   const initialValues = {
     category: getCategoryValue(),
-    name: dataSource?.name || '',
-    condition: dataSource?.condition || 'new',
-    description: dataSource?.description || '',
-    price: dataSource?.price?.toString() || '',
-    currency: dataSource?.currency || 'NGN',
-    stock: dataSource?.stock?.toString() || '',
-    availability: dataSource?.availability || 'in_stock',
-    delivery_option: dataSource?.delivery_option || 'nationwide',
+    custom_category_name: getCustomCategoryName(),
+    condition: parsedProductData?.condition || 'new',
+    description: parsedProductData?.description || '',
+    price: parsedProductData?.price?.toString() || '',
+    currency: parsedProductData?.currency || 'NGN',
+    stock: parsedProductData?.stock?.toString() || '',
+    availability: parsedProductData?.availability || 'in_stock',
+    delivery_option: parsedProductData?.delivery_option || 'nationwide',
   }
+
+  // Debug initial values
+  useEffect(() => {
+    console.log('📝 EditSparePart - Initial Values:', initialValues);
+    console.log('📝 EditSparePart - Category Value:', getCategoryValue());
+    console.log('📝 EditSparePart - Custom Name:', getCustomCategoryName());
+  }, [categories, parsedProductData]);
 
   // Initialize vehicle compatibility from parsed data
   useEffect(() => {
-    const vehicleCompat = dataSource?.vehicle_compatibility;
-    if (vehicleCompat && Array.isArray(vehicleCompat)) {
-      setVehicleCompatibility(vehicleCompat.map((vc: any) => ({
+    if (!parsedProductData?.vehicle_compatibility) return;
+    
+    const vehicleCompat = parsedProductData.vehicle_compatibility;
+    console.log('🚗 EditSparePart - Vehicle Compat from API:', vehicleCompat);
+    
+    if (Array.isArray(vehicleCompat)) {
+      const mapped = vehicleCompat.map((vc: any) => ({
         make: vc.make,
         models: vc.model || vc.models || []
-      })));
+      }));
+      console.log('🚗 EditSparePart - Mapped Vehicle Compat:', mapped);
+      setVehicleCompatibility(mapped);
     }
-  }, [dataSource])
+  }, [parsedProductData?.vehicle_compatibility])
 
   // Check if initial category is "other" and show custom input
   useEffect(() => {
-    if (!dataSource || !categories) return;
-
-    const categoryId = dataSource.category_id || dataSource.category?.id;
+    if (!parsedProductData || !categories) return;
+ 
+    const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
     if (!categoryId) return;
-
+ 
     const isOtherCategory = !categories.some(cat =>
       cat.id === categoryId && !cat.name.toLowerCase().includes('car')
     );
-
+ 
     setShowOtherCategory(isOtherCategory);
-  }, [categories, dataSource])
+  }, [categories, parsedProductData])
 
   const handleSubmit = async (values: typeof initialValues) => {
     try {
-      const isEditing = isEditMode;
-
       // Determine category_id and name based on selection
       let categoryId: number;
       let productName: string;
 
       if (values.category === 'other') {
-        // If "Other" is selected, use spare parts category ID and user's product name
         categoryId = sparePartsCategoryId;
-        productName = values.name;
+        productName = values.custom_category_name;
       } else {
-        // If a category is selected, use that category's ID and user's product name
         categoryId = parseInt(values.category);
-        productName = values.name;
+        const selectedCategory = categories?.find(cat => cat.id.toString() === values.category);
+        productName = selectedCategory?.name || '';
       }
 
-      // Format payload to match API structure
+      // Format payload
       const payload = {
         data: {
           category_id: categoryId,
@@ -166,16 +190,12 @@ const UploadSparePart = () => {
         requestType: "inbound"
       };
 
-      // Determine endpoint and method based on edit mode
-      const finalProductId = productId || dataSource?.id;
-      const endpoint = isEditing && finalProductId
-        ? `${process.env.EXPO_PUBLIC_API_URL}/products/products/${finalProductId}/`
-        : `${process.env.EXPO_PUBLIC_API_URL}/products/products/`;
-      const method = isEditing && finalProductId ? 'PUT' : 'POST';
+      console.log('📤 Edit Product Payload:', JSON.stringify(payload, null, 2));
 
-      // Call the products API endpoint
+      const endpoint = `${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/`;
+
       const response = await fetch(endpoint, {
-        method: method,
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
@@ -189,41 +209,29 @@ const UploadSparePart = () => {
       }
 
       const responseData = await response.json();
-      // Get the product ID from response
-      const updatedProductId = responseData.data?.id || finalProductId || '';
+      console.log('Product updated successfully:', responseData);
 
-      if (isEditing) {
-        // For editing, show success alert
-        Alert.alert('Success', `${productName} updated successfully!`, [
-          {
-            text: 'Continue to Edit Images',
-            onPress: () => router.push({
-              pathname: sellerRoutes.editImage as any,
-              params: {
-                productId: updatedProductId,
-                productData: JSON.stringify(responseData.data || parsedProductData),
-              }
-            })
-          },
-          { text: 'Done', onPress: () => router.back() }
-        ]);
-      } else {
-        // For creation, navigate to image upload page
-    router.push({
-          pathname: sellerRoutes.uploadCarImages as any,
-      params: {
-            formData: JSON.stringify(payload),
-            productId: updatedProductId,
-            productType: 'spare-part', // Identify as spare part
-          }
-        });
-      }
+      // Show success alert
+      Alert.alert('Success', `${productName} updated successfully!`, [
+        {
+          text: 'Continue to Edit Images',
+          onPress: () => router.push({
+            pathname: sellerRoutes.editImage as any,
+            params: {
+              productId: productId,
+              productData: JSON.stringify(responseData.data || parsedProductData),
+            }
+          })
+        },
+        { text: 'Done', onPress: () => router.back() }
+      ]);
     } catch (error) {
-      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} product. Please try again.`);
+      console.error('Error updating product:', error);
+      Alert.alert('Error', 'Failed to update product. Please try again.');
     }
   }
 
-  // Helper functions for vehicle compatibility
+  // Helper functions
   const addVehicleCompatibility = () => {
     setVehicleCompatibility([...vehicleCompatibility, { make: 0, models: [] }]);
   };
@@ -252,7 +260,7 @@ const UploadSparePart = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
-      
+ 
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
@@ -261,14 +269,14 @@ const UploadSparePart = () => {
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
-        </TouchableOpacity>
+          </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
-              {isEditMode ? 'Edit Product' : 'Product Details'}
+              Edit Product
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
-              {isEditMode ? 'Update Product Information' : 'Enter Product Information'}
-        </Text>
+              Update Product Information
+            </Text>
           </View>
           <View className="w-10" />
         </View>
@@ -289,15 +297,38 @@ const UploadSparePart = () => {
             flexGrow: 1
           }}
         >
-        {/* Form Fields */}
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
+          {/* Debug Info */}
+          <View className="bg-yellow-50 rounded-xl p-4 my-4 border border-yellow-200">
+            <Text className="text-xs font-NunitoBold text-gray-900 mb-2">Debug Info:</Text>
+            <Text className="text-xs text-gray-700">Product ID: {productId || 'N/A'}</Text>
+            <Text className="text-xs text-gray-700">Product Name: {parsedProductData?.name || 'N/A'}</Text>
+            <Text className="text-xs text-gray-700">Category ID: {parsedProductData?.category_id || parsedProductData?.category?.id || 'N/A'}</Text>
+            <Text className="text-xs text-gray-700">Category Name: {parsedProductData?.category?.name || 'N/A'}</Text>
+            <Text className="text-xs text-gray-700">Vehicle Compat: {vehicleCompatibility.length} items</Text>
+            <Text className="text-xs text-gray-700">Price: {parsedProductData?.price || 'N/A'}</Text>
+          </View>
+
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
             enableReinitialize={true}
-        >
-          {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
-            <View className="space-y-6">
+          >
+            {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, isSubmitting, setFieldValue }) => {
+              // Debug current form values
+              console.log('📋 EditSparePart - Current Form Values:', values);
+              
+              return (
+              <View className="space-y-6">
+                {/* Form Values Debug */}
+                <View className="bg-blue-50 rounded-xl p-3 my-2 border border-blue-200">
+                  <Text className="text-xs font-NunitoBold text-gray-900 mb-1">Current Form Values:</Text>
+                  <Text className="text-xs text-gray-700">Category: {values.category || 'Empty'}</Text>
+                  <Text className="text-xs text-gray-700">Custom Name: {values.custom_category_name || 'Empty'}</Text>
+                  <Text className="text-xs text-gray-700">Price: {values.price || 'Empty'}</Text>
+                  <Text className="text-xs text-gray-700">Stock: {values.stock || 'Empty'}</Text>
+                </View>
+
                 {/* Basic Information */}
                 <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
                   <View className="flex-row items-center mb-4">
@@ -307,11 +338,11 @@ const UploadSparePart = () => {
                     <View className="flex-1">
                       <Text className="text-lg font-NunitoBold text-gray-900">Basic Information</Text>
                       <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Tell us about the Product
+                        Update Product Details
                       </Text>
                     </View>
                   </View>
-
+ 
                   {/* Category */}
                   <SelectField
                     name="category"
@@ -322,18 +353,23 @@ const UploadSparePart = () => {
                     onValueChange={(value) => {
                       setFieldValue('category', value);
                       setShowOtherCategory(value === 'other');
+                      if (value !== 'other') {
+                        setFieldValue('custom_category_name', '');
+                      }
                     }}
                     error={errors.category as string}
                     touched={touched.category as boolean}
                   />
 
-                  {/* Product Name */}
-              <FormikInput
-                    name="name"
-                    label="Product Name"
-                    placeholder="e.g., Brake Pads, Engine Oil Filter, Spark Plugs"
-                type="text"
-              />
+                  {/* Custom Category Name */}
+                  {showOtherCategory && (
+                    <FormikInput
+                      name="custom_category_name"
+                      label="Specify Category Name"
+                      placeholder="e.g., Custom Exhaust System, Special Engine Component"
+                      type="text"
+                    />
+                  )}
 
                   {/* Condition */}
                   <SelectField
@@ -348,7 +384,7 @@ const UploadSparePart = () => {
                   />
                 </View>
 
-                {/* Vehicle Compatibility - Dropdown Style */}
+                {/* Vehicle Compatibility */}
                 <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
                   <View className="flex-row items-center justify-between mb-4">
                     <View className="flex-row items-center flex-1">
@@ -358,7 +394,7 @@ const UploadSparePart = () => {
                       <View className="flex-1">
                         <Text className="text-lg font-NunitoBold text-gray-900">Compatible Vehicles</Text>
                         <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Select makes and Models
+                          Select Makes and Models
                         </Text>
                       </View>
                     </View>
@@ -385,24 +421,21 @@ const UploadSparePart = () => {
                       </Text>
                     </View>
                   ) : (
-                    <View className="space-y-3 ">
+                    <View className="space-y-3">
                       {vehicleCompatibility.map((vc, index) => {
                         const selectedMake = getSelectedMake(index);
 
                         return (
                           <View key={index} className="border border-gray-200 rounded-xl p-4 mb-4 bg-white">
-                            {/* Make Dropdown */}
                             <View className="mb-3">
                               <View className="flex-row items-center justify-between mb-2">
                                 <Text className="text-sm font-NunitoMedium text-gray-700">Make</Text>
-                                <TouchableOpacity
-                                  onPress={() => removeVehicleCompatibility(index)}
-                                >
+                                <TouchableOpacity onPress={() => removeVehicleCompatibility(index)}>
                                   <Text className="text-red-500 text-sm font-NunitoMedium">Remove</Text>
                                 </TouchableOpacity>
                               </View>
 
-              <SelectField
+                              <SelectField
                                 name={`vehicle_make_${index}`}
                                 label=""
                                 placeholder="Select make"
@@ -417,7 +450,6 @@ const UploadSparePart = () => {
                               />
                             </View>
 
-                            {/* Models Multi-Select Bottom Sheet */}
                             {selectedMake && selectedMake.models && selectedMake.models.length > 0 && (
                               <MultiSelectBottomSheet
                                 label={`Select Models for ${selectedMake.name}`}
@@ -426,7 +458,7 @@ const UploadSparePart = () => {
                                   label: model.name,
                                   value: model.id
                                 }))}
-                                selectedValues={vc.models}
+                                selectedValues={vc.models || []}
                                 onValuesChange={(values) => updateVehicleModels(index, values)}
                               />
                             )}
@@ -434,7 +466,6 @@ const UploadSparePart = () => {
                         );
                       })}
 
-                      {/* Add More Button */}
                       <TouchableOpacity
                         onPress={addVehicleCompatibility}
                         className="border border-dashed border-gray-500 rounded-xl p-3 bg-white"
@@ -456,7 +487,7 @@ const UploadSparePart = () => {
                     <View className="flex-1">
                       <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
                       <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Provide details about the Product
+                        Provide Details About the Product
                       </Text>
                     </View>
                   </View>
@@ -464,7 +495,7 @@ const UploadSparePart = () => {
                   <FormikInput
                     name="description"
                     label="Description"
-                    placeholder="e.g., High-quality brake pads compatible with multiple Toyota and Honda models. Includes installation hardware."
+                    placeholder="e.g., High-quality brake pads compatible with multiple Toyota and Honda models."
                     type="text"
                     multiline={true}
                     numberOfLines={4}
@@ -492,13 +523,13 @@ const UploadSparePart = () => {
                     </Text>
                     <View className="flex-row gap-3">
                       <View className="flex-1">
-              <FormikInput
+                        <FormikInput
                           name="price"
                           label=""
                           placeholder="e.g., 25000.00"
-                keyboardType="numeric"
-                type="text"
-              />
+                          keyboardType="numeric"
+                          type="text"
+                        />
                       </View>
                       <View className="w-32">
                         <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
@@ -507,29 +538,17 @@ const UploadSparePart = () => {
                         <View className="flex-row bg-gray-100 rounded-lg p-1">
                           <TouchableOpacity
                             onPress={() => setFieldValue('currency', 'NGN')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN'
-                              ? 'bg-white'
-                              : 'bg-transparent'
-                              }`}
+                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN' ? 'bg-white' : 'bg-transparent'}`}
                           >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN'
-                              ? 'text-gray-900'
-                              : 'text-gray-500'
-                              }`}>
+                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN' ? 'text-gray-900' : 'text-gray-500'}`}>
                               ₦
                             </Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={() => setFieldValue('currency', 'USD')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD'
-                              ? 'bg-white'
-                              : 'bg-transparent'
-                              }`}
+                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD' ? 'bg-white' : 'bg-transparent'}`}
                           >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD'
-                              ? 'text-gray-900'
-                              : 'text-gray-500'
-                              }`}>
+                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD' ? 'text-gray-900' : 'text-gray-500'}`}>
                               $
                             </Text>
                           </TouchableOpacity>
@@ -539,13 +558,13 @@ const UploadSparePart = () => {
                   </View>
 
                   {/* Stock */}
-              <FormikInput
+                  <FormikInput
                     name="stock"
                     label="Stock Quantity"
                     placeholder="e.g., 100"
-                keyboardType="numeric"
-                type="text"
-              />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
                   {/* Availability */}
                   <SelectField
@@ -574,29 +593,27 @@ const UploadSparePart = () => {
 
                 {/* Submit Button */}
                 <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
-              <FormikButton
-                    title={isEditMode ? "Update Product Details" : "Continue to Images"}
-                type="submit"
-                onPress={formikHandleSubmit}
-                disabled={!isValid || !dirty || isSubmitting}
-                loading={isSubmitting}
-                    loadingText="Processing..."
+                  <FormikButton
+                    title="Update Product Details"
+                    type="submit"
+                    onPress={formikHandleSubmit}
+                    disabled={!isValid || isSubmitting}
+                    loading={isSubmitting}
+                    loadingText="Updating..."
                     className="mb-3"
                   />
                   <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
-                    {isEditMode
-                      ? "Your Product Details will be Updated"
-                      : "Next: Upload Product Images to Complete your Listing"
-                    }
+                    Your Product Details will be Updated
                   </Text>
                 </View>
-            </View>
-          )}
-        </Formik>
-      </ScrollView>
+    </View>
+              );
+            }}
+          </Formik>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
 
-export default UploadSparePart
+export default EditSparePart

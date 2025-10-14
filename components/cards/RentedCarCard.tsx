@@ -8,32 +8,47 @@ interface RentedCarCardProps {
     id: string;
     name: string;
     transmission: string;
-    image: any;
-    price: number;
+    images?: Array<{
+      id: number;
+      image: string;
+      ordering: number;
+      created_at: string;
+    }>;
+    price: string;
+    currency: string;
+    make: number;
+    model: number;
+    year: number;
+    condition: string;
+    body_type: string;
+    fuel_type: string;
+    exterior_color: string;
+    number_of_seats: number;
   };
   onPress: () => void;
   onDelete: (car: any) => void;
 }
 
 const RentedCarCard: React.FC<RentedCarCardProps> = ({ car, onPress, onDelete }) => {
-  const ImageComponent = car.image;
-  
+  // Get the first image from the images array, or use a fallback
+  const carImage = car.images && car.images.length > 0 ? car.images[0].image : null;
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row"
       onPress={onPress}
     >
       <View className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden mr-4">
-        {typeof ImageComponent === 'function' ? (
-          <View className="w-full h-full items-center justify-center">
-            <ImageComponent width={60} height={60} />
-          </View>
-        ) : (
-          <Image 
-            source={{ uri: car.image }} 
+        {carImage ? (
+          <Image
+            source={{ uri: carImage }}
             className="w-full h-full"
             resizeMode="cover"
           />
+        ) : (
+          <View className="w-full h-full items-center justify-center">
+            <Text className="text-gray-400 text-xs text-center">No Image</Text>
+          </View>
         )}
       </View>
       
@@ -42,13 +57,18 @@ const RentedCarCard: React.FC<RentedCarCardProps> = ({ car, onPress, onDelete })
           <Text className="font-NunitoBold text-gray-900 mb-1" numberOfLines={1}>
             {car.name}
           </Text>
-          <Text className="text-gray-600 text-sm mb-2">{car.transmission}</Text>
+          <Text className="text-gray-600 text-sm mb-1">
+            {car.year} • {car.transmission} • {car.fuel_type}
+          </Text>
+          <Text className="text-gray-500 text-xs mb-2">
+            {car.condition} • {car.body_type} • {car.number_of_seats} seats
+          </Text>
         </View>
-        
+
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="font-NunitoBold text-gray-900">
-              NGN {car.price.toLocaleString()}/day
+              {car.currency === 'NGN' ? '₦' : '$'}{parseFloat(car.price).toLocaleString()}/day
             </Text>
           </View>
           <TouchableOpacity 

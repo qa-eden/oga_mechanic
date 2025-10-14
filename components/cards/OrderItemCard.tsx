@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { CalendarIcon, CreditCardIcon, ClockIcon } from 'react-native-heroicons/outline';
+import { router } from 'expo-router';
+import { sellerRoutes } from '@/constants/routes';
 
 interface OrderItem {
   id: string;
@@ -12,6 +14,7 @@ interface OrderItem {
   image?: string | null;
   deliveryDate?: string;
   paymentStatus?: string;
+  orderId?: string; // Add orderId to navigate to order details
 }
 
 interface OrderItemCardProps {
@@ -55,8 +58,25 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
     }
   };
 
+  const handlePress = () => {
+    // Navigate to order details with the order ID
+    const orderIdToPass = order.orderId || order.id;
+    console.log('🔄 Navigating to order details with ID:', orderIdToPass);
+
+    router.push({
+      pathname: sellerRoutes.orderDetails,
+      params: {
+        orderId: orderIdToPass
+      }
+    });
+  };
+
   return (
-    <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.7}
+      className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100"
+    >
       <View className="flex-row">
         {/* Left Section - Product Info (35% width) */}
         <View className="mr-4" style={{ width: '35%' }}>
@@ -131,7 +151,7 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
           </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

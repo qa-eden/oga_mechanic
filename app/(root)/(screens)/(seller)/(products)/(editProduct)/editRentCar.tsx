@@ -17,7 +17,6 @@ import { useCategories } from '@/hooks/useProducts'
 import { useVehicleMakes } from '@/hooks/useVehicleMakes'
 import {
   deliveryOptions,
-  engineSizeOptions,
   bodyTypeOptions,
   fuelTypeOptions,
   conditionOptions,
@@ -26,45 +25,68 @@ import {
   featureOptions
 } from '@/constants/data'
 import CustomButton from '@/components/CustomButton'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
-// Dedicated edit page for updating existing car products
-// This page only handles editing - no creation logic
-const EditProduct = () => {
+const EditRentCar = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successDrawerVisible, setSuccessDrawerVisible] = useState(false)
   const [updatedProductData, setUpdatedProductData] = useState<any>(null)
+  const [hasError, setHasError] = useState(false)
   const featuresInitialized = useRef(false)
 
+  // Get navigation parameters
   const { productId, productData: productDataParam } = useLocalSearchParams<{
     productId?: string;
     productData?: string;
   }>();
 
-  // Parse the product data passed from navigation
-  const productData = productDataParam ? JSON.parse(productDataParam) : null;
+  // Parse product data safely
+  const productData = React.useMemo(() => {
+    if (!productDataParam) return null;
+    try {
+      return JSON.parse(productDataParam);
+    } catch (error) {
+      console.error('Error parsing product data:', error);
+      setHasError(true);
+      return null;
+    }
+  }, [productDataParam]);
 
-  // Fetch categories to get car category ID
+  // Fetch categories and vehicle makes
   const { data: categories } = useCategories();
+  const { data: vehicleMakes } = useVehicleMakes();
+
+  // Get car category ID
   const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
-  const carCategoryId = carCategory?.id || 0;
+  const carCategoryId = carCategory?.id;
 
-  // Fetch vehicle makes from API
-  const { data: vehicleMakes, loading: vehicleMakesLoading, error: vehicleMakesError } = useVehicleMakes();
+  // Get vehicle makes and models with error handling
+  const makeOptions = React.useMemo(() => {
+    try {
+      return vehicleMakes?.map(make => ({
+        label: make?.name || 'Unknown Make',
+        value: make?.id?.toString() || ''
+      })) || [];
+    } catch (error) {
+      console.error('Error processing make options:', error);
+      return [];
+    }
+  }, [vehicleMakes]);
 
-  // Convert vehicle makes to select options
-  const makeOptions = vehicleMakes?.map(make => ({
-    label: make.name,
-    value: make.id.toString()
-  })) || [];
-
-  // Get models for selected make
-  const getModelsForSelectedMake = (makeId: string) => {
-    if (!makeId || !vehicleMakes) return [];
-    const selectedMake = vehicleMakes.find(make => make.id.toString() === makeId);
-    return selectedMake?.models || [];
-  };
-
+  const modelOptions = React.useMemo(() => {
+    try {
+      if (!vehicleMakes || !productData?.make) return [];
+      const selectedMake = vehicleMakes.find(make => make.id?.toString() === productData.make?.toString());
+      return selectedMake?.models?.map(model => ({
+        label: model?.name || 'Unknown Model',
+        value: model?.id?.toString() || ''
+      })) || [];
+    } catch (error) {
+      console.error('Error processing model options:', error);
+      return [];
+    }
+  }, [vehicleMakes, productData?.make]);
 
   const validationSchema = Yup.object().shape({
     name: Yup.string(),
@@ -73,14 +95,9 @@ const EditProduct = () => {
     year: Yup.string(),
     condition: Yup.string(),
     body_type: Yup.string(),
-    mileage: Yup.string(),
-    mileage_unit: Yup.string(),
     transmission: Yup.string(),
     fuel_type: Yup.string(),
-    engine_size: Yup.string(),
     exterior_color: Yup.string(),
-    interior_color: Yup.string(),
-    number_of_doors: Yup.string(),
     number_of_seats: Yup.string(),
     description: Yup.string(),
     price: Yup.string(),
@@ -95,44 +112,55 @@ const EditProduct = () => {
     if (productData && productData.id && !featuresInitialized.current) {
       const features: string[] = [];
 
-      if (productData.air_conditioning) features.push('Air Conditioning');
-      if (productData.leather_seats) features.push('Leather Seats');
-      if (productData.navigation_system) features.push('Navigation System');
-      if (productData.bluetooth) features.push('Bluetooth');
-      if (productData.parking_sensors) features.push('Parking Sensors');
-      if (productData.cruise_control) features.push('Cruise Control');
-      if (productData.keyless_entry) features.push('Keyless Entry');
-      if (productData.sunroof) features.push('Sunroof');
-      if (productData.alloy_wheels) features.push('Alloy Wheels');
-      if (productData.airbags) features.push('Airbags');
-      if (productData.abs) features.push('ABS');
-      if (productData.traction_control) features.push('Traction Control');
-      if (productData.lane_assist) features.push('Lane Assist');
-      if (productData.blind_spot_monitor) features.push('Blind Spot Monitor');
+      // Map product data to feature display names
+      const featureMapping: Record<string, string> = {
+        'air_conditioning': 'Air Conditioning',
+        'leather_seats': 'Leather Seats',
+        'navigation_system': 'Navigation System',
+        'bluetooth': 'Bluetooth',
+        'parking_sensors': 'Parking Sensors',
+        'cruise_control': 'Cruise Control',
+        'keyless_entry': 'Keyless Entry',
+        'sunroof': 'Sunroof',
+        'alloy_wheels': 'Alloy Wheels',
+        'airbags': 'Airbags',
+        'abs': 'ABS',
+        'traction_control': 'Traction Control',
+        'lane_assist': 'Lane Assist',
+        'blind_spot_monitor': 'Blind Spot Monitor'
+      };
+
+      // Check each feature and add display name if true
+      Object.entries(featureMapping).forEach(([key, displayName]) => {
+        if (productData[key]) {
+          features.push(displayName);
+        }
+      });
 
       setSelectedFeatures(features);
       featuresInitialized.current = true;
     }
-  }, [productData?.id]); // Only depend on the product ID, not the entire productData object
+  }, [productData?.id]); // Only depend on productData.id to prevent infinite re-renders
 
-  const handleContinueToImages = () => {
-    router.push({
-      pathname: sellerRoutes.editImage as any,
-      params: {
-        productId: productId,
-        productData: JSON.stringify(updatedProductData),
-      }
-    });
-  };
-
-  const handleDone = () => {
-    router.back();
-  };
-
-  const handleCloseDrawer = () => {
-    setSuccessDrawerVisible(false);
-    setUpdatedProductData(null);
-  };
+  const initialValues = {
+    name: productData?.name || '',
+    make: productData?.make?.toString() || '',
+    model: productData?.model?.toString() || '',
+    year: productData?.year?.toString() || '',
+    condition: productData?.condition || '',
+    body_type: productData?.body_type || '',
+    transmission: productData?.transmission || '',
+    fuel_type: productData?.fuel_type || '',
+    exterior_color: productData?.exterior_color || '',
+    number_of_seats: productData?.number_of_seats?.toString() || '',
+    description: productData?.description || '',
+    price: productData?.price || '',
+    currency: productData?.currency || 'NGN',
+    stock: productData?.stock?.toString() || '',
+    availability: productData?.availability || '',
+    delivery_option: productData?.delivery_option || '',
+    negotiable: productData?.negotiable || false,
+  }
 
   const handleFeatureToggle = (feature: string) => {
     setSelectedFeatures(prev =>
@@ -142,81 +170,91 @@ const EditProduct = () => {
     )
   }
 
-  const handleSubmit = async (values: any) => {
-
-    if (!productId || !productData) {
-      return;
-    }
-
+  const handleSubmit = async (values: typeof initialValues) => {
     try {
       setIsSubmitting(true);
 
-      // Create feature object from selected features
-      const features = {
-        air_conditioning: selectedFeatures.includes('Air Conditioning'),
-        leather_seats: selectedFeatures.includes('Leather Seats'),
-        navigation_system: selectedFeatures.includes('Navigation System'),
-        bluetooth: selectedFeatures.includes('Bluetooth'),
-        parking_sensors: selectedFeatures.includes('Parking Sensors'),
-        cruise_control: selectedFeatures.includes('Cruise Control'),
-        keyless_entry: selectedFeatures.includes('Keyless Entry'),
-        sunroof: selectedFeatures.includes('Sunroof'),
-        alloy_wheels: selectedFeatures.includes('Alloy Wheels'),
-        airbags: selectedFeatures.includes('Airbags'),
-        abs: selectedFeatures.includes('ABS'),
-        traction_control: selectedFeatures.includes('Traction Control'),
-        lane_assist: selectedFeatures.includes('Lane Assist'),
-        blind_spot_monitor: selectedFeatures.includes('Blind Spot Monitor'),
+      // Validate required fields
+      if (!productId) {
+        throw new Error('Product ID is missing');
       }
+
+      if (!carCategoryId) {
+        throw new Error('Car category not found');
+      }
+
+      // Convert features array to boolean object
+      const featureMapping: Record<string, string> = {
+        'Air Conditioning': 'air_conditioning',
+        'Leather Seats': 'leather_seats',
+        'Navigation System': 'navigation_system',
+        'Bluetooth': 'bluetooth',
+        'Parking Sensors': 'parking_sensors',
+        'Cruise Control': 'cruise_control',
+        'Keyless Entry': 'keyless_entry',
+        'Sunroof': 'sunroof',
+        'Alloy Wheels': 'alloy_wheels',
+        'Airbags': 'airbags',
+        'ABS': 'abs',
+        'Traction Control': 'traction_control',
+        'Lane Assist': 'lane_assist',
+        'Blind Spot Monitor': 'blind_spot_monitor'
+      };
+
+      const features = featureOptions.reduce((acc, feature) => {
+        const featureKey = featureMapping[feature] || feature.toLowerCase().replace(/\s+/g, '_');
+        acc[featureKey] = selectedFeatures.includes(feature); // Use display name for comparison
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      // Safe parsing helper function
+      const safeParseInt = (value: string, fallback: number = 0): number => {
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? fallback : parsed;
+      };
 
       const payload = {
         data: {
           category_id: carCategoryId,
-          name: values.name,
-          make: parseInt(values.make),
-          model: parseInt(values.model),
-          year: parseInt(values.year),
-          condition: values.condition,
-          body_type: values.body_type,
-          mileage: parseInt(values.mileage),
-          mileage_unit: values.mileage_unit,
-          transmission: values.transmission,
-          fuel_type: values.fuel_type,
-          engine_size: values.engine_size,
-          exterior_color: values.exterior_color,
-          interior_color: values.interior_color,
-          number_of_doors: parseInt(values.number_of_doors),
-          number_of_seats: parseInt(values.number_of_seats),
-          air_conditioning: features.air_conditioning,
-          leather_seats: features.leather_seats,
-          navigation_system: features.navigation_system,
-          bluetooth: features.bluetooth,
-          parking_sensors: features.parking_sensors,
-          cruise_control: features.cruise_control,
-          keyless_entry: features.keyless_entry,
-          sunroof: features.sunroof,
-          alloy_wheels: features.alloy_wheels,
-          description: values.description,
-          price: values.price,
-          currency: values.currency,
+          name: values.name || '',
+          make: safeParseInt(values.make),
+          model: safeParseInt(values.model),
+          year: safeParseInt(values.year),
+          condition: values.condition || '',
+          body_type: values.body_type || '',
+          transmission: values.transmission || '',
+          fuel_type: values.fuel_type || '',
+          exterior_color: values.exterior_color || '',
+          number_of_seats: safeParseInt(values.number_of_seats),
+          air_conditioning: features.air_conditioning || false,
+          leather_seats: features.leather_seats || false,
+          navigation_system: features.navigation_system || false,
+          bluetooth: features.bluetooth || false,
+          parking_sensors: features.parking_sensors || false,
+          cruise_control: features.cruise_control || false,
+          keyless_entry: features.keyless_entry || false,
+          sunroof: features.sunroof || false,
+          alloy_wheels: features.alloy_wheels || false,
+          description: values.description || '',
+          price: values.price || '0',
+          currency: values.currency || 'NGN',
           negotiable: values.negotiable || false,
           discount: "0",
-          availability: values.availability,
-          stock: parseInt(values.stock),
-          is_rental: values.is_rental || false,
-          airbags: features.airbags,
-          abs: features.abs,
-          traction_control: features.traction_control,
-          lane_assist: features.lane_assist,
-          blind_spot_monitor: features.blind_spot_monitor,
-          delivery_option: values.delivery_option,
+          availability: values.availability || '',
+          stock: safeParseInt(values.stock),
+          is_rental: true, // Always true for rental cars
+          airbags: features.airbags || false,
+          abs: features.abs || false,
+          traction_control: features.traction_control || false,
+          lane_assist: features.lane_assist || false,
+          blind_spot_monitor: features.blind_spot_monitor || false,
+          delivery_option: values.delivery_option || '',
         },
         requestType: "inbound"
       }
 
       // Call the products API endpoint for update
       const endpoint = `${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/`;
-    
 
       const response = await fetch(endpoint, {
         method: 'PUT',
@@ -239,56 +277,116 @@ const EditProduct = () => {
       setSuccessDrawerVisible(true);
 
     } catch (error) {
-      Alert.alert('Error', 'Failed to update car details. Please try again.')
+      console.error('Error updating rental car:', error);
+      Alert.alert('Error', 'Failed to update rental car. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Show error state if no product data
-  if (!productData || !productId) {
+  const handleCloseDrawer = () => {
+    setSuccessDrawerVisible(false);
+  };
+
+  const handleContinueToImages = () => {
+    setSuccessDrawerVisible(false);
+    router.push({
+      pathname: sellerRoutes.editImage as any,
+      params: {
+        productId: productId,
+        productData: JSON.stringify(updatedProductData),
+      }
+    });
+  };
+
+  const handleDone = () => {
+    setSuccessDrawerVisible(false);
+    router.back();
+  };
+
+  // Show error state if there was a parsing error
+  if (hasError) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
         <StatusBar style="dark" />
-        <View className="flex-1 justify-center items-center px-5">
-          <Text className="text-lg font-NunitoMedium text-gray-600 text-center mb-4">
-            Car data not found
+
+        {/* Header */}
+        <View className="bg-white border-b border-gray-200">
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
+            >
+              <ArrowLeftIcon size={20} color="#374151" />
+            </TouchableOpacity>
+            <View className="items-center">
+              <Text className="text-xl font-NunitoBold text-gray-900">Edit Rental Car</Text>
+            </View>
+            <View className="w-10" />
+          </View>
+        </View>
+
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-lg font-NunitoBold text-gray-900 mb-2">Error Loading Data</Text>
+          <Text className="text-gray-600 text-center mb-4">
+            There was an error loading the rental car information. Please try again.
           </Text>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="bg-primary-600 px-6 py-3 rounded-lg"
+            className="bg-primary-500 px-6 py-3 rounded-xl"
           >
-            <Text className="text-white font-NunitoSemiBold">Go Back</Text>
+            <Text className="text-white font-NunitoBold">Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const initialValues = {
-    name: productData.name || '',
-    make: productData.make?.toString() || '',
-    model: productData.model?.toString() || '',
-    year: productData.year?.toString() || '',
-    condition: productData.condition || 'new',
-    body_type: productData.body_type || '',
-    mileage: productData.mileage?.toString() || '',
-    mileage_unit: productData.mileage_unit || 'km',
-    transmission: productData.transmission || 'automatic',
-    fuel_type: productData.fuel_type || '',
-    engine_size: productData.engine_size || '',
-    exterior_color: productData.exterior_color || '',
-    interior_color: productData.interior_color || '',
-    number_of_doors: productData.number_of_doors?.toString() || '',
-    number_of_seats: productData.number_of_seats?.toString() || '',
-    description: productData.description || '',
-    price: productData.price?.toString() || '',
-    currency: productData.currency || 'NGN',
-    stock: productData.stock?.toString() || '',
-    availability: productData.availability || 'in_stock',
-    delivery_option: productData.delivery_option || 'pickup',
-    negotiable: productData.negotiable || false,
-    is_rental: productData.is_rental || false,
+  // Show loading if no product data or missing productId
+  if (!productData || !productId) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
+
+        {/* Header */}
+        <View className="bg-white border-b border-gray-200">
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
+            >
+              <ArrowLeftIcon size={20} color="#374151" />
+            </TouchableOpacity>
+            <View className="items-center">
+              <Text className="text-xl font-NunitoBold text-gray-900">Edit Rental Car</Text>
+            </View>
+            <View className="w-10" />
+          </View>
+        </View>
+
+        {!productId ? (
+          <View className="flex-1 items-center justify-center px-6">
+            <Text className="text-lg font-NunitoBold text-gray-900 mb-2">Missing Product Information</Text>
+            <Text className="text-gray-600 text-center mb-4">
+              Unable to load rental car details. Please try again.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="bg-primary-500 px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-NunitoBold">Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <LoadingSpinner
+            message="Loading Rental Car Details..."
+            subMessage="Please wait while we fetch the information"
+            size="medium"
+            logoSize={32}
+          />
+        )}
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -306,10 +404,10 @@ const EditProduct = () => {
           </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
-              Edit Car Details
+              Edit Rental Car
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
-              Update your Car Details
+              Update your rental car information
             </Text>
           </View>
           <View className="w-10" />
@@ -339,7 +437,7 @@ const EditProduct = () => {
             enableReinitialize={true}
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting: formikIsSubmitting, setFieldValue }) => {
-             
+
               return (
                 <View className="space-y-6">
                   {/* Basic Information */}
@@ -359,7 +457,7 @@ const EditProduct = () => {
                     {/* Name of car */}
                     <FormikInput
                       name="name"
-                      label="Name of Car"
+                      label="Rental Car Name"
                       placeholder="e.g., Toyota Camry LE"
                       type="text"
                     />
@@ -368,13 +466,12 @@ const EditProduct = () => {
                     <SelectField
                       name="make"
                       label="Make"
-                      placeholder={vehicleMakesLoading ? "Loading makes..." : "Select make"}
+                      placeholder="Select make"
                       options={makeOptions}
                       value={values.make}
                       onValueChange={(value) => {
                         setFieldValue('make', value);
-                        // Clear model when make changes
-                        setFieldValue('model', '');
+                        setFieldValue('model', ''); // Reset model when make changes
                       }}
                       error={errors.make as string}
                       touched={touched.make as boolean}
@@ -384,11 +481,8 @@ const EditProduct = () => {
                     <SelectField
                       name="model"
                       label="Model"
-                      placeholder={values.make ? "Select model" : "Select make first"}
-                      options={getModelsForSelectedMake(values.make).map(model => ({
-                        label: model.name,
-                        value: model.id.toString()
-                      }))}
+                      placeholder={!values.make ? "Select make first" : "Select model"}
+                      options={modelOptions}
                       value={values.model}
                       onValueChange={(value) => setFieldValue('model', value)}
                       error={errors.model as string}
@@ -399,7 +493,7 @@ const EditProduct = () => {
                     <FormikInput
                       name="year"
                       label="Year"
-                      placeholder="e.g., 2023"
+                      placeholder="e.g., 2020"
                       keyboardType="numeric"
                       type="text"
                     />
@@ -415,21 +509,6 @@ const EditProduct = () => {
                       error={errors.condition as string}
                       touched={touched.condition as boolean}
                     />
-                  </View>
-
-                  {/* Vehicle Details */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-green-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">2</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Details</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          All fields optional - update what you need
-                        </Text>
-                      </View>
-                    </View>
 
                     {/* Body type */}
                     <SelectField
@@ -442,57 +521,19 @@ const EditProduct = () => {
                       error={errors.body_type as string}
                       touched={touched.body_type as boolean}
                     />
+                  </View>
 
-                    {/* Mileage */}
-                    <View className="mb-4">
-                      <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                        Mileage
-                      </Text>
-                      <View className="flex-row gap-3">
-                        <View className="flex-1">
-                          <FormikInput
-                            name="mileage"
-                            label=""
-                            placeholder="e.g., 50,000"
-                            keyboardType="numeric"
-                            type="text"
-                          />
-                        </View>
-                        <View className="w-32">
-                          <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                            Unit
-                          </Text>
-                          <View className="flex-row bg-gray-100 rounded-lg p-1">
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('mileage_unit', 'km')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.mileage_unit === 'km'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.mileage_unit === 'km'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                km
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('mileage_unit', 'miles')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.mileage_unit === 'miles'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.mileage_unit === 'miles'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                miles
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
+                  {/* Vehicle Specifications */}
+                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                    <View className="flex-row items-center mb-4">
+                      <View className="w-8 h-8 bg-green-500 rounded-lg items-center justify-center mr-3">
+                        <Text className="text-white font-NunitoBold text-sm">2</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Specifications</Text>
+                        <Text className="text-xs text-gray-500 font-NunitoMedium">
+                          Technical details and features
+                        </Text>
                       </View>
                     </View>
 
@@ -520,33 +561,6 @@ const EditProduct = () => {
                       touched={touched.fuel_type as boolean}
                     />
 
-                    {/* Engine size */}
-                    <SelectField
-                      name="engine_size"
-                      label="Engine Size"
-                      placeholder="Select engine size"
-                      options={engineSizeOptions}
-                      value={values.engine_size}
-                      onValueChange={(value) => setFieldValue('engine_size', value)}
-                      error={errors.engine_size as string}
-                      touched={touched.engine_size as boolean}
-                    />
-                  </View>
-
-                  {/* Appearance */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">3</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Appearance</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Colors and styling (all optional)
-                        </Text>
-                      </View>
-                    </View>
-
                     {/* Exterior color */}
                     <FormikInput
                       name="exterior_color"
@@ -555,47 +569,26 @@ const EditProduct = () => {
                       type="text"
                     />
 
-                    {/* Interior color */}
+                    {/* Number of seats */}
                     <FormikInput
-                      name="interior_color"
-                      label="Interior Color"
-                      placeholder="e.g., Black, Beige, Brown, Gray"
+                      name="number_of_seats"
+                      label="Number of Seats"
+                      placeholder="e.g., 4, 5, 7"
+                      keyboardType="numeric"
                       type="text"
                     />
-
-                    {/* Number of doors and seats */}
-                    <View className="flex-row gap-3">
-                      <View className="flex-1">
-                        <FormikInput
-                          name="number_of_doors"
-                          label="Number of Doors"
-                          placeholder="e.g., 2, 4, 5"
-                          keyboardType="numeric"
-                          type="text"
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <FormikInput
-                          name="number_of_seats"
-                          label="Number of Seats"
-                          placeholder="e.g., 4, 5, 7"
-                          keyboardType="numeric"
-                          type="text"
-                        />
-                      </View>
-                    </View>
                   </View>
 
                   {/* Features */}
                   <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
                     <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-orange-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">4</Text>
+                      <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
+                        <Text className="text-white font-NunitoBold text-sm">3</Text>
                       </View>
                       <View className="flex-1">
                         <Text className="text-lg font-NunitoBold text-gray-900">Features</Text>
                         <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Select/deselect features (optional)
+                          Select available features
                         </Text>
                       </View>
                     </View>
@@ -604,20 +597,19 @@ const EditProduct = () => {
                       features={featureOptions}
                       selectedFeatures={selectedFeatures}
                       onFeatureToggle={handleFeatureToggle}
-                      label="Car Features"
                     />
                   </View>
 
                   {/* Description */}
                   <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
                     <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-indigo-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">5</Text>
+                      <View className="w-8 h-8 bg-orange-500 rounded-lg items-center justify-center mr-3">
+                        <Text className="text-white font-NunitoBold text-sm">4</Text>
                       </View>
                       <View className="flex-1">
                         <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
                         <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Update description (optional)
+                          Additional details about your rental car
                         </Text>
                       </View>
                     </View>
@@ -625,23 +617,23 @@ const EditProduct = () => {
                     <FormikInput
                       name="description"
                       label="Description"
-                      placeholder="e.g., Well maintained car with regular service history. Perfect for daily commuting with excellent fuel economy."
-                      type="text"
-                      multiline={true}
+                      placeholder="Describe your rental car, special features, rental terms, etc."
+                      multiline
                       numberOfLines={4}
+                      type="text"
                     />
                   </View>
 
-                  {/* Pricing & Availability */}
+                  {/* Pricing and Availability */}
                   <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
                     <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-emerald-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">6</Text>
+                      <View className="w-8 h-8 bg-red-500 rounded-lg items-center justify-center mr-3">
+                        <Text className="text-white font-NunitoBold text-sm">5</Text>
                       </View>
                       <View className="flex-1">
                         <Text className="text-lg font-NunitoBold text-gray-900">Pricing & Availability</Text>
                         <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Update price and availability (all optional)
+                          Set your rental pricing and availability
                         </Text>
                       </View>
                     </View>
@@ -649,14 +641,14 @@ const EditProduct = () => {
                     {/* Price and Currency */}
                     <View className="mb-4">
                       <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                        Price
+                        Daily Rental Price
                       </Text>
                       <View className="flex-row gap-3">
                         <View className="flex-1">
                           <FormikInput
                             name="price"
                             label=""
-                            placeholder="e.g., 2,500,000"
+                            placeholder="e.g., 25,000"
                             keyboardType="numeric"
                             type="text"
                           />
@@ -699,10 +691,23 @@ const EditProduct = () => {
                       </View>
                     </View>
 
+                    {/* Negotiable toggle */}
+                    <View className="flex-row items-center justify-between mb-4">
+                      <Text className="text-base font-NunitoSemiBold text-gray-700">
+                        Price Negotiable
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setFieldValue('negotiable', !values.negotiable)}
+                        className={`w-12 h-6 rounded-full ${values.negotiable ? 'bg-blue-500' : 'bg-gray-300'}`}
+                      >
+                        <View className={`w-5 h-5 rounded-full bg-white mt-0.5 ${values.negotiable ? 'ml-6' : 'ml-0.5'}`} />
+                      </TouchableOpacity>
+                    </View>
+
                     {/* Stock */}
                     <FormikInput
                       name="stock"
-                      label="Stock Quantity"
+                      label="Number of Cars Available"
                       placeholder="e.g., 1, 2, 5"
                       keyboardType="numeric"
                       type="text"
@@ -736,7 +741,7 @@ const EditProduct = () => {
                   {/* Action Buttons */}
                   <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
                     <FormikButton
-                      title="Update Car Details"
+                      title="Update Rental Car Details"
                       type="submit"
                       onPress={() => {
                         formikHandleSubmit();
@@ -747,15 +752,20 @@ const EditProduct = () => {
                       className="mb-3"
                     />
 
-                    <CustomButton title='Edit Images' bgVariant='outline' textVariant='outline' onPress={() => {
-                      router.push({
-                        pathname: sellerRoutes.editImage as any,
-                        params: {
-                          productId: productId,
-                          productData: JSON.stringify(productData),
-                        }
-                      });
-                    }} />
+                    <CustomButton
+                      title='Edit Images'
+                      bgVariant='outline'
+                      textVariant='outline'
+                      onPress={() => {
+                        router.push({
+                          pathname: sellerRoutes.editImage as any,
+                          params: {
+                            productId: productId,
+                            productData: JSON.stringify(productData),
+                          }
+                        });
+                      }}
+                    />
 
                     <Text className="text-xs text-gray-500 text-center font-NunitoMedium mt-2">
                       All fields are optional - only update what you want to change
@@ -783,4 +793,4 @@ const EditProduct = () => {
   )
 }
 
-export default EditProduct
+export default React.memo(EditRentCar)

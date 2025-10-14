@@ -140,6 +140,9 @@ export const SERVICE_ENDPOINTS = {
   FAVORITE_PRODUCT: '/products/favorite-product/',
   // Checkout endpoints
   CHECKOUT: '/products/checkout/',
+  // Orders endpoints
+  ORDERS: '/products/orders/',
+  ORDER_STATUS: (orderId: string) => `/products/orders/${orderId}/status/`,
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_FAQ: '/support/faq',
   SUPPORT_TICKETS: '/support/tickets',

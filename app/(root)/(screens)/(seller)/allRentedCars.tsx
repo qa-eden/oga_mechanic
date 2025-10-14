@@ -1,46 +1,121 @@
-import React, { useState, useCallback } from 'react'
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import React, { useState, useCallback, useMemo } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl, TextInput, Modal } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ArrowLeftIcon, PlusIcon } from 'react-native-heroicons/outline'
-import { images } from '@/constants'
+import { ArrowLeftIcon, PlusIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 import { router } from 'expo-router'
 import { LAYOUT } from '@/constants/units'
 import { sellerRoutes } from '@/constants/routes'
-import SearchBarWithCategories from '@/components/SearchBarWithCategories'
 import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal'
 import RentedCarCard from '@/components/cards/RentedCarCard'
+import LoadingErrorWrapper from '@/components/LoadingErrorWrapper'
+import { useQuery } from '@tanstack/react-query'
+import { useActiveRoleProfile } from '@/hooks/useUserProfile'
+import { useCategories } from '@/hooks/useProducts'
+import { productsAPI } from '@/lib/api/products'
 
-const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
+const { CONTAINER_PADDING } = LAYOUT;
 
 const AllRentedCars = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All')
   const [inputQuery, setInputQuery] = useState("")
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  
-  const categoryOptions = [
-    { name: "All", id: null },
-    { name: "Mercedez", id: 1 },
-    { name: "Porsche", id: 2 },
-    { name: "Hyundai", id: 3 }
-  ]
-  
-  const rentedCars = [
-    { id: "1", name: "BMW 328", transmission: "Automatic", image: images.car1, price: 100000 },
-    { id: "2", name: "Tesla Model S", transmission: "Automatic", image: images.benz, price: 210000 },
-    { id: "3", name: "Toyota Yaris", transmission: "Manual", image: images.car1, price: 90000 },
-    { id: "4", name: "Brabus G63", transmission: "Automatic", image: images.benz, price: 400000 },
-  ]
+  const [refreshing, setRefreshing] = useState(false)
+  const [showFilterModal, setShowFilterModal] = useState(false)
+
+  // Fetch user profile based on active role to get merchant ID
+  const { data: profileData, activeRole } = useActiveRoleProfile();
+
+  // Extract merchant ID safely from different profile structures
+  const merchantId = activeRole === 'merchant'
+    ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
+    : (profileData?.data as any)?.user_id;
+
+  // Fetch categories to get car category ID
+  const { data: categories } = useCategories();
+  const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
+  const carCategoryId = carCategory?.id;
+
+  // Fetch rental cars from API with search and filter parameters
+  const {
+    data: allRentedCars = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['products', merchantId, 'rental-cars', carCategoryId, inputQuery, minPrice, maxPrice],
+    queryFn: async () => {
+      console.log('🔄 Fetching RENTAL CARS for merchant:', merchantId, 'with filters:', {
+        category: carCategoryId,
+        search: inputQuery,
+        minPrice,
+        maxPrice
+      });
+
+      const response = await productsAPI.getProducts(
+        carCategoryId, // categoryId - filter by car category
+        minPrice || undefined, // minPrice
+        maxPrice || undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        merchantId, // merchantId
+        true // isRental - fetch only rental cars
+      )
+      return response.data.results || []
+    },
+    enabled: !!merchantId && !!carCategoryId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Apply client-side filtering for search only
+  const rentedCars = useMemo(() => {
+    let filtered = allRentedCars;
+
+    // Debug: Log the first car to understand data structure
+    if (allRentedCars.length > 0) {
+      console.log('🔍 First rental car structure:', allRentedCars[0]);
+      console.log('🔍 Available properties:', Object.keys(allRentedCars[0]));
+    }
+
+    // Filter by search query (name, description, and other available fields)
+    if (inputQuery.trim()) {
+      const query = inputQuery.toLowerCase().trim();
+      filtered = filtered.filter((car: any) => {
+        // Safe string conversion with type checking for common product fields
+        const name = (typeof car.name === 'string' ? car.name.toLowerCase() : '') || '';
+        const description = (typeof car.description === 'string' ? car.description.toLowerCase() : '') || '';
+
+        // Check if car has make/model properties or if they're in a different structure
+        const make = (typeof car.make === 'string' ? car.make.toLowerCase() :
+                     typeof car.brand === 'string' ? car.brand.toLowerCase() : '') || '';
+        const model = (typeof car.model === 'string' ? car.model.toLowerCase() : '') || '';
+        const year = (car.year ? car.year.toString() : '') || '';
+
+        return name.includes(query) ||
+               description.includes(query) ||
+               make.includes(query) ||
+               model.includes(query) ||
+               year.includes(query);
+      });
+    }
+
+    console.log('🔍 Filtered rental cars:', {
+      total: allRentedCars.length,
+      filtered: filtered.length,
+      query: inputQuery
+    });
+
+    return filtered;
+  }, [allRentedCars, inputQuery]);
 
   const handleSearchChange = useCallback((text: string) => {
     setInputQuery(text);
-  }, []);
-
-  const handleCategoryChange = useCallback((categoryName: string, categoryId?: number | null) => {
-    setSelectedCategory(categoryName);
   }, []);
 
   const handlePriceChange = useCallback((field: 'min' | 'max', value: string) => {
@@ -51,38 +126,66 @@ const AllRentedCars = () => {
     }
   }, []);
 
-  const handleApplySearch = () => {
-    console.log('Applying search:', { inputQuery, selectedCategory, minPrice, maxPrice });
+  const handleApplyFilters = () => {
+    console.log('Applying filters:', { inputQuery, minPrice, maxPrice });
+    setShowFilterModal(false);
+    // The query will automatically refetch due to dependency changes
   };
 
-  const handleResetSearch = () => {
+  const handleResetFilters = () => {
     setInputQuery("");
-    setSelectedCategory("All");
     setMinPrice("");
     setMaxPrice("");
+    setShowFilterModal(false);
+    // The query will automatically refetch due to dependency changes
   };
 
-  const handleFilterPress = () => {
-    console.log("Filter pressed");
-  };
+  // Pull-to-refresh functionality
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Error refreshing rental cars:', error);
+      // The LoadingErrorWrapper will handle displaying the error to the user
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const handleDeleteItem = (item: any) => {
     setSelectedItem(item);
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     setShowDeleteModal(false);
-    // In real app, call delete API here
-    console.log('Deleting rented car:', selectedItem?.id);
-    
-    // Navigate to success page
-    setTimeout(() => {
-      router.push({
-        pathname: sellerRoutes.deleteSuccess as any,
-        params: { itemType: 'rentedCar' }
-      });
-    }, 300);
+
+    if (!selectedItem?.id) return;
+
+    try {
+      console.log('🗑️ Deleting rental car:', selectedItem.id);
+
+      // Call delete API
+      await productsAPI.deleteProduct(selectedItem.id);
+      console.log('✅ Rental car deleted successfully');
+
+      // Refetch the list to update UI
+      await refetch();
+
+      // Navigate to success page
+      setTimeout(() => {
+        router.push({
+          pathname: sellerRoutes.deleteSuccess as any,
+          params: { itemType: 'rentedCar' }
+        });
+      }, 300);
+
+    } catch (error) {
+      console.error('❌ Error deleting rental car:', error);
+      // TODO: Show user-friendly error toast/alert
+      // For now, the error will be logged and the UI will remain unchanged
+    }
   };
 
   const renderCarCard = (car: any) => {
@@ -93,9 +196,9 @@ const AllRentedCars = () => {
         onPress={() => {
           router.push({
             pathname: sellerRoutes.productDetails as any,
-            params: { 
+            params: {
               productType: 'rentedCar',
-              productId: car.id 
+              productId: car.id
             }
           });
         }}
@@ -104,17 +207,37 @@ const AllRentedCars = () => {
     )
   }
 
+  // Empty state component
+  const EmptyState = () => (
+    <View className="flex-1 justify-center items-center px-8">
+      <Text className="text-6xl mb-4">🚗</Text>
+      <Text className="text-xl font-NunitoBold text-gray-800 text-center mb-2">
+        No Rental Cars Yet
+      </Text>
+      <Text className="text-gray-600 font-NunitoMedium text-center mb-6 leading-6">
+        You haven't uploaded any cars for rent yet. Start by adding your first rental car to attract customers.
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push('/uploadCarToRent' as any)}
+        className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
+      >
+        <PlusIcon size={20} color="white" />
+        <Text className="text-white font-NunitoBold ml-2">Add Rental Car</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeftIcon size={24} color="#000" />
         </TouchableOpacity>
         <Text className="text-lg font-NunitoBold text-gray-900">All Rented Cars</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.push('/uploadCarToRent' as any)}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
         >
@@ -122,29 +245,112 @@ const AllRentedCars = () => {
         </TouchableOpacity>
       </View>
 
-      <SearchBarWithCategories
-        searchQuery={inputQuery}
-        setSearchQuery={handleSearchChange}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={handleCategoryChange}
-        categories={categoryOptions}
-        onFilterPress={handleFilterPress}
-        minPrice={minPrice}
-        maxPrice={maxPrice}
-        onPriceChange={handlePriceChange}
-        onApplySearch={handleApplySearch}
-        onResetSearch={handleResetSearch}
-        isSearching={false}
-      />
+      <LoadingErrorWrapper
+        isLoading={isLoading && !refreshing}
+        error={error}
+        onRetry={refetch}
+        loadingMessage="Loading Rental Cars..."
+        loadingSubMessage="Please wait while we fetch your rental cars"
+        isEmpty={!isLoading && !error && allRentedCars.length === 0}
+        emptyState={<EmptyState />}
+        className="flex-1"
+      >
+        {/* Custom Search Bar without Categories */}
+      <View className={`${CONTAINER_PADDING} mb-6`}>
+        <View
+          className="flex-row items-center bg-white rounded-2xl px-3 py-2 border border-primary-200"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 3,
+          }}
+        >
+          <View className="mr-4">
+            <MagnifyingGlassIcon size={20} color="#6B7280" />
+          </View>
+
+          <View className="flex-1 relative">
+            <TextInput
+              placeholder="Search rental cars..."
+              value={inputQuery}
+              onChangeText={handleSearchChange}
+              className="text-base font-NunitoMedium text-gray-900"
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          {/* Clear Button */}
+          {inputQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setInputQuery("")}
+              className="mr-2 p-1"
+              activeOpacity={0.7}
+            >
+              <View className="w-5 h-5 bg-gray-300 rounded-full items-center justify-center">
+                <Text className="text-gray-600 text-xs font-NunitoBold">×</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          <View className="border-l border-primary-100 flex-row">
+            <TouchableOpacity
+              onPress={() => setShowFilterModal(true)}
+              className="ml-2 px-4 py-2 rounded-xl bg-red-50 flex-row items-center"
+              activeOpacity={0.7}
+            >
+              <View className="w-4 h-4 mr-2">
+                <View className="w-full h-0.5 bg-primary-500 mb-1" />
+                <View className="w-3 h-0.5 bg-primary-500 mb-1" />
+                <View className="w-full h-0.5 bg-primary-500" />
+              </View>
+              <Text className="text-primary-500 font-NunitoBold text-lg">
+                Filter
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
 
       {/* Cars List */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0A6DEE"
+            colors={['#0A6DEE']}
+            title="Pull to refresh"
+            titleColor="#6B7280"
+          />
+        }
+      >
         <View className={`${CONTAINER_PADDING} py-4`}>
-          {rentedCars.map(renderCarCard)}
+          {rentedCars.length > 0 ? (
+            rentedCars.map(renderCarCard)
+          ) : (
+            <View className="flex-1 items-center justify-center py-20">
+              <Text className="text-gray-500 text-center text-lg font-NunitoMedium">
+                No rental cars found
+              </Text>
+              <Text className="text-gray-400 text-center text-sm font-NunitoRegular mt-2">
+                {inputQuery || minPrice || maxPrice
+                  ? 'Try adjusting your search filters'
+                  : 'Start by adding your first rental car'
+                }
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
+      </LoadingErrorWrapper>
 
-          {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
           <DeleteConfirmationModal
             visible={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
@@ -152,6 +358,83 @@ const AllRentedCars = () => {
             itemType="rentedCar"
             itemName={selectedItem?.name || ''}
           />
+
+          {/* Price Filter Modal */}
+          <Modal
+            visible={showFilterModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowFilterModal(false)}
+          >
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+              activeOpacity={1}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <View className="flex-1 justify-end">
+                <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+                  <View className="bg-white rounded-t-3xl p-6">
+                    <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-6" />
+
+                    <Text className="text-xl font-NunitoBold text-gray-900 mb-6 text-center">
+                      Filter Rental Cars
+                    </Text>
+
+                    {/* Price Range */}
+                    <View className="mb-6">
+                      <Text className="font-NunitoBold text-gray-700 mb-3">
+                        Price Range
+                      </Text>
+                      <View className="space-y-3">
+                        <View>
+                          <Text className="text-gray-500 mb-2">Min Price</Text>
+                          <TextInput
+                            value={minPrice}
+                            onChangeText={(text) => handlePriceChange('min', text)}
+                            className="border border-gray-300 rounded-xl px-4 py-3 text-base font-NunitoMedium"
+                            placeholder="Enter minimum price"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                        <View>
+                          <Text className="text-gray-500 mb-2">Max Price</Text>
+                          <TextInput
+                            value={maxPrice}
+                            onChangeText={(text) => handlePriceChange('max', text)}
+                            className="border border-gray-300 rounded-xl px-4 py-3 text-base font-NunitoMedium"
+                            placeholder="Enter maximum price"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View className="flex-row space-x-3">
+                      <TouchableOpacity
+                        onPress={handleResetFilters}
+                        className="flex-1 py-4 border border-gray-300 rounded-xl items-center"
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-gray-700 font-NunitoBold text-base">
+                          Reset
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleApplyFilters}
+                        className="flex-1 py-4 bg-primary-500 rounded-xl items-center"
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-white font-NunitoBold text-base">
+                          Apply Filters
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </SafeAreaView>
       )
     }
