@@ -1,7 +1,7 @@
 import { View, Text, ImageBackground, TouchableOpacity } from "react-native";
 import React, { memo } from 'react';
 import { LinearGradient } from "expo-linear-gradient";
-import { icons } from "@/constants"; // Assuming you have an `images` constant
+import { ArrowRightIcon } from "react-native-heroicons/outline";
 import { AdsProps } from "@/types/type";
 
 const AdsComponents = memo(({ image, title, description, onPress }: AdsProps) => {
@@ -34,7 +34,7 @@ const AdsComponents = memo(({ image, title, description, onPress }: AdsProps) =>
             <Text className="text-white text-[13px] py-3">{description}</Text>
 
             <TouchableOpacity className="bg-white w-[100px] justify-center flex flex-row items-center gap-2 px-2 py-2 rounded-[.7rem] mt-2">
-              <icons.explore />
+              <ArrowRightIcon size={16} color="#000" />
               <Text className="font-NunitoBold">Explore </Text>
             </TouchableOpacity>
           </View>

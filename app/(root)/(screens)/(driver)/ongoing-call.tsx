@@ -11,7 +11,6 @@ import {
 } from 'react-native-heroicons/solid';
 import { router } from 'expo-router';
 import callService, { CallState } from '@/services/CallService';
-import CallTestIndicator from '@/components/CallTestIndicator';
 
 const OngoingCallScreen = () => {
   const [callDuration, setCallDuration] = useState(0);
@@ -32,7 +31,7 @@ const OngoingCallScreen = () => {
   const customerData = {
     name: "Big Suzz",
     phoneNumber: "+234 9076543211",
-    profileImage: require('@/assets/images/user.png'), // Using existing user image
+    profileImage: require('@/assets/icons/user.svg'), // Using existing user image
   };
 
   // Initialize call service

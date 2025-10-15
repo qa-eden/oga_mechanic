@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Modal } from 'react-native';
 import { ArrowRightOnRectangleIcon } from 'react-native-heroicons/outline';
+import CustomButton from '../CustomButton';
 
 interface LogoutModalProps {
   visible: boolean;
@@ -45,25 +46,9 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
 
           {/* Buttons */}
           <View className="space-y-3">
-            <TouchableOpacity
-              onPress={onConfirm}
-              className="bg-primary-500 py-4 rounded-xl items-center"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white font-NunitoBold text-base">
-                {confirmText}
-              </Text>
-            </TouchableOpacity>
+            <CustomButton title={confirmText} loadingText='Logging Out' onPress={onConfirm} />
 
-            <TouchableOpacity
-              onPress={onCancel}
-              className="bg-gray-100 py-4 mt-4 border border-gray-300 rounded-xl items-center"
-              activeOpacity={0.8}
-            >
-              <Text className="text-gray-700 font-NunitoBold text-base">
-                {cancelText}
-              </Text>
-            </TouchableOpacity>
+            <CustomButton title={cancelText} onPress={onCancel} bgVariant="outline" textVariant="outline" className='mt-4' />
           </View>
         </View>
       </View>

@@ -1,8 +1,12 @@
 import { Platform } from 'react-native';
 
 // Platform-specific imports
+let CustomMapView: any;
+
 if (Platform.OS === 'web') {
-  module.exports = require('./MapView.web').default;
+  CustomMapView = require('./MapView.web').default;
 } else {
-  module.exports = require('./MapView.native').default;
+  CustomMapView = require('./MapView.native').default;
 }
+
+export default CustomMapView;

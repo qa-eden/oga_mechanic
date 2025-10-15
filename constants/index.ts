@@ -2,14 +2,10 @@ import { ServicesProps } from "@/types/type";
 
 //images
 import onboarding1 from "@/assets/images/auth/onboarding1.svg";
-import onboarding2 from "@/assets/images/auth/onboarding2.svg";
 import welcomeImg1 from "@/assets/images/auth/welcomeImg1.svg";
 import welcomeImg2 from "@/assets/images/auth/welcomeImg2.svg";
 import welcomeImg3 from "@/assets/images/auth/welcomeImg3.svg";
 import welcomeImg4 from "@/assets/images/auth/welcomeImg4.svg";
-import welcomeBG from "@/assets/images/auth/welcomeBG.svg";
-import background1 from "@/assets/images/auth/background1.png";
-import background2 from "@/assets/images/auth/background2.png";
 import loginBackground from "@/assets/images/auth/loginBackground.png";
 import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar1.svg";
 import success from "@/assets/images/success.svg";
@@ -21,28 +17,18 @@ import carRight from "@/assets/images/carRight.png";
 import carLeft from "@/assets/images/carLeft.png";
 
 import car1 from "@/assets/images/car.svg";
-import sparePart from "@/assets/images/sparePart.svg";
-import ProductImg from "@/assets/images/productImg.svg";
+import sparePart from "@/assets/images/brabus.svg";
 import brabus from "@/assets/images/brabus.svg";
 
 //mechanics
-import mechanic1 from "@/assets/images/dummy/lookman.svg";
-import lookman from "@/assets/images/dummy/lookman.svg";
-import salisu from "@/assets/images/dummy/salisu.svg";
-import otunba from "@/assets/images/dummy/salisu.svg";
-
-import mechanic_ads from "@/assets/images/mechanic_ads.png";
-import user1 from "@/assets/images/user.png";
+import mechanic1 from "@/assets/images/dummy/mechanic2.svg";
 
 import brabus2 from "@/assets/images/dummy/brabus.svg";
 import benz from "@/assets/images/dummy/benz.svg";
-import carEngine from "@/assets/images/dummy/driverWheel.svg";
-import driverWheel from "@/assets/images/dummy/driverWheel.svg";
+import carEngine from "@/assets/images/dummy/brabus.svg";
 // import engineoil from "@/assets/images/dummy/engineoil.svg";
 import mechanic3 from "@/assets/images/dummy/mechanic2.svg";
 import toyota from "@/assets/images/dummy/toyota.png";
-import gcm from "@/assets/images/dummy/gcm.svg";
-import cartImg from "@/assets/images/dummy/cartImg.svg";
 
 //icons
 import logo from "@/assets/icons/logo.svg";
@@ -51,13 +37,11 @@ import logoBox from "@/assets/icons/box_logo.svg";
 import splash from "@/assets/icons/logo2.svg";
 import backBtn from "@/assets/icons/backBtn.svg";
 import tick1 from "@/assets/icons/tick1.svg";
-import explore from "@/assets/icons/explore.svg";
 import eyeClosed from "@/assets/icons/EyeClosed.png";
 import eyeOpen from "@/assets/icons/eyeOpen.png";
 import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import courage from "@/assets/icons/courage.svg";
-import pickUp from "@/assets/icons/pickUp.svg";
 import empty from "@/assets/icons/empty.svg";
 import carticon from "@/assets/icons/carticon.svg";
 import bankIcon from "@/assets/icons/bank.svg";
@@ -117,31 +101,17 @@ import { driverRoutes, mechanicRoutes, routes, sellerRoutes } from "./routes";
 
 export const images = {
   onboarding1,
-  onboarding2,
   welcomeImg1,
   welcomeImg2,
   welcomeImg3,
   welcomeImg4,
-  welcomeBG,
-  background1,
-  background2,
   loginBackground,
   splashBackgroundCar,
   dummyProfile,
   adsbackground,
-  ProductImg,
   brabus,
-  cartImg,
   mechanic3,
   mechanic1,
-
-  //mechanics
-  lookman,
-  salisu,
-  otunba,
-
-  mechanic_ads,
-  user1,
 
   carFront,
   carBack,
@@ -181,7 +151,6 @@ export const icons = {
   car,
   services,
   profile,
-  explore,
   filledStar,
   unfillStar,
   redPhone,
@@ -378,7 +347,7 @@ export const CarsList = [
     address: "No 1, Mechanic Street, Lagos",
     price: 65000000,
     love: true,
-    image: gcm,
+    image: car1,
     reviewCount: 20,
   },
 
@@ -412,7 +381,7 @@ export const SpareParts = [
     address: "No 1, Mechanic Street, Lagos",
     price: 25000,
     love: true,
-    image: driverWheel,
+    image: carEngine,
     reviewCount: 20,
   },
   {

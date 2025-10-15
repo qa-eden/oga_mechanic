@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import {
     View,
-    SafeAreaView,
     StatusBar,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     Alert
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import * as DocumentPicker from 'expo-document-picker'
 import { router, useLocalSearchParams } from 'expo-router'

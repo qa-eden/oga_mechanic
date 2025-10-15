@@ -1,4 +1,5 @@
-import { Audio } from 'expo-av';
+// TODO: Replace expo-av with expo-audio when available
+// import { Audio } from 'expo-audio';
 
 export interface CallState {
   isConnected: boolean;
@@ -11,7 +12,7 @@ export interface CallState {
 }
 
 class CallService {
-  private sound: Audio.Sound | null = null;
+  private sound: any | null = null; // TODO: Replace with expo-audio Sound type
   private onCallStateChange: ((state: CallState) => void) | null = null;
   private ws: WebSocket | null = null;
   private roomId: string | null = null;
@@ -25,13 +26,15 @@ class CallService {
 
   private async initializeAudio() {
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
+      // TODO: Replace with expo-audio when available
+      // await Audio.setAudioModeAsync({
+      //   allowsRecordingIOS: true,
+      //   playsInSilentModeIOS: true,
+      //   staysActiveInBackground: true,
+      //   shouldDuckAndroid: true,
+      //   playThroughEarpieceAndroid: false,
+      // });
+      console.log('Audio initialization skipped - expo-av deprecated');
     } catch (error) {
       console.error('Error initializing audio:', error);
     }
@@ -114,7 +117,8 @@ class CallService {
     this.isMuted = false;
     
     if (this.sound) {
-      this.sound.unloadAsync();
+      // TODO: Replace with expo-audio unload method
+      // this.sound.unloadAsync();
       this.sound = null;
     }
     

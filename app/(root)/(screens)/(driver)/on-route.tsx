@@ -109,7 +109,7 @@ const OnRouteScreen = () => {
             params: {
                 mechanicName: bookingData.customerName,
                 mechanicPhone: bookingData.phoneNumber,
-                mechanicImage: require('@/assets/images/user.png'),
+                mechanicImage: require('@/assets/icons/user.svg'),
             },
         });
     };
