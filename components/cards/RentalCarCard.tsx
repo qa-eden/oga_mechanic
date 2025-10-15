@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableOpacity, View, Text } from "react-native";
+import { TouchableOpacity, View, Text, Image } from "react-native";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 
 interface RentalCarCardProps {
@@ -15,7 +15,11 @@ const RentalCarCard: React.FC<RentalCarCardProps> = React.memo(({ item, onPress 
   >
     {/* Car Image */}
     <View className="w-32 h-24 bg-white rounded-xl mr-4 overflow-hidden items-center justify-center">
-      <item.image width={120} height={100} />
+      <Image
+        source={{ uri: item.image }}
+        style={{ width: 120, height: 100 }}
+        resizeMode="cover"
+      />
     </View>
 
     {/* Car Details */}

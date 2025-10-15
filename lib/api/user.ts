@@ -458,4 +458,28 @@ export const userAPI = {
     const response = await api.delete(USER_ENDPOINTS.DELETE_CAR(carId));
     return response.data;
   },
+
+  // Rent car
+  rentCar: async (rentalData: any): Promise<any> => {
+    console.log('=== RENT CAR API REQUEST ===');
+    console.log('Endpoint:', USER_ENDPOINTS.RENT_CAR);
+    console.log('Rental data:', JSON.stringify(rentalData, null, 2));
+    console.log('============================');
+
+    try {
+      const response = await api.post(USER_ENDPOINTS.RENT_CAR, rentalData);
+      console.log('=== RENT CAR API RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('=============================');
+      return response.data;
+    } catch (error: any) {
+      console.log('=== RENT CAR API ERROR ===');
+      console.log('Error status:', error?.response?.status);
+      console.log('Error data:', JSON.stringify(error?.response?.data, null, 2));
+      console.log('Error message:', error?.message);
+      console.log('==========================');
+      throw error;
+    }
+  },
 };

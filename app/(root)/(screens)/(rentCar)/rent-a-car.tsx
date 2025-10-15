@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl, Animated } from "react-native"
+import { useState, useCallback, useMemo, useEffect } from "react"
+import { View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router } from "expo-router"
-import { images } from "@/constants"
 import { LAYOUT } from "@/constants/units"
 import { routes } from "@/constants/routes"
 import RentalCarCard from "@/components/cards/RentalCarCard";
 import BackArrowBtn from "@/components/BackArrowBtn"
+import InputField from "@/components/InputField"
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline"
 import { useQuery } from "@tanstack/react-query"
 import { productsAPI } from "@/lib/api/products"
@@ -34,13 +34,12 @@ const RentACarScreen = () => {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
-  const [selectedMake, setSelectedMake] = useState("All")
+  const [selectedMake, setSelectedMake] = useState("All") // Store make ID or "All"
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
   const [refreshing, setRefreshing] = useState(false)
 
-  // Animated progress bar
-  const progressAnim = useRef(new Animated.Value(0)).current
+
 
   // Debounce search query
   useEffect(() => {
@@ -92,34 +91,6 @@ const RentACarScreen = () => {
   });
 
   const rentalCarsData = rentalCarsResponse?.data?.results || [];
-  console.log('🔍 Rental Cars Data:', rentalCarsData);
-  console.log('🔍 Selected Make:', selectedMake);
-  console.log('🔍 Vehicle Makes:', vehicleMakes);
-
-  // Animate progress bar when loading
-  useEffect(() => {
-    if (isLoading) {
-      // Start animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(progressAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: false,
-          }),
-          Animated.timing(progressAnim, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: false,
-          }),
-        ])
-      ).start();
-    } else {
-      // Stop animation and reset
-      progressAnim.stopAnimation();
-      progressAnim.setValue(0);
-    }
-  }, [isLoading, progressAnim]);
 
   // Transform API data to match component interface
   const transformRentalCar = (car: any): RentalCar => ({
@@ -127,22 +98,25 @@ const RentACarScreen = () => {
     name: car.name || 'Unknown Car',
     transmission: car.transmission || 'Automatic',
     pricePerDay: parseFloat(car.price || 0),
-    image: car.images?.[0]?.image || images?.brabus, // Use first image or fallback
+    image: car.images?.[0]?.image || 'https://via.placeholder.com/300x200/f3f4f6/9ca3af?text=No+Image', // Use first image or placeholder
     category: car.make || 'Unknown', // Use make as category
   });
 
   // Transform API data
   const rentalCars: RentalCar[] = rentalCarsData.map(transformRentalCar);
 
-  // Convert vehicle makes to make options (using the same format as uploadProducts)
+  // Convert vehicle makes to make options (using IDs for API calls)
   const makeOptions = vehicleMakes?.map(make => ({
     label: make.name,
     value: make.id.toString(),
     name: make.name
   })) || [];
 
-  // Create makes array for filtering (using make names)
-  const makes = ["All", ...makeOptions.map(option => option.name)];
+  // Create makes array for filtering (using make IDs for API calls)
+  const makes = [
+    { label: "All", value: "All" },
+    ...makeOptions.map(option => ({ label: option.name, value: option.value }))
+  ];
 
   // Handle refresh
   const onRefresh = useCallback(async () => {
@@ -159,10 +133,16 @@ const RentACarScreen = () => {
   const filteredCars = useMemo(() =>
     rentalCars.filter((car) => {
       const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesMake = selectedMake === "All" || car.category === selectedMake
+
+      // Find the selected make name from the ID
+      const selectedMakeName = selectedMake === "All"
+        ? "All"
+        : makeOptions.find(option => option.value === selectedMake)?.name || "All"
+
+      const matchesMake = selectedMakeName === "All" || car.category === selectedMakeName
       return matchesSearch && matchesMake
     }),
-    [rentalCars, searchQuery, selectedMake]
+    [rentalCars, searchQuery, selectedMake, makeOptions]
   )
 
   const sections = useMemo(() => {
@@ -184,14 +164,14 @@ const RentACarScreen = () => {
     return sectionsData
   }, [makes, filteredCars, isLoading, error])
 
-  const renderMakeTab = useCallback(({ item }: { item: string }) => (
+  const renderMakeTab = useCallback(({ item }: { item: { label: string; value: string } }) => (
     <TouchableOpacity
-      onPress={() => setSelectedMake(item)}
-      className={`px-6 py-3 rounded-full mr-3 ${selectedMake === item ? "bg-primary-500" : "bg-gray-200"}`}
+      onPress={() => setSelectedMake(item.value)}
+      className={`px-6 py-3 rounded-full mr-3 ${selectedMake === item.value ? "bg-primary-500" : "bg-gray-200"}`}
       activeOpacity={0.7}
     >
-      <Text className={`font-NunitoBold text-base ${selectedMake === item ? "text-white" : "text-gray-600"}`}>
-        {item}
+      <Text className={`font-NunitoBold text-base ${selectedMake === item.value ? "text-white" : "text-gray-600"}`}>
+        {item.label}
       </Text>
     </TouchableOpacity>
   ), [selectedMake])
@@ -230,31 +210,31 @@ const RentACarScreen = () => {
 
             {/* Price Filter Inputs */}
             <View className="space-y-3">
-              <View className="flex-row space-x-3">
+              <View className="flex-row gap-2">
                 <View className="flex-1">
-                  <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">Min Price (₦)</Text>
-                  <TextInput
-                    className="bg-gray-50 rounded-2xl px-4 py-4 text-base font-NunitoMedium text-gray-900"
+                  <InputField
+                    label="Min Price (₦)"
                     placeholder="0"
-                    placeholderTextColor="#9CA3AF"
                     value={minPrice}
                     onChangeText={setMinPrice}
                     keyboardType="numeric"
+                    containerStyle="bg-gray-50 rounded-2xl"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    noMargin={true}
                   />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">Max Price (₦)</Text>
-                  <TextInput
-                    className="bg-gray-50 rounded-2xl px-4 py-4 text-base font-NunitoMedium text-gray-900"
+                  <InputField
+                    label="Max Price (₦)"
                     placeholder="No limit"
-                    placeholderTextColor="#9CA3AF"
                     value={maxPrice}
                     onChangeText={setMaxPrice}
                     keyboardType="numeric"
+                    containerStyle="bg-gray-50 rounded-2xl border"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    noMargin={true}
                   />
                 </View>
               </View>
@@ -273,26 +253,6 @@ const RentACarScreen = () => {
                 </TouchableOpacity>
               )}
             </View>
-
-            {/* Animated Progress Bar */}
-            {isLoading && (
-              <View className="mt-4">
-                <View className="bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <Animated.View
-                    className="bg-primary-500 h-full rounded-full"
-                    style={{
-                      width: progressAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['20%', '90%'],
-                      })
-                    }}
-                  />
-                </View>
-                <Text className="text-sm font-NunitoMedium text-gray-500 mt-2 text-center">
-                  {debouncedSearchQuery.trim() ? 'Searching...' : 'Loading rental cars...'}
-                </Text>
-              </View>
-            )}
           </View>
         )
       
@@ -303,7 +263,7 @@ const RentACarScreen = () => {
             <FlatList
               data={item.data}
               renderItem={renderMakeTab}
-              keyExtractor={(make) => make}
+              keyExtractor={(make) => make.value}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 20 }}
