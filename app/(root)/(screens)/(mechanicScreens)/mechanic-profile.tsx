@@ -7,6 +7,7 @@ import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
 import { useGetMechanicDetail } from "@/hooks/useMechanics";
 import { getErrorMessage } from "@/utils/errorMessages";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface MechanicProfile {
   id: number;
@@ -31,10 +32,10 @@ const MechanicProfile = () => {
 
 
   // Fetch mechanic details from API
-  const { 
-    data: mechanicData, 
-    isLoading, 
-    error 
+  const {
+    data: mechanicData,
+    isLoading,
+    error
   } = useGetMechanicDetail(mechanicId);
 
   // Transform API data to component format
@@ -113,19 +114,12 @@ const MechanicProfile = () => {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-          <BackArrowBtn />
-          <Text className="text-xl font-NunitoBold text-gray-900">
-            Mechanics
-          </Text>
-          <View className="w-10" />
-        </View>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#D30309" />
-          <Text className="text-gray-600 text-lg mt-4">Loading mechanic details...</Text>
-        </View>
-      </SafeAreaView>
+      <LoadingSpinner
+        message="Loading Mechanic Profile..."
+        subMessage="Please wait while we fetch the information"
+        size="medium"
+        logoSize={40}
+      />
     );
   }
 
@@ -158,7 +152,7 @@ const MechanicProfile = () => {
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
         <BackArrowBtn />
         <Text className="text-xl font-NunitoBold text-gray-900">
-           Mechanics
+          Mechanics
         </Text>
         <View className="w-10" />
       </View>

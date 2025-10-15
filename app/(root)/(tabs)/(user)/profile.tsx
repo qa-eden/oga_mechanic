@@ -34,6 +34,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLogout } from "@/hooks/useLogout";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -42,15 +43,15 @@ const Profile = () => {
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
-  
+
   // Fetch user profile data
-  const { 
-    data: profileData, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: profileData,
+    isLoading,
+    error,
+    refetch
   } = usePrimaryUserProfile();
-  
+
   const { visible, alertConfig, hideAlert } = useCustomAlert();
   const logoutMutation = useLogout();
 
@@ -76,11 +77,11 @@ const Profile = () => {
 
   const confirmLogout = async () => {
     setShowLogoutModal(false);
-    
+
     try {
       // Get refresh token from AsyncStorage
       const refreshToken = await AsyncStorage.getItem('refresh_token');
-      
+
       if (refreshToken) {
         // Call logout API with refresh token
         logoutMutation.mutate({ refresh: refreshToken });
@@ -142,24 +143,20 @@ const Profile = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <SafeAreaView className="bg-white flex-1" edges={["top"]}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#D30309" />
-          <Text className="text-gray-600 mt-4 font-NunitoMedium">
-            Loading profile...
-          </Text>
-        </View>
-      </SafeAreaView>
+      <LoadingSpinner
+        message="Loading Profile..."
+        size="medium"
+        logoSize={40}
+      />
     );
   }
 
   // Get user data from API or fallback to static data
   const userData = (profileData as PrimaryUserProfileResponse)?.data;
-  const displayName = userData?.first_name && userData?.last_name 
+  const displayName = userData?.first_name && userData?.last_name
     ? `${userData.first_name} ${userData.last_name}`
     : userInfo.name;
-  
+
   const displayEmail = userData?.email || '';
   const displayPhone = userData?.phone_number || userInfo.phone;
   const isVerified = userData?.is_verified || false;
@@ -195,28 +192,28 @@ const Profile = () => {
               </View>
             )}
           </View>
-          
+
           {/* Email display */}
           {displayEmail && (
             <Text className="font-NunitoMedium text-gray-600 text-sm pt-1">
               {displayEmail}
             </Text>
           )}
-          
+
           {/* Role display */}
           <View className="bg-blue-50 px-3 py-1 rounded-full mt-2">
             <Text className="text-blue-800 text-xs font-NunitoMedium capitalize">
               {activeRole.replace('_', ' ')} Account
             </Text>
           </View>
-          
+
           {/* Member since */}
           {userData?.date_joined && (
             <Text className="text-gray-500 text-xs mt-2 font-NunitoMedium">
               Member since {new Date(userData.date_joined).toLocaleDateString()}
             </Text>
           )}
-          
+
           <View className="flex-row items-center justify-center gap-2 pt-2">
             <icons.redPhone width={20} height={20} />
             <Text className="text-[14px] font-NunitoBold text-gray-600">
@@ -231,7 +228,7 @@ const Profile = () => {
             <Text className="uppercase text-[#999999] pb-3 font-NunitoBold">
               Vehicle Information
             </Text>
-            
+
             {userData.car_make && userData.car_model && (
               <View className="flex-row items-center justify-between py-2">
                 <Text className="text-gray-700 font-NunitoMedium">Vehicle</Text>
@@ -240,14 +237,14 @@ const Profile = () => {
                 </Text>
               </View>
             )}
-            
+
             {userData.car_year && (
               <View className="flex-row items-center justify-between py-2">
                 <Text className="text-gray-700 font-NunitoMedium">Year</Text>
                 <Text className="text-gray-900 font-NunitoBold">{userData.car_year}</Text>
               </View>
             )}
-            
+
             {userData.license_plate && (
               <View className="flex-row items-center justify-between py-2">
                 <Text className="text-gray-700 font-NunitoMedium">License Plate</Text>
@@ -318,9 +315,8 @@ const Profile = () => {
           <TouchableOpacity
             onPress={handleLogout}
             disabled={logoutMutation.isPending}
-            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${
-              logoutMutation.isPending ? 'opacity-50' : ''
-            }`}
+            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${logoutMutation.isPending ? 'opacity-50' : ''
+              }`}
           >
             {logoutMutation.isPending ? (
               <ActivityIndicator size="small" color="#D30309" />

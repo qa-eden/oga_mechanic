@@ -63,16 +63,6 @@ const HomePage = memo(() => {
   const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
   const sparePartCategoryId = homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.id;
 
-  // Debug: Log home products data
-  console.log('🏠 Home Products Data:', homeProducts);
-  console.log('🏠 Is Loading:', productsLoading);
-  console.log('🏠 Error:', productsError);
-  console.log('🏠 Mechanics:', homeProducts?.data?.mechanics?.length || 0);
-  console.log('🏠 Cars:', homeProducts?.data?.best_selling_cars?.length || 0);
-  console.log('🏠 Spare Parts:', homeProducts?.data?.best_selling_spare_parts?.length || 0);
-  console.log('🏠 Car Category ID:', carCategoryId);
-  console.log('🏠 Spare Part Category ID:', sparePartCategoryId);
-
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {

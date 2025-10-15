@@ -3,6 +3,7 @@ import { View, Animated, Image, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { icons } from "@/constants";
 import { TruckIcon, WrenchScrewdriverIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
+import { StatusBar } from "expo-status-bar";
 
 export default function AnimatedSplash({ onAnimationEnd }: { onAnimationEnd: () => void }) {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -15,16 +16,16 @@ export default function AnimatedSplash({ onAnimationEnd }: { onAnimationEnd: () 
     SplashScreen.preventAutoHideAsync();
 
     Animated.sequence([
-      Animated.delay(300),
+      Animated.delay(200), // Reduced from 300ms
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
-          duration: 800,
+          duration: 600, // Reduced from 800ms
           useNativeDriver: true,
         }),
         Animated.timing(textScale, {
           toValue: 1,
-          duration: 800,
+          duration: 600, // Reduced from 800ms
           useNativeDriver: true,
         }),
       ]),
@@ -39,6 +40,7 @@ export default function AnimatedSplash({ onAnimationEnd }: { onAnimationEnd: () 
       className="absolute inset-0 bg-primary-500 z-50"
       style={{ opacity, transform: [{ scale }] }}
     >
+      <StatusBar style="light" />
       {/* Main Content */}
       <View className="flex-1 items-center justify-center px-6">
         {/* Logo */}

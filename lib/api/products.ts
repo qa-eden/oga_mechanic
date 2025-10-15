@@ -384,7 +384,8 @@ export const productsAPI = {
     offset?: number,
     limit?: number,
     merchantId?: string,
-    isRental?: boolean
+    isRental?: boolean,
+    make?: string
   ): Promise<ProductListAPIResponse> => {
     const params = new URLSearchParams();
     if (categoryId) {
@@ -408,6 +409,9 @@ export const productsAPI = {
     if (isRental !== undefined) {
       params.append('is_rental', isRental.toString());
     }
+    if (make && make.trim()) {
+      params.append('make', make);
+    }
 
     const url = params.toString()
       ? `${SERVICE_ENDPOINTS.PRODUCTS_LIST}?${params.toString()}`
@@ -421,10 +425,12 @@ export const productsAPI = {
 
   // Search products
   searchProducts: async (
-    query: string, 
-    categoryId?: number | null, 
-    minPrice?: string, 
-    maxPrice?: string
+    query: string,
+    categoryId?: number | null,
+    minPrice?: string,
+    maxPrice?: string,
+    make?: string,
+    isRental?: boolean
   ): Promise<ProductListResponse[]> => {
     const params = new URLSearchParams();
     params.append('q', query);
@@ -436,6 +442,12 @@ export const productsAPI = {
     }
     if (maxPrice && maxPrice.trim()) {
       params.append('max_price', maxPrice);
+    }
+    if (make && make.trim()) {
+      params.append('make', make);
+    }
+    if (isRental !== undefined) {
+      params.append('is_rental', isRental.toString());
     }
     
     const response = await api.get<any>(

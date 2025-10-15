@@ -34,7 +34,6 @@ const MerchantProfile = () => {
         undefined, // limit
         merchantId  // merchantId
       )
-      console.log('🏪 Merchant Products Response:', response)
       return response.data
     },
     enabled: !!merchantId,
@@ -59,13 +58,12 @@ const MerchantProfile = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
-        <StatusBar style="dark" />
-        <View className="flex-1 items-center justify-center">
-          <LoadingSpinner size="large" />
-          <Text className="text-gray-500 font-NunitoMedium mt-4">Loading merchant profile...</Text>
-        </View>
-      </SafeAreaView>
+      <LoadingSpinner
+        message="Loading Merchant Profile..."
+        subMessage="Please wait while we fetch the information"
+        size="medium"
+        logoSize={32}
+      />
     )
   }
 
@@ -123,7 +121,7 @@ const MerchantProfile = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
 
       {/* Header */}
       <View className="bg-white border-b border-gray-200">

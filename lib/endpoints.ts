@@ -126,7 +126,7 @@ export const SERVICE_ENDPOINTS = {
   PRODUCTS_HOME: '/products/home/',
   PRODUCTS_LIST: '/products/products/',
   PRODUCTS_BY_MERCHANT: (merchantId: string) => `/products/products/${merchantId}/`,
-  PRODUCTS_SEARCH: '/products/products/search/',
+  PRODUCTS_SEARCH: '/products/search-product/',
   PRODUCT_DETAIL: (id: string) => `/products/products/${id}/`,
   PRODUCTS_CATEGORIES: '/products/categories/',
   // Cart endpoints

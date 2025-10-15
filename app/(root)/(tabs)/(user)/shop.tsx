@@ -15,6 +15,7 @@ import { useProducts, useProductsInfinite, useCategories, useProductSearch } fro
 import { ProductListResponse } from "@/lib/api/products"
 import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages"
 import usePullToRefresh from "@/hooks/usePullToRefresh"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 const Shop = () => {
   const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
@@ -289,23 +290,12 @@ const Shop = () => {
   // Loading state
   if (productsLoading || categoriesLoading) {
     return (
-      <SafeAreaView className="bg-white flex-1" edges={["top"]}>
-        <ScrollView 
-          className="flex-1" 
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl {...refreshControl} />}
-        >
-          <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
-            <BackArrowBtn />
-            <ProfileHeader title="Shop" />
-            <CartIconBtn />
-          </View>
-          <View className="flex-1 items-center justify-center py-20">
-            <ActivityIndicator size="large" color="#D30309" />
-            <Text className="text-gray-600 mt-4">{getLoadingMessage('products')}</Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+         <LoadingSpinner
+        message="Loading Products..."
+        subMessage="Please wait while we fetch available products"
+        size="medium"
+        logoSize={55}
+      />
     );
   }
 
