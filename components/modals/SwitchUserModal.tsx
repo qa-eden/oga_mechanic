@@ -454,7 +454,7 @@ const SwitchUserModal = ({
                         const roleName = selectedOption?.name || selectedUser;
                         return hasAccess ? `Switch to ${roleName}` : `Sign up for ${roleName}`;
                       })()
-                    : "Select a role"
+                    : "Select a Role"
                 }
                 onPress={handleConfirm}
                 disabled={!selectedUser || isLoadingUserRoles || isLoadingAllRoles || isSwitching}

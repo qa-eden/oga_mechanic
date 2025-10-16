@@ -60,13 +60,18 @@ api.interceptors.request.use(
           console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Removed Content-Type header for FormData`);
           console.log(`📤 Final headers:`, config.headers);
         } else {
-          // For non-FormData, wrap in { data, requestType }
-          const originalData = config.data || {};
-          config.data = {
-            requestType: 'inbound',
-            data: originalData,
-          };
-          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
+          // Skip wrapping for checkout endpoint (it handles its own structure)
+          if (config.url?.includes('/checkout/')) {
+            console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Checkout endpoint, skipping interceptor wrapping`);
+          } else {
+            // For non-FormData, wrap in { data, requestType }
+            const originalData = config.data || {};
+            config.data = {
+              requestType: 'inbound',
+              data: originalData,
+            };
+            console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
+          }
         }
       }
     } catch (error) {

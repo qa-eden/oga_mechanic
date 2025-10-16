@@ -132,8 +132,9 @@ const InputField = ({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
+      enabled={!props.multiline} // Disable for multiline to prevent conflicts
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <TouchableWithoutFeedback onPress={props.multiline ? undefined : Keyboard.dismiss}>
         <View className={clsx("mb-4 w-full", containerStyle1, !noMargin && "mb-4")}>
           {/* Label */}
           {label && (
@@ -147,7 +148,7 @@ const InputField = ({
 
           {/* Input Container */}
           <Animated.View
-            className={`flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1 ${containerStyle}`}
+            className={`flex ${props.multiline ? 'flex-col' : 'flex-row items-center'} bg-gray-50 rounded-xl px-4 py-1 ${containerStyle}`}
             style={{
               borderWidth: 1.5,
               borderColor: borderColor,
@@ -169,7 +170,7 @@ const InputField = ({
             }}
           >
             {/* Left Icon */}
-            {leftIcon && !secureTextEntry && (
+            {leftIcon && !secureTextEntry && !props.multiline && (
               <View className="mr-3">
                 <Image
                   source={leftIcon}
@@ -181,7 +182,7 @@ const InputField = ({
 
             {/* Text Input */}
             <TextInput
-              className={`flex-1 py-3 text-[1.2rem] font-NunitoMedium text-gray-900 ${inputStyle}`}
+              className={`flex-1 ${props.multiline ? 'py-3 min-h-[100px]' : 'py-3'} text-[1.2rem] font-NunitoMedium text-gray-900 ${inputStyle}`}
               secureTextEntry={secureTextEntry && isPasswordVisible}
               keyboardType={keyboardType}
               placeholder={placeholder}
@@ -193,13 +194,15 @@ const InputField = ({
               textContentType={
                 keyboardType === "email-address" ? "emailAddress" : undefined
               }
+              textAlignVertical={props.multiline ? "top" : "center"}
               {...props}
             />
 
             {/* Right Icon (Password Toggle) */}
             {secureTextEntry &&
               typeof isPasswordVisible === "boolean" &&
-              typeof setIsPasswordVisible === "function" && (
+              typeof setIsPasswordVisible === "function" &&
+              !props.multiline && (
                 <TouchableOpacity
                   onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                   className="ml-3 p-1"
@@ -214,7 +217,7 @@ const InputField = ({
               )}
 
             {/* Custom Right Icon */}
-            {icon && !secureTextEntry && (
+            {icon && !secureTextEntry && !props.multiline && (
               <View className="ml-3">
                 <Image
                   source={icon}

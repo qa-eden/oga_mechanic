@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
 import FormikInput from '@/components/forms/FormikInput'
+import FormikTextArea from '@/components/forms/FormikTextArea'
 import SelectField from '@/components/forms/SelectField'
 import MultiSelectBottomSheet from '@/components/forms/MultiSelectBottomSheet'
 import FormikButton from '@/components/forms/FormikButton'
@@ -492,13 +493,13 @@ const EditSparePart = () => {
                     </View>
                   </View>
 
-                  <FormikInput
+                  <FormikTextArea
                     name="description"
                     label="Description"
                     placeholder="e.g., High-quality brake pads compatible with multiple Toyota and Honda models."
-                    type="text"
-                    multiline={true}
                     numberOfLines={4}
+                    maxLength={500}
+                    helperText="Describe the spare part's features, compatibility, and condition"
                   />
                 </View>
 

@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
 import FormikInput from '@/components/forms/FormikInput'
+import FormikTextArea from '@/components/forms/FormikTextArea'
 import SelectField from '@/components/forms/SelectField'
 import FormikButton from '@/components/forms/FormikButton'
 import FeatureBadges from '@/components/forms/FeatureBadges'
@@ -622,13 +623,13 @@ const EditProduct = () => {
                       </View>
                     </View>
 
-                    <FormikInput
+                    <FormikTextArea
                       name="description"
                       label="Description"
                       placeholder="e.g., Well maintained car with regular service history. Perfect for daily commuting with excellent fuel economy."
-                      type="text"
-                      multiline={true}
                       numberOfLines={4}
+                      maxLength={500}
+                      helperText="Describe your car's condition, features, and what makes it special"
                     />
                   </View>
 

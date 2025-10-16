@@ -554,13 +554,27 @@ export const productsAPI = {
   },
 
   // Checkout with payment method
-  checkout: async (paymentMethod: string): Promise<{ message: string; status: boolean; data?: any }> => {
+  checkout: async (paymentMethod: string, mobileCallbackUrl?: string): Promise<{ message: string; status: boolean; data?: any }> => {
     console.log('🔄 checkout called - paymentMethod:', paymentMethod);
-    
-    const response = await api.post(SERVICE_ENDPOINTS.CHECKOUT, {
-      payment_method: paymentMethod
-    });
-    
+    console.log('🔄 checkout called - mobileCallbackUrl:', mobileCallbackUrl);
+
+    // Create the exact payload structure you want
+    const payload: any = {
+      data: {
+        payment_method: paymentMethod
+      },
+      requestType: "inbound"
+    };
+
+    // Add mobile_callback_url to data object if provided
+    if (mobileCallbackUrl && paymentMethod === 'online') {
+      payload.data.mobile_callback_url = mobileCallbackUrl;
+    }
+
+    console.log('📦 Final checkout payload:', JSON.stringify(payload, null, 2));
+
+    const response = await api.post(SERVICE_ENDPOINTS.CHECKOUT, payload);
+
     console.log('✅ checkout response:', response.data);
     return response.data;
   },

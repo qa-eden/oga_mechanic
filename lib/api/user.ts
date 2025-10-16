@@ -357,6 +357,31 @@ export const userAPI = {
     }
   },
 
+  // Get merchant profile by UUID
+  getMerchantProfileByUuid: async (merchantUuid: string): Promise<MerchantProfileResponse> => {
+    console.log('=== MERCHANT PROFILE BY UUID API REQUEST ===');
+    const endpoint = `users/profile/merchant/?merchant_user_uuid=${merchantUuid}`;
+    console.log('Endpoint:', endpoint);
+    console.log('Merchant UUID:', merchantUuid);
+    console.log('============================================');
+
+    try {
+      const response = await api.get(endpoint);
+      console.log('=== MERCHANT PROFILE BY UUID API RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data, null, 2));
+      console.log('=============================================');
+      return response.data;
+    } catch (error: any) {
+      console.log('=== MERCHANT PROFILE BY UUID API ERROR ===');
+      console.log('Error status:', error.response?.status);
+      console.log('Error data:', JSON.stringify(error.response?.data, null, 2));
+      console.log('Error message:', error.message);
+      console.log('==========================================');
+      throw error;
+    }
+  },
+
   // Get user roles
   getUserRoles: async (): Promise<UserRolesResponse> => {
     console.log('=== USER ROLES API REQUEST ===');

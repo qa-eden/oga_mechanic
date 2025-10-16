@@ -46,7 +46,7 @@ const PaymentResult = () => {
           <BackArrowBtn />
           <View className="items-center">
             <Text className="text-xl font-NunitoExtraBold text-gray-900">
-              Payment {isSuccess ? 'Successful' : 'Failed'}
+              Payments {isSuccess ? 'Successful' : 'Failed'}
             </Text>
             <Text className="text-sm text-gray-500">
               {isSuccess ? 'Order confirmed' : 'Payment incomplete'}

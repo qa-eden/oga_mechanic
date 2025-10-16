@@ -115,9 +115,10 @@ export const useToggleFavorite = () => {
 
 export const useCheckout = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (paymentMethod: string) => productsAPI.checkout(paymentMethod),
+    mutationFn: ({ paymentMethod, mobileCallbackUrl }: { paymentMethod: string; mobileCallbackUrl?: string }) =>
+      productsAPI.checkout(paymentMethod, mobileCallbackUrl),
     onSuccess: () => {
       // Invalidate cart and product queries to refresh data
       queryClient.invalidateQueries({ queryKey: productKeys.all });

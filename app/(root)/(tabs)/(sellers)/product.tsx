@@ -32,18 +32,12 @@ const Product = () => {
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
-  // Fetch categories to get car and spare parts category IDs
+  // Use specific category IDs as provided
+  const SPARE_PARTS_CATEGORY_ID = 24;
+  const CAR_CATEGORY_ID = 23;
+
+  // Fetch categories for reference (optional)
   const { data: categories } = useCategories();
-  const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
-  const carCategoryId = carCategory?.id;
-  
-  // Get spare parts category ID (exclude cars)
-  const sparePartsCategory = categories?.find(cat => 
-    !cat.name.toLowerCase().includes('car') && 
-    (cat.name.toLowerCase().includes('spare') || 
-     cat.name.toLowerCase().includes('Spare Part'))
-  );
-  const sparePartsCategoryId = sparePartsCategory?.id;
 
   // Query 1: Fetch ALL products (no category filter)
   const {
@@ -81,21 +75,22 @@ const Product = () => {
     error: errorCars,
     refetch: refetchCars,
   } = useQuery({
-    queryKey: ['products', merchantId, 'cars', carCategoryId],
+    queryKey: ['products', merchantId, 'cars', CAR_CATEGORY_ID],
     queryFn: async () => {
-      console.log('🔄 [Query 2] Fetching CARS ONLY for merchant:', merchantId, 'with category:', carCategoryId);
+      console.log('🔄 [Query 2] Fetching CARS ONLY for merchant:', merchantId, 'with category:', CAR_CATEGORY_ID);
       const response = await productsAPI.getProducts(
-        carCategoryId, // categoryId - filter by car category
+        CAR_CATEGORY_ID, // categoryId - filter by car category (23)
         undefined, // minPrice
         undefined, // maxPrice
         undefined, // offset
         undefined, // limit
-        merchantId  // merchantId
+        merchantId, // merchantId
+        false // isRental - fetch non-rental cars only
       )
       console.log('✅ [Query 2] Fetched CAR products:', response.data.results?.length);
       return response.data.results || []
     },
-    enabled: !!merchantId && !!carCategoryId,
+    enabled: !!merchantId,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
@@ -110,11 +105,11 @@ const Product = () => {
     error: errorSpareParts,
     refetch: refetchSpareParts,
   } = useQuery({
-    queryKey: ['products', merchantId, 'spareParts', sparePartsCategoryId],
+    queryKey: ['products', merchantId, 'spareParts', SPARE_PARTS_CATEGORY_ID],
     queryFn: async () => {
-      console.log('🔄 [Query 3] Fetching SPARE PARTS ONLY for merchant:', merchantId, 'with category:', sparePartsCategoryId);
+      console.log('🔄 [Query 3] Fetching SPARE PARTS ONLY for merchant:', merchantId, 'with category:', SPARE_PARTS_CATEGORY_ID);
       const response = await productsAPI.getProducts(
-        sparePartsCategoryId, // categoryId - filter by spare parts category
+        SPARE_PARTS_CATEGORY_ID, // categoryId - filter by spare parts category (24)
         undefined, // minPrice
         undefined, // maxPrice
         undefined, // offset
@@ -124,7 +119,37 @@ const Product = () => {
       console.log('✅ [Query 3] Fetched SPARE PARTS products:', response.data.results?.length);
       return response.data.results || []
     },
-    enabled: !!merchantId && !!sparePartsCategoryId,
+    enabled: !!merchantId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  // Query 4: Fetch ONLY rental cars (filtered by car category with is_rental=true)
+  const {
+    data: rentalCarProducts = [],
+    isLoading: loadingRentalCars,
+    error: errorRentalCars,
+    refetch: refetchRentalCars,
+  } = useQuery({
+    queryKey: ['products', merchantId, 'rentalCars', CAR_CATEGORY_ID],
+    queryFn: async () => {
+      console.log('🔄 [Query 4] Fetching RENTAL CARS ONLY for merchant:', merchantId, 'with category:', CAR_CATEGORY_ID);
+      const response = await productsAPI.getProducts(
+        CAR_CATEGORY_ID, // categoryId - filter by car category (23)
+        undefined, // minPrice
+        undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        merchantId, // merchantId
+        true // isRental - fetch rental cars only
+      )
+      console.log('✅ [Query 4] Fetched RENTAL CAR products:', response.data.results?.length);
+      return response.data.results || []
+    },
+    enabled: !!merchantId,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
@@ -133,56 +158,23 @@ const Product = () => {
   })
 
   // Combine loading and error states
-  const loading = loadingAll || loadingCars || loadingSpareParts;
-  const error = errorAll || errorCars || errorSpareParts;
+  const loading = loadingAll || loadingCars || loadingSpareParts || loadingRentalCars;
+  const error = errorAll || errorCars || errorSpareParts || errorRentalCars;
 
-  // Use allProducts as the main data source
-  const products = allProducts;
+  // Use specific query results instead of filtering from all products
+  const products = allProducts; // Keep for backward compatibility
 
-  // Categorize products based on category ID and rental status
-  const categorizeProducts = () => {
-    console.log('🔍 Categorizing products with car category ID:', carCategoryId);
-    
-    // Spare parts are products where category.id is NOT the car category
-    const spareParts = products.filter(product => {
-      const categoryId = product.category?.id;
-      const isSparePart = categoryId !== carCategoryId;
-      if (isSparePart) {
-        console.log('✅ Spare Part:', product.name, 'Category ID:', categoryId);
-      }
-      return isSparePart;
-    })
-    
-    // Cars are products where category.id IS the car category AND not rental
-    const cars = products.filter(product => {
-      const categoryId = product.category?.id;
-      const isCar = categoryId === carCategoryId && !product.is_rental;
-      if (isCar) {
-        console.log('🚗 Car:', product.name, 'Category ID:', categoryId);
-      }
-      return isCar;
-    })
-    
-    // Rented cars are products where category.id IS the car category AND is rental
-    const rentedCars = products.filter(product => {
-      const categoryId = product.category?.id;
-      const isRentedCar = categoryId === carCategoryId && product.is_rental;
-      if (isRentedCar) {
-        console.log('🚕 Rented Car:', product.name, 'Category ID:', categoryId);
-      }
-      return isRentedCar;
-    })
+  // Use the specific query results for each category
+  const spareParts = sparePartsProducts;
+  const cars = carProducts;
+  const rentedCars = rentalCarProducts;
 
-    console.log('📊 Categorization Results:', {
-      spareParts: spareParts.length,
-      cars: cars.length,
-      rentedCars: rentedCars.length
-    });
-
-    return { spareParts, cars, rentedCars }
-  }
-
-  const { spareParts, cars, rentedCars } = categorizeProducts()
+  console.log('📊 Product Results from Specific Queries:', {
+    spareParts: spareParts.length,
+    cars: cars.length,
+    rentedCars: rentedCars.length,
+    allProducts: allProducts.length
+  });
 
   const options = [
     {
@@ -391,19 +383,19 @@ const Product = () => {
     </View>
   )
 
-  // Pull-to-refresh functionality - refetch all three queries
+  // Pull-to-refresh functionality - refetch all four queries
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
       console.log('🔄 Refreshing all product queries...');
-      await Promise.all([refetchAll(), refetchCars(), refetchSpareParts()])
+      await Promise.all([refetchAll(), refetchCars(), refetchSpareParts(), refetchRentalCars()])
       console.log('✅ All product queries refreshed');
     } catch (error) {
       console.error('❌ Error refreshing:', error);
     } finally {
       setRefreshing(false)
     }
-  }, [refetchAll, refetchCars, refetchSpareParts])
+  }, [refetchAll, refetchCars, refetchSpareParts, refetchRentalCars])
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>

@@ -25,7 +25,8 @@
               "NSIncludesSubdomains": true
             }
           }
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

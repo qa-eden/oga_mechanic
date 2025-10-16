@@ -13,7 +13,6 @@ import {
 import { useState, useRef, useEffect, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { images } from "@/constants";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import {
   CheckIcon,
@@ -67,12 +66,10 @@ const Cart = () => {
     try {
       // Check if cart data exists and has items
       if (!cartData?.data) {
-        console.log('🛒 No cart data available');
         return [];
       }
       
       if (!cartData.data.items || !Array.isArray(cartData.data.items)) {
-        console.log('🛒 No items array in cart data:', cartData.data);
         return [];
       }
       
@@ -80,7 +77,6 @@ const Cart = () => {
         .filter((item) => {
           // Filter out invalid items
           if (!item) {
-            console.warn('⚠️ Cart item is null/undefined');
             return false;
           }
           
@@ -94,17 +90,13 @@ const Cart = () => {
           discount: item.product?.discount || 0,
           quantity: item.quantity || 1,
           stock: item.product?.stock || 0,
-          image: item.product?.images?.[0]?.image || images.cartImg,
+          image: item.product?.images?.[0]?.image,
         }));
     } catch (error) {
-      console.error('❌ Error transforming cart items:', error);
       return [];
     }
   })();
 
-  // Debug: Log cart data structure
-  console.log('🛒 Cart API Response:', cartData);
-  console.log('🛒 Cart Items:', cartItems);
   
   // Note: The cart API only returns item IDs and quantities, not full product details
   // For a complete cart experience, we would need to:
@@ -307,9 +299,7 @@ const Cart = () => {
     setIsRefreshing(true);
     try {
       await refetchCart();
-      console.log('Cart data refreshed');
     } catch (error) {
-      console.error('Refresh error:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -330,14 +320,17 @@ const Cart = () => {
     setShowPaymentModal(false);
 
     if (paymentMethod === "online") {
-      
-      checkoutMutation.mutate(paymentMethod, {
+
+      checkoutMutation.mutate({
+        paymentMethod,
+        mobileCallbackUrl: "/(root)/(screens)/(user)/payment-result"
+      }, {
         onSuccess: (response) => {
           setIsLoading(false);
-          
+
           // Trigger cart refresh after successful checkout
           refetchCart();
-          
+
           // Check if payment_url exists in response
           if (response?.data?.payment_url) {
             // Navigate to payment screen with WebView
@@ -356,7 +349,6 @@ const Cart = () => {
           }
         },
         onError: (error) => {
-          console.error("❌ Online payment failed:", error);
           setIsLoading(false);
           // Show error message
           alert("Payment failed. Please try again.");
@@ -364,21 +356,20 @@ const Cart = () => {
       });
     } else if (paymentMethod === "cash_on_delivery") {
       // Handle cash on delivery with API call
-      console.log("🔄 Processing cash on delivery...");
       
-      checkoutMutation.mutate(paymentMethod, {
+      checkoutMutation.mutate({
+        paymentMethod
+      }, {
         onSuccess: (response) => {
-          console.log("✅ Cash on delivery successful:", response);
           setIsLoading(false);
-          
+
           // Trigger cart refresh after successful checkout
           refetchCart();
-          
+
           // Show success message but don't navigate yet
           alert("Cash on delivery order created successfully!");
         },
         onError: (error) => {
-          console.error("❌ Cash on delivery failed:", error);
           setIsLoading(false);
           // Show error message
           alert("Order creation failed. Please try again.");

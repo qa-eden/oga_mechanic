@@ -9,12 +9,13 @@ import {
   Image,
   Linking,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
 
 const { width: screenWidth } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import {
   ChevronLeftIcon,
@@ -29,6 +30,8 @@ import { StarIcon as StarIconSolid } from "react-native-heroicons/solid";
 import { FlatList } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { productsAPI } from "@/lib/api/products";
+import { userAPI } from "@/lib/api/user";
+import CallOptionsModal from "@/components/modals/CallOptionsModal";
 
 interface CarRentalDetails {
   id: string;
@@ -63,6 +66,9 @@ interface CarRentalDetails {
     rating: number;
     reviewCount: number;
     responseTime: string;
+    business_address?: string;
+    location?: string;
+    is_approved?: boolean;
   };
   pickupLocation: string;
   returnLocation: string;
@@ -80,9 +86,43 @@ const CarRentalDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [productData, setProductData] = useState<any>(null);
   const [merchantData, setMerchantData] = useState<any>(null);
+  const [rentalCarsData, setRentalCarsData] = useState<any[]>([]);
+
+  // State for call modal
+  const [showCallModal, setShowCallModal] = useState(false);
 
   // Get product ID from params
   const productId = params.carId as string;
+
+  // Function to fetch rental cars
+  const fetchRentalCars = React.useCallback(async () => {
+    try {
+      const CAR_CATEGORY_ID = 23; // Category ID for cars
+      const response = await productsAPI.getProducts(
+        CAR_CATEGORY_ID, // categoryId - filter by car category (23)
+        undefined, // minPrice
+        undefined, // maxPrice
+        undefined, // offset
+        undefined, // limit
+        undefined, // merchantId - get from all merchants
+        true // isRental - fetch rental cars only
+      );
+      setRentalCarsData(response.data.results || []);
+    } catch (err) {
+    }
+  }, []);
+
+  // Fetch rental cars on every component mount
+  useEffect(() => {
+    fetchRentalCars();
+  }, [fetchRentalCars]);
+
+  // Also fetch rental cars on every screen focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchRentalCars();
+    }, [fetchRentalCars])
+  );
 
   // Fetch product details from API
   useEffect(() => {
@@ -94,9 +134,7 @@ const CarRentalDetail = () => {
         setError(null);
         const response = await productsAPI.getProductById(productId);
         setProductData(response.data);
-        console.log('Fetched product details:', response.data);
       } catch (err) {
-        console.error('Error fetching product details:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch product details');
       } finally {
         setLoading(false);
@@ -106,21 +144,67 @@ const CarRentalDetail = () => {
     fetchProductDetails();
   }, [productId]);
 
-  // Extract merchant data from product data (merchant info is embedded in the product response)
+  // Fetch full merchant profile data using the merchant UUID from product data
   useEffect(() => {
-    if (productData) {
-      // Create merchant object from the embedded merchant fields in product data
-      const merchantInfo = {
-        id: productData.merchant_id,
-        email: productData.merchant_email,
-        rating: productData.merchant_rating,
-        // Note: Full merchant profile details (business_name, phone_number, etc.)
-        // are not included in the products API response
-      };
-      setMerchantData(merchantInfo);
-      console.log('🏪 Extracted merchant data from product:', merchantInfo);
-    }
+    const fetchMerchantProfile = async () => {
+      if (productData && productData.merchant_id) {
+        try {
+          const merchantResponse = await userAPI.getMerchantProfileByUuid(productData.merchant_id);
+
+          // Combine basic merchant info from product with full profile data
+          // The API response structure: merchantResponse.data.user contains user info
+          const userData: any = merchantResponse.data?.user || {};
+          const merchantProfileData: any = merchantResponse.data || {};
+
+          const fullMerchantInfo = {
+            // Basic info from product
+            id: productData.merchant_id,
+            email: productData.merchant_email || userData.email,
+            rating: productData.merchant_rating,
+            // Full profile data from merchant API
+            business_address: merchantProfileData.business_address,
+            cac_number: merchantProfileData.cac_number,
+            location: merchantProfileData.location,
+            lga: merchantProfileData.lga,
+            is_approved: merchantProfileData.is_approved,
+            profile_picture: merchantProfileData.profile_picture,
+            // User info from nested user object
+            phone_number: userData.phone_number,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_id: userData.id,
+            date_joined: userData.date_joined,
+            last_login: userData.last_login,
+            active_role: userData.active_role,
+            // Computed values
+            business_name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Merchant',
+            response_time: '< 1 hour', // Default value
+            review_count: 0, // Default value
+          };
+
+          setMerchantData(fullMerchantInfo);
+        } catch (error) {
+          // Fallback to basic merchant info from product data
+          const basicMerchantInfo = {
+            id: productData.merchant_id,
+            email: productData.merchant_email,
+            rating: productData.merchant_rating,
+          };
+          setMerchantData(basicMerchantInfo);
+        }
+      }
+    };
+
+    fetchMerchantProfile();
   }, [productData]);
+
+
+  // Force refresh rental cars every time productId changes
+  useEffect(() => {
+    if (productId) {
+      fetchRentalCars();
+    }
+  }, [productId, fetchRentalCars]);
 
   // Transform API data to CarRentalDetails format
   const transformProductToCarData = (product: any, merchant: any): CarRentalDetails => {
@@ -168,12 +252,15 @@ const CarRentalDetail = () => {
         deductible: product.insurance_deductible,
       },
       owner: {
-        name: merchant?.email?.split('@')[0] || 'Car Owner', // Use email username as fallback
+        name: merchant?.business_name || `${merchant?.first_name || ''} ${merchant?.last_name || ''}`.trim() || merchant?.email?.split('@')[0] || 'Car Owner',
         phone: merchant?.phone_number,
         avatar: merchant?.profile_picture,
         rating: merchant?.rating || product.merchant_rating,
-        reviewCount: merchant?.review_count,
-        responseTime: merchant?.response_time,
+        reviewCount: merchant?.review_count || 0,
+        responseTime: merchant?.response_time || '< 1 hour',
+        business_address: merchant?.business_address,
+        location: merchant?.location,
+        is_approved: merchant?.is_approved,
       },
       pickupLocation: product.pickup_location,
       returnLocation: product.return_location,
@@ -200,10 +287,84 @@ const CarRentalDetail = () => {
   };
 
   const handleContactNow = () => {
-    if (!carData) return;
-    const phoneNumber = carData.owner.phone.replace(/\s/g, "");
-    const url = `tel:+234${phoneNumber.substring(1)}`;
-    Linking.openURL(url);
+    setShowCallModal(true);
+  };
+
+  const handleInAppCall = () => {
+    setShowCallModal(false);
+
+    // Show alert about in-app calling
+    Alert.alert(
+      "In-App Calling",
+      "In-app calling feature is currently in development. This will open a demo call screen. For real calls, please use the 'Phone call' option.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Open Demo",
+          onPress: () => {
+            // Navigate to voice call screen (demo)
+            router.push({
+              pathname: "/(root)/(screens)/(calls)/voice-call",
+              params: {
+                mechanicName: merchantData?.business_name || productData?.merchant_email || "Car Owner",
+                mechanicImage: merchantData?.profile_picture || "",
+                phoneNumber: merchantData?.phone_number || productData?.merchant_phone || "+234 000 000 0000"
+              }
+            });
+          }
+        }
+      ]
+    );
+  };
+
+  const handlePhoneCall = async () => {
+    setShowCallModal(false);
+
+    // Get phone number from merchant data
+    const phoneNumber = merchantData?.phone_number || productData?.merchant_phone || "";
+
+    if (!phoneNumber) {
+      Alert.alert("Error", "Phone number not available");
+      return;
+    }
+
+    try {
+      // Clean the phone number (remove spaces, dashes, etc.)
+      let cleanNumber = phoneNumber.replace(/[\s\-\(\)]/g, "");
+
+      // Ensure it starts with + for international format
+      if (!cleanNumber.startsWith('+')) {
+        // If it starts with 0, replace with +234 (Nigeria)
+        if (cleanNumber.startsWith('0')) {
+          cleanNumber = '+234' + cleanNumber.substring(1);
+        } else if (!cleanNumber.startsWith('234')) {
+          // If no country code, add +234
+          cleanNumber = '+234' + cleanNumber;
+        } else {
+          // Already has 234, just add +
+          cleanNumber = '+' + cleanNumber;
+        }
+      }
+
+      const url = `tel:${cleanNumber}`;
+
+      // Check if the device can handle phone calls
+      const canOpen = await Linking.canOpenURL(url);
+
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          "Unable to make call",
+          "Your device doesn't support phone calls or the number format is invalid."
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Call Failed",
+        "Unable to initiate phone call. Please try again or contact support."
+      );
+    }
   };
 
   return (
@@ -580,6 +741,15 @@ const CarRentalDetail = () => {
         </View>
       </ScrollView>
       )}
+
+      {/* Call Options Modal */}
+      <CallOptionsModal
+        isVisible={showCallModal}
+        onClose={() => setShowCallModal(false)}
+        phoneNumber={merchantData?.phone_number || productData?.merchant_phone || "+234 000 000 0000"}
+        onInAppCall={handleInAppCall}
+        onPhoneCall={handlePhoneCall}
+      />
     </SafeAreaView>
   );
 };
