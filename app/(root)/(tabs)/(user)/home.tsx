@@ -108,7 +108,7 @@ const HomePage = memo(() => {
         image={item.image}
         title={item.title}
         description={item.description}
-        onPress={() => console.log(`Ad ${index + 1} pressed`)}
+        onPress={() => {}}
       />
     </View>
   ), [screenWidth]);

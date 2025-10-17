@@ -140,8 +140,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleAttachment = () => {
     Alert.alert("Attachment", "Choose attachment type", [
-      { text: "Photo", onPress: () => console.log("Photo selected") },
-      { text: "Document", onPress: () => console.log("Document selected") },
+      { text: "Photo", onPress: () => {} },
+      { text: "Document", onPress: () => {} },
       { text: "Cancel", style: "cancel" },
     ]);
   };

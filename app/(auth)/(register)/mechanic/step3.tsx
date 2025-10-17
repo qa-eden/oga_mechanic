@@ -81,7 +81,6 @@ const MechanicStep3 = () => {
         ]
       );
     } catch (error) {
-      console.error("Error picking document:", error);
       Alert.alert("Error", "Failed to select document. Please try again.");
     }
   };
@@ -120,7 +119,6 @@ const MechanicStep3 = () => {
         }
       }
     } catch (error) {
-      console.error("Error taking photo:", error);
       Alert.alert("Error", "Failed to take photo. Please try again.");
     }
   };
@@ -160,7 +158,6 @@ const MechanicStep3 = () => {
         }
       }
     } catch (error) {
-      console.error("Error picking from library:", error);
       Alert.alert("Error", "Failed to select image. Please try again.");
     }
   };
@@ -201,7 +198,6 @@ const MechanicStep3 = () => {
         },
       });
     } catch (error) {
-      console.error("Submission error:", error);
       Alert.alert("Error", "Failed to submit documents. Please try again.");
     } finally {
       setIsLoading(false);
@@ -247,14 +243,14 @@ const MechanicStep3 = () => {
               <View>
                 {/* ID Type Select */}
                 <SelectField
+                  name="idType"
                   label="Government ID Type"
                   placeholder="Select your ID type"
                   options={idTypes}
                   value={values.idType}
-                  onSelect={(value) => setFieldValue("idType", value)}
+                  onValueChange={(value: string) => setFieldValue("idType", value)}
                   error={errors.idType}
                   touched={touched.idType}
-                  labelStyle="mb-4 mt-2"
                   required={true}
                 />
 

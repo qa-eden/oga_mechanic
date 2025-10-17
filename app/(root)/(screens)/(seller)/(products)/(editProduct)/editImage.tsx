@@ -41,8 +41,6 @@ const EditImage = () => {
   const merchantId = activeRole === 'merchant' 
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
-  
-  console.log('🔍 Active Role:', activeRole, 'Merchant ID:', merchantId);
 
   // Get make and model names for display
   const getMakeName = (makeId: number) => {
@@ -82,12 +80,9 @@ const EditImage = () => {
   useEffect(() => {
     if (fetchedProductData?.images && fetchedProductData.images.length > 0) {
       const imageUrls = fetchedProductData.images.map((img: any) => img.image || img.image_url || img.url);
-      console.log('🔍 DEBUG: TanStack Query - Setting images:', imageUrls);
-      console.log('🔍 DEBUG: TanStack Query - Setting existingImages:', fetchedProductData.images);
       setImages(imageUrls);
       setExistingImages(fetchedProductData.images);
     } else if (fetchedProductData && (!fetchedProductData.images || fetchedProductData.images.length === 0)) {
-      console.log('🔍 DEBUG: TanStack Query - No images found in product data');
       setImages([]);
       setExistingImages([]);
     }
@@ -115,7 +110,6 @@ const EditImage = () => {
     
     // Upload each new image immediately using mutation
     if (newImageUris.length > 0) {
-      console.log('🔍 DEBUG: Starting upload process for', newImageUris.length, 'images');
       setIsUploading(true);
       
       let successfulUploads = 0;
@@ -124,15 +118,12 @@ const EditImage = () => {
       try {
         for (const imageUri of newImageUris) {
           // Add to loading state
-          console.log('🔍 DEBUG: Adding to loading state:', imageUri);
           setLoadingImages(prev => new Set(prev).add(imageUri));
           
           try {
             await uploadImage(imageUri);
             successfulUploads++;
-            console.log('🔍 DEBUG: Image uploaded successfully:', imageUri);
           } catch (error) {
-            console.error('🔍 DEBUG: Error uploading image:', error);
             // Track failed images
             failedImageUris.push(imageUri);
           } finally {
@@ -147,7 +138,6 @@ const EditImage = () => {
         
         // Remove failed images from the state
         if (failedImageUris.length > 0) {
-          console.log('🔍 DEBUG: Removing failed images from state:', failedImageUris);
           setImages(prevImages => prevImages.filter(img => !failedImageUris.includes(img)));
           
           // Show error message for failed uploads
@@ -158,17 +148,14 @@ const EditImage = () => {
         }
         
         // Wait for refetch to complete before clearing loading state
-        console.log('🔍 DEBUG: Waiting for data to refresh...');
         await new Promise(resolve => setTimeout(resolve, 1000)); // Give time for refetch to complete
         
       } finally {
         // Clear the overall uploading state when all uploads are done
-        console.log('🔍 DEBUG: All operations complete, setting isUploading to false');
         setIsUploading(false);
         
         // Show success message
         if (successfulUploads > 0 && failedImageUris.length === 0) {
-          console.log(`✅ Successfully uploaded ${successfulUploads} image(s)`);
           showSuccess(
             'Upload Successful',
             `${successfulUploads} image(s) uploaded successfully!`
@@ -193,19 +180,16 @@ const EditImage = () => {
         const newImageUri = result.assets[0].uri;
         
         // Add to loading state
-        console.log('🔍 DEBUG: Adding to loading state for replacement:', newImageUri);
         setLoadingImages(prev => new Set(prev).add(newImageUri));
         
         try {
           await replaceImageMutation({ imageId, imageIndex, newImageUri });
-          console.log('🔍 DEBUG: Image replaced successfully');
           // Show success message
           showSuccess(
             'Image Replaced',
             'Your car image has been updated successfully!'
           );
         } catch (error) {
-          console.error('🔍 DEBUG: Error replacing image:', error);
           // Show error alert if replacement fails
           showError(
             'Replace Failed',
@@ -221,7 +205,6 @@ const EditImage = () => {
         }
       }
     } catch (error) {
-      console.error('Error in replace image picker:', error);
     }
   };
 
@@ -230,16 +213,13 @@ const EditImage = () => {
     setDeletingImages(prev => new Set(prev).add(imageId));
     
     try {
-      console.log('🔍 DEBUG: Starting delete for imageId:', imageId);
       await deleteImageMutation(imageId);
-      console.log('🔍 DEBUG: Delete completed successfully');
       // Show success message
       showSuccess(
         'Image Deleted',
         'Your car image has been removed successfully!'
       );
     } catch (error) {
-      console.error('🔍 DEBUG: Error deleting image:', error);
       // Show error message
       showError(
         'Delete Failed',
@@ -281,20 +261,15 @@ const EditImage = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      console.log('🔍 DEBUG: Pull-to-refresh triggered');
       await refetch();
-      console.log('🔍 DEBUG: Pull-to-refresh completed');
     } catch (error) {
-      console.error('Error during refresh:', error);
     } finally {
       setRefreshing(false);
     }
   }, [refetch]);
 
   // Show loading spinner when uploading images
-  console.log('🔍 DEBUG: Render check - isUploading:', isUploading);
   if (isUploading) {
-    console.log('🔍 DEBUG: Showing loading spinner');
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
         <StatusBar style="dark" />
@@ -330,7 +305,6 @@ const EditImage = () => {
     );
   }
 
-  console.log('🔍 DEBUG: Rendering normal view (not loading)');
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />

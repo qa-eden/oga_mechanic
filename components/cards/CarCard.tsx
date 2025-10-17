@@ -15,7 +15,6 @@ const CarCard: React.FC<CarCardProps> = React.memo(({ item, onPress, isFavorite 
   const handleFavoritePress = async (e: any) => {
     e.stopPropagation(); // Prevent card press
     try {
-      console.log('❤️ Car favorite button clicked - item:', item, 'isFavorite:', isFavorite);
       await toggleFavoriteMutation.mutateAsync({
         productId: item.id || item.productId,
         isCurrentlyFavorited: isFavorite

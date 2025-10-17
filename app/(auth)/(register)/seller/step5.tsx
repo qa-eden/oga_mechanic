@@ -69,19 +69,14 @@ const Step5 = () => {
         
         // Call /users/roles/ endpoint after successful registration
         try {
-          console.log('🔄 Fetching user roles after seller registration...');
           const rolesResponse = await userAPI.getUserRoles();
-          console.log('✅ User roles fetched after seller registration:', rolesResponse);
           
           // Store roles data in local storage
           await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
-          console.log('✅ User roles data stored in AsyncStorage after seller registration');
         } catch (rolesError) {
-          console.error('❌ Failed to fetch roles after seller registration:', rolesError);
           // Continue with registration even if roles fetch fails
         }
       } catch (storageError) {
-        console.error('Error storing user data:', storageError);
         // Continue with navigation even if storage fails
       }
 

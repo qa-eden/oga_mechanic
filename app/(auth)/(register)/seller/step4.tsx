@@ -51,7 +51,6 @@ export default function SellerStep4() {
                 setCapturedPhoto(result.assets[0].uri);
             }
         } catch (error) {
-            console.error('Error taking photo:', error);
             Alert.alert('Error', 'Failed to take photo. Please try again.');
         }
     };
@@ -73,7 +72,6 @@ export default function SellerStep4() {
             // Validate files exist and get their info
             const validateFile = async (uri: string, name: string): Promise<string> => {
                 const fileInfo = await FileSystem.getInfoAsync(uri);
-                console.log(`📁 File info for ${name}:`, fileInfo);
                 if (!fileInfo.exists) {
                     throw new Error(`File not found: ${name}`);
                 }
@@ -87,9 +85,6 @@ export default function SellerStep4() {
             const selfieUri = await validateFile(capturedPhoto, 'Selfie');
 
             const token = await AsyncStorage.getItem('auth_token');
-            console.log('🔑 Token retrieved:', token ? `${token.substring(0, 20)}...` : 'None');
-
-            console.log('🚀 Using direct fetch with requestType field...');
 
             const formData = new FormData();
             formData.append('requestType', 'inbound');
@@ -127,7 +122,6 @@ export default function SellerStep4() {
             }
 
             const responseData = await response.json();
-            console.log('✅ Direct fetch response:', responseData);
 
             // Navigate to Step 5
         router.push({
@@ -138,12 +132,6 @@ export default function SellerStep4() {
                 },
             });
         } catch (error: any) {
-            console.error('❌ Error in handleSubmit:', error);
-            console.error('❌ Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-            });
 
             setAlertConfig({
                 title: 'Registration Error',

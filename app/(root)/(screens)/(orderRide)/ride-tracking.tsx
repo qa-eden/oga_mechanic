@@ -1,10 +1,10 @@
 "use client";
 
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { icons, images } from "@/constants";
+import { images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import CustomButton from "@/components/CustomButton";
 import * as Location from "expo-location";
@@ -101,7 +101,7 @@ const RideTracking = () => {
   const handleProceed = () => {
     // Navigate to ride completion or payment screen
     alert("Ride completed! Thank you for using our service.");
-    router.push("/(root)/(tabs)/(user)/home");
+    router.push(routes?.home);
   };
 
   return (

@@ -51,12 +51,10 @@ const AllMechanic = () => {
   const mechanics: Mechanic[] = (() => {
     try {
       if (!mechanicsData?.data) {
-        console.log('🔧 No mechanics data available');
         return [];
       }
       
       if (!Array.isArray(mechanicsData.data)) {
-        console.log('🔧 Mechanics data is not an array:', mechanicsData.data);
         return [];
       }
       
@@ -73,14 +71,9 @@ const AllMechanic = () => {
         isVip: false, // Not provided in API response
       }));
     } catch (error) {
-      console.error('❌ Error transforming mechanics data:', error);
       return [];
     }
   })();
-
-  // Debug: Log mechanics data
-  console.log('🔧 Mechanics API Response:', mechanicsData);
-  console.log('🔧 Transformed Mechanics:', mechanics);
 
   const filteredMechanics = mechanics.filter(
     (mechanic) =>

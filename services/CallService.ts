@@ -34,7 +34,7 @@ class CallService {
       //   shouldDuckAndroid: true,
       //   playThroughEarpieceAndroid: false,
       // });
-      console.log('Audio initialization skipped - expo-av deprecated');
+
     } catch (error) {
       console.error('Error initializing audio:', error);
     }
@@ -43,11 +43,11 @@ class CallService {
   private initializeWebSocket() {
     // For demo purposes, we'll simulate WebSocket connection
     // In a real app, you would connect to your signaling server
-    console.log('Simulating WebSocket connection...');
+
     
     // Simulate connection after a delay
     setTimeout(() => {
-      console.log('WebSocket connected (simulated)');
+
       this.isConnected = true;
       this.updateCallState();
     }, 1000);
@@ -76,7 +76,7 @@ class CallService {
   async makeCall(roomId: string, targetUserId: string) {
     await this.initializeCall(roomId, true);
     
-    console.log(`Making call to ${targetUserId} in room ${roomId}`);
+
     
     // Simulate call connection
     setTimeout(() => {
@@ -89,7 +89,7 @@ class CallService {
   async acceptCall(roomId: string) {
     await this.initializeCall(roomId, false);
     
-    console.log(`Accepting call in room ${roomId}`);
+
     
     // Simulate call connection
     setTimeout(() => {
@@ -100,13 +100,13 @@ class CallService {
 
   // Reject incoming call
   rejectCall(roomId: string) {
-    console.log(`Rejecting call in room ${roomId}`);
+
     this.endCall();
   }
 
   // End call
   endCall() {
-    console.log('Ending call');
+
     
     if (this.callTimer) {
       clearTimeout(this.callTimer);
@@ -128,13 +128,13 @@ class CallService {
   // Toggle mute
   toggleMute() {
     this.isMuted = !this.isMuted;
-    console.log('Mute toggled:', this.isMuted);
+
     this.updateCallState();
   }
 
   // Toggle speaker
   toggleSpeaker() {
-    console.log('Speaker toggled');
+
     this.updateCallState();
   }
 
@@ -172,7 +172,7 @@ class CallService {
 
   // Simulate incoming call
   simulateIncomingCall(fromUserId: string) {
-    console.log(`Incoming call from ${fromUserId}`);
+
     
     // This would trigger the incoming call UI
     // You can implement this based on your app's notification system

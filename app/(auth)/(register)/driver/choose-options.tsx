@@ -28,22 +28,10 @@ const ChooseOptions = () => {
     'rider': 'Rider'
   }
 
-  // Debug API roles data
-  console.log('🎯 Choose Options API Roles State:', {
-    isLoadingRoles,
-    isRolesError,
-    apiRolesCount: apiRoles.length,
-    driverRiderRolesCount: driverRiderRoles.length,
-    driverRiderRoles: driverRiderRoles,
-    error: rolesError
-  })
-
   const handleDriverSelect = (type: "driver" | "rider") => {
-    console.log("type", type)
     
     // Find the API role data for the selected type
     const selectedRole = apiRoles.find(role => role.name === type)
-    console.log("Selected role from API:", selectedRole)
     
     // Store the user type for later use
     // Navigate to the same registration flow for both driver and rider

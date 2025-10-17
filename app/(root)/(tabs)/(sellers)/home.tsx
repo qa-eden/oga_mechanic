@@ -53,22 +53,18 @@ const SellerHome = () => {
   // Debug: Log profile data
   React.useEffect(() => {
     if (profileData) {
-      console.log('👤 Seller Home - Profile Data:', profileData);
-      console.log('👤 Seller Home - Active Role:', activeRole);
-      console.log('👤 Seller Home - Is Merchant Profile:', activeRole === 'merchant');
+      // Profile data loaded
     }
     if (isProfileLoading) {
-      console.log('⏳ Seller Home - Loading profile...');
+      // Loading profile
     }
   }, [profileData, activeRole, isProfileLoading]);
 
   // Add error handling for missing user data
   React.useEffect(() => {
     if (error) {
-      console.error('❌ Analytics Error:', error);
       // If it's a 401 or 403 error, the user might be deleted
       if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
-        console.log('🔐 User authentication failed - redirecting to login');
         // You can add a logout function here or redirect to login
       }
     }
@@ -117,13 +113,12 @@ const SellerHome = () => {
   // Debug: Log analytics data (not rendered)
   React.useEffect(() => {
     if (analyticsData) {
-      console.log('📊 Merchant Analytics Data:', analyticsData);
+      // Analytics data loaded
     }
     if (error) {
-      console.error('❌ Merchant Analytics Error:', error);
     }
     if (isLoading) {
-      console.log('⏳ Loading merchant analytics...');
+      // Loading analytics
     }
   }, [analyticsData, error, isLoading]);
 
@@ -131,14 +126,11 @@ const SellerHome = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      console.log('🔄 Pull-to-refresh triggered - refetching analytics and profile...');
       await Promise.all([
         refetchAnalytics(),
         refetchProfile()
       ]);
-      console.log('✅ Analytics and profile refreshed successfully');
     } catch (error) {
-      console.error('❌ Error during refresh:', error);
     } finally {
       setRefreshing(false);
     }

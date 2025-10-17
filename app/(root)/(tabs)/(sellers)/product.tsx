@@ -48,7 +48,6 @@ const Product = () => {
   } = useQuery({
     queryKey: ['products', merchantId, 'all'],
     queryFn: async () => {
-      console.log('🔄 [Query 1] Fetching ALL products for merchant:', merchantId);
       const response = await productsAPI.getProducts(
         undefined, // categoryId - no filter
         undefined, // minPrice
@@ -57,7 +56,6 @@ const Product = () => {
         undefined, // limit
         merchantId  // merchantId
       )
-      console.log('✅ [Query 1] Fetched ALL products:', response.data.results?.length);
       return response.data.results || []
     },
     enabled: !!merchantId,
@@ -77,7 +75,6 @@ const Product = () => {
   } = useQuery({
     queryKey: ['products', merchantId, 'cars', CAR_CATEGORY_ID],
     queryFn: async () => {
-      console.log('🔄 [Query 2] Fetching CARS ONLY for merchant:', merchantId, 'with category:', CAR_CATEGORY_ID);
       const response = await productsAPI.getProducts(
         CAR_CATEGORY_ID, // categoryId - filter by car category (23)
         undefined, // minPrice
@@ -87,7 +84,6 @@ const Product = () => {
         merchantId, // merchantId
         false // isRental - fetch non-rental cars only
       )
-      console.log('✅ [Query 2] Fetched CAR products:', response.data.results?.length);
       return response.data.results || []
     },
     enabled: !!merchantId,
@@ -107,7 +103,6 @@ const Product = () => {
   } = useQuery({
     queryKey: ['products', merchantId, 'spareParts', SPARE_PARTS_CATEGORY_ID],
     queryFn: async () => {
-      console.log('🔄 [Query 3] Fetching SPARE PARTS ONLY for merchant:', merchantId, 'with category:', SPARE_PARTS_CATEGORY_ID);
       const response = await productsAPI.getProducts(
         SPARE_PARTS_CATEGORY_ID, // categoryId - filter by spare parts category (24)
         undefined, // minPrice
@@ -116,7 +111,6 @@ const Product = () => {
         undefined, // limit
         merchantId  // merchantId
       )
-      console.log('✅ [Query 3] Fetched SPARE PARTS products:', response.data.results?.length);
       return response.data.results || []
     },
     enabled: !!merchantId,
@@ -136,7 +130,6 @@ const Product = () => {
   } = useQuery({
     queryKey: ['products', merchantId, 'rentalCars', CAR_CATEGORY_ID],
     queryFn: async () => {
-      console.log('🔄 [Query 4] Fetching RENTAL CARS ONLY for merchant:', merchantId, 'with category:', CAR_CATEGORY_ID);
       const response = await productsAPI.getProducts(
         CAR_CATEGORY_ID, // categoryId - filter by car category (23)
         undefined, // minPrice
@@ -146,7 +139,6 @@ const Product = () => {
         merchantId, // merchantId
         true // isRental - fetch rental cars only
       )
-      console.log('✅ [Query 4] Fetched RENTAL CAR products:', response.data.results?.length);
       return response.data.results || []
     },
     enabled: !!merchantId,
@@ -169,12 +161,7 @@ const Product = () => {
   const cars = carProducts;
   const rentedCars = rentalCarProducts;
 
-  console.log('📊 Product Results from Specific Queries:', {
-    spareParts: spareParts.length,
-    cars: cars.length,
-    rentedCars: rentedCars.length,
-    allProducts: allProducts.length
-  });
+
 
   const options = [
     {
@@ -320,11 +307,7 @@ const Product = () => {
     );
   }, [CARD_WIDTH]);
 
-  const handleDeleteRentedCar = useCallback((car: any) => {
-    // console.log('Delete rented car:', car.id);
-    // In real app, call delete API here
-    // For now, just log the action
-  }, []);
+
 
   const renderRentedCarItem = useCallback(({ item }: { item: any }) => {
     const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
@@ -387,9 +370,7 @@ const Product = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      console.log('🔄 Refreshing all product queries...');
       await Promise.all([refetchAll(), refetchCars(), refetchSpareParts(), refetchRentalCars()])
-      console.log('✅ All product queries refreshed');
     } catch (error) {
       console.error('❌ Error refreshing:', error);
     } finally {

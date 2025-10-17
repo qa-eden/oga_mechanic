@@ -40,7 +40,6 @@ const WelcomeDriver = () => {
       try {
         await router.push(driverRoutes.step1)
       } catch (error) {
-        console.error('Navigation error:', error)
       } finally {
         setIsSignUpLoading(false)
       }
@@ -53,7 +52,6 @@ const WelcomeDriver = () => {
       try {
         await router.push(routes.signIn)
       } catch (error) {
-        console.error('Navigation error:', error)
       } finally {
         setIsSignInLoading(false)
       }

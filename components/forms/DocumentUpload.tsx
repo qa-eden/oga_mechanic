@@ -44,7 +44,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           text: 'Camera',
           onPress: () => {
             // TODO: Implement camera capture
-            console.log('Opening camera...')
             simulateUpload()
           }
         },
@@ -52,7 +51,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           text: 'Gallery',
           onPress: () => {
             // TODO: Implement gallery picker
-            console.log('Opening gallery...')
             simulateUpload()
           }
         },
@@ -60,7 +58,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           text: 'Files',
           onPress: () => {
             // TODO: Implement file picker
-            console.log('Opening file picker...')
             simulateUpload()
           }
         },

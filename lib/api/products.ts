@@ -322,9 +322,7 @@ export const productsAPI = {
         api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=best_selling_spare_parts`),
       ]);
 
-      console.log('🏠 Home API - Mechanics Response:', mechanicsResponse.data);
-      console.log('🏠 Home API - Cars Response:', carsResponse.data);
-      console.log('🏠 Home API - Spare Parts Response:', sparePartsResponse.data);
+
 
       // Extract the actual data arrays from nested structure
       const mechanicsData = mechanicsResponse.data?.data?.mechanics || [];
@@ -332,9 +330,7 @@ export const productsAPI = {
       const sparePartsData = sparePartsResponse.data?.data?.best_selling_spare_parts || 
                              sparePartsResponse.data?.data?.mechanics || []; // Fallback for backend bug
 
-      console.log('🏠 Extracted - Mechanics:', mechanicsData.length);
-      console.log('🏠 Extracted - Cars:', carsData.length);
-      console.log('🏠 Extracted - Spare Parts:', sparePartsData.length);
+
 
       // Combine the responses
       return {
@@ -354,20 +350,19 @@ export const productsAPI = {
   
   // Get product detail by ID
   getProductDetail: async (id: string): Promise<ProductDetailResponse> => {
-    console.log('🔍 Fetching product detail for ID:', id);
-    console.log('🔍 Trying shop endpoint first:', SERVICE_ENDPOINTS.SHOP_PRODUCT_DETAIL(id));
+
     
     try {
       // Try shop endpoint first
       const response = await api.get<ProductDetailAPIResponse>(SERVICE_ENDPOINTS.SHOP_PRODUCT_DETAIL(id));
-      console.log('✅ Shop product detail response:', response.data);
+
       return response.data.data; // Extract the data field from the API response
     } catch (shopError) {
-      console.log('❌ Shop endpoint failed, trying products endpoint:', SERVICE_ENDPOINTS.PRODUCT_DETAIL(id));
+
       try {
         // Fallback to products endpoint
         const response = await api.get<ProductDetailAPIResponse>(SERVICE_ENDPOINTS.PRODUCT_DETAIL(id));
-        console.log('✅ Products endpoint response:', response.data);
+
         return response.data.data; // Extract the data field from the API response
       } catch (productsError) {
         console.error('❌ Both endpoints failed:', { shopError, productsError });
@@ -417,9 +412,7 @@ export const productsAPI = {
       ? `${SERVICE_ENDPOINTS.PRODUCTS_LIST}?${params.toString()}`
       : SERVICE_ENDPOINTS.PRODUCTS_LIST;
 
-    console.log('🛍️ Products API URL:', url);
     const response = await api.get<ProductListAPIResponse>(url);
-    console.log('🛍️ Products API response:', response.data);
     return response.data; // Return full paginated response
   },
 
@@ -453,7 +446,7 @@ export const productsAPI = {
     const response = await api.get<any>(
       `${SERVICE_ENDPOINTS.PRODUCTS_SEARCH}?${params.toString()}`
     );
-    console.log('🔍 Search API response:', response.data);
+
     
     // Handle different response structures
     if (Array.isArray(response.data.data)) {
@@ -464,7 +457,7 @@ export const productsAPI = {
       return response.data.data.results;
     } else {
       // Fallback to empty array
-      console.log('🔍 No search results found');
+
       return [];
     }
   },
@@ -478,7 +471,7 @@ export const productsAPI = {
   // Cart API functions
   getCart: async (): Promise<CartResponse> => {
     const response = await api.get<CartResponse>(SERVICE_ENDPOINTS.CART);
-    console.log('🛒 Cart API response:', response.data);
+
     return response.data;
   },
 
@@ -488,7 +481,7 @@ export const productsAPI = {
       quantity: quantity
     };
     const response = await api.post<AddToCartResponse>(SERVICE_ENDPOINTS.CART, payload);
-    console.log('➕ Add to cart API response:', response.data);
+
     return response.data;
   },
 
@@ -497,13 +490,13 @@ export const productsAPI = {
       quantity: quantity
     };
     const response = await api.put<AddToCartResponse>(`${SERVICE_ENDPOINTS.CART}/${itemId}`, payload);
-    console.log('✏️ Update cart item API response:', response.data);
+
     return response.data;
   },
 
   removeFromCart: async (productId: string): Promise<{ message: string; status: boolean }> => {
     const response = await api.delete<{ message: string; status: boolean }>(`${SERVICE_ENDPOINTS.CART}?product_id=${productId}`);
-    console.log('🗑️ Remove from cart API response:', response.data);
+
     return response.data;
   },
 
@@ -513,38 +506,33 @@ export const productsAPI = {
       action: action
     };
     const response = await api.patch<UpdateCartItemResponse>(SERVICE_ENDPOINTS.CART, payload);
-    console.log(`🔄 ${action} cart item API response:`, response.data);
+
     return response.data;
   },
 
   // Add product to favorites
   addToFavorites: async (productId: string): Promise<{ message: string; status: boolean }> => {
-    console.log('❤️ addToFavorites API called with productId:', productId);
-    console.log('❤️ Using endpoint:', SERVICE_ENDPOINTS.FAVORITE_PRODUCT);
-    
     const payload = {
       product_id: productId
     };
-    console.log('❤️ Payload being sent:', payload);
     
     const response = await api.post<{ message: string; status: boolean }>(SERVICE_ENDPOINTS.FAVORITE_PRODUCT, payload);
-    console.log('❤️ Add to favorites API response:', response.data);
+
     return response.data;
   },
 
   // Remove product from favorites
   removeFromFavorites: async (productId: string): Promise<{ message: string; status: boolean }> => {
-    console.log('💔 removeFromFavorites API called with productId:', productId);
-    console.log('💔 Using endpoint:', `${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}?product_id=${productId}`);
+
     
     const response = await api.delete<{ message: string; status: boolean }>(`${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}?product_id=${productId}`);
-    console.log('💔 Remove from favorites API response:', response.data);
+
     return response.data;
   },
 
   // Toggle favorite (add if not favorited, remove if favorited)
   toggleFavorite: async (productId: string, isCurrentlyFavorited: boolean): Promise<{ message: string; status: boolean }> => {
-    console.log('🔄 toggleFavorite called - productId:', productId, 'isCurrentlyFavorited:', isCurrentlyFavorited);
+
     
     if (isCurrentlyFavorited) {
       return await productsAPI.removeFromFavorites(productId);
@@ -555,8 +543,7 @@ export const productsAPI = {
 
   // Checkout with payment method
   checkout: async (paymentMethod: string, mobileCallbackUrl?: string): Promise<{ message: string; status: boolean; data?: any }> => {
-    console.log('🔄 checkout called - paymentMethod:', paymentMethod);
-    console.log('🔄 checkout called - mobileCallbackUrl:', mobileCallbackUrl);
+
 
     // Create the exact payload structure you want
     const payload: any = {
@@ -571,70 +558,48 @@ export const productsAPI = {
       payload.data.mobile_callback_url = mobileCallbackUrl;
     }
 
-    console.log('📦 Final checkout payload:', JSON.stringify(payload, null, 2));
-
     const response = await api.post(SERVICE_ENDPOINTS.CHECKOUT, payload);
-
-    console.log('✅ checkout response:', response.data);
     return response.data;
   },
 
   // Get merchant analytics
   getMerchantAnalytics: async (): Promise<MerchantAnalytics> => {
-    console.log('📊 Fetching merchant analytics...');
-    
     const response = await api.get<MerchantAnalyticsResponse>(MERCHANT_ENDPOINTS.ANALYTICS);
-    console.log('📊 Merchant analytics response:', response.data);
     
     return response.data.data;
   },
 
   // Get vehicle makes
   getVehicleMakes: async (): Promise<VehicleMake[]> => {
-    console.log('🚗 Fetching vehicle makes...');
-    
     const response = await api.get<VehicleMakesAPIResponse>(MECHANIC_ENDPOINTS.VEHICLE_MAKES);
-    console.log('🚗 Vehicle makes response:', response.data);
     
     return response.data.data;
   },
 
   // Get product by ID (for seller product details)
   getProductById: async (id: string): Promise<ProductDetailAPIResponse> => {
-    console.log('🔍 Fetching product by ID:', id);
-    
     const response = await api.get<ProductDetailAPIResponse>(`${SERVICE_ENDPOINTS.PRODUCTS_LIST}${id}/`);
-    console.log('🔍 Product by ID response:', response.data);
     
     return response.data;
   },
 
   // Delete product by ID
   deleteProduct: async (id: string): Promise<any> => {
-    console.log('🗑️ Deleting product with ID:', id);
-
     const response = await api.delete(`${SERVICE_ENDPOINTS.PRODUCTS_LIST}${id}/`);
-    console.log('🗑️ Product delete response:', response.data);
 
     return response.data;
   },
 
   // Get merchant orders
   getMerchantOrders: async (merchantId: string): Promise<any> => {
-    console.log('📦 Fetching merchant orders for ID:', merchantId);
-
     const response = await api.get(`${SERVICE_ENDPOINTS.ORDERS}?merchant_id=${merchantId}`);
-    console.log('📦 Merchant orders response:', response.data);
 
     return response.data;
   },
 
   // Get specific order by ID
   getOrderById: async (orderId: string): Promise<any> => {
-    console.log('📦 Fetching order details for ID:', orderId);
-
     const response = await api.get(SERVICE_ENDPOINTS.ORDER_STATUS(orderId));
-    console.log('📦 Order details response:', response.data);
 
     return response.data;
   },

@@ -40,9 +40,6 @@ const ProductDetail = () => {
   const params = useLocalSearchParams() as { id?: string; productId?: string };
   const productId = params?.id || params?.productId;
   
-  console.log('🔍 Product Detail - Params:', params);
-  console.log('🔍 Product Detail - Product ID:', productId);
-  
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
@@ -60,7 +57,6 @@ const ProductDetail = () => {
   const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
 
   // Log cart data for debugging
-  console.log('🛒 Cart Data:', cartData);
   
   // Favorite API hook
   const toggleFavoriteMutation = useToggleFavorite();
@@ -76,13 +72,6 @@ const ProductDetail = () => {
   
   // Fetch product detail from API
   const { data: product, isLoading, error, refetch } = useProductDetail(productId || '');
-  
-  // Debug: Log the API response
-  console.log('🔍 Product Detail Debug:');
-  console.log('  productId:', productId);
-  console.log('  isLoading:', isLoading);
-  console.log('  error:', error);
-  console.log('  product:', product);
 
   // Animation effects
   useEffect(() => {
@@ -136,7 +125,6 @@ const ProductDetail = () => {
     try {
       await refetch();
     } catch (error) {
-      console.error('Refresh error:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -243,16 +231,6 @@ const ProductDetail = () => {
     );
   }
 
-  // const handleCall = () => {
-  //   if (typeof product.merchant === 'object' && product.merchant?.phone_number) {
-  //     // Use the phone number from merchant object
-  //     console.log("Calling seller:", product.merchant.phone_number);
-  //     // You can implement actual calling logic here
-  //   } else {
-  //     console.log("Call seller - phone not available in API");
-  //   }
-  // };
-
   const cartItem = {
     id: product.id,
     name: product.name,
@@ -263,35 +241,28 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     try {
-      console.log('🛒 Adding to cart...');
       await addToCartMutation.mutateAsync({
         productId: product.id,
         quantity: quantity
       });
       // Refetch cart data and product detail
       await Promise.all([refetchCart(), refetch()]);
-      console.log('✅ Cart updated successfully');
     } catch (error) {
-      console.error('❌ Add to cart error:', error);
     }
   };
 
   const handleRemoveFromCart = async () => {
     try {
-      console.log('🛒 Removing from cart...');
       await removeFromCartMutation.mutateAsync(product.id);
       // Refetch cart data and product detail
       await Promise.all([refetchCart(), refetch()]);
-      console.log('✅ Cart updated successfully');
     } catch (error) {
-      console.error('❌ Remove from cart error:', error);
     }
   };
 
   const handleIncrementQuantity = async () => {
     if (quantity < ((product as any).stock || 10)) {
       try {
-        console.log('🛒 Incrementing quantity...');
         await updateCartItemQuantityMutation.mutateAsync({
           productId: product.id,
           action: "increment"
@@ -299,9 +270,7 @@ const ProductDetail = () => {
         setQuantity(prev => prev + 1);
         // Refetch cart data and product detail
         await Promise.all([refetchCart(), refetch()]);
-        console.log('✅ Cart updated successfully');
       } catch (error) {
-        console.error('❌ Increment quantity error:', error);
       }
     }
   };
@@ -309,7 +278,6 @@ const ProductDetail = () => {
   const handleDecrementQuantity = async () => {
     if (quantity > 1) {
       try {
-        console.log('🛒 Decrementing quantity...');
         await updateCartItemQuantityMutation.mutateAsync({
           productId: product.id,
           action: "decrement"
@@ -317,33 +285,25 @@ const ProductDetail = () => {
         setQuantity(prev => prev - 1);
         // Refetch cart data and product detail
         await Promise.all([refetchCart(), refetch()]);
-        console.log('✅ Cart updated successfully');
       } catch (error) {
-        console.error('❌ Decrement quantity error:', error);
       }
     }
   };
 
   const handleChatSeller = () => {
     // Chat seller logic
-    console.log("Chat seller");
     router.push(routes?.chatSeller);
   };
 
   const handleToggleFavorite = async () => {
-    console.log('❤️ Favorite button clicked!');
-    console.log('❤️ Product ID:', product.id);
-    console.log('❤️ Current favorite status:', (product as any).is_in_favorite_list);
     
     const isCurrentlyFavorited = (product as any).is_in_favorite_list || false;
     
     try {
-      console.log('❤️ Calling toggleFavorite API...');
       const result = await toggleFavoriteMutation.mutateAsync({
         productId: product.id,
         isCurrentlyFavorited
       });
-      console.log('❤️ Toggle favorite API result:', result);
       
       // Show success toast
       if (isCurrentlyFavorited) {
@@ -356,9 +316,7 @@ const ProductDetail = () => {
       setShowFavoriteSuccess(true);
       
       // Refetch product detail to update favorite status
-      console.log('❤️ Refetching product detail...');
       await refetch();
-      console.log('❤️ Product detail refetched successfully');
       
       // Hide success feedback after 2 seconds
       setTimeout(() => {
@@ -366,7 +324,6 @@ const ProductDetail = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('❌ Toggle favorite error:', error);
       setShowFavoriteSuccess(false);
       
       // Show error toast
@@ -1098,7 +1055,6 @@ const ProductDetail = () => {
           
           <TouchableOpacity 
             onPress={() => {
-              console.log('❤️ TouchableOpacity onPress triggered!');
               handleToggleFavorite();
             }}
             disabled={toggleFavoriteMutation.isPending}

@@ -60,14 +60,12 @@ const Step1 = () => {
 
     // Reset any stuck states on component mount
     useEffect(() => {
-        console.log('🔄 Seller step1 component mounted, resetting states');
         
         // Reset states
         setShowAlert(false);
         setIsSubmitting(false);
         
         return () => {
-            console.log('🧹 Seller step1 component unmounting, cleanup');
             setShowAlert(false);
             setIsSubmitting(false);
         };
@@ -81,11 +79,9 @@ const Step1 = () => {
     }
 
     const handleSubmit = async (values: typeof initialValues, { setSubmitting }: any) => {
-        console.log('📤 Posting seller personal details to step 2 endpoint...')
         
         // Prevent multiple submissions
         if (isSubmitting) {
-            console.log('⚠️ Already submitting, ignoring');
             return;
         }
         
@@ -100,7 +96,6 @@ const Step1 = () => {
                 // role_id: 3 // Seller role ID
             });
             
-            console.log('✅ Seller step 2 response:', response);
             setSubmitting(false);
             setIsSubmitting(false);
             
@@ -117,7 +112,6 @@ const Step1 = () => {
             });
             
         } catch (error: any) {
-            console.error('❌ Error posting seller step 2 data:', error);
             setSubmitting(false);
             setIsSubmitting(false);
             
@@ -238,12 +232,6 @@ const Step1 = () => {
                                             title={isSubmitting ? "Processing..." : "Proceed"}
                                             type="submit"
                                             onPress={() => {
-                                                console.log('🖱️ Form submit button pressed');
-                                                console.log('📊 Submit state:', {
-                                                    isSubmitting: isSubmitting,
-                                                    isValid: isValid,
-                                                    dirty: dirty
-                                                });
                                                 formikHandleSubmit();
                                             }}
                                             disabled={!isValid || !dirty || isSubmitting}

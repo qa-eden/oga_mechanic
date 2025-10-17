@@ -21,24 +21,18 @@ api.interceptors.request.use(
     try {
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('auth_token');
-      console.log(`🔑 Token check for ${config.method?.toUpperCase()} ${config.url}:`, token ? 'Found' : 'Not found');
       
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`✅ Authorization header added: Bearer ${token.substring(0, 20)}...`);
       } else {
-        console.log(`❌ No token found for ${config.method?.toUpperCase()} ${config.url}`);
       }
 
       // Add requestType: "inbound" only to POST/PUT/PATCH requests
       if (config.method === 'post' || config.method === 'put' || config.method === 'patch') {
         // Skip ALL processing for registration step 4 - using fetch API directly
         if (config.url?.includes('/register/step/4/')) {
-          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Step 4 endpoint, skipping ALL interceptor processing`);
           return config; // Return config unchanged
         } else if (config.data instanceof FormData) {
-          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - FormData detected, wrapping in data structure`);
-          console.log(`📤 FormData _parts:`, (config.data as any)._parts);
 
           // Create a new FormData with the proper nested structure
           const wrappedData = new FormData();
@@ -52,17 +46,12 @@ api.interceptors.request.use(
           wrappedData.append('requestType', 'inbound');
           
           config.data = wrappedData;
-          console.log(`📤 Wrapped FormData in data structure with requestType`);
-          console.log(`📤 New FormData _parts:`, (config.data as any)._parts);
 
           // Let axios set Content-Type for FormData to include boundary
           delete config.headers['Content-Type'];
-          console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Removed Content-Type header for FormData`);
-          console.log(`📤 Final headers:`, config.headers);
         } else {
           // Skip wrapping for checkout endpoint (it handles its own structure)
           if (config.url?.includes('/checkout/')) {
-            console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Checkout endpoint, skipping interceptor wrapping`);
           } else {
             // For non-FormData, wrap in { data, requestType }
             const originalData = config.data || {};
@@ -70,17 +59,14 @@ api.interceptors.request.use(
               requestType: 'inbound',
               data: originalData,
             };
-            console.log(`📤 ${config.method?.toUpperCase()} ${config.url} - Wrapped data with requestType: "inbound"`);
           }
         }
       }
     } catch (error) {
-      console.error('Error in request interceptor:', error);
     }
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -88,10 +74,6 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log(`📥 Response for ${response.config.method?.toUpperCase()} ${response.config.url}:`, {
-      status: response.status,
-      data: JSON.stringify(response.data, null, 2),
-    });
     return response;
   },
   async (error) => {
@@ -113,17 +95,10 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
         await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user_data']);
         // Add navigation to login screen if needed
       }
     }
-
-    console.error(`📥 Error for ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}:`, {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
     return Promise.reject(error);
   }
 );

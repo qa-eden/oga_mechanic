@@ -94,8 +94,6 @@ const UploadCarImages = () => {
         throw new Error(`Product ID not found. Please try creating the ${productLabelLower} listing again.`)
       }
 
-      console.log('Uploading images for product ID:', currentProductId)
-
       // Create FormData for image upload
       const formData = new FormData()
       
@@ -120,12 +118,10 @@ const UploadCarImages = () => {
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Image upload failed:', errorText)
         throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
       const responseData = await response.json()
-      console.log('Images uploaded successfully:', responseData)
       
       setUploadStep('complete')
 
@@ -139,7 +135,6 @@ const UploadCarImages = () => {
         }
       })
     } catch (error) {
-      console.error('Error uploading images:', error)
       Alert.alert('Upload Failed', 'Failed to upload images. Please try again.')
     } finally {
       setIsSubmitting(false)

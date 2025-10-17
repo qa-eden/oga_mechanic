@@ -33,20 +33,7 @@ const envPath = path.join(process.cwd(), '.env');
 
 // Check if .env already exists
 if (fs.existsSync(envPath)) {
-  console.log('⚠️  .env file already exists. Skipping creation.');
-  console.log('   If you want to update it, please edit it manually.');
 } else {
   // Create .env file
   fs.writeFileSync(envPath, envExample);
-  console.log('✅ Created .env file with default configuration.');
-  console.log('📝 Please update the values in .env according to your environment.');
 }
-
-console.log('\n📋 Next steps:');
-console.log('1. Edit the .env file with your actual API URLs and keys');
-console.log('2. For development: Use development API URLs');
-console.log('3. For production: Use production API URLs');
-console.log('4. Restart your development server after making changes');
-console.log('\n🔒 Security reminder:');
-console.log('- Never commit .env to version control');
-console.log('- Add .env to your .gitignore file');

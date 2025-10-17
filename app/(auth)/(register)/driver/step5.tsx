@@ -62,19 +62,16 @@ const Step5 = () => {
     setIsVINLoading(true);
     
     try {
-      console.log('🔍 Starting VIN lookup for:', vin);
       
       // Simple VIN lookup without complex error handling
       let vehicleInfo = null;
       try {
         vehicleInfo = await decodeVINWithImage(vin);
       } catch (decodeError) {
-        console.error('❌ VIN decode error:', decodeError);
         vehicleInfo = null;
       }
 
       if (vehicleInfo && isMounted) {
-        console.log('✅ Vehicle info received:', vehicleInfo);
         
         // Simple field mapping
         const fieldMappings = {
@@ -96,7 +93,6 @@ const Step5 = () => {
             try {
               setFieldValue(field, value);
             } catch (fieldError) {
-              console.error(`❌ Error setting field ${field}:`, fieldError);
             }
           }
         });
@@ -120,7 +116,6 @@ const Step5 = () => {
         }
       }
     } catch (error: any) {
-      console.error('❌ VIN lookup error:', error);
       if (isMounted) {
         Alert.alert(
           "VIN Lookup",
@@ -138,21 +133,12 @@ const Step5 = () => {
   const handleSubmit = (values: any) => {
     try {
       if (!isMounted) return
-
-      console.log('Vehicle Information:', {
-        ...values,
-        frontSideImage,
-        backSideImage,
-        rightSideImage,
-        leftSideImage
-      })
       
       // Safe navigation
       if (router && driverRoutes.step6) {
         router.push(driverRoutes.step6)
       }
     } catch (error) {
-      console.error('❌ Error in handleSubmit:', error);
       // Don't crash - just log the error
     }
   }
@@ -200,7 +186,6 @@ const Step5 = () => {
         }
       }
     } catch (error) {
-      console.error('❌ Error in image upload:', error);
       if (isMounted) {
         Alert.alert(
           'Error',
@@ -283,7 +268,6 @@ const Step5 = () => {
                         setCurrentVIN(text)
                         // Auto-trigger VIN lookup when it reaches 17 characters
                         if (text.length === 17) {
-                          console.log('🔄 VIN ready for lookup:', text);
                           // Simple lookup without complex timeout
                           handleVINLookup(text, setFieldValue);
                         }

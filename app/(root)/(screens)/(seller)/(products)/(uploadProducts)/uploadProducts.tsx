@@ -153,7 +153,6 @@ const UploadProducts = () => {
   const handleSubmit = async (values: typeof initialValues) => {
     try {
       const isEditing = isEditMode || isEditingMode;
-      console.log('🔍 DEBUG: Starting handleSubmit for', isEditing ? 'editing' : 'creating', 'car')
 
       // Create feature object from selected features
       const features = {
@@ -218,16 +217,12 @@ const UploadProducts = () => {
         requestType: "inbound"
       }
 
-      console.log('Car payload:', payload)
-
       // Determine endpoint and method based on edit mode
       const finalProductId = productId || parsedProductData?.id;
       const endpoint = isEditing
         ? `${process.env.EXPO_PUBLIC_API_URL}/products/products/${finalProductId}/`
         : `${process.env.EXPO_PUBLIC_API_URL}/products/products/`;
       const method = isEditing ? 'PUT' : 'POST';
-
-      console.log('🔍 DEBUG:', isEditing ? 'Updating' : 'Creating', 'product:', endpoint, 'Method:', method);
 
       // Call the products API endpoint
       const response = await fetch(endpoint, {
@@ -245,11 +240,9 @@ const UploadProducts = () => {
       }
 
       const responseData = await response.json()
-      console.log('Product', isEditing ? 'updated' : 'created', 'successfully:', responseData)
 
       // Get the product ID from response
       const updatedProductId = responseData.data?.id || finalProductId || '';
-      console.log('Product ID:', updatedProductId)
 
       if (isEditing) {
         // For editing, show success alert with options
@@ -277,7 +270,6 @@ const UploadProducts = () => {
         })
       }
     } catch (error) {
-      console.error('Error', isEditing ? 'updating' : 'creating', 'product:', error)
       Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'create'} product. Please try again.`)
     }
   }

@@ -67,15 +67,12 @@ const MechanicStep1 = () => {
   };
 
   const handleStep1Submit = (values: any, { setSubmitting }: any) => {
-    console.log("Step 1 values:", values);
     setIsSubmitting(true);
     setSubmitting(false);
     
     try {
       router.push(mechanicRoutes?.step2);
-      console.log('✅ Mechanic navigation successful');
     } catch (error) {
-      console.error('❌ Mechanic navigation failed:', error);
       setIsSubmitting(false);
     } finally {
       // Reset state after a delay
@@ -178,29 +175,28 @@ const MechanicStep1 = () => {
                   />
 
                   <SelectField
+                    name="country"
                     label="Country"
                     placeholder="Select your country"
                     options={countries}
                     value={values.country}
-                    onSelect={(value) => {
+                    onValueChange={(value: string) => {
                       setFieldValue("country", value);
                       setFieldValue("city", ""); // Reset city when country changes
                     }}
                     error={errors.country}
                     touched={touched.country}
-                    labelStyle="mt-2"
                   />
 
                   <SelectField
+                    name="city"
                     label="City"
                     placeholder="Select your city"
                     options={cities[values.country] || []}
                     value={values.city}
-                    onSelect={(value) => setFieldValue("city", value)}
+                    onValueChange={(value: string) => setFieldValue("city", value)}
                     error={errors.city}
                     touched={touched.city}
-                    disabled={!values.country}
-                    labelStyle="mt-2"
                   />
 
                   {/* Terms and Conditions */}

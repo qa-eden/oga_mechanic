@@ -15,7 +15,6 @@ const forgetPassword = () => {
   const router = useRouter();
 
   const handleProceed = (values: any, { setSubmitting }: any) => {
-    console.log("Forgot password values:", values);
 
     // Simulate API call
     setTimeout(() => {

@@ -28,24 +28,19 @@ const Step6 = () => {
 
   const handleSubmit = (values: any) => {
     try {
-      console.log('Bank Details:', values)
       if (router && driverRoutes.step7) {
         router.push(driverRoutes.step7)
       }
     } catch (error) {
-      console.error('❌ Error in handleSubmit:', error);
     }
   }
 
   const handleBankSelect = (bank: string) => {
-    console.log('🔍 handleBankSelect called with:', bank)
     setSelectedBank(bank)
     // Update Formik field value using the callback
     if (setFieldValueCallback) {
-      console.log('✅ setFieldValueCallback exists, updating field')
       setFieldValueCallback('bankName', bank)
     } else {
-      console.log('❌ setFieldValueCallback is null')
     }
     setShowBankPicker(false)
   }
@@ -93,16 +88,13 @@ const Step6 = () => {
                     values.accountNumber
                   );
                 } catch (error) {
-                  console.error('❌ Error in form validation:', error);
                   return false;
                 }
               }, [values]);
 
               // Update selectedBank when Formik values change
               React.useEffect(() => {
-                console.log('🔍 Formik values changed:', values)
                 if (values.bankName && values.bankName !== selectedBank) {
-                  console.log('✅ Updating selectedBank from Formik:', values.bankName)
                   setSelectedBank(values.bankName)
                 }
               }, [values.bankName, selectedBank])

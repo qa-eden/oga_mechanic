@@ -47,12 +47,7 @@ const AllRentedCars = () => {
   } = useQuery({
     queryKey: ['products', merchantId, 'rental-cars', carCategoryId, inputQuery, minPrice, maxPrice],
     queryFn: async () => {
-      console.log('🔄 Fetching RENTAL CARS for merchant:', merchantId, 'with filters:', {
-        category: carCategoryId,
-        search: inputQuery,
-        minPrice,
-        maxPrice
-      });
+
 
       const response = await productsAPI.getProducts(
         carCategoryId, // categoryId - filter by car category
@@ -77,11 +72,7 @@ const AllRentedCars = () => {
   const rentedCars = useMemo(() => {
     let filtered = allRentedCars;
 
-    // Debug: Log the first car to understand data structure
-    if (allRentedCars.length > 0) {
-      console.log('🔍 First rental car structure:', allRentedCars[0]);
-      console.log('🔍 Available properties:', Object.keys(allRentedCars[0]));
-    }
+
 
     // Filter by search query (name, description, and other available fields)
     if (inputQuery.trim()) {
@@ -105,11 +96,7 @@ const AllRentedCars = () => {
       });
     }
 
-    console.log('🔍 Filtered rental cars:', {
-      total: allRentedCars.length,
-      filtered: filtered.length,
-      query: inputQuery
-    });
+
 
     return filtered;
   }, [allRentedCars, inputQuery]);
@@ -127,7 +114,6 @@ const AllRentedCars = () => {
   }, []);
 
   const handleApplyFilters = () => {
-    console.log('Applying filters:', { inputQuery, minPrice, maxPrice });
     setShowFilterModal(false);
     // The query will automatically refetch due to dependency changes
   };
@@ -164,11 +150,8 @@ const AllRentedCars = () => {
     if (!selectedItem?.id) return;
 
     try {
-      console.log('🗑️ Deleting rental car:', selectedItem.id);
-
       // Call delete API
       await productsAPI.deleteProduct(selectedItem.id);
-      console.log('✅ Rental car deleted successfully');
 
       // Refetch the list to update UI
       await refetch();

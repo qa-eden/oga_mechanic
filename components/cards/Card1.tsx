@@ -89,7 +89,6 @@ const Card1 = memo(({
       onLovePress();
     } else if (productId) {
       try {
-        console.log('❤️ Card favorite button clicked - productId:', productId, 'isFavorite:', isFavorite);
         await toggleFavoriteMutation.mutateAsync({
           productId: productId.toString(),
           isCurrentlyFavorited: isFavorite

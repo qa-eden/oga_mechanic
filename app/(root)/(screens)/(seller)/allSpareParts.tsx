@@ -41,8 +41,6 @@ const AllSpareParts = () => {
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
   
-  console.log('🔍 Active Role:', activeRole, 'Merchant ID:', merchantId);
-  
   // Fetch spare parts using TanStack Query with merchant_id filter
   const {
     data: spareParts = [],
@@ -65,7 +63,6 @@ const AllSpareParts = () => {
         product.category?.name?.toLowerCase().includes('spare') || 
         product.category?.name?.toLowerCase().includes('part')
       )
-      console.log('Fetched spare parts for merchant:', merchantId, sparePartProducts)
       return sparePartProducts
     },
     enabled: !!merchantId, // Only fetch when we have merchantId
@@ -80,11 +77,8 @@ const AllSpareParts = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      console.log('🔄 Pull-to-refresh triggered - refetching spare parts...')
       await refetch()
-      console.log('✅ Spare parts refreshed successfully')
     } catch (error) {
-      console.error('❌ Error during refresh:', error)
     } finally {
       setRefreshing(false)
     }
@@ -107,7 +101,6 @@ const AllSpareParts = () => {
   }, []);
 
   const handleApplySearch = () => {
-    console.log('Applying search:', { inputQuery, selectedCategory, minPrice, maxPrice });
   };
 
   const handleResetSearch = () => {
@@ -129,7 +122,6 @@ const AllSpareParts = () => {
   const handleConfirmDelete = () => {
     setShowDeleteModal(false);
     // In real app, call delete API here
-    console.log('Deleting spare part:', selectedItem?.id);
     
     // Navigate to success page
     setTimeout(() => {

@@ -79,7 +79,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
           text: 'Use Current Location',
           onPress: () => {
             // TODO: Get current location and set address
-            console.log('Getting current location...')
             // For now, just show a placeholder
             onChangeText?.('Current location will be set here')
           }
@@ -88,7 +87,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
           text: 'Search Location',
           onPress: () => {
             // TODO: Open location search
-            console.log('Opening location search...')
             // For now, just focus the input
             inputRef.current?.focus()
           }

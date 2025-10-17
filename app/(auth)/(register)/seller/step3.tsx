@@ -87,23 +87,15 @@ const Step3 = () => {
     }
 
     const handleSubmit = async (values: typeof initialValues) => {
-        console.log('📤 Moving to step 4 with business details...')
         
         // Prevent multiple submissions
         if (isSubmitting) {
-            console.log('⚠️ Already submitting, ignoring');
             return;
         }
         
         setIsSubmitting(true);
         
         try {
-            // Debug: Log what we're about to pass
-            console.log('🔍 Step 3 - CAC Document value:', values.cacDocument);
-            console.log('🔍 Step 3 - CAC Document URI:', values.cacDocument?.uri);
-            console.log('🔍 Step 3 - CAC Document type:', typeof values.cacDocument);
-            console.log('🔍 Step 3 - CAC Document keys:', values.cacDocument ? Object.keys(values.cacDocument) : 'null');
-            console.log('🔍 Step 3 - CAC Document stringified:', JSON.stringify(values.cacDocument));
             
             // Just navigate to next step without API call
             // API call will be made in step 4 with both CAC document and selfie
@@ -118,7 +110,6 @@ const Step3 = () => {
                 cacDocumentUri: values.cacDocument?.uri || values.cacDocument?.path || null
             };
             
-            console.log('🔍 Step 3 - Navigation params:', navigationParams);
             
             router.push({
                 pathname: sellerRoutes.step4,
@@ -126,7 +117,6 @@ const Step3 = () => {
             });
             
         } catch (error: any) {
-            console.error('❌ Error navigating to step 4:', error);
             setIsSubmitting(false);
             
             // Show error alert
@@ -178,7 +168,6 @@ const Step3 = () => {
                                 })
                             }
                         } catch (error) {
-                            console.error('Camera error:', error)
                             Alert.alert('Error', 'Failed to take photo. Please try again.')
                         }
                     }
@@ -212,7 +201,6 @@ const Step3 = () => {
                                 })
                             }
                         } catch (error) {
-                            console.error('Gallery error:', error)
                             Alert.alert('Error', 'Failed to select photo. Please try again.')
                         }
                     }
@@ -237,7 +225,6 @@ const Step3 = () => {
                                 })
                             }
                         } catch (error) {
-                            console.error('Document picker error:', error)
                             Alert.alert('Error', 'Failed to select document. Please try again.')
                         }
                     }
@@ -285,8 +272,7 @@ const Step3 = () => {
                             onSubmit={handleSubmit}
                         >
                             {({ handleSubmit: formikHandleSubmit, isValid, dirty, setFieldValue, values, errors, touched }) => {
-                                // Debug form state
-                                console.log('Form state:', { isValid, dirty, values, errors })
+                                
                                 return (
                                 <View className="space-y-6">
                                     {/* State Select */}

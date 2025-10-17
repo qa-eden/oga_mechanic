@@ -52,9 +52,7 @@ const ProductDetailsDetailed = () => {
         setError(null);
         const response = await productsAPI.getProductById(productId);
         setProductData(response.data);
-        console.log('Fetched product details:', response.data);
       } catch (err) {
-        console.error('Error fetching product details:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch product details');
       } finally {
         setLoading(false);
@@ -224,18 +222,11 @@ const ProductDetailsDetailed = () => {
   const handleEdit = () => {
     if (!productData) return;
     
-    console.log('🔍 DEBUG: handleEdit called with productData:', productData);
-    console.log('🔍 DEBUG: productData.id:', productData.id);
-    console.log('🔍 DEBUG: productData.category?.name:', productData.category?.name);
-    
     // Determine if it's a spare part (not a car)
     const isSparePart = !productData.category?.name?.toLowerCase().includes('car');
 
-    console.log('🔍 DEBUG: Is spare part?', isSparePart);
-
     if (isSparePart) {
       // Navigate to spare part edit page
-      console.log('🔍 DEBUG: Navigating to spare part edit page');
       router.push({
         pathname: sellerRoutes.editSparePart,
         params: {
@@ -245,7 +236,6 @@ const ProductDetailsDetailed = () => {
       });
     } else {
       // Navigate to car edit page
-      console.log('🔍 DEBUG: Navigating to car edit page');
       router.push({
         pathname: sellerRoutes.editProduct,
         params: {
@@ -273,9 +263,7 @@ const ProductDetailsDetailed = () => {
       router.back();
       
       // Show success message or handle success
-      console.log('Product deleted successfully');
     } catch (error) {
-      console.error('Failed to delete product:', error);
       // Handle error - maybe show an alert
     } finally {
       setIsDeleting(false);

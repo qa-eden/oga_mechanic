@@ -34,10 +34,8 @@ const Step7 = () => {
 
   const handleSubmit = (values: any) => {
     try {
-      console.log('Password Setup:', { password: values.password, confirmPassword: values.confirmPassword })
       setShowSuccessModal(true)
     } catch (error) {
-      console.error('❌ Error in handleSubmit:', error)
     }
   }
 
@@ -101,7 +99,6 @@ const Step7 = () => {
                     values.password === values.confirmPassword
                   )
                 } catch (error) {
-                  console.error('❌ Error in form validation:', error)
                   return false
                 }
               }, [values])
@@ -143,7 +140,6 @@ const Step7 = () => {
                       try {
                         handleSubmit()
                       } catch (error) {
-                        console.error('❌ Error in button press:', error)
                       }
                     }}
                     disabled={!isFormValid}
@@ -159,7 +155,6 @@ const Step7 = () => {
                             router.push(routes.signIn)
                           }
                         } catch (error) {
-                          console.error('❌ Error in navigation:', error)
                         }
                       }}
                       text="Already have an account?"

@@ -43,15 +43,10 @@ const MerchantProfile = () => {
   const merchantData = productsData?.results?.[0]?.merchant
   const merchantProducts = productsData?.results || []
 
-  console.log('🏪 Merchant Data:', merchantData)
-  console.log('🏪 Products Count:', merchantProducts.length)
-
   const onRefresh = useCallback(async () => {
     try {
       await refetch()
-      console.log('✅ Refreshing merchant profile...')
     } catch (error) {
-      console.error('❌ Refresh error:', error)
     }
   }, [refetch])
 

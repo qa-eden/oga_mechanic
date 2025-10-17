@@ -15,7 +15,6 @@ const ResetPassword = () => {
   const router = useRouter();
 
   const handleProceed = (values: any, { setSubmitting }: any) => {
-    console.log("Reset password values:", values);
 
     if (values.password !== values.confirmPassword) {
       showToast.error("Password does not match");

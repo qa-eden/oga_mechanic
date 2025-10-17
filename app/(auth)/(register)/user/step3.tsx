@@ -33,11 +33,9 @@ const Step3 = () => {
   const registerVehicleMutation = useRegisterVehicle();
 
   const handleStep2Submit = async (values: any, { setSubmitting }: any) => {
-    console.log("Step 3 values:", values);
 
     if (isStepByStepMode) {
       // Use TanStack Query mutation for vehicle registration
-      console.log('📤 Posting vehicle details to step 4 endpoint...');
       registerVehicleMutation.mutate({
         has_car: true,
         car_make: values.car_make || '',
@@ -50,7 +48,6 @@ const Step3 = () => {
           router.push(routes?.userStep4);
         },
         onError: (error: any) => {
-          console.error('❌ Error posting vehicle data:', error);
           setSubmitting(false);
           
           // Extract error message from API response
@@ -86,7 +83,6 @@ const Step3 = () => {
   const handleSkip = () => {
     if (isStepByStepMode) {
       // Use TanStack Query mutation for skip (no car)
-      console.log('📤 Posting skip vehicle to step 4 endpoint...');
       registerVehicleMutation.mutate({
         has_car: false
       }, {
@@ -94,7 +90,6 @@ const Step3 = () => {
           router.push(routes?.userStep4);
         },
         onError: (error: any) => {
-          console.error('❌ Error posting skip vehicle data:', error);
           
           // Extract error message from API response
           let errorMessage = 'Registration failed. Please try again.';
@@ -127,7 +122,6 @@ const Step3 = () => {
 
   // Handle vehicle found callback
   const handleVehicleFound = (vehicleInfo: any) => {
-    console.log('🚗 Vehicle found:', vehicleInfo);
     // Update UI state
     setVehicleImage(vehicleInfo.imageUrl || null);
     setVehicleColor(vehicleInfo.color || vehicleInfo.exteriorColor || null);

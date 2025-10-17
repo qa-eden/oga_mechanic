@@ -35,7 +35,6 @@ export default function Index() {
   return (
     <AnimatedSplash
       onAnimationEnd={() => {
-        console.log('🎬 Splash animation completed');
         setAnimationComplete(true);
       }}
     />

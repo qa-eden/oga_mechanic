@@ -54,9 +54,9 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
       <View className={`space-y-4 ${className}`}>
         {/* Connection Status - only for network/timeout errors */}
         {showConnectionStatus && (errorInfo.type === 'network' || errorInfo.type === 'timeout') && (
-          <ConnectionStatus 
+          <ConnectionStatus
             onStatusChange={(isHealthy) => {
-              console.log('🌐 Connection status changed:', isHealthy ? 'Healthy' : 'Unhealthy');
+              // Connection status changed
             }}
           />
         )}

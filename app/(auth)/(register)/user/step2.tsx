@@ -43,7 +43,6 @@ const Step2 = () => {
     const email = stepByStepData.email || '';
 
     // Use TanStack Query mutation for step 3
-    console.log('📤 Posting OTP verification to step 3 endpoint...');
     registerStep3Mutation.mutate({
       email: email,
       verification_code: otp.toString()
@@ -53,7 +52,6 @@ const Step2 = () => {
     router.push(routes?.userStep3);
       },
       onError: (error: any) => {
-        console.error('❌ Error posting OTP verification:', error);
         
         // Extract error message from API response
         let errorMessage = 'OTP verification failed. Please try again.';
@@ -80,14 +78,12 @@ const Step2 = () => {
   };
 
   const handleResendCode = () => {
-    console.log('📤 Resending OTP...');
     resendOTPMutation.mutate(undefined, {
       onSuccess: () => {
         setCountdown(60);
         showSuccess('OTP Sent', 'A new verification code has been sent to your email.');
       },
       onError: (error: any) => {
-        console.error('❌ Error resending OTP:', error);
         
         // Extract error message from API response
         let errorMessage = 'Failed to resend OTP. Please try again.';

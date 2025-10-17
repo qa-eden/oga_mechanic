@@ -45,19 +45,16 @@ import {
     }, [countdown]);
   
     const handleOtpComplete = (otp: string | number) => {
-      console.log('📤 Posting OTP verification to step 3 endpoint...');
       
       sellerRegistrationMutation.mutate({
         email: email,
         verification_code: otp.toString()
       }, {
         onSuccess: (response) => {
-          console.log('✅ OTP verification successful:', response);
           // Navigate to next step
           router.push(sellerRoutes?.step3);
         },
         onError: (error: any) => {
-          console.error('❌ Error posting OTP verification:', error);
           
           // Extract error message from API response
           let errorMessage = 'OTP verification failed. Please try again.';

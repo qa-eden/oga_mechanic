@@ -82,15 +82,7 @@ export const useUserStore = create<UserState>()(
           
                 const response = await userAPI.register(apiData);
       
-      // Log the complete response for debugging
-      console.log('=== REGISTRATION API RESPONSE ===');
-      console.log('Full response:', JSON.stringify(response, null, 2));
-      console.log('Response type:', typeof response);
-      console.log('Response keys:', Object.keys(response || {}));
-      console.log('Success property:', response?.success);
-      console.log('Data property:', response?.data);
-      console.log('Message property:', response?.message);
-      console.log('================================');
+
       
       if (response.success) {
         set({
@@ -125,13 +117,10 @@ export const useUserStore = create<UserState>()(
         try {
           // Call /users/roles/ endpoint before clearing auth data
           try {
-            console.log('🔄 Fetching user roles before logout...');
             const rolesResponse = await userAPI.getUserRoles();
-            console.log('✅ User roles fetched:', rolesResponse);
-            
+
             // Store roles data in local storage
             await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
-            console.log('✅ User roles data stored in AsyncStorage');
           } catch (rolesError) {
             console.error('❌ Failed to fetch roles during logout:', rolesError);
           }

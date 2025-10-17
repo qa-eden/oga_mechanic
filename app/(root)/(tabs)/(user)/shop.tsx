@@ -35,7 +35,6 @@ const Shop = () => {
   useEffect(() => {
     if (params.categoryId && params.category) {
       const categoryId = parseInt(params.categoryId);
-      console.log('🏷️ Applying category filter from params:', params.category, categoryId);
       
       // Update both selected and applied states
       setSelectedCategory(params.category);
@@ -57,7 +56,6 @@ const Shop = () => {
   // Auto-trigger search when user finishes typing
   useEffect(() => {
     if (debouncedSearchQuery.trim().length > 0) {
-      console.log('🔍 Auto-triggering search for:', debouncedSearchQuery);
       setSearchTriggered(true);
       setSearchCategoryId(selectedCategoryId);
       setSearchMinPrice(minPrice);
@@ -67,15 +65,6 @@ const Shop = () => {
     }
   }, [debouncedSearchQuery, selectedCategoryId, minPrice, maxPrice]);
 
-  // Debug: Monitor when main API parameters change
-  useEffect(() => {
-    console.log('🔄 Main API parameters changed:', {
-      selectedCategoryId,
-      minPrice,
-      maxPrice,
-      timestamp: new Date().toISOString()
-    });
-  }, [selectedCategoryId, minPrice, maxPrice]);
 
   // Manual filtering - only trigger when Apply button is clicked
   const [filtersApplied, setFiltersApplied] = useState(false);
@@ -140,7 +129,6 @@ const Shop = () => {
       { name: "All", id: null },
       ...categories.map(cat => ({ name: cat.name, id: cat.id }))
     ];
-    console.log('🏷️ Available categories:', options);
     return options;
   }, [categories]);
 
@@ -154,38 +142,22 @@ const Shop = () => {
   const displayProducts = useMemo(() => {
     // If search was triggered, use search results
     if (searchTriggered) {
-      console.log('🔍 Search state:', {
-        searchQuery,
-        searchCategoryId,
-        searchMinPrice,
-        searchMaxPrice,
-        searchResults: (searchResults as ProductListResponse[])?.length || 0,
-        searchLoading,
-        searchError: !!searchError
-      });
+     
       return (searchResults as ProductListResponse[]) || [];
     }
     
     // If filters were applied, show products from main API
     if (filtersApplied) {
-      console.log('🛍️ Showing products from main API with applied filters:', {
-        categoryId: appliedCategoryId,
-        minPrice: appliedMinPrice,
-        maxPrice: appliedMaxPrice,
-        productCount: products?.length || 0
-      });
       return products || [];
     }
     
     // Default: show all products (no filters applied)
-    console.log('🛍️ Showing all products (no filters applied)');
     return products || [];
   }, [searchTriggered, searchResults, products, searchQuery, searchCategoryId, searchMinPrice, searchMaxPrice, searchLoading, searchError, filtersApplied, appliedCategoryId, appliedMinPrice, appliedMaxPrice]);
 
 
   const handleFilterPress = () => {
     // Handle filter functionality
-    console.log("Filter pressed")
   }
 
   const handleApplySearch = (categoryId?: number | null) => {
@@ -209,14 +181,6 @@ const Shop = () => {
       setSearchTriggered(false);
     }
     
-    console.log('🔍 Applying filters and search:', {
-      query: debouncedSearchQuery,
-      categoryId: targetCategoryId,
-      minPrice,
-      maxPrice,
-      filtersApplied: true,
-      searchTriggered: debouncedSearchQuery.trim().length > 0
-    });
   }
 
   const handleResetSearch = () => {
@@ -236,7 +200,6 @@ const Shop = () => {
     setSelectedCategoryId(null);
     setMinPrice("");
     setMaxPrice("");
-    console.log('🔄 Everything reset - showing all products');
   }
 
   const handleSearchChange = useCallback((text: string) => {
@@ -281,7 +244,6 @@ const Shop = () => {
         }}
         onLovePress={() => {
           // Handle love press
-          console.log("Love pressed:", item.name)
         }}
       />
     </View>
@@ -371,7 +333,6 @@ const Shop = () => {
             onEndReached={() => {
               // Only load more if not searching and there are more pages
               if (!searchTriggered && hasNextPage && !isFetchingNextPage) {
-                console.log('📄 Loading next 20 products...');
                 fetchNextPage();
               }
             }}

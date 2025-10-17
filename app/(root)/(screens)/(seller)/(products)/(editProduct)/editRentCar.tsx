@@ -48,7 +48,6 @@ const EditRentCar = () => {
     try {
       return JSON.parse(productDataParam);
     } catch (error) {
-      console.error('Error parsing product data:', error);
       setHasError(true);
       return null;
     }
@@ -70,7 +69,6 @@ const EditRentCar = () => {
         value: make?.id?.toString() || ''
       })) || [];
     } catch (error) {
-      console.error('Error processing make options:', error);
       return [];
     }
   }, [vehicleMakes]);
@@ -84,7 +82,6 @@ const EditRentCar = () => {
         value: model?.id?.toString() || ''
       })) || [];
     } catch (error) {
-      console.error('Error processing model options:', error);
       return [];
     }
   }, [vehicleMakes, productData?.make]);
@@ -278,7 +275,6 @@ const EditRentCar = () => {
       setSuccessDrawerVisible(true);
 
     } catch (error) {
-      console.error('Error updating rental car:', error);
       Alert.alert('Error', 'Failed to update rental car. Please try again.');
     } finally {
       setIsSubmitting(false);

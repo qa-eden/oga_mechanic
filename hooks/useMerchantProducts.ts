@@ -23,8 +23,7 @@ export const useMerchantCars = (
   return useQuery({
     queryKey: merchantProductKeys.cars(merchantId, carCategoryId, isRental),
     queryFn: async () => {
-      const logPrefix = isRental ? '[RENTAL CARS]' : '[CARS]';
-      console.log(`🔄 ${logPrefix} Fetching for merchant:`, merchantId, 'with category:', carCategoryId);
+
       
       const response = await productsAPI.getProducts(
         carCategoryId, // categoryId - filter by car category
@@ -101,7 +100,7 @@ export const useRentalCars = (
         true // isRental - fetch only rental cars
       );
       
-      console.log('✅ [PUBLIC RENTAL CARS] Fetched products:', response.data.results?.length);
+
       return response.data.results || [];
     },
     enabled: enabled,

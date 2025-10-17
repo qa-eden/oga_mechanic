@@ -33,14 +33,6 @@ const EditSparePart = () => {
 
   const parsedProductData = productData ? JSON.parse(productData) : null;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔧 EditSparePart - Product ID:', productId);
-    console.log('🔧 EditSparePart - Parsed Data:', parsedProductData);
-    console.log('🔧 EditSparePart - Category ID:', parsedProductData?.category_id || parsedProductData?.category?.id);
-    console.log('🔧 EditSparePart - Vehicle Compatibility:', parsedProductData?.vehicle_compatibility);
-  }, [productId, parsedProductData]);
-
   // Fetch categories from API
   const { data: categories, isLoading: categoriesLoading } = useCategories();
  
@@ -118,26 +110,17 @@ const EditSparePart = () => {
     delivery_option: parsedProductData?.delivery_option || 'nationwide',
   }
 
-  // Debug initial values
-  useEffect(() => {
-    console.log('📝 EditSparePart - Initial Values:', initialValues);
-    console.log('📝 EditSparePart - Category Value:', getCategoryValue());
-    console.log('📝 EditSparePart - Custom Name:', getCustomCategoryName());
-  }, [categories, parsedProductData]);
-
   // Initialize vehicle compatibility from parsed data
   useEffect(() => {
     if (!parsedProductData?.vehicle_compatibility) return;
     
     const vehicleCompat = parsedProductData.vehicle_compatibility;
-    console.log('🚗 EditSparePart - Vehicle Compat from API:', vehicleCompat);
     
     if (Array.isArray(vehicleCompat)) {
       const mapped = vehicleCompat.map((vc: any) => ({
         make: vc.make,
         models: vc.model || vc.models || []
       }));
-      console.log('🚗 EditSparePart - Mapped Vehicle Compat:', mapped);
       setVehicleCompatibility(mapped);
     }
   }, [parsedProductData?.vehicle_compatibility])
@@ -191,8 +174,6 @@ const EditSparePart = () => {
         requestType: "inbound"
       };
 
-      console.log('📤 Edit Product Payload:', JSON.stringify(payload, null, 2));
-
       const endpoint = `${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/`;
 
       const response = await fetch(endpoint, {
@@ -210,7 +191,6 @@ const EditSparePart = () => {
       }
 
       const responseData = await response.json();
-      console.log('Product updated successfully:', responseData);
 
       // Show success alert
       Alert.alert('Success', `${productName} updated successfully!`, [
@@ -227,7 +207,6 @@ const EditSparePart = () => {
         { text: 'Done', onPress: () => router.back() }
       ]);
     } catch (error) {
-      console.error('Error updating product:', error);
       Alert.alert('Error', 'Failed to update product. Please try again.');
     }
   }
@@ -317,7 +296,6 @@ const EditSparePart = () => {
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, isSubmitting, setFieldValue }) => {
               // Debug current form values
-              console.log('📋 EditSparePart - Current Form Values:', values);
               
               return (
               <View className="space-y-6">

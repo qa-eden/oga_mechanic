@@ -60,7 +60,6 @@ const DiverProfile = () => {
 
   const handleSwitchUser = (userType: string) => {
     // Handle user switching logic here
-    console.log("Switching to user type:", userType);
     // You can add navigation logic or state management here
   };
 

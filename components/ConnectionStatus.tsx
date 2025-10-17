@@ -19,18 +19,15 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ onStatusChange }) =
       logAPIConfiguration();
       
       // First try a simple connectivity test
-      console.log('🔌 Starting connectivity test...');
       const connectivityResult = await performConnectivityTest();
-      
+
       if (connectivityResult.isHealthy) {
         // If connectivity is good, try the full health check
-        console.log('✅ Connectivity OK, running full health check...');
         const healthResult = await performAPIHealthCheck();
         setLastCheck(healthResult);
         onStatusChange?.(healthResult.isHealthy);
       } else {
         // If connectivity fails, don't bother with health check
-        console.log('❌ Connectivity failed, skipping health check');
         setLastCheck(connectivityResult);
         onStatusChange?.(false);
       }

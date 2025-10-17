@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, SafeAreaView, StatusBar, ScrollView, TouchableOpacity, TextInput } from 'react-native'
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
@@ -73,15 +73,11 @@ const Step1 = () => {
 
         try {
             router.push(driverRoutes.step2)
-            console.log('✅ Driver navigation successful')
         } catch (error) {
-            console.error('❌ Driver navigation failed:', error)
             // Fallback: try direct navigation
             try {
                 router.push('/(auth)/(register)/driver/step2')
-                console.log('✅ Fallback navigation successful')
             } catch (fallbackError) {
-                console.error('❌ Fallback navigation also failed:', fallbackError)
                 setIsSubmitting(false) // Stop loading if navigation fails
             }
         } finally {

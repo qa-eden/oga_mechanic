@@ -41,9 +41,7 @@ const ProductDetails = () => {
       setError(null);
       const response = await productsAPI.getProductById(productId);
       setProductData(response.data);
-      console.log('Fetched product details:', response.data);
     } catch (err) {
-      console.error('Error fetching product details:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch product details');
     } finally {
       setLoading(false);
@@ -52,7 +50,6 @@ const ProductDetails = () => {
 
   // Refetch function to reload data after successful operations
   const refetchProductDetails = async () => {
-    console.log('🔄 Refetching product details after successful operation...');
     await fetchProductDetails();
   };
 
@@ -66,13 +63,10 @@ const ProductDetails = () => {
   // Refetch data when screen comes into focus (e.g., returning from edit screens)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔍 ProductDetails screen focused - checking for updates...');
       // Only refetch if this is NOT the initial load
       if (!isInitialLoad) {
-        console.log('🔄 Refetching data after returning from edit...');
         refetchProductDetails();
       } else {
-        console.log('⏭️ Skipping refetch on initial load');
         setIsInitialLoad(false);
       }
     }, [isInitialLoad])
@@ -154,11 +148,9 @@ const ProductDetails = () => {
 
     try {
       setLoading(true);
-      console.log('🗑️ Deleting product:', productData.id);
 
       // Call delete API
       await productsAPI.deleteProduct(productData.id);
-      console.log('✅ Product deleted successfully');
 
       // Determine item type for success page
       let itemType = 'sparePart';
@@ -177,7 +169,6 @@ const ProductDetails = () => {
       }, 300);
 
     } catch (error) {
-      console.error('❌ Error deleting product:', error);
       setError('Failed to delete product. Please try again.');
       // Optionally show an alert or toast
     } finally {

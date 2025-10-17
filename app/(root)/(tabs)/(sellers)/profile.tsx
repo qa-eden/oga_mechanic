@@ -44,10 +44,10 @@ const SellerProfile = () => {
   // Debug: Log profile data (not rendered)
   React.useEffect(() => {
     if (profileData) {
-      console.log('👤 Primary Profile Data:', profileData);
+      // Profile data loaded
     }
     if (isProfileLoading) {
-      console.log('⏳ Loading primary profile...');
+      // Loading profile
     }
   }, [profileData, isProfileLoading]);
 
@@ -75,7 +75,6 @@ const SellerProfile = () => {
 
   const handleSwitchUser = (userType: string) => {
     // Handle user switching logic here
-    console.log("Switching to user type:", userType);
     // You can add navigation logic or state management here
   };
 

@@ -41,7 +41,7 @@ const AllCars = () => {
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
   
-  console.log('🔍 Active Role:', activeRole, 'Merchant ID:', merchantId);
+
 
   // Fetch cars using TanStack Query with merchant_id filter
   const {
@@ -65,7 +65,7 @@ const AllCars = () => {
         product.category?.name?.toLowerCase().includes('car') && 
         !product.is_rental
       )
-      console.log('Fetched cars for merchant:', merchantId, carProducts)
+
       return carProducts
     },
     enabled: !!merchantId, // Only fetch when we have merchantId
@@ -80,9 +80,7 @@ const AllCars = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      console.log('🔄 Pull-to-refresh triggered - refetching cars...')
       await refetch()
-      console.log('✅ Cars refreshed successfully')
     } catch (error) {
       console.error('❌ Error during refresh:', error)
     } finally {
@@ -107,7 +105,7 @@ const AllCars = () => {
   }, []);
 
   const handleApplySearch = () => {
-    console.log('Applying search:', { inputQuery, selectedCategory, minPrice, maxPrice });
+    // Apply search logic here
   };
 
   const handleResetSearch = () => {
@@ -118,7 +116,7 @@ const AllCars = () => {
   };
 
   const handleFilterPress = () => {
-    console.log("Filter pressed");
+    // Filter logic here
   };
 
   const handleDeleteItem = (item: any) => {
@@ -129,7 +127,6 @@ const AllCars = () => {
   const handleConfirmDelete = () => {
     setShowDeleteModal(false);
     // In real app, call delete API here
-    console.log('Deleting car:', selectedItem?.id);
     
     // Navigate to success page
     setTimeout(() => {

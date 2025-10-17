@@ -17,9 +17,6 @@ export const performAPIHealthCheck = async (): Promise<HealthCheckResult> => {
   const timestamp = new Date();
 
   try {
-    console.log('🏥 Performing API health check...');
-    console.log('🌐 API URL:', ENV_CONFIG.API_URL);
-
     // Simple fetch request to check if the server is reachable
     const response = await fetch(`${ENV_CONFIG.API_URL}/health`, {
       method: 'GET',
@@ -35,10 +32,6 @@ export const performAPIHealthCheck = async (): Promise<HealthCheckResult> => {
     const responseTime = Date.now() - startTime;
 
     if (response.ok) {
-      console.log('✅ API health check passed:', {
-        status: response.status,
-        responseTime: `${responseTime}ms`,
-      });
 
       return {
         isHealthy: true,
@@ -47,11 +40,6 @@ export const performAPIHealthCheck = async (): Promise<HealthCheckResult> => {
         timestamp,
       };
     } else {
-      console.log('⚠️ API health check failed - server responded with error:', {
-        status: response.status,
-        statusText: response.statusText,
-        responseTime: `${responseTime}ms`,
-      });
 
       return {
         isHealthy: false,
@@ -98,9 +86,6 @@ export const performConnectivityTest = async (): Promise<HealthCheckResult> => {
   const timestamp = new Date();
 
   try {
-    console.log('🔌 Performing connectivity test...');
-    console.log('🌐 Testing URL:', ENV_CONFIG.API_URL);
-
     // Try to reach any endpoint on the API server
     const response = await fetch(ENV_CONFIG.API_URL, {
       method: 'HEAD', // Use HEAD to minimize data transfer
@@ -111,11 +96,6 @@ export const performConnectivityTest = async (): Promise<HealthCheckResult> => {
     });
 
     const responseTime = Date.now() - startTime;
-
-    console.log('✅ Connectivity test passed:', {
-      status: response.status,
-      responseTime: `${responseTime}ms`,
-    });
 
     return {
       isHealthy: true,
@@ -153,11 +133,5 @@ export const performConnectivityTest = async (): Promise<HealthCheckResult> => {
  * Logs the current API configuration for debugging
  */
 export const logAPIConfiguration = () => {
-  console.log('🔧 API Configuration Debug:', {
-    baseURL: ENV_CONFIG.API_URL,
-    hasApiKey: !!ENV_CONFIG.API_KEY,
-    apiKeyLength: ENV_CONFIG.API_KEY?.length || 0,
-    environment: ENV_CONFIG.ENV,
-    timestamp: new Date().toISOString(),
-  });
+  // API Configuration Debug - removed console.log
 };

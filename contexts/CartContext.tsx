@@ -179,7 +179,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const existingItem = state.items.find(cartItem => cartItem.id === item.id);
     
     if (existingItem && existingItem.quantity >= existingItem.stock) {
-      showToast(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`, 'error');
+      showToast.error(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`);
       return;
     }
 
@@ -191,13 +191,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Update local state
         dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
         triggerCartAnimation();
-        showToast(getSuccessMessage('cart_add'), 'success');
+        showToast.success(getSuccessMessage('cart_add'));
       } else {
-        showToast(getErrorMessage({ response }, 'cart'), 'error');
+        showToast.error(getErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Add to cart error:', error);
-      showToast(getErrorMessage(error, 'cart'), 'error');
+      showToast.error(getErrorMessage(error, 'cart'));
     }
   };
 
@@ -210,13 +210,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'REMOVE_ITEM', payload: id });
-        showToast(getSuccessMessage('cart_remove'), 'success');
+        showToast.success(getSuccessMessage('cart_remove'));
       } else {
-        showToast(getErrorMessage({ response }, 'cart'), 'error');
+        showToast.error(getErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Remove from cart error:', error);
-      showToast(getErrorMessage(error, 'cart'), 'error');
+      showToast.error(getErrorMessage(error, 'cart'));
     }
   };
 
@@ -230,13 +230,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
-        showToast(getSuccessMessage('cart_update'), 'success');
+        showToast.success(getSuccessMessage('cart_update'));
       } else {
-        showToast(getErrorMessage({ response }, 'cart'), 'error');
+        showToast.error(getErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Update quantity error:', error);
-      showToast(getErrorMessage(error, 'cart'), 'error');
+      showToast.error(getErrorMessage(error, 'cart'));
     }
   };
 
@@ -247,13 +247,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'CLEAR_CART' });
-        showToast(getSuccessMessage('cart_clear'), 'success');
+        showToast.success(getSuccessMessage('cart_clear'));
       } else {
-        showToast(getErrorMessage({ response }, 'cart'), 'error');
+        showToast.error(getErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Clear cart error:', error);
-      showToast(getErrorMessage(error, 'cart'), 'error');
+      showToast.error(getErrorMessage(error, 'cart'));
     }
   };
 

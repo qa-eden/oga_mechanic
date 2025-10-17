@@ -46,27 +46,20 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
 
   // Get LGAs based on state and country using the countries-states-cities package
   const lgas = useMemo(() => {
-    console.log('🔍 LGAs calculation triggered for state:', state, 'country:', country)
-    
     if (!state || !country) {
-      console.log('❌ No state or country selected - State:', state, 'Country:', country)
       return []
     }
     
     try {
       // Import the functions dynamically to avoid issues
       const { Country: CountryData, State, City } = require('countries-states-cities')
-      console.log('📦 Package imported successfully')
-      
+
       // First get the country data
       const countryData = CountryData.getCountryByCode(country)
-      console.log('🌍 Country data found:', countryData?.name || 'Not found', 'ID:', countryData?.id)
       
       if (countryData) {
         // Get states for the country
         const countryStates = State.getStatesOfCountry(countryData.id)
-        console.log('🏛️ States from package:', countryStates?.length || 0)
-        console.log('🏛️ Available states:', countryStates?.map((s: any) => s.name) || [])
         
         if (countryStates && countryStates.length > 0) {
           // Find the matching state - try both exact match and partial match
@@ -75,41 +68,24 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
             s.name.toLowerCase().includes(state.toLowerCase()) ||
             state.toLowerCase().includes(s.name.toLowerCase())
           )
-          
-          console.log('🎯 State search for:', state)
-          console.log('🎯 Matching state found:', matchingState?.name || 'None')
-          
+
           if (matchingState) {
-            console.log('🎯 Matching state details:', matchingState)
             // Get cities/LGAs for the state
             const stateCities = City.getCitiesOfState(countryData.id, matchingState.id)
-            console.log('🏙️ Cities/LGAs from package:', stateCities?.length || 0)
-            console.log('🏙️ Sample cities:', stateCities?.slice(0, 5).map((c: any) => c.name) || [])
             
             if (stateCities && stateCities.length > 0) {
               const cityNames = stateCities.map((city: any) => city.name)
-              console.log('✅ Returning', cityNames.length, 'LGAs from package')
               return cityNames
-            } else {
-              console.log('⚠️ No cities found for state:', matchingState.name)
             }
-          } else {
-            console.log('⚠️ No matching state found for:', state)
-            console.log('Available states:', countryStates.map((s: any) => s.name))
           }
-        } else {
-          console.log('⚠️ No states found for country:', countryData.name)
         }
-      } else {
-        console.log('⚠️ Country not found for code:', country)
       }
     } catch (error) {
-      console.log('❌ Error fetching LGAs from package:', error)
+      // Error fetching LGAs from package
     }
     
     // Fallback for Nigeria if package fails
     if (country === 'NG') {
-      console.log('🇳🇬 Using fallback LGAs for Nigeria state:', state)
       
       // Lagos LGAs
       if (state.toLowerCase().includes('lagos')) {
@@ -210,7 +186,6 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
     }
 
     // Fallback for other countries
-    console.log('🌍 Using fallback LGAs for country:', country, 'state:', state)
     
     // US States
     if (country === 'US') {
@@ -249,7 +224,6 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
     }
 
     // Generic fallback for any country/state
-    console.log('⚠️ Using generic fallback LGAs')
     return [
       'Central District', 'North District', 'South District', 'East District', 'West District',
       'Urban Area', 'Rural Area', 'Main City', 'Suburban Area', 'Industrial Zone',
@@ -265,7 +239,6 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
   }, [lgas, debouncedSearchQuery])
 
   const handleLGASelect = useCallback((lga: string) => {
-    console.log('🏙️ LGA selected:', lga)
     onLGAChange(lga)
     setShowLGA(false)
     setSearchQuery('')

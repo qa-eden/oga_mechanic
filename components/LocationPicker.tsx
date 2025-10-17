@@ -61,7 +61,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         };
 
         setLocation(locationData);
-        console.log("Current location set:", locationData);
       } else {
         // Fallback if reverse geocoding fails
         const locationData = {

@@ -59,7 +59,6 @@ const RiderProfile = () => {
 
   const handleSwitchUser = (userType: string) => {
     // Handle user switching logic here
-    console.log("Switching to user type:", userType);
     // You can add navigation logic or state management here
   };
 
@@ -175,13 +174,12 @@ const RiderProfile = () => {
                 onPress={() => {
                   if (item.name === "My Profile") {
                     // router.push(riderRoutes.EditProfile);
-                    console.log("Edit Profile");
                   } else if (item.name === "Vehicle Information") {
-                    console.log("Vehicle Information");
+                    // Handle vehicle information
                   } else if (item.name === "Add Bank Details") {
-                    console.log("Add Bank Details");
+                    // Handle bank details
                   } else if (item.name === "Change Password") {
-                    console.log("Change Password");
+                    // Handle password change
                   } else if (item.name === "Switch Account") {
                     setShowSwitchUserModal(true);
                   }

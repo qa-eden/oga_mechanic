@@ -61,7 +61,6 @@ const OrderItemCard: React.FC<OrderItemCardProps> = ({ order }) => {
   const handlePress = () => {
     // Navigate to order details with the order ID
     const orderIdToPass = order.orderId || order.id;
-    console.log('🔄 Navigating to order details with ID:', orderIdToPass);
 
     router.push({
       pathname: sellerRoutes.orderDetails,

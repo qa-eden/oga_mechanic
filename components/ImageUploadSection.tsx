@@ -128,16 +128,6 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
     const isImageLoading = hasImage && loadingImages.has(hasImage)
     const isImageDeleting = existingImages[index]?.id && deletingImages.has(existingImages[index].id)
     
-    console.log('🔍 DEBUG: renderUploadSlot', {
-      index,
-      hasImage,
-      isImageLoading,
-      isImageDeleting,
-      loadingImages: Array.from(loadingImages),
-      deletingImages: Array.from(deletingImages),
-      existingImageId: existingImages[index]?.id
-    })
-    
     return (
       <View key={index} className={isLarge ? "mb-3" : "flex-1"}>
         {hasImage ? (

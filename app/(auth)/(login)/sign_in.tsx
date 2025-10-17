@@ -98,7 +98,6 @@ const SignIn = () => {
           // router.replace(sellerRoutes?.home as any);
         },
         onError: (error: any) => {
-          console.error('❌ Login failed:', error);
           
           // Extract error message
           let errorMessage = 'Login failed. Please check your credentials.';
@@ -122,7 +121,6 @@ const SignIn = () => {
       });
       
     } catch (error) {
-      console.error('❌ Error during sign in:', error);
       showError('Login Failed', 'An unexpected error occurred. Please try again.');
       setSubmitting(false);
     }

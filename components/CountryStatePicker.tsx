@@ -93,35 +93,28 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
 
   // Get states dynamically from the package
   const states = useMemo(() => {
-    console.log('🔍 States calculation triggered for country:', selectedCountry?.cca2)
-    
     if (!selectedCountry) {
-      console.log('❌ No country selected')
       return []
     }
     
     try {
       // Import the functions dynamically to avoid issues
       const { Country: CountryData, State } = require('countries-states-cities')
-      console.log('📦 Package imported successfully')
-      
+
       const countryData = CountryData.getCountryByCode(selectedCountry.cca2)
-      console.log('🌍 Country data found:', countryData?.name || 'Not found')
-      
+
       if (countryData) {
         const countryStates = State.getStatesOfCountry(countryData.id)
-        console.log('🏛️ States from package:', countryStates?.length || 0)
         if (countryStates && countryStates.length > 0) {
           return countryStates.map((state: IState) => state.name)
         }
       }
     } catch (error) {
-      console.log('❌ Error fetching states from package:', error)
+      // Error fetching states from package
     }
     
     // Fallback for Nigeria if package fails
     if (selectedCountry.cca2 === 'NG') {
-      console.log('🇳🇬 Using fallback states for Nigeria')
       return [
         'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River',
         'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano',
@@ -131,7 +124,6 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     }
 
     // Fallback for other countries
-    console.log('🌍 Using fallback states for country:', selectedCountry.cca2)
     
     // US States
     if (selectedCountry.cca2 === 'US') {
@@ -189,7 +181,6 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     }
 
     // Generic fallback for any country
-    console.log('⚠️ Using generic fallback states for country:', selectedCountry.cca2)
     return [
       'Central Region', 'Northern Region', 'Southern Region', 'Eastern Region', 'Western Region',
       'Capital Region', 'Metropolitan Area', 'Province', 'State', 'Territory'
@@ -204,7 +195,6 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   }, [states, debouncedSearchQuery])
 
   const handleCountrySelect = useCallback((country: any) => {
-    console.log('🌍 Country selected:', country.name, 'Code:', country.cca2)
     onCountryChange(country)
     onStateChange('') // Reset state when country changes
     setShowCountry(false)
@@ -212,7 +202,6 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
   }, [onCountryChange, onStateChange, setShowCountry])
 
   const handleStateSelect = useCallback((state: string) => {
-    console.log('🏛️ State selected:', state)
     onStateChange(state)
     setShowState(false)
     setSearchQuery('')

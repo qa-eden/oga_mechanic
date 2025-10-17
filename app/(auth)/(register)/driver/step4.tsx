@@ -34,14 +34,7 @@ const Step4 = () => {
   const [backSideImage, setBackSideImage] = useState('')
 
   const handleSubmit = (values: any) => {
-    console.log('Driving License Info:', {
-      ...values,
-      issueDate,
-      expiryDate,
-      frontSideImage,
-      backSideImage
-    })
-    router.push('/(auth)/(register)/driver/step5')
+    router.push(driverRoutes?.step5)
   }
 
   const handleImageUpload = async (side: 'front' | 'back') => {
@@ -71,10 +64,8 @@ const Step4 = () => {
         } else {
           setBackSideImage(result.assets[0].uri);
         }
-        console.log(`${side} side image uploaded:`, result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       Alert.alert(
         'Error',
         'Failed to pick image. Please try again.',

@@ -24,11 +24,9 @@ const Step1 = () => {
   const { visible, alertConfig, hideAlert, showError } = useCustomAlert();
   
   const handleStep1Submit = async (values: any, { setSubmitting }: any) => {
-    console.log("Step 1 values:", values);
     
     if (isStepByStepMode) {
       // Use TanStack Query mutation for step 2
-      console.log('📤 Posting personal details to step 2 endpoint...');
       registerStep2Mutation.mutate({
         email: values.email.trim(),
         first_name: values.firstName.trim(),
@@ -40,7 +38,6 @@ const Step1 = () => {
           router.push(routes?.userStep2);
         },
         onError: (error: any) => {
-          console.error('❌ Error posting step 2 data:', error);
           setSubmitting(false);
           
           // Extract error message from API response

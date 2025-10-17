@@ -49,17 +49,14 @@ const OnRouteScreen = () => {
     ];
 
     const handleStartTrip = () => {
-        console.log('Trip started');
         setTripStatus('starting');
         // Wait 5 seconds before changing to "End Trip" button
         setTimeout(() => {
-            console.log('Trip is now in progress - ready to end');
             setTripStatus('in-progress');
         }, 5000);
     };
 
     const handleEndTrip = () => {
-        console.log('Trip ended');
         setTripStatus('completed');
         // Add a small delay before navigating
         setTimeout(() => {
@@ -73,14 +70,12 @@ const OnRouteScreen = () => {
     };
 
     const handleInAppCall = () => {
-        console.log('In-app call initiated');
         setShowCallModal(false);
         // Navigate to ongoing call screen
         router.push('/(root)/(screens)/(driver)/ongoing-call');
     };
 
     const handlePhoneCall = () => {
-        console.log('Phone call initiated');
         setShowCallModal(false);
         // Open device's phone app with the number
         const phoneNumber = bookingData.phoneNumber.replace(/\s/g, '');
@@ -102,7 +97,6 @@ const OnRouteScreen = () => {
     };
 
     const handleChat = () => {
-        console.log('Open chat');
         // Navigate to chat screen with customer data
         router.push({
             pathname: '/(root)/(screens)/(orderRide)/chat-driver',

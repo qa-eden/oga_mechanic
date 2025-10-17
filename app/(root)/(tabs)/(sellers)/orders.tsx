@@ -21,8 +21,6 @@ const Orders = () => {
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
-  console.log('🔍 Active Role:', activeRole, 'Merchant ID:', merchantId);
-
   // Fetch merchant orders
   const {
     data: ordersResponse,
@@ -55,7 +53,6 @@ const Orders = () => {
   const orders = ordersResponse?.data || [];
   const allOrderItems: any[] = [];
 
-  console.log('🔍 Raw orders data:', orders);
 
   orders.forEach((order: any) => {
     order.items?.forEach((item: any) => {
@@ -63,7 +60,6 @@ const Orders = () => {
     });
   });
 
-  console.log('🔍 Transformed order items:', allOrderItems);
 
   // Categorize orders based on status
   const ongoingOrders = useMemo(() => {
@@ -95,7 +91,6 @@ const Orders = () => {
     try {
       await refetch();
     } catch (error) {
-      console.error('Error refreshing orders:', error);
     } finally {
       setRefreshing(false);
     }

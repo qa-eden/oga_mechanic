@@ -171,7 +171,7 @@ const SearchBarWithCategories = ({
 
   // Debug: Monitor searchQuery changes
   useEffect(() => {
-    console.log("SearchQuery changed to:", searchQuery);
+    // Search query changed
   }, [searchQuery]);
 
   // No auto-rotating suggestions - use real search
@@ -270,7 +270,6 @@ const SearchBarWithCategories = ({
   };
 
   const applyAdvancedFilters = () => {
-    console.log("Applying advanced filters:", advancedFilters);
     setShowFilterDropdown(false);
     // Call the main Apply function from parent
     onApplySearch?.();
@@ -288,7 +287,6 @@ const SearchBarWithCategories = ({
   };
 
   const handleSuggestionSelect = (suggestion: string) => {
-    console.log("Selecting suggestion:", suggestion);
 
     // Set flag to prevent filtering interference
     setIsSelectingSuggestion(true);
@@ -408,7 +406,6 @@ const SearchBarWithCategories = ({
         item={item} 
         selectedCategory={selectedCategory} 
         onSelect={(categoryName, categoryId) => {
-          console.log('🏷️ Category clicked:', { categoryName, categoryId });
           setSelectedCategory(categoryName);
           // Call a special handler that applies the category filter immediately
           onApplySearch?.(categoryId);

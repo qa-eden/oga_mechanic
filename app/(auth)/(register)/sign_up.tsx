@@ -46,7 +46,6 @@ const SignUp = () => {
     // Reset state periodically to prevent stuck state
     const interval = setInterval(() => {
       if (isNavigating) {
-        console.log('🔄 Resetting stuck navigation state');
         setIsNavigating(false);
       }
     }, 5000); // Check every 5 seconds
@@ -68,18 +67,9 @@ const SignUp = () => {
   // Function to save selected role to local storage
   const saveSelectedRole = async (role: any) => {
     try {
-      console.log('💾 Saving role to storage:', role);
-      console.log('💾 Role ID:', role.id, 'Role Title:', role.title);
-      
       await AsyncStorage.setItem('selectedRole', JSON.stringify(role));
-      console.log('✅ Role saved to local storage:', role.title);
-      
-      // Verify what was saved
-      const savedRole = await AsyncStorage.getItem('selectedRole');
-      console.log('🔍 Verification - saved role:', savedRole);
       
     } catch (error) {
-      console.error('❌ Error saving role to local storage:', error);
     }
   };
 
@@ -87,25 +77,20 @@ const SignUp = () => {
   const handleRoleSelection = async (role: any) => {
     // Prevent multiple rapid clicks
     if (isNavigating) {
-      console.log('⏳ Navigation already in progress, ignoring click');
       return;
     }
     
     try {
       setIsNavigating(true);
-      console.log('🎯 Selected role:', role);
-      
+
       // Enable step-by-step mode
       setStepByStepMode(true);
       setCurrentStep(1);
-      
+
       // Post role selection to step 1 endpoint
-      console.log('📤 Posting role selection to step 1 endpoint...');
       const step1Response = await userAPI.registerStep(1, {
         role_id: role.id
       });
-      
-      console.log('✅ Step 1 response:', step1Response);
       
       // Store role data in step-by-step store
       setStepByStepData({
@@ -122,7 +107,6 @@ const SignUp = () => {
       // Navigate immediately without delay
       router.replace(role?.route as any);
     } catch (error) {
-      console.error('❌ Error during role selection:', error);
       // Reset navigation state immediately on error
       setIsNavigating(false);
       // Still navigate even if API call fails
@@ -222,9 +206,7 @@ const SignUp = () => {
     const clearStaleRole = async () => {
       try {
         await AsyncStorage.removeItem('selectedRole');
-        console.log('🧹 Cleared stale role data on component mount');
       } catch (error) {
-        console.error('❌ Error clearing stale role:', error);
       }
     };
     
@@ -268,31 +250,7 @@ const SignUp = () => {
     };
   });
 
-  // Log API roles data for debugging (not rendering)
-  console.log('🎯 Current API Roles State:', {
-    isLoadingRoles,
-    isRolesError,
-    apiRolesCount: apiRoles.length,
-    filteredApiRolesCount: filteredApiRoles.length,
-    mergedRolesCount: mergedRoles.length,
-    roleMapping: roleMapping,
-    apiRoles: apiRoles,
-    filteredApiRoles: filteredApiRoles,
-    mergedRoles: mergedRoles,
-    error: rolesError
-  });
 
-  // Debug role matching
-  console.log('🔍 Role Matching Debug:', {
-    localRoles: Roles.map(r => ({ id: r.id, title: r.title })),
-    apiRoles: apiRoles.map(r => ({ id: r.id, name: r.name })),
-    mergedRoles: mergedRoles.map(r => ({ 
-      id: r.id, 
-      title: r.title, 
-      name: r.name,
-      hasApiData: !!apiRoles.find(ar => ar.id === r.id || roleMapping[ar.name as keyof typeof roleMapping] === r.title)
-    }))
-  });
 
   return (
     <KeyboardAvoidingView
@@ -402,7 +360,6 @@ const SignUp = () => {
                     try {
                       handleRoleSelection(item);
                     } catch (error) {
-                      console.error('Role selection error:', error);
                     }
                   }}
                   activeOpacity={0.8}
@@ -452,7 +409,6 @@ const SignUp = () => {
                   setIsNavigating(true);
                   router.replace(routes?.welcome as any);
                 } catch (error) {
-                  console.error('Navigation error:', error);
                   setIsNavigating(false);
                 }
               }}
@@ -470,7 +426,6 @@ const SignUp = () => {
                   setIsNavigating(true);
                   router.replace(routes?.signIn as any);
                 } catch (error) {
-                  console.error('Navigation error:', error);
                   setIsNavigating(false);
                 }
               }}

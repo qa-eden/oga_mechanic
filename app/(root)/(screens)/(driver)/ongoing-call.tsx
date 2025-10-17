@@ -38,23 +38,18 @@ const OngoingCallScreen = () => {
   useEffect(() => {
     const initializeCall = async () => {
       try {
-        console.log('🚀 Initializing call service...');
         
         // Set up call state callback
         callService.setCallStateCallback((state: CallState) => {
-          console.log('📞 Call state updated:', state);
           setCallState(state);
         });
 
         // Initialize the call (you would get roomId from navigation params)
-        const roomId = 'call-' + Date.now(); // Generate unique room ID
-        console.log('📱 Creating call room:', roomId);
+        const roomId = 'call-' + Date.now(); 
         await callService.initializeCall(roomId, true); // true = initiator
         
-        console.log('✅ Call initialized successfully');
         setIsInitializing(false);
       } catch (error) {
-        console.error('❌ Failed to initialize call:', error);
         Alert.alert('Error', 'Failed to initialize call. Please try again.');
         router.back();
       }
@@ -64,7 +59,6 @@ const OngoingCallScreen = () => {
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 Cleaning up call service...');
       callService.cleanup();
     };
   }, []);
@@ -91,28 +85,23 @@ const OngoingCallScreen = () => {
   };
 
   const handleEndCall = () => {
-    console.log('Call ended');
     callService.endCall();
     router.back();
   };
 
   const handleToggleMute = () => {
     callService.toggleMute();
-    console.log('Mute toggled');
   };
 
   const handleToggleBluetooth = () => {
     setIsBluetoothActive(!isBluetoothActive);
-    console.log('Bluetooth toggled:', !isBluetoothActive);
   };
 
   const handleToggleVideo = () => {
     setIsVideoEnabled(!isVideoEnabled);
-    console.log('Video toggled:', !isVideoEnabled);
   };
 
   const handleMessage = () => {
-    console.log('Open message');
     // Navigate to chat screen
   };
 

@@ -96,7 +96,6 @@ const Home = () => {
     try {
       // Simulate API call - replace with actual data fetching
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Rider home data refreshed');
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
@@ -228,7 +227,6 @@ const Home = () => {
                     onPress={() => {
                       // Handle request selection
                       setSelectedRequestId(request.id);
-                      console.log('Request selected:', request.id);
                     }}
                     showSelection={true}
                     pickupColor="#3B82F6"

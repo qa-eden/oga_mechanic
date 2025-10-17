@@ -30,7 +30,6 @@ export const useAuth = () => {
   // Handle navigation after auth check is complete
   useEffect(() => {
     if (shouldNavigate && navigationTarget && !isLoading) {
-      console.log('🚀 Navigating to:', navigationTarget);
       
       // Small delay to prevent navigation conflicts
       const timer = setTimeout(() => {
@@ -59,11 +58,9 @@ export const useAuth = () => {
         
         // Get current active role from server
         try {
-          console.log('🔍 Fetching current user roles from server...');
           const rolesResponse = await userAPI.getUserRoles();
           const activeRole = rolesResponse.data.active_role;
           
-          console.log('✅ Current active role:', activeRole);
           
           // Set navigation target for role-specific home page using server role
           if (activeRole && activeRole.name) {
@@ -80,19 +77,16 @@ export const useAuth = () => {
             setShouldNavigate(true);
           }
         } catch (rolesError) {
-          console.error('❌ Error fetching user roles, using stored active role as fallback:', rolesError);
           
           // Try to get the last known active role from AsyncStorage
           const storedActiveRole = await AsyncStorage.getItem('current_active_role');
           
           if (storedActiveRole) {
-            console.log('🔄 Using stored active role as fallback:', storedActiveRole);
             const targetRoute = getRoleHomeRoute(storedActiveRole);
             setNavigationTarget(targetRoute as any);
             setShouldNavigate(true);
           } else {
             // Final fallback to userData.role
-            console.log('🔄 Using userData.role as final fallback:', userData.role);
             const targetRoute = getRoleHomeRoute(userData.role);
             setNavigationTarget(targetRoute as any);
             setShouldNavigate(true);
@@ -106,7 +100,6 @@ export const useAuth = () => {
         setShouldNavigate(true);
       }
     } catch (error) {
-      console.error('❌ Error checking auth status:', error);
       setIsAuthenticated(false);
       setUserData(null);
       setNavigationTarget(routes?.signIn as any || '/sign-in');
@@ -117,7 +110,6 @@ export const useAuth = () => {
   };
 
   const getRoleHomeRoute = (role: string): string => {
-    console.log('🏠 Getting route for role:', role);
     
     switch (role) {
       case 'primary_user':
@@ -147,24 +139,18 @@ export const useAuth = () => {
         try {
           const { userAPI } = await import('@/lib/api/user');
           await userAPI.logout({ refresh: refreshToken });
-          console.log('✅ Logout API called successfully');
         } catch (apiError) {
-          console.error('❌ Logout API failed, but continuing with local logout:', apiError);
         }
       }
       
       // Call /users/roles/ endpoint before clearing auth data
       try {
-        console.log('🔄 Fetching user roles before logout...');
         const { userAPI } = await import('@/lib/api/user');
         const rolesResponse = await userAPI.getUserRoles();
-        console.log('✅ User roles fetched:', rolesResponse);
         
         // Store roles data in local storage
         await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
-        console.log('✅ User roles data stored in AsyncStorage');
       } catch (rolesError) {
-        console.error('❌ Failed to fetch roles during logout:', rolesError);
       }
       
       // Clear all stored auth data (but keep roles data)
@@ -179,12 +165,10 @@ export const useAuth = () => {
       setUserData(null);
       
       // Navigate to login
-      setNavigationTarget(routes?.signIn as any || '/sign-in');
+      setNavigationTarget(routes?.signIn as any);
       setShouldNavigate(true);
       
-      console.log('✅ Logout successful');
     } catch (error) {
-      console.error('❌ Error during logout:', error);
     }
   };
 
@@ -199,10 +183,8 @@ export const useAuth = () => {
       // const response = await authAPI.refreshToken(refreshToken);
       // await AsyncStorage.setItem('auth_token', response.access_token);
       
-      console.log('✅ Token refreshed successfully');
       return true;
     } catch (error) {
-      console.error('❌ Error refreshing token:', error);
       await logout();
       return false;
     }
