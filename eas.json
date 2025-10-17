@@ -18,6 +18,17 @@
         "simulator": true
       }
     },
+    "preview-optimized": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest"
+      },
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
     "production": {
       "autoIncrement": true
     }

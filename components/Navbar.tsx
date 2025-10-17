@@ -75,7 +75,7 @@ const Navbar = () => {
       </View>
 
       <TouchableOpacity className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full">
-        <BellIcon />
+        <BellIcon size={24} color="#D30309" />
       </TouchableOpacity>
     </View>
   );

@@ -39,7 +39,10 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.INTERNET"
       ],
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "jsEngine": "hermes",
+      "enableProguardInReleaseBuilds": true,
+      "enableSeparateBuildPerCPUArchitecture": true
     },
     "web": {
       "bundler": "metro",

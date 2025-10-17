@@ -6,7 +6,6 @@ import welcomeImg1 from "@/assets/images/auth/welcomeImg1.svg";
 import welcomeImg2 from "@/assets/images/auth/welcomeImg2.svg";
 import welcomeImg3 from "@/assets/images/auth/welcomeImg3.svg";
 import welcomeImg4 from "@/assets/images/auth/welcomeImg4.svg";
-import loginBackground from "@/assets/images/auth/loginBackground.png";
 import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar1.svg";
 import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
@@ -16,24 +15,15 @@ import carBack from "@/assets/images/carBack.png";
 import carRight from "@/assets/images/carRight.png";
 import carLeft from "@/assets/images/carLeft.png";
 
-import car1 from "@/assets/images/car.svg";
-import sparePart from "@/assets/images/brabus.svg";
 import brabus from "@/assets/images/brabus.svg";
 
 //mechanics
 import mechanic1 from "@/assets/images/dummy/mechanic2.svg";
 
-import brabus2 from "@/assets/images/dummy/brabus.svg";
-import benz from "@/assets/images/dummy/benz.svg";
-import carEngine from "@/assets/images/dummy/brabus.svg";
-// import engineoil from "@/assets/images/dummy/engineoil.svg";
-import mechanic3 from "@/assets/images/dummy/mechanic2.svg";
-import toyota from "@/assets/images/dummy/toyota.png";
-
 //icons
 import logo from "@/assets/icons/logo.svg";
 import logoBlack from "@/assets/icons/logo_black.svg";
-import logoBox from "@/assets/icons/box_logo.svg";
+import logoBox from "@/assets/icons/box_logo.png";
 import splash from "@/assets/icons/logo2.svg";
 import backBtn from "@/assets/icons/backBtn.svg";
 import tick1 from "@/assets/icons/tick1.svg";
@@ -43,7 +33,6 @@ import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import courage from "@/assets/icons/courage.svg";
 import empty from "@/assets/icons/empty.svg";
-import carticon from "@/assets/icons/carticon.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
 import rent from "@/assets/icons/rent.svg";
@@ -105,24 +94,16 @@ export const images = {
   welcomeImg2,
   welcomeImg3,
   welcomeImg4,
-  loginBackground,
   splashBackgroundCar,
   dummyProfile,
   adsbackground,
   brabus,
-  mechanic3,
   mechanic1,
 
   carFront,
   carBack,
   carRight,
   carLeft,
-
-  //products
-  car1,
-  benz,
-  sparePart,
-  carEngine,
 };
 
 export const icons = {
@@ -158,7 +139,6 @@ export const icons = {
   enablePass,
   faceId,
   shopTab,
-  carticon,
   bankIcon,
   productTab,
   activeProductTab,
@@ -246,156 +226,6 @@ export const Ads = [
   },
 ];
 
-export const MechanicsList = [
-  {
-    id: 1,
-    name: "Fatai Sule",
-    rating: 1,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: mechanic1,
-    reviewCount: 20,
-  },
-  {
-    id: 2,
-    name: "Easther Emeka",
-    rating: 2,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: mechanic3,
-    reviewCount: 200,
-  },
-  {
-    id: 3,
-    name: "Mechanic 3",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: mechanic2,
-    reviewCount: 19,
-  },
-  {
-    id: 4,
-    name: "Mechanic 4",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: mechanic1,
-    reviewCount: 60,
-  },
-  {
-    id: 5,
-    name: "Mechanic 5",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 100,
-    love: true,
-    image: mechanic3,
-    reviewCount: 24,
-  },
-];
-
-export const CarsList = [
-  {
-    id: 1,
-    name: "Escalade (2024)",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 85000000,
-    love: true,
-    image: car1,
-    reviewCount: 20,
-  },
-  {
-    id: 2,
-    name: "Benz (2020)",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 45000000,
-    love: true,
-    image: benz,
-    reviewCount: 20,
-  },
-  {
-    id: 3,
-    name: "Toyota Camry 2019",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 28000000,
-    love: true,
-    image: toyota,
-    reviewCount: 20,
-  },
-  {
-    id: 4,
-    name: "Brabus G63 2022",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 180000000,
-    love: true,
-    image: brabus2,
-    reviewCount: 20,
-  },
-  {
-    id: 5,
-    name: "GMC (2022)",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 65000000,
-    love: true,
-    image: car1,
-    reviewCount: 20,
-  },
-
-];
-
-export const SpareParts = [
-  {
-    id: 11,
-    name: "Car Wheel",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 35000,
-    love: true,
-    image: sparePart,
-    reviewCount: 20,
-  },
-  // {
-  //   id: 12,
-  //   name: "Engine Oil",
-  //   rating: 4.5,
-  //   address: "No 1, Mechanic Street, Lagos",
-  //   price: 5500,
-  //   love: true,
-  //   image: engineoil,
-  //   reviewCount: 20,
-  // },
-  {
-    id: 13,
-    name: "Driving Wheel",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 25000,
-    love: true,
-    image: carEngine,
-    reviewCount: 20,
-  },
-  {
-    id: 14,
-    name: "Car Engine",
-    rating: 4.5,
-    address: "No 1, Mechanic Street, Lagos",
-    price: 1500000,
-    love: true,
-    image: carEngine,
-    reviewCount: 20,
-  },
-];
-
 export const myCars = [
   {
     id: 101,
@@ -421,7 +251,7 @@ export const myCars = [
     year: 2010,
     vin: "059943452",
     status: "Inactive",
-    image: brabus2,
+    image: brabus,
     color: "#DC2626",
   },
   {
@@ -430,7 +260,7 @@ export const myCars = [
     year: 2022,
     vin: "229974531",
     status: "Active",
-    image: brabus2,
+    image: brabus,
     color: "#374151",
   },
 ];
