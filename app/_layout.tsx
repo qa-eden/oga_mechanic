@@ -90,6 +90,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* <StatusBar style="auto" /> */}
       <AuthProvider>
         <AppContent />
       </AuthProvider>

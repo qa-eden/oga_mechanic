@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, memo, useEffect } from 'react'
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native'
 import { XMarkIcon, CheckCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
+import { getCitiesByState } from '@/constants/locationData'
 
 interface LGAPickerProps {
   selectedLGA: string
@@ -44,44 +45,16 @@ const LGAPicker: React.FC<LGAPickerProps> = ({
     }
   }
 
-  // Get LGAs based on state and country using the countries-states-cities package
+  // Get LGAs based on state and country using our lightweight data
   const lgas = useMemo(() => {
     if (!state || !country) {
       return []
     }
-    
-    try {
-      // Import the functions dynamically to avoid issues
-      const { Country: CountryData, State, City } = require('countries-states-cities')
 
-      // First get the country data
-      const countryData = CountryData.getCountryByCode(country)
-      
-      if (countryData) {
-        // Get states for the country
-        const countryStates = State.getStatesOfCountry(countryData.id)
-        
-        if (countryStates && countryStates.length > 0) {
-          // Find the matching state - try both exact match and partial match
-          const matchingState = countryStates.find((s: any) => 
-            s.name.toLowerCase() === state.toLowerCase() ||
-            s.name.toLowerCase().includes(state.toLowerCase()) ||
-            state.toLowerCase().includes(s.name.toLowerCase())
-          )
-
-          if (matchingState) {
-            // Get cities/LGAs for the state
-            const stateCities = City.getCitiesOfState(countryData.id, matchingState.id)
-            
-            if (stateCities && stateCities.length > 0) {
-              const cityNames = stateCities.map((city: any) => city.name)
-              return cityNames
-            }
-          }
-        }
-      }
-    } catch (error) {
-      // Error fetching LGAs from package
+    // Use our lightweight data
+    const cities = getCitiesByState(country, state)
+    if (cities.length > 0) {
+      return cities
     }
     
     // Fallback for Nigeria if package fails

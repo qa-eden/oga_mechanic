@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, memo, useEffect } from 'react'
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native'
 import { ChevronDownIcon, XMarkIcon, CheckCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 import { Country, CountryCode } from 'react-native-country-picker-modal'
-import { IState } from 'countries-states-cities'
+import { getStatesByCountry, COUNTRIES } from '@/constants/locationData'
 
 interface CountryStatePickerProps {
   selectedCountry: Country | null
@@ -60,27 +60,9 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     }
   }
 
-  // Get countries list
+  // Get countries list from our lightweight data
   const countries = useMemo(() => {
-    const popularCountries = [
-      { cca2: 'NG', name: 'Nigeria', callingCode: ['234'], flag: '🇳🇬' },
-      { cca2: 'US', name: 'United States', callingCode: ['1'], flag: '🇺🇸' },
-      { cca2: 'GB', name: 'United Kingdom', callingCode: ['44'], flag: '🇬🇧' },
-      { cca2: 'FR', name: 'France', callingCode: ['33'], flag: '🇫🇷' },
-      { cca2: 'DE', name: 'Germany', callingCode: ['49'], flag: '🇩🇪' },
-      { cca2: 'JP', name: 'Japan', callingCode: ['81'], flag: '🇯🇵' },
-      { cca2: 'CN', name: 'China', callingCode: ['86'], flag: '🇨🇳' },
-      { cca2: 'IN', name: 'India', callingCode: ['91'], flag: '🇮🇳' },
-      { cca2: 'CA', name: 'Canada', callingCode: ['1'], flag: '🇨🇦' },
-      { cca2: 'AU', name: 'Australia', callingCode: ['61'], flag: '🇦🇺' },
-      { cca2: 'BR', name: 'Brazil', callingCode: ['55'], flag: '🇧🇷' },
-      { cca2: 'MX', name: 'Mexico', callingCode: ['52'], flag: '🇲🇽' },
-      { cca2: 'ZA', name: 'South Africa', callingCode: ['27'], flag: '🇿🇦' },
-      { cca2: 'EG', name: 'Egypt', callingCode: ['20'], flag: '🇪🇬' },
-      { cca2: 'KE', name: 'Kenya', callingCode: ['254'], flag: '🇰🇪' },
-      { cca2: 'GH', name: 'Ghana', callingCode: ['233'], flag: '🇬🇭' }
-    ]
-    return popularCountries
+    return COUNTRIES
   }, [])
 
   const filteredCountries = useMemo(() => {
@@ -91,26 +73,16 @@ const CountryStatePicker: React.FC<CountryStatePickerProps> = ({
     )
   }, [countries, debouncedSearchQuery])
 
-  // Get states dynamically from the package
+  // Get states from our lightweight data
   const states = useMemo(() => {
     if (!selectedCountry) {
       return []
     }
-    
-    try {
-      // Import the functions dynamically to avoid issues
-      const { Country: CountryData, State } = require('countries-states-cities')
 
-      const countryData = CountryData.getCountryByCode(selectedCountry.cca2)
-
-      if (countryData) {
-        const countryStates = State.getStatesOfCountry(countryData.id)
-        if (countryStates && countryStates.length > 0) {
-          return countryStates.map((state: IState) => state.name)
-        }
-      }
-    } catch (error) {
-      // Error fetching states from package
+    // Use our lightweight data first
+    const countryStates = getStatesByCountry(selectedCountry.cca2)
+    if (countryStates.length > 0) {
+      return countryStates.map(state => state.name)
     }
     
     // Fallback for Nigeria if package fails

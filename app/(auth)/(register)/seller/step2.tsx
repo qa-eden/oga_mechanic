@@ -15,6 +15,7 @@ import {
   import { SafeAreaView } from "react-native-safe-area-context";
   import { useSellerRegisterStep3 } from "@/hooks/useSellerRegistration";
   import CustomAlert from "@/components/CustomAlert";
+import { StatusBar } from "expo-status-bar";
   
   const Step2 = () => {
     const router = useRouter();
@@ -96,6 +97,7 @@ import {
   
     return (
       <SafeAreaView>
+        <StatusBar style="auto" />
         <View className="">
           <View className=" w-full px-4">
             <UserAuthHeader />

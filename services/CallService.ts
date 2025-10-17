@@ -1,4 +1,4 @@
-// TODO: Replace expo-av with expo-audio when available
+// TODO: Implement audio functionality when needed
 // import { Audio } from 'expo-audio';
 
 export interface CallState {

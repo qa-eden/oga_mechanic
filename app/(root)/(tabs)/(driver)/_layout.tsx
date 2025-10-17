@@ -110,6 +110,20 @@ export default function Layout() {
 
       {/* Custom Bottom Tab Bar */}
       {renderTabBar()}
+
+      {/* Android System Navigation Bar Overlay */}
+      {Platform.OS === "android" && insets.bottom > 0 && (
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 35,
+            backgroundColor: "#D30309",
+          }}
+        />
+      )}
     </View>
   );
 }

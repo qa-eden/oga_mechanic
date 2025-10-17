@@ -17,6 +17,7 @@ import { useRegistrationStore } from "@/stores/registrationStore";
 import { useRegisterStep3, useResendOTP } from "@/hooks/useRegistration";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import CustomAlert from "@/components/CustomAlert";
+import { StatusBar } from "expo-status-bar";
 
 const Step2 = () => {
   const router = useRouter();
@@ -108,6 +109,7 @@ const Step2 = () => {
 
   return (
     <SafeAreaView>
+      <StatusBar style="auto" />
       <View className="">
         <View className=" w-full px-4">
           <UserAuthHeader />

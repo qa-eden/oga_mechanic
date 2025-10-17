@@ -181,7 +181,7 @@ export default function Layout() {
             right: 0,
             bottom: 0,
             height: 35, // or 50
-            backgroundColor: "#000",
+            backgroundColor: "#D30309",
             // zIndex: -1, // optional
           }}
         />
