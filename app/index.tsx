@@ -26,7 +26,7 @@ export default function Index() {
     return <Redirect href={navigationTarget as any} />;
   }
 
-  // If auth check is complete but no navigation target, go to welcome
+  // If auth check is complete but no navigation target, fallback to welcome
   if (animationComplete && !isLoading && !shouldNavigate) {
     return <Redirect href={routes?.welcome as any} />;
   }

@@ -1,18 +1,19 @@
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Toast from 'react-native-toast-message';
 
 // Import your global CSS file
 import "../global.css";
-import { Dimensions, View } from "react-native";
+import { View, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { CartProvider } from "@/contexts/CartContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AnimatedSplash from "../components/AnimatedSplash";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -20,19 +21,18 @@ SplashScreen.preventAutoHideAsync();
 // Component that handles the main app logic
 function AppContent() {
   const auth = useAuthContext();
+  const insets = useSafeAreaInsets();
 
   // Show splash screen while auth is loading
   if (auth.isLoading) {
     return (
-      <AnimatedSplash 
+      <AnimatedSplash
         onAnimationEnd={() => {
           // Animation done, but keep showing splash until auth is complete
-        }} 
+        }}
       />
     );
   }
-
-  const screenWidth = Dimensions.get("window").width;
 
   return (
     <CartProvider>
@@ -44,6 +44,21 @@ function AppContent() {
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(root)" options={{ headerShown: false }} />
           </Stack>
+
+          {/* Global Android Navigation Bar Overlay */}
+          {Platform.OS === "android" && insets.bottom > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 40,
+                backgroundColor: "#333",
+                zIndex: 1000,
+              }}
+            />
+          )}
         </View>
       </LocationProvider>
     </CartProvider>

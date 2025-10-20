@@ -16,13 +16,13 @@ import CustomAlert from "@/components/CustomAlert";
 import { ChevronDownIcon } from "react-native-heroicons/outline";
 import CountryStatePicker from "@/components/CountryStatePicker";
 import { Country } from 'react-native-country-picker-modal';
+import { useRoles } from "@/hooks/useRoles";
 
 const SignIn = () => {
   const loginMutation = useLogin();
   const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
-  
+
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('email');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<Country>({
@@ -35,7 +35,11 @@ const SignIn = () => {
     flag: '🇳🇬'
   });
   const [selectedState, setSelectedState] = useState<string>('');
-  
+
+  const {
+    refetch: refetchRoles
+  } = useRoles();
+
   // Get user type from route params (set during registration)
   const params = useLocalSearchParams();
   const userType = params.userType as string;
@@ -50,7 +54,7 @@ const SignIn = () => {
   const getPhoneExample = useMemo(() => (country: any) => {
     if (!country?.callingCode) return 'Enter phone number';
     const examples: { [key: string]: string } = {
-      '234': '906 935 0833',
+      '234': '0906 935 0833',
       '1': '555 123 4567',
       '44': '7700 900000',
       '33': '6 12 34 56 78',
@@ -69,8 +73,8 @@ const SignIn = () => {
   };
 
   const handleSignIn = async (values: any, { setSubmitting, setFieldError }: any) => {
-          // router.replace(sellerRoutes?.home);
-    
+    // router.replace(sellerRoutes?.home);
+
     try {
       // Prepare login credentials based on login method
       const credentials: LoginCredentials = {
@@ -81,10 +85,11 @@ const SignIn = () => {
         credentials.email = values.email;
       } else {
         // For phone login, combine country code with phone number
-        const countryCode = Array.isArray(selectedCountry?.callingCode) 
-          ? selectedCountry?.callingCode[0] 
+        const countryCode = Array.isArray(selectedCountry?.callingCode)
+          ? selectedCountry?.callingCode[0]
           : selectedCountry?.callingCode || '234';
-        credentials.phone_number = `+${countryCode}${phoneNumber}`;
+        // credentials.phone_number = `+${countryCode}${values.phone_number}`;
+        credentials.phone_number = `${values.phone_number}`;
       }
 
       // Call login mutation
@@ -92,16 +97,16 @@ const SignIn = () => {
         onSuccess: (response) => {
           showSuccess('Login Successful!', 'Welcome back!');
           setSubmitting(false);
-          
+
           // Immediate navigation - no delay
           router.replace(routes?.userHome);
           // router.replace(sellerRoutes?.home as any);
         },
         onError: (error: any) => {
-          
+
           // Extract error message
           let errorMessage = 'Login failed. Please check your credentials.';
-          
+
           if (error.response?.data?.message) {
             errorMessage = error.response.data.message;
           } else if (error.response?.data?.errors) {
@@ -114,12 +119,12 @@ const SignIn = () => {
               errorMessage = errors.phone_number[0];
             }
           }
-          
+
           showError('Login Failed', errorMessage);
           setSubmitting(false);
         }
       });
-      
+
     } catch (error) {
       showError('Login Failed', 'An unexpected error occurred. Please try again.');
       setSubmitting(false);
@@ -129,9 +134,9 @@ const SignIn = () => {
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View className="pt-[2rem]">
-        <HeaderAndDescTextCenter 
-          header={userType ? `Sign in as ${userType.charAt(0).toUpperCase() + userType.slice(1)}` : "Sign in"} 
-          text1={userType ? `Hi, Welcome back ${userType}.` : "Hi, Welcome back."} 
+        <HeaderAndDescTextCenter
+          header={userType ? `Sign in as ${userType.charAt(0).toUpperCase() + userType.slice(1)}` : "Sign in"}
+          text1={userType ? `Hi, Welcome back ${userType}.` : "Hi, Welcome back."}
         />
       </View>
 
@@ -141,13 +146,13 @@ const SignIn = () => {
           <TouchableOpacity
             onPress={() => setLoginMethod('email')}
             className={`flex-1 py-3 px-4 rounded-xl ${loginMethod === 'email'
-                ? 'bg-primary-500'
-                : 'bg-transparent'
+              ? 'bg-primary-500'
+              : 'bg-transparent'
               }`}
           >
             <Text className={`text-center font-semibold ${loginMethod === 'email'
-                ? 'text-white'
-                : 'text-gray-500'
+              ? 'text-white'
+              : 'text-gray-500'
               }`}>
               Email address
             </Text>
@@ -156,13 +161,13 @@ const SignIn = () => {
           <TouchableOpacity
             onPress={() => setLoginMethod('phone')}
             className={`flex-1 py-3 px-4 rounded-xl ${loginMethod === 'phone'
-                ? 'bg-primary-500'
-                : 'bg-transparent'
+              ? 'bg-primary-500'
+              : 'bg-transparent'
               }`}
           >
             <Text className={`text-center font-semibold ${loginMethod === 'phone'
-                ? 'text-white'
-                : 'text-gray-500'
+              ? 'text-white'
+              : 'text-gray-500'
               }`}>
               Phone number
             </Text>
@@ -173,12 +178,17 @@ const SignIn = () => {
       <Formik
         initialValues={{
           email: "",
+          phone_number: "",
           password: "",
           rememberMe: false,
+          loginMethod: loginMethod,
         }}
         validationSchema={loginSchema}
         onSubmit={handleSignIn}
+        enableReinitialize={true}
+        context={{ loginMethod }}
       >
+        {({ values, setFieldValue, errors, touched }) => (
         <View className="px-5">
           {/* Phone Number Input */}
           {loginMethod === 'phone' && (
@@ -201,12 +211,17 @@ const SignIn = () => {
                     placeholder={getPhoneExample(selectedCountry)}
                     placeholderTextColor="#9CA3AF"
                     keyboardType="phone-pad"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
+                    value={values.phone_number}
+                    onChangeText={(text) => setFieldValue('phone_number', text)}
                   />
                 </View>
+                {errors.phone_number && touched.phone_number && (
+                  <Text className="text-red-500 text-sm mt-1 px-2">
+                    {errors.phone_number}
+                  </Text>
+                )}
               </View>
-              
+
               {/* Country Picker Modal */}
               <CountryStatePicker
                 selectedCountry={selectedCountry}
@@ -270,9 +285,9 @@ const SignIn = () => {
             </View>
           </View>
 
-          <FormikButton 
-            title={loginMutation.isPending ? "Signing In..." : "Sign In"} 
-            className="mb-6" 
+          <FormikButton
+            title={loginMutation.isPending ? "Signing In..." : "Sign In"}
+            className="mb-6"
             loading={loginMutation.isPending}
             disabled={loginMutation.isPending}
           />
@@ -284,6 +299,7 @@ const SignIn = () => {
             containerClassName="mb-4"
           />
         </View>
+        )}
       </Formik>
 
       {/* Country Picker Modal - Only render when needed */}

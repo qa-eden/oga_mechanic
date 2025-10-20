@@ -151,20 +151,32 @@ export interface LoginResponse {
 // Merchant Profile specific interfaces
 export interface MerchantProfile {
   id: number;
-  business_address: string;
-  cac_document: string;
-  cac_number: string;
-  created_at: string;
-  is_approved: boolean;
-  lga: string;
-  location: string;
-  profile_picture: string | null;
-  selfie: string;
-  updated_at: string;
   user: {
     id: string;
     email: string;
+    first_name: string;
+    last_name: string;
+    active_role: string;
+    date_joined: string;
+    last_login: string | null;
+    phone_number: string;
+    created_at: string;
+    updated_at: string;
+    car_make: string | null;
+    car_model: string | null;
+    car_year: string | null;
+    license_plate: string | null;
   };
+  location: string | null;
+  lga: string | null;
+  cac_number: string;
+  cac_document: string | null;
+  selfie: string | null;
+  business_address: string;
+  profile_picture: string | null;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Merchant Profile API Response
@@ -175,21 +187,6 @@ export interface MerchantProfileResponse {
   referenceId: string;
   status: boolean;
   data: MerchantProfile;
-  // Additional user fields at top level (merged from user object)
-  active_role: string;
-  car_make: string | null;
-  car_model: string | null;
-  car_year: string | null;
-  created_at: string;
-  date_joined: string;
-  email: string;
-  first_name: string;
-  id: string;
-  last_login: string | null;
-  last_name: string;
-  license_plate: string | null;
-  phone_number: string;
-  updated_at: string;
 }
 
 export interface RegisterResponse {

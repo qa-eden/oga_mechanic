@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { icons } from "@/constants";
 import { Dimensions } from "react-native";
 import { routes } from "@/constants/routes";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 // Import your actual tab screen components
 import HomeScreen from "./home";
@@ -24,7 +24,6 @@ import ShopScreen from "./shop"; // Shop screen component
 export default function Layout() {
   const router = useRouter();
   const { width } = Dimensions.get("window");
-  const insets = useSafeAreaInsets();
 
   // Function to render tab icons with labels
   const renderTabBar = ({
@@ -173,19 +172,6 @@ export default function Layout() {
           component={ShopScreen}
         />
       </CurvedBottomBarExpo.Navigator>
-      {Platform.OS === "android" && insets.bottom > 0 && (
-        <View
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 35, // or 50
-            backgroundColor: "#D30309",
-            // zIndex: -1, // optional
-          }}
-        />
-      )}
     </View>
   );
 }

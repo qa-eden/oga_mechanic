@@ -47,7 +47,7 @@ const ChooseOptions = () => {
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="white" />
 
-      <BackArrowBtn text="Go back" className="ml-4 mt-4" />
+      <BackArrowBtn text="Go back" className="ml-4 mt-8" />
 
       {/* Main Content */}
       <View className="flex-1 flex h-[80vh] justify-center items-center px-4">

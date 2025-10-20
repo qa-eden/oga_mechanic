@@ -15,10 +15,18 @@ import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { LAYOUT } from "@/constants/units";
+import { useHomeProducts } from "@/hooks/useProducts";
 
 const Services = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Fetch home products to get category IDs
+  const { data: homeProducts } = useHomeProducts();
+
+  // Extract category IDs from the actual products
+  const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
+  const sparePartCategoryId = homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.id;
 
   // Enhanced services data with additional information
   const enhancedServices = ServicesData.map((service) => ({
@@ -70,10 +78,30 @@ const Services = () => {
         router.push(routes.enterAddressForRide);
         break;
       case "Buy spare parts":
-        router.push(routes.shop);
+        if (sparePartCategoryId) {
+          router.push({
+            pathname: routes.shop,
+            params: {
+              category: homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.name || 'Spare Part',
+              categoryId: sparePartCategoryId.toString(),
+            }
+          });
+        } else {
+          router.push(routes.shop);
+        }
         break;
       case "Buy a Car":
-        router.push(routes.cars);
+        if (carCategoryId) {
+          router.push({
+            pathname: routes.shop,
+            params: {
+              category: homeProducts?.data?.best_selling_cars?.[0]?.category?.name || 'Car',
+              categoryId: carCategoryId.toString(),
+            }
+          });
+        } else {
+          router.push(routes.cars);
+        }
         break;
       case "Rent a car":
         router.push(routes.rentACar);

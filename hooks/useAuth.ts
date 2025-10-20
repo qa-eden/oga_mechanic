@@ -45,7 +45,19 @@ export const useAuth = () => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      
+
+      // Check if this is the first time opening the app
+      const hasSeenWelcome = await AsyncStorage.getItem('has_seen_welcome');
+
+      // If first time user, show welcome screen
+      if (!hasSeenWelcome) {
+        setIsAuthenticated(false);
+        setUserData(null);
+        setNavigationTarget(routes?.welcome as any);
+        setShouldNavigate(true);
+        return;
+      }
+
       // Check if user is logged in
       const isLoggedIn = await AsyncStorage.getItem('is_logged_in');
       const accessToken = await AsyncStorage.getItem('auth_token');
@@ -190,6 +202,16 @@ export const useAuth = () => {
     }
   };
 
+  // Utility function to reset welcome screen flag (for testing)
+  const resetWelcomeFlag = async () => {
+    try {
+      await AsyncStorage.removeItem('has_seen_welcome');
+      console.log('✅ Welcome screen flag reset - user will see welcome screen on next app start');
+    } catch (error) {
+      console.error('❌ Error resetting welcome flag:', error);
+    }
+  };
+
   return {
     isLoading,
     isAuthenticated,
@@ -199,5 +221,6 @@ export const useAuth = () => {
     checkAuthStatus,
     shouldNavigate,
     navigationTarget,
+    resetWelcomeFlag, // For testing purposes
   };
 };

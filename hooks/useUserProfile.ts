@@ -6,6 +6,7 @@ export const userProfileKeys = {
   all: ['userProfile'] as const,
   primary: () => [...userProfileKeys.all, 'primary'] as const,
   merchant: () => [...userProfileKeys.all, 'merchant'] as const,
+  merchantByUuid: (uuid: string) => [...userProfileKeys.all, 'merchant', 'uuid', uuid] as const,
   profile: () => [...userProfileKeys.all, 'profile'] as const,
   roles: () => [...userProfileKeys.all, 'roles'] as const,
 };
@@ -28,6 +29,17 @@ export const useMerchantProfile = (enabled: boolean = true) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
     enabled: enabled,
+  });
+};
+
+// Hook to get merchant profile by UUID
+export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean = true) => {
+  return useQuery<MerchantProfileResponse>({
+    queryKey: userProfileKeys.merchantByUuid(merchantUuid),
+    queryFn: () => userAPI.getMerchantProfileByUuid(merchantUuid),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    enabled: enabled && !!merchantUuid,
   });
 };
 

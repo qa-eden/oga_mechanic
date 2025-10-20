@@ -337,66 +337,77 @@ const SignUp = () => {
               transform: [{ scale: roleCardsScale }],
             }}
           >
-            <FlatList
-              data={mergedRoles}
-              keyExtractor={(item) => item.id.toString()}
-              numColumns={2}
-              columnWrapperStyle={{
-                justifyContent: "space-between",
-                marginBottom: 16,
-              }}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
-              nestedScrollEnabled={true}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: item?.backgroundColor,
-                    borderWidth: 2,
-                    borderColor: item?.border,
-                  }}
-                  className="w-[48%] h-[137px] p-4 rounded-2xl items-center"
-                  onPress={() => {
-                    try {
-                      handleRoleSelection(item);
-                    } catch (error) {
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View className="w-full flex flex-row justify-end">
-                    {typeof item.image === "function" ? (
-                      <item.image width={40} height={40} />
-                    ) : (
-                      <Image
-                        source={typeof item.image === "string" ? { uri: item.image } : item.image}
-                        style={{ width: 40, height: 40, resizeMode: "cover" }}
-                      />
-                    )}
-                  </View>
-                  <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
-                    {item.title}
-                  </Text>
-                  <Text className="text-sm text-gray-500 w-full flex-col justify-end items-end pt-2">
-                    {item.description}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              initialNumToRender={4}
-              maxToRenderPerBatch={4}
-              windowSize={3}
-              removeClippedSubviews={true}
-              getItemLayout={(data, index) => ({
-                length: 137,
-                offset: 137 * index,
-                index,
-              })}
-            />
+            {isLoadingRoles ? (
+              // Loading state
+              <View className="flex-1 justify-center items-center py-20">
+                <ActivityIndicator size="large" color="#D30309" />
+                <Text className="text-gray-500 font-NunitoMedium mt-4">
+                  Loading Roles...
+                </Text>
+              </View>
+            ) : (
+              // Roles FlatList
+              <FlatList
+                data={mergedRoles}
+                keyExtractor={(item) => item.id.toString()}
+                numColumns={2}
+                columnWrapperStyle={{
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                }}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: item?.backgroundColor,
+                      borderWidth: 2,
+                      borderColor: item?.border,
+                    }}
+                    className="w-[48%] h-[137px] p-4 rounded-2xl items-center"
+                    onPress={() => {
+                      try {
+                        handleRoleSelection(item);
+                      } catch (error) {
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View className="w-full flex flex-row justify-end">
+                      {typeof item.image === "function" ? (
+                        <item.image width={40} height={40} />
+                      ) : (
+                        <Image
+                          source={typeof item.image === "string" ? { uri: item.image } : item.image}
+                          style={{ width: 40, height: 40, resizeMode: "cover" }}
+                        />
+                      )}
+                    </View>
+                    <Text className="text-lg font-NunitoSemiBold w-full flex-col justify-end items-end pt-4">
+                      {item.title}
+                    </Text>
+                    <Text className="text-sm text-gray-500 w-full flex-col justify-end items-end pt-2">
+                      {item.description}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                initialNumToRender={4}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews={true}
+                getItemLayout={(data, index) => ({
+                  length: 137,
+                  offset: 137 * index,
+                  index,
+                })}
+              />
+            )}
           </Animated.View>
 
           {/* Bottom Navigation with Animation */}
           <Animated.View
-            className="absolute bottom-[11%] px-5 flex flex-row justify-between w-full"
+            className={`absolute ${Platform.OS === 'ios' ? 'bottom-[12%]' : 'bottom-[16%]'} px-5 flex flex-row justify-between w-full`}
             style={{
               opacity: bottomButtonsOpacity,
               transform: [{ translateY: bottomButtonsTranslateY }],

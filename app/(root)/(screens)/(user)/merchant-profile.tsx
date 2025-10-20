@@ -8,7 +8,9 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import { routes } from '@/constants/routes'
 import { useQuery } from '@tanstack/react-query'
 import { productsAPI } from '@/lib/api/products'
+import { useMerchantProfileByUuid } from '@/hooks/useUserProfile'
 import Card1 from '@/components/cards/Card1'
+import BackArrowBtn from '@/components/BackArrowBtn'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -17,12 +19,20 @@ const MerchantProfile = () => {
 
   const { merchantId } = useLocalSearchParams<{ merchantId?: string }>()
 
-  // Fetch merchant products - merchant info will come with the products
+  // Fetch merchant profile data
+  const {
+    data: merchantProfileData,
+    isLoading: isProfileLoading,
+    error: profileError,
+    refetch: refetchProfile
+  } = useMerchantProfileByUuid(merchantId || '', !!merchantId)
+
+  // Fetch merchant products
   const {
     data: productsData,
-    isLoading,
-    error,
-    refetch
+    isLoading: isProductsLoading,
+    error: productsError,
+    refetch: refetchProducts
   } = useQuery({
     queryKey: ['merchant-products', merchantId],
     queryFn: async () => {
@@ -39,16 +49,21 @@ const MerchantProfile = () => {
     enabled: !!merchantId,
   })
 
-  // Extract merchant data from the first product
-  const merchantData = productsData?.results?.[0]?.merchant
+  // Extract merchant data from profile API
+  const merchantData = merchantProfileData?.data // The merchant profile data
+  const userData = merchantData?.user // User data is nested inside merchant data
   const merchantProducts = productsData?.results || []
+
+  // Combined loading and error states
+  const isLoading = isProfileLoading || isProductsLoading
+  const error = profileError || productsError
 
   const onRefresh = useCallback(async () => {
     try {
-      await refetch()
+      await Promise.all([refetchProfile(), refetchProducts()])
     } catch (error) {
     }
-  }, [refetch])
+  }, [refetchProfile, refetchProducts])
 
   // Show loading state
   if (isLoading) {
@@ -121,12 +136,8 @@ const MerchantProfile = () => {
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
-          >
-            <ArrowLeftIcon size={20} color="#374151" />
-          </TouchableOpacity>
+
+          <BackArrowBtn />
           <Text className="text-xl font-NunitoBold text-gray-900">Seller Profile</Text>
           <View className="w-10" />
         </View>
@@ -156,7 +167,7 @@ const MerchantProfile = () => {
                 />
               ) : (
                 <Text className="text-4xl font-NunitoBold text-primary-700">
-                  {merchantData?.first_name?.charAt(0) || 'M'}{merchantData?.last_name?.charAt(0) || 'S'}
+                  {userData?.first_name?.charAt(0) || 'M'}{userData?.last_name?.charAt(0) || 'S'}
                 </Text>
               )}
             </View>
@@ -169,7 +180,7 @@ const MerchantProfile = () => {
             </View>
 
             <Text className="text-2xl font-NunitoBold text-gray-900 mb-1">
-              {`${merchantData.first_name || ''} ${merchantData.last_name || ''}`.trim() || 'Merchant Store'}
+              {`${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Merchant Store'}
             </Text>
 
             {/* Hide location for now - not available in API */}
@@ -226,7 +237,7 @@ const MerchantProfile = () => {
               <View className="flex-1 ml-3">
                 <Text className="text-sm text-gray-600 mb-1">Member Since</Text>
                 <Text className="text-sm font-NunitoMedium text-gray-900">
-                  {merchantData?.date_joined ? new Date(merchantData.date_joined).toLocaleDateString('en-US', {
+                  {userData?.date_joined ? new Date(userData.date_joined).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long'
                   }) : 'N/A'}

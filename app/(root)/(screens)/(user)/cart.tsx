@@ -28,6 +28,7 @@ import CartItemCard from "@/components/cards/CartItemCard";
 import { useCart, useUpdateCartItem, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
 import { useCheckout } from "@/hooks/useProducts";
 import { getErrorMessage } from "@/utils/errorMessages";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -709,6 +710,9 @@ const Cart = () => {
               🔒 Secure payment guaranteed
             </Text>
           </View>
+
+          {/* Android Navigation Bar Spacer */}
+          <AndroidNavBarSpacer backgroundColor="transparent" extraHeight={6} />
         </View>
       </LinearGradient>
 

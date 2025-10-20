@@ -28,6 +28,7 @@ import { routes } from "@/constants/routes";
 import { useCart as useCartContext } from "@/contexts/CartContext";
 import AddToCartButton from "@/components/AddToCartButton";
 import ImageGalleryModal from "@/components/ImageGalleryModal";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
@@ -99,7 +100,7 @@ const ProductDetail = () => {
 
   // Sync quantity with cart when product loads
   useEffect(() => {
-    if (product && (product as any).is_in_cart) {
+    if (product && product.is_in_cart) {
       // Get quantity from cart context if available
       const cartQuantity = getItemQuantity(product.id);
       if (cartQuantity > 0) {
@@ -235,7 +236,7 @@ const ProductDetail = () => {
     id: product.id,
     name: product.name,
     price: parseFloat(product.price),
-    stock: (product as any).stock || 0,
+    stock: product.stock || 0,
     image: product.images?.[0]?.image || null,
   };
 
@@ -261,7 +262,7 @@ const ProductDetail = () => {
   };
 
   const handleIncrementQuantity = async () => {
-    if (quantity < ((product as any).stock || 10)) {
+    if (quantity < (product.stock || 10)) {
       try {
         await updateCartItemQuantityMutation.mutateAsync({
           productId: product.id,
@@ -297,7 +298,7 @@ const ProductDetail = () => {
 
   const handleToggleFavorite = async () => {
     
-    const isCurrentlyFavorited = (product as any).is_in_favorite_list || false;
+    const isCurrentlyFavorited = product.is_in_favorite_list || false;
     
     try {
       const result = await toggleFavoriteMutation.mutateAsync({
@@ -576,43 +577,35 @@ const ProductDetail = () => {
               onPress={() => router.push({
                 pathname: routes.merchantProfile as any,
                 params: {
-                  merchantId: typeof product.merchant === 'string' 
-                    ? product.merchant 
-                    : product.merchant?.id
+                  merchantId: product.merchant_id
                 }
               })}
               activeOpacity={0.7}
             >
               <View className="w-14 h-14 rounded-2xl overflow-hidden mr-4 bg-gray-200 items-center justify-center">
                 <Text className="text-xl font-NunitoBold text-primary-700">
-                  {typeof product.merchant === 'string' 
-                    ? product.merchant.charAt(0).toUpperCase() 
-                    : product.merchant?.first_name?.charAt(0)?.toUpperCase() || 'M'}
+                  {product.merchant_email?.charAt(0)?.toUpperCase() || 'M'}
                 </Text>
               </View>
-              
+
             <View className="flex-1">
                 <Text className="text-base font-NunitoBold text-gray-900 mb-1">
-                  {typeof product.merchant === 'string' 
-                    ? 'Merchant Store' 
-                    : `${product.merchant?.first_name || ''} ${product.merchant?.last_name || ''}`.trim() || 'Merchant Store'}
+                  {product.merchant_email || 'Merchant Store'}
               </Text>
-                {/* <Text className="text-sm text-gray-500 mb-2">
-                  {typeof product.merchant === 'string' 
-                    ? `Store ID: ${product.merchant.slice(0, 8)}...` 
-                    : `Contact: ${product.merchant?.email || 'N/A'}`}
-                </Text> */}
+                <Text className="text-sm text-gray-500 mb-2">
+                  Store ID: {product.merchant_id.slice(0, 8)}...
+                </Text>
                 
                 <View className="flex-row items-center gap-2 space-x-4">
                   <View className="flex-row items-center">
                     <Text className="text-xs text-gray-500 mr-1">Rating:</Text>
                     <Text className="text-xs font-NunitoBold text-gray-900">
-                      {(product as any).merchant_rating ? (product as any).merchant_rating.toFixed(1) : 'N/A'}
+                      {product.merchant_rating ? product.merchant_rating.toFixed(1) : 'N/A'}
                     </Text>
                   </View>
                   <View className="flex-row items-center">
                     <Text className="text-xs text-gray-500 mr-1">Sales:</Text>
-                    <Text className="text-xs font-NunitoBold text-gray-900">{(product as any).purchased_count || '0'}</Text>
+                    <Text className="text-xs font-NunitoBold text-gray-900">{product.purchased_count || '0'}</Text>
                   </View>
                 </View>
               </View>
@@ -648,7 +641,7 @@ const ProductDetail = () => {
               <View className="flex-row items-center bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
                 <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
                 <Text className="text-sm text-green-700 font-NunitoBold">
-                  {(product as any).stock > 0 ? "In Stock" : "Out of Stock"}
+                  {product.stock > 0 ? "In Stock" : "Out of Stock"}
             </Text>
               </View>
           </View>
@@ -1145,8 +1138,8 @@ const ProductDetail = () => {
           </View>
         </View>
 
-        {/* Safe Area Bottom */}
-        <View className="h-6 bg-white" />
+        {/* Safe Area Bottom - Extra padding for Android navigation bar */}
+        <AndroidNavBarSpacer backgroundColor="white" extraHeight={6} />
       </Animated.View>
 
       {/* Image Gallery Modal */}

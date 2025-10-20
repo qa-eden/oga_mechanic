@@ -37,7 +37,8 @@
       "package": "com.ogamechanic.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
       ],
       "usesCleartextTraffic": true,
       "jsEngine": "hermes",

@@ -16,6 +16,11 @@
       },
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ogamechanic-api-1.onrender.com/api/v1",
+        "EXPO_PUBLIC_API_KEY": "DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq",
+        "EXPO_PUBLIC_ENV": "development"
       }
     },
     "preview-optimized": {

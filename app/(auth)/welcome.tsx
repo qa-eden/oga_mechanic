@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import React from "react";
 import type { ComponentType } from "react";
 import { useRoles } from "@/hooks/useRoles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator } from "react-native";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
@@ -102,20 +103,24 @@ const Welcome = () => {
     refetch: refetchRoles
   } = useRoles();
   // Navigation handlers with debouncing
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (isNavigating) return;
     try {
       setIsNavigating(true);
+      // Mark that user has seen welcome screen
+      await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.signUp as any);
     } catch (error) {
       setIsNavigating(false);
     }
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (isNavigating) return;
     try {
       setIsNavigating(true);
+      // Mark that user has seen welcome screen
+      await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.signIn as any);
     } catch (error) {
       setIsNavigating(false);

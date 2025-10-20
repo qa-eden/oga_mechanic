@@ -30,12 +30,48 @@ export interface HomeProductsResponse {
 
 export interface ProductDetailResponse {
   id: string;
+  merchant_id: string;
+  merchant_email: string;
   name: string;
+  make_id: string | null;
+  model_id: string | null;
+  year: number | null;
+  condition: string;
+  body_type: string;
+  mileage: number | null;
+  mileage_unit: string;
+  transmission: string;
+  fuel_type: string;
+  engine_size: number | null;
+  exterior_color: string | null;
+  interior_color: string | null;
+  number_of_doors: number | null;
+  number_of_seats: number | null;
+  air_conditioning: boolean;
+  leather_seats: boolean;
+  navigation_system: boolean;
+  bluetooth: boolean;
+  parking_sensors: boolean;
+  cruise_control: boolean;
+  keyless_entry: boolean;
+  sunroof: boolean;
+  alloy_wheels: boolean;
+  airbags: boolean;
+  abs: boolean;
+  traction_control: boolean;
+  lane_assist: boolean;
+  blind_spot_monitor: boolean;
   price: string;
+  currency: string;
+  negotiable: boolean;
+  discount: string | null;
+  availability: string;
+  stock: number;
   description: string;
   category: {
     id: number;
     name: string;
+    sub_categories: any[];
     description: string;
     created_at: string;
     updated_at: string;
@@ -43,33 +79,18 @@ export interface ProductDetailResponse {
   images: Array<{
     id: number;
     image: string;
-  }>;
-  merchant: string | {
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    active_role: string;
-    date_joined: string;
-    last_login: string;
-    phone_number: string;
+    ordering: number;
     created_at: string;
-    updated_at: string;
-    car_make?: string;
-    car_model?: string;
-    car_year?: string;
-    license_plate?: string;
-  };
+  }>;
+  vehicle_compatibility: any[];
   is_rental: boolean;
-  stock?: number;
-  rating?: number;
-  reviews?: Array<{
-    id: string;
-    rating: number;
-    comment: string;
-    user_name: string;
-    created_at: string;
-  }>;
+  delivery_option: string;
+  rating: number;
+  merchant_rating: number;
+  purchased_count: number | null;
+  contact_info: any | null;
+  is_in_cart: boolean;
+  is_in_favorite_list: boolean;
   created_at: string;
   updated_at: string;
 }
