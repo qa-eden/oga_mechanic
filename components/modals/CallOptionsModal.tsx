@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { PhoneIcon } from 'react-native-heroicons/solid';
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer';
 
 interface CallOptionsModalProps {
   isVisible: boolean;
@@ -86,6 +87,9 @@ const CallOptionsModal: React.FC<CallOptionsModalProps> = ({
                 </Text>
               </View>
             </TouchableOpacity>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </View>
       </View>

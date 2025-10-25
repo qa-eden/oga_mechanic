@@ -19,14 +19,68 @@ import FormikButton from "@/components/forms/FormikButton";
 import { useRouter } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { resetPasswordSchema } from "@/utils/validationSchemas";
-import { routes } from "@/constants/routes";
+import { routes, mechanicRoutes } from "@/constants/routes";
+import { useRegisterStep4 } from "@/hooks/useRegistration";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import CustomAlert from "@/components/CustomAlert";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from "@/hooks/useAuth";
 
 const MechanicStep4 = () => {
   const router = useRouter();
+  const registerStep4Mutation = useRegisterStep4();
+  const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
+  const { checkAuthStatus } = useAuth();
 
-  const handleStep3Submit = (values: any, { setSubmitting }: any) => {
-    setSubmitting(false);
-    router.push(routes?.accountCreated);
+  const handleStep4Submit = async (values: any, { setSubmitting }: any) => {
+    registerStep4Mutation.mutate({
+      password: values.password,
+      password_confirm: values.confirmPassword
+    }, {
+      onSuccess: async (response) => {
+        setSubmitting(false);
+        
+        try {
+          // Store tokens and user data
+          await AsyncStorage.multiSet([
+            ['auth_token', response.data.access],
+            ['refresh_token', response.data.refresh],
+            ['user_data', JSON.stringify({
+              user_id: response.data.user_id,
+              email: response.data.email,
+              role: response.data.role
+            })]
+          ]);
+
+          // Refresh auth status to update context
+          await checkAuthStatus();
+
+          showSuccess(
+            "Account Created Successfully!",
+            "Your mechanic account has been created. Redirecting to success page..."
+          );
+
+          // Navigate to success page after a short delay
+          setTimeout(() => {
+            router.push(mechanicRoutes?.accountCreated);
+          }, 2000);
+        } catch (error) {
+          console.error('Error storing user data:', error);
+          showError(
+            "Login Error",
+            "Account created but failed to log you in. Please sign in manually."
+          );
+        }
+      },
+      onError: (error: any) => {
+        setSubmitting(false);
+        console.error('Registration step 4 failed:', error);
+        showError(
+          "Registration Failed",
+          error?.response?.data?.message || "Failed to create account. Please try again."
+        );
+      }
+    });
   };
 
   return (
@@ -69,7 +123,7 @@ const MechanicStep4 = () => {
                   confirmPassword: "",
                 }}
                 validationSchema={resetPasswordSchema}
-                onSubmit={handleStep3Submit}
+                onSubmit={handleStep4Submit}
               >
                 {() => (
                   <View>
@@ -99,6 +153,7 @@ const MechanicStep4 = () => {
                     <FormikButton
                       title="Create account"
                       className="py-4 mb-2"
+                      loading={registerStep4Mutation.isPending}
                     />
 
                     <AuthNavigateLink
@@ -117,6 +172,15 @@ const MechanicStep4 = () => {
           </ScrollView>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={visible}
+        title={alertConfig?.title || ""}
+        message={alertConfig?.message || ""}
+        type={alertConfig?.type || "info"}
+        onClose={hideAlert}
+      />
     </SafeAreaView>
   );
 };

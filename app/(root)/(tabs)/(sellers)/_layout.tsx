@@ -12,6 +12,7 @@ import { icons } from "@/constants";
 // import { routes } from "@/constants/routes";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 // Import your actual tab screen components
 import SellerEarnings from "./earnings";
@@ -83,7 +84,7 @@ export default function Layout() {
       <View
         style={[
           styles.bottomBar,
-          Platform.OS === "android" && { paddingBottom: insets.bottom },
+          // Platform.OS === "android" && { paddingBottom: insets.bottom },
         ]}
       >
         {Object.keys(tabInfo).map((routeName) => {
@@ -130,7 +131,8 @@ export default function Layout() {
       {/* Custom Bottom Tab Bar */}
       {renderTabBar()}
 
-
+      {/* Android Navigation Bar Spacer */}
+      <AndroidNavBarSpacer />
     </View>
   );
 }

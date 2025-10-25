@@ -3,6 +3,7 @@
 import { View, Text, TouchableOpacity, Modal, Animated } from "react-native"
 import { useRef, useEffect } from "react"
 import { CheckCircleIcon } from "react-native-heroicons/solid"
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer"
 
 interface SuccessModalProps {
   isVisible: boolean
@@ -105,6 +106,9 @@ const SuccessModal = ({ isVisible, onClose, title, message, buttonText = "Contin
           <TouchableOpacity onPress={onClose} className="bg-green-500 py-4 px-6 rounded-full" activeOpacity={0.8}>
             <Text className="text-white font-NunitoBold text-lg text-center">{buttonText}</Text>
           </TouchableOpacity>
+
+          {/* Android Navigation Bar Spacer */}
+          <AndroidNavBarSpacer />
         </Animated.View>
       </Animated.View>
     </Modal>

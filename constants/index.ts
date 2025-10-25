@@ -192,7 +192,7 @@ export const Roles = [
     image: icons.mechanic,
     border: "#DBAF79",
     backgroundColor: "#ECE2D6",
-    route: mechanicRoutes?.welcome,
+    route: mechanicRoutes?.step1,
   },
   {
     id: 6,

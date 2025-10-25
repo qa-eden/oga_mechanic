@@ -9,6 +9,7 @@ import {
 import { useRouter } from "expo-router";
 import { icons } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 // Import your actual tab screen components
 import RiderEarnings from "./earnings";
@@ -63,7 +64,7 @@ export default function Layout() {
       <View
         style={[
           styles.bottomBar,
-          Platform.OS === "android" && { paddingBottom: insets.bottom },
+          // Platform.OS === "android" && { paddingBottom: insets.bottom },
         ]}
       >
         {Object.keys(tabInfo).map((routeName) => {
@@ -109,7 +110,8 @@ export default function Layout() {
       {/* Custom Bottom Tab Bar */}
       {renderTabBar()}
 
-
+      {/* Android Navigation Bar Spacer */}
+      <AndroidNavBarSpacer />
     </View>
   );
 }

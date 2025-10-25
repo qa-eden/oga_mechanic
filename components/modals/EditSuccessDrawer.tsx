@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { XMarkIcon, CheckCircleIcon, CameraIcon, ArrowRightIcon } from 'react-native-heroicons/outline'
 import CustomButton from '../CustomButton'
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface EditSuccessDrawerProps {
   visible: boolean
@@ -209,6 +210,9 @@ const EditSuccessDrawer: React.FC<EditSuccessDrawerProps> = ({
                 You can continue to edit your car images or finish here. Your changes have been saved successfully.
               </Text>
             </Animated.View>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </Animated.View>
       </View>

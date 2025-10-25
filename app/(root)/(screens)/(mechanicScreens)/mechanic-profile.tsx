@@ -8,6 +8,7 @@ import { routes } from "@/constants/routes";
 import { useGetMechanicDetail } from "@/hooks/useMechanics";
 import { getErrorMessage } from "@/utils/errorMessages";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 interface MechanicProfile {
   id: number;
@@ -261,6 +262,9 @@ const MechanicProfile = () => {
         //   className="bg-primary-500"
         //   textVariant="primary"
         />
+        
+        {/* Android Navigation Bar Spacer */}
+        <AndroidNavBarSpacer />
       </View>
     </SafeAreaView>
   );

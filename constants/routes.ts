@@ -77,7 +77,7 @@ export const mechanicRoutes = {
   step2: "/(auth)/(register)/mechanic/step2",
   step3: "/(auth)/(register)/mechanic/step3",
   step4: "/(auth)/(register)/mechanic/step4",
-
+  accountCreated: "/(auth)/(register)/mechanic/accountCreated",
   // Mechanic tabs
   home: "/(root)/(tabs)/(mechanic)/home",
   earnings: "/(root)/(tabs)/(mechanic)/earnings",

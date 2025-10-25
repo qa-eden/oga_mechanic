@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Modal } from 'react-native';
 import { ArrowRightOnRectangleIcon } from 'react-native-heroicons/outline';
 import CustomButton from '../CustomButton';
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer';
 
 interface LogoutModalProps {
   visible: boolean;
@@ -49,6 +50,9 @@ const LogoutModal: React.FC<LogoutModalProps> = ({
             <CustomButton title={confirmText} loadingText='Logging Out' onPress={onConfirm} />
 
             <CustomButton title={cancelText} onPress={onCancel} bgVariant="outline" textVariant="outline" className='mt-4' />
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </View>
       </View>

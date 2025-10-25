@@ -3,39 +3,36 @@ import {
   View,
   Text,
   Modal,
-  Dimensions,
-  StyleSheet,
   Animated,
-  Easing,
-  Pressable,
   TouchableOpacity,
   AccessibilityInfo,
 } from 'react-native';
+import CustomButton from './CustomButton';
+import { InformationCircleIcon } from "react-native-heroicons/solid";
+import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon } from "react-native-heroicons/outline";
 
 interface CustomAlertProps {
   visible: boolean;
   title: string;
   message: string;
   onClose: () => void;
-  onButtonPress?: () => void;
   type?: 'success' | 'error' | 'warning' | 'info';
   autoDismiss?: boolean;
   autoDismissDelay?: number;
   buttonText?: string;
+  onButtonPress?: () => void;
 }
-
-const { width, height } = Dimensions.get('window');
 
 const CustomAlert: React.FC<CustomAlertProps> = ({
   visible,
   title,
   message,
   onClose,
-  onButtonPress,
   type = 'info',
   autoDismiss = false,
   autoDismissDelay = 3000,
   buttonText = 'OK',
+  onButtonPress,
 }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -47,7 +44,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
   useEffect(() => {
     if (visible) {
       announceAccessibility();
-      
+
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -88,29 +85,36 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
     switch (type) {
       case 'success':
         return {
-          icon: '✓',
-          color: '#10B981',
+          icon: <CheckCircleIcon size={35} color="#10B981" />,
+          color: '',
           backgroundColor: '#F0FDF4',
           borderColor: '#BBF7D0',
         };
       case 'error':
         return {
-          icon: '✕',
-          color: '#EF4444',
+          icon: <XCircleIcon size={35} color="#D30309" />,
+          color: '',
           backgroundColor: '#FEF2F2',
           borderColor: '#FECACA',
         };
+      case 'info':
+        return {
+          icon: <InformationCircleIcon size={35} color="#3B82F6" />,
+          color: "",
+          backgroundColor: '#EFF6FF',
+          borderColor: '#BFDBFE',
+        };
       case 'warning':
         return {
-          icon: '⚠',
-          color: '#F59E0B',
+          icon: <ExclamationTriangleIcon size={35} color="#F59E0B" />,
+          color: '',
           backgroundColor: '#FFFBEB',
           borderColor: '#FED7AA',
         };
       default:
         return {
-          icon: 'ℹ',
-          color: '#3B82F6',
+          icon: <InformationCircleIcon size={35} color="#3B82F6" />,
+          color: "",
           backgroundColor: '#EFF6FF',
           borderColor: '#BFDBFE',
         };
@@ -123,6 +127,14 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
     onClose();
   }, [onClose]);
 
+  const handleButtonPress = useCallback(() => {
+    if (onButtonPress) {
+      onButtonPress();
+    } else {
+      handleClose();
+    }
+  }, [onButtonPress, handleClose]);
+
   return (
     <Modal
       visible={visible}
@@ -130,16 +142,16 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
       animationType="none"
       statusBarTranslucent
     >
-      <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
-        <TouchableOpacity 
-          style={styles.overlayTouchable}
+      <Animated.View className="flex-1 justify-center items-center bg-black/50" style={{ opacity: opacityAnim }}>
+        <TouchableOpacity
+          className="flex-1 w-full justify-center items-center"
           activeOpacity={1}
           onPress={handleClose}
         >
-          <Animated.View 
+          <Animated.View
+            className="w-4/5 max-w-96 rounded-2xl border border-gray-200 shadow-lg"
             style={[
-              styles.alert,
-              { 
+              {
                 transform: [{ scale: scaleAnim }],
                 backgroundColor,
                 borderColor,
@@ -147,104 +159,27 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
             ]}
             onStartShouldSetResponder={() => true}
           >
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <View style={[styles.iconContainer, { backgroundColor: color }]}>
-                <Text style={styles.icon}>{icon}</Text>
+            <View className="p-5">
+              <View className='mb-5'>
+                <View className="flex-row items-center ">
+                  <View className={` justify-center items-center ${color ? 'bg-opacity-100' : ''}`} style={{ backgroundColor: color }}>
+                    <Text className="text-lg font-bold text-white">{icon}</Text>
+                  </View>
+                  <View className="flex-1 ml-3">
+                    <Text className="text-xl font-bold text-gray-900">{title}</Text>
+                  </View>
+                </View>
+
+                <Text className="text-lg text-gray-500 pt-3 pb-6">{message}</Text>
               </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.message}>{message}</Text>
-              </View>
+
+              <CustomButton title={buttonText} onPress={handleButtonPress} />
             </View>
-            
-            <Pressable
-              style={[styles.button, { backgroundColor: color }]}
-              onPress={onButtonPress || handleClose}
-              accessibilityRole="button"
-              accessibilityLabel={buttonText}
-            >
-              <Text style={styles.buttonText}>{buttonText}</Text>
-            </Pressable>
-          </View>
           </Animated.View>
         </TouchableOpacity>
       </Animated.View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  overlayTouchable: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  alert: {
-    width: width * 0.85,
-    maxWidth: 400,
-    borderRadius: 16,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  content: {
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  textContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  message: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 22,
-  },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-});
 
 export default CustomAlert;

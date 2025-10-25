@@ -1,7 +1,6 @@
 import ProfileTabs from "@/components/templates/ProfileTabs";
 import ProfileHeader from "@/components/ProfileHeader";
 import {
-  images,
   userInfo,
   icons,
   ProfileSettings,
@@ -23,7 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { MapPinIcon, UserIcon } from "react-native-heroicons/solid";
+import { UserIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 // import { useUserStore } from "@/stores/userStore";
 import LogoutModal from "@/components/modals/LogoutModal";
@@ -52,7 +51,7 @@ const Profile = () => {
     refetch
   } = usePrimaryUserProfile();
 
-  const { visible, alertConfig, hideAlert } = useCustomAlert();
+  const { visible, alertConfig, hideAlert, showInfo } = useCustomAlert();
   const logoutMutation = useLogout();
 
   // Pull to refresh functionality

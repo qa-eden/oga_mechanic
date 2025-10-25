@@ -6,13 +6,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   ImageBackground,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { BellIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { images } from "@/constants";
 import OrderCard, { Order } from "@/components/OrderCard";
@@ -20,35 +17,7 @@ import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
 
-const { width } = Dimensions.get("window");
-
 const MechanicHome = () => {
-  const consultations = [
-    {
-      id: 1,
-      name: "Yvonne Ede",
-      email: "yvonnede@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 2,
-      name: "Azeez Babatunde",
-      email: "azeez@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 3,
-      name: "Tomiwa Bamigboye",
-      email: "tomiwa@email.com",
-      avatar: images?.user1,
-    },
-    {
-      id: 4,
-      name: "Funmilayo Shomefun",
-      email: "funmi@email.com",
-      avatar: images?.user1,
-    },
-  ];
 
   const currentOrders: Order[] = [
     {
@@ -104,7 +73,7 @@ const MechanicHome = () => {
           {/* Let's fix some cars card */}
           <View className="rounded-2xl mb-6 overflow-hidden">
             <ImageBackground
-              source={images?.mechanic_ads}
+              source={images?.adsbackground}
               className="w-full h-[150px] bg-cover bg-center"
               resizeMode="cover"
             >

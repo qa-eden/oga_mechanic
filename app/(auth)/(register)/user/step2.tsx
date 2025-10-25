@@ -50,7 +50,7 @@ const Step2 = () => {
     }, {
       onSuccess: () => {
         // Navigate to next step
-    router.push(routes?.userStep3);
+    router.push(routes?.userStep4 );
       },
       onError: (error: any) => {
         
@@ -115,7 +115,7 @@ const Step2 = () => {
           <UserAuthHeader />
 
           <View className="pt-6 pb-2">
-            <ProgressBar step={2} totalSteps={4} />
+            <ProgressBar step={2} totalSteps={3} />
           </View>
 
         </View>

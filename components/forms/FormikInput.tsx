@@ -52,7 +52,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
     if (!touched[name]) {
       setFieldTouched(name, true, false)
     }
-    
+
     // Handle formatting for numeric fields with thousand separators
     if (shouldFormatNumber(name)) {
       // Remove commas and non-numeric characters
@@ -61,10 +61,23 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
       setFieldValue(name, numericValue)
       return
     }
-    
-    // Only trim for specific field types, allow spaces for car names, makes, models, etc.
-    const shouldTrim = type === "email" || name === "stock"
-    handleChange(name)(shouldTrim ? text.trim() : text)
+
+    // Handle phone number - remove all spaces and trim
+    if (type === "phone" || type === "tel") {
+      const phoneValue = text.trim().replace(/\s/g, '')
+      handleChange(name)(phoneValue)
+      return
+    }
+
+    // Handle email - trim and convert to lowercase
+    if (type === "email") {
+      const emailValue = text.trim().toLowerCase()
+      handleChange(name)(emailValue)
+      return
+    }
+
+    // Default behavior for other field types
+    handleChange(name)(text)
   }
 
   // Get display value with formatting if applicable

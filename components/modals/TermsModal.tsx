@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, Modal, ScrollView, TouchableOpacity } from 'react-native'
 import { XMarkIcon } from 'react-native-heroicons/outline'
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface TermsModalProps {
   visible: boolean
@@ -95,6 +96,9 @@ const TermsModal = ({ visible, onClose }: TermsModalProps) => {
             >
               <Text className="text-white font-semibold text-center text-lg">Close</Text>
             </TouchableOpacity>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </View>
       </View>

@@ -20,11 +20,12 @@ import { router } from "expo-router";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { step1Schema } from "@/utils/validationSchemas";
 import { mechanicRoutes, routes } from "@/constants/routes";
-import SelectField from "@/components/forms/SelectField";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";
+import { useRegisterStep2 } from "@/hooks/useRegistration";
 
 const MechanicStep1 = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const registerStep2Mutation = useRegisterStep2();
 
   // Reset any stuck states on component mount
   useEffect(() => {
@@ -35,51 +36,24 @@ const MechanicStep1 = () => {
     };
   }, []);
 
-  const countries = [
-    { label: "Nigeria", value: "Nigeria" },
-    { label: "Ghana", value: "Ghana" },
-    { label: "Kenya", value: "Kenya" },
-    { label: "South Africa", value: "South Africa" },
-  ];
-
-  const cities: { [key: string]: { label: string; value: string }[] } = {
-    Nigeria: [
-      { label: "Lagos", value: "Lagos" },
-      { label: "Abuja", value: "Abuja" },
-      { label: "Port Harcourt", value: "Port Harcourt" },
-      { label: "Kano", value: "Kano" },
-    ],
-    Ghana: [
-      { label: "Accra", value: "Accra" },
-      { label: "Kumasi", value: "Kumasi" },
-      { label: "Tamale", value: "Tamale" },
-    ],
-    Kenya: [
-      { label: "Nairobi", value: "Nairobi" },
-      { label: "Mombasa", value: "Mombasa" },
-      { label: "Kisumu", value: "Kisumu" },
-    ],
-    "South Africa": [
-      { label: "Johannesburg", value: "Johannesburg" },
-      { label: "Cape Town", value: "Cape Town" },
-      { label: "Durban", value: "Durban" },
-    ],
-  };
-
-  const handleStep1Submit = (values: any, { setSubmitting }: any) => {
-    setIsSubmitting(true);
-    setSubmitting(false);
-    
-    try {
-      router.push(mechanicRoutes?.step2);
-    } catch (error) {
-      setIsSubmitting(false);
-    } finally {
-      // Reset state after a delay
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 1000);
-    }
+  const handleStep1Submit = async (values: any, { setSubmitting }: any) => {
+    // Use TanStack Query mutation for step 2
+    registerStep2Mutation.mutate({
+      first_name: values.firstName.trim(),
+      last_name: values.lastName.trim(),
+      email: values.email.trim(),
+      phone_number: values.phone.trim()
+    }, {
+      onSuccess: () => {
+        setSubmitting(false);
+        router.push(mechanicRoutes?.step2);
+      },
+      onError: (error: any) => {
+        setSubmitting(false);
+        console.error('Registration step 1 failed:', error);
+        // You can add error handling here if needed
+      }
+    });
   };
 
   return (
@@ -94,7 +68,6 @@ const MechanicStep1 = () => {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{
-            flexGrow: 1,
             paddingBottom: 80,
           }}
           keyboardShouldPersistTaps="handled"
@@ -126,14 +99,12 @@ const MechanicStep1 = () => {
                 lastName: "",
                 email: "",
                 phone: "",
-                country: "Nigeria",
-                city: "Lagos",
                 termsAndConditions: false,
                 }}
               validationSchema={step1Schema}
               onSubmit={handleStep1Submit}
             >
-              {({ setFieldValue, values, errors, touched }) => (
+              {() => (
                 <View className="flex-1">
                   <FormikInput
                     name="firstName"
@@ -174,31 +145,6 @@ const MechanicStep1 = () => {
                     autoCorrect={false}
                   />
 
-                  <SelectField
-                    name="country"
-                    label="Country"
-                    placeholder="Select your country"
-                    options={countries}
-                    value={values.country}
-                    onValueChange={(value: string) => {
-                      setFieldValue("country", value);
-                      setFieldValue("city", ""); // Reset city when country changes
-                    }}
-                    error={errors.country}
-                    touched={touched.country}
-                  />
-
-                  <SelectField
-                    name="city"
-                    label="City"
-                    placeholder="Select your city"
-                    options={cities[values.country] || []}
-                    value={values.city}
-                    onValueChange={(value: string) => setFieldValue("city", value)}
-                    error={errors.city}
-                    touched={touched.city}
-                  />
-
                   {/* Terms and Conditions */}
                   <View className="flex-row items-start mt-6 mb-4">
                     <View className="">
@@ -224,12 +170,10 @@ const MechanicStep1 = () => {
 
                   <View style={{ height: 20 }} />
 
-                  <FormikButton 
-                    title="Verify Account" 
+                  <FormikButton
+                    title="Verify Account"
                     className="py-4 mb-2"
-                    disabled={isSubmitting}
-                    loading={isSubmitting}
-                    loadingText="Processing..."
+                    loading={registerStep2Mutation.isPending}
                   />
 
                   <AuthNavigateLink

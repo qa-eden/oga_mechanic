@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { XMarkIcon, TrashIcon, ExclamationTriangleIcon } from 'react-native-heroicons/outline'
 import CustomButton from '../CustomButton'
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface DeleteImageDrawalProps {
     visible: boolean
@@ -158,7 +159,6 @@ const DeleteImageDrawal: React.FC<DeleteImageDrawalProps> = ({
 
                         {/* Action Buttons */}
                         <View className="space-y-3">
-
                             <CustomButton
                                 IconLeft={TrashIcon}
                                 title="Delete Image"
@@ -175,6 +175,9 @@ const DeleteImageDrawal: React.FC<DeleteImageDrawalProps> = ({
                                 className="py-4"
                                 onPress={onClose}
                             />
+
+                            {/* Android Navigation Bar Spacer */}
+                            <AndroidNavBarSpacer />
                         </View>
                     </View>
                 </Animated.View>

@@ -3,6 +3,7 @@
 import { View, Text, TouchableOpacity, Modal, Animated } from "react-native";
 import { useRef, useEffect } from "react";
 import { CalendarIcon } from "react-native-heroicons/outline";
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer";
 
 interface DeactivateCarModalProps {
   isVisible: boolean;
@@ -139,6 +140,9 @@ const DeactivateCarModal = ({
                 Cancel
               </Text>
             </TouchableOpacity>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </Animated.View>
       </Animated.View>

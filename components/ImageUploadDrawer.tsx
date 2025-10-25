@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, Modal, Pressable } from 'react-native'
 import { CameraIcon, XMarkIcon, PhotoIcon } from 'react-native-heroicons/outline'
 import * as ImagePicker from 'expo-image-picker'
+import AndroidNavBarSpacer from './AndroidNavBarSpacer'
 
 interface ImageUploadDrawerProps {
   images: string[]
@@ -211,6 +212,9 @@ const ImageUploadDrawer: React.FC<ImageUploadDrawerProps> = ({
                   <Text className="text-gray-500 text-sm">Select an image from your gallery</Text>
                 </View>
               </TouchableOpacity>
+
+              {/* Android Navigation Bar Spacer */}
+              <AndroidNavBarSpacer />
             </View>
           </Pressable>
         </Pressable>

@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, Modal, Pressable } from 'react-native'
 import { XMarkIcon } from 'react-native-heroicons/outline'
 import CustomButton from '../CustomButton'
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface DeleteConfirmationModalProps {
   visible: boolean
@@ -98,7 +99,9 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
               <CustomButton title="Delete" onPress={onConfirm} textVariant="default" />
 
               <CustomButton title="Cancel" onPress={onClose} bgVariant="outline" textVariant="outline" className="mt-4" />
-             
+
+              {/* Android Navigation Bar Spacer */}
+              <AndroidNavBarSpacer />
             </View>
           </View>
         </Pressable>

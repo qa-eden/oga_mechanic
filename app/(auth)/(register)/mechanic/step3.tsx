@@ -14,17 +14,42 @@ import ProgressBar from "@/components/ProgressBar";
 import { mechanicRoutes, routes } from "@/constants/routes";
 import SelectField from "@/components/forms/SelectField";
 import UserAuthHeader from "@/components/UserAuthHeader";
+import { useVehicleMakes } from "@/hooks/useVehicleMakes";
+import { VehicleMake } from "@/lib/api/products";
+import { getStatesByCountry, getCitiesByState } from "@/constants/locationData";
+import { getLGAs } from "@/constants/nigeriaData";
+import DocumentUpload from "@/components/forms/DocumentUpload";
+import ImageUpload from "@/components/ImageUpload";
+import { useMutation } from "@tanstack/react-query";
+import { userAPI } from "@/lib/api/user";
 
 const validationSchema = Yup.object().shape({
-  idType: Yup.string().required("Please select an ID type"),
-  nationalId: Yup.string()
-    .min(11, "National ID must be at least 11 characters")
-    .required("National Identification Number is required"),
+  location: Yup.string().required("Please enter your location"),
+  state: Yup.string().required("Please select your state"),
+  lga: Yup.string().required("Please select your LGA"),
+  ccac_document: Yup.string().required("CAC document number is required"),
+  govt_id_type: Yup.string().required("Please select government ID type"),
 });
 
 interface FormValues {
-  idType: string;
-  nationalId: string;
+  location: string;
+  state: string;
+  lga: string;
+  ccac_document: string;
+  govt_id_type: string;
+}
+
+interface ExpertiseDetail {
+  vehicle_make_id: number;
+  years_of_experience: number;
+  certification_level: string;
+}
+
+interface SelectedMake {
+  id: number;
+  name: string;
+  years_of_experience: number;
+  certification_level: string;
 }
 
 interface DocumentFile {
@@ -36,19 +61,96 @@ interface DocumentFile {
 
 const MechanicStep3 = () => {
   const params = useLocalSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [frontIdCard, setFrontIdCard] = useState<DocumentFile | null>(null);
-  const [backIdCard, setBackIdCard] = useState<DocumentFile | null>(null);
+  const [cacDocument, setCacDocument] = useState<DocumentFile | null>(null);
+  const [selfie, setSelfie] = useState<DocumentFile | null>(null);
+  const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
+  const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
+  const [selectedMakes, setSelectedMakes] = useState<SelectedMake[]>([]);
 
-  const idTypes = [
-    { label: "National ID Card (NIN)", value: "nin" },
-    { label: "Driver's License", value: "drivers_license" },
-    { label: "Voter's Card", value: "voters_card" },
-    { label: "International Passport", value: "passport" },
-    { label: "Permanent Voter's Card (PVC)", value: "pvc" },
+  // API mutation for step 4 registration (documents and expertise)
+  const registerStep4Mutation = useMutation({
+    mutationFn: (data: any) => userAPI.registerStep(4, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+    onSuccess: (response) => {
+      console.log('✅ Step 4 registration successful:', response);
+    },
+    onError: (error: any) => {
+      console.error('❌ Error in step 4 registration:', error);
+    },
+  });
+
+  // Fetch vehicle makes
+  const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
+
+  // Get Nigerian states from existing location data
+  const nigerianStates = getStatesByCountry('NG');
+  const states = nigerianStates.map(state => ({
+    label: state.name,
+    value: state.name.toLowerCase().replace(/\s+/g, '_')
+  }));
+
+  const govtIdTypes = [
+    { label: "NIN", value: "NIN" },
+    { label: "Drivers license", value: "drivers_license" },
+    { label: "Voters card", value: "voters_card" },
+    { label: "International passport", value: "international_passport" },
+    { label: "Permanent voter's card", value: "permanent_voters_card" },
   ];
 
-  const pickDocument = async (type: "front" | "back") => {
+  const certificationLevels = [
+    { label: "Basic", value: "basic" },
+    { label: "Intermediate", value: "intermediate" },
+    { label: "Advanced", value: "advanced" },
+    { label: "Expert", value: "expert" },
+    { label: "Certified", value: "certified" },
+  ];
+
+  const yearsOfExperience = [
+    { label: "0-1 years", value: 1 },
+    { label: "2-3 years", value: 2 },
+    { label: "4-5 years", value: 3 },
+    { label: "6-10 years", value: 5 },
+    { label: "10+ years", value: 10 },
+  ];
+
+  // Handle adding a vehicle make to expertise
+  const addVehicleMake = (make: VehicleMake) => {
+    const newSelectedMake: SelectedMake = {
+      id: make.id,
+      name: make.name,
+      years_of_experience: 1,
+      certification_level: "basic"
+    };
+    setSelectedMakes([...selectedMakes, newSelectedMake]);
+  };
+
+  // Handle removing a vehicle make from expertise
+  const removeVehicleMake = (makeId: number) => {
+    setSelectedMakes(selectedMakes.filter(make => make.id !== makeId));
+  };
+
+  // Handle updating expertise details
+  const updateExpertiseDetail = (makeId: number, field: 'years_of_experience' | 'certification_level', value: number | string) => {
+    setSelectedMakes(selectedMakes.map(make =>
+      make.id === makeId ? { ...make, [field]: value } : make
+    ));
+  };
+
+  // Get LGAs based on selected state
+  const getLGAsForState = (stateValue: string) => {
+    // Convert state value back to proper case for lookup
+    const stateName = stateValue.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const lgas = getLGAs(stateName);
+    return lgas.map(lga => ({
+      label: lga,
+      value: lga.toLowerCase().replace(/\s+/g, '_').replace(/[\/\-]/g, '_')
+    }));
+  };
+
+  const pickDocument = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
     try {
       // Request permissions
       const { status } =
@@ -64,7 +166,7 @@ const MechanicStep3 = () => {
       // Show action sheet for image source
       Alert.alert(
         "Select Image",
-        "Choose how you want to select your ID card image",
+        "Choose how you want to select your document image",
         [
           {
             text: "Camera",
@@ -85,7 +187,7 @@ const MechanicStep3 = () => {
     }
   };
 
-  const takePhoto = async (type: "front" | "back") => {
+  const takePhoto = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
@@ -97,7 +199,7 @@ const MechanicStep3 = () => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 10],
         quality: 0.8,
@@ -107,15 +209,24 @@ const MechanicStep3 = () => {
         const asset = result.assets[0];
         const file: DocumentFile = {
           uri: asset.uri,
-          name: `id_card_${type}_${Date.now()}.jpg`,
+          name: `${type}_${Date.now()}.jpg`,
           type: "image/jpeg",
           size: asset.fileSize || 0,
         };
 
-        if (type === "front") {
-          setFrontIdCard(file);
-        } else {
-          setBackIdCard(file);
+        switch (type) {
+          case "cac":
+            setCacDocument(file);
+            break;
+          case "selfie":
+            setSelfie(file);
+            break;
+          case "govt_front":
+            setGovernmentIdFront(file);
+            break;
+          case "govt_back":
+            setGovernmentIdBack(file);
+            break;
         }
       }
     } catch (error) {
@@ -123,10 +234,10 @@ const MechanicStep3 = () => {
     }
   };
 
-  const pickFromLibrary = async (type: "front" | "back") => {
+  const pickFromLibrary = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 10],
         quality: 0.8,
@@ -136,7 +247,7 @@ const MechanicStep3 = () => {
         const asset = result.assets[0];
         const file: DocumentFile = {
           uri: asset.uri,
-          name: `id_card_${type}_${Date.now()}.jpg`,
+          name: `${type}_${Date.now()}.jpg`,
           type: "image/jpeg",
           size: asset.fileSize || 0,
         };
@@ -151,10 +262,19 @@ const MechanicStep3 = () => {
           return;
         }
 
-        if (type === "front") {
-          setFrontIdCard(file);
-        } else {
-          setBackIdCard(file);
+        switch (type) {
+          case "cac":
+            setCacDocument(file);
+            break;
+          case "selfie":
+            setSelfie(file);
+            break;
+          case "govt_front":
+            setGovernmentIdFront(file);
+            break;
+          case "govt_back":
+            setGovernmentIdBack(file);
+            break;
         }
       }
     } catch (error) {
@@ -164,44 +284,120 @@ const MechanicStep3 = () => {
 
   const handleSubmit = async (values: FormValues) => {
     // Validate required documents
-    if (!frontIdCard) {
+    if (!cacDocument) {
       Alert.alert(
         "Missing Document",
-        "Please upload the front side of your ID card."
+        "Please upload your CAC document."
+      );
+      return;
+    }
+
+    if (!selfie) {
+      Alert.alert(
+        "Missing Document",
+        "Please upload your selfie."
+      );
+      return;
+    }
+
+    if (!governmentIdFront) {
+      Alert.alert(
+        "Missing Document",
+        "Please upload the front of your government ID."
       );
       return;
     }
 
     // Only require back image for non-passport documents
-    if (values.idType !== "passport" && !backIdCard) {
+    if (values.govt_id_type !== "international_passport" && !governmentIdBack) {
       Alert.alert(
         "Missing Document",
-        "Please upload the back side of your ID card."
+        "Please upload the back of your government ID."
       );
       return;
     }
 
-    setIsLoading(true);
+    // Convert selected makes to expertise details format
+    const expertiseDetails: ExpertiseDetail[] = selectedMakes.map(make => ({
+      vehicle_make_id: make.id,
+      years_of_experience: make.years_of_experience,
+      certification_level: make.certification_level
+    }));
 
-    try {
-      // Simulate API call for document upload and verification
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Prepare FormData payload (matching seller step4 structure)
+    const formData = new FormData();
+    
+    // Add request type
+    formData.append('requestType', 'inbound');
+    
+    // Add text fields directly (not wrapped in data object)
+    formData.append('location', values.location);
+    formData.append('state', values.state);
+    formData.append('lga', values.lga);
+    formData.append('cac_number', values.ccac_document);
+    formData.append('govt_id_type', values.govt_id_type);
+    formData.append('expertise_details', JSON.stringify(expertiseDetails));
+    
+    // Add file uploads
+    if (cacDocument) {
+      formData.append('cac_document', {
+        uri: cacDocument.uri,
+        name: `cac_document_${Date.now()}.jpg`,
+        type: 'image/jpeg'
+      } as any);
+    }
+    
+    if (selfie) {
+      formData.append('selfie', {
+        uri: selfie.uri,
+        name: `selfie_${Date.now()}.jpg`,
+        type: 'image/jpeg'
+      } as any);
+    }
+    
+    if (governmentIdFront) {
+      formData.append('government_id_front', {
+        uri: governmentIdFront.uri,
+        name: `government_id_front_${Date.now()}.jpg`,
+        type: 'image/jpeg'
+      } as any);
+    }
+    
+    if (governmentIdBack) {
+      formData.append('government_id_back', {
+        uri: governmentIdBack.uri,
+        name: `government_id_back_${Date.now()}.jpg`,
+        type: 'image/jpeg'
+      } as any);
+    }
 
-      // Navigate to step 3 with all data
+    // Call the API with FormData
+    registerStep4Mutation.mutate(formData, {
+      onSuccess: (response) => {
+        console.log('✅ Step 4 registration successful:', response);
+        // Navigate to step 4 with all data
       router.push({
         pathname: mechanicRoutes.step4,
         params: {
           ...params,
-          idType: values.idType,
-          nationalId: values.nationalId,
+            location: values.location,
+            state: values.state,
+            lga: values.lga,
+            ccac_document: values.ccac_document,
+            govt_id_type: values.govt_id_type,
+            expertise_details: JSON.stringify(expertiseDetails),
           documentsUploaded: "true",
         },
       });
-    } catch (error) {
-      Alert.alert("Error", "Failed to submit documents. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+      },
+      onError: (error: any) => {
+        console.error('❌ Step 4 registration failed:', error);
+        Alert.alert(
+          "Registration Failed",
+          error?.response?.data?.message || "Failed to submit documents. Please try again."
+        );
+      }
+    });
   };
 
   const handleSignIn = () => {
@@ -216,24 +412,36 @@ const MechanicStep3 = () => {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        bounces={false}
+        overScrollMode="never"
+        nestedScrollEnabled={true}
+        automaticallyAdjustKeyboardInsets={true}
+        keyboardDismissMode="interactive"
+        contentContainerStyle={{ paddingBottom: 40 }}
+        scrollEnabled={true}
+        alwaysBounceVertical={false}
       >
         <View className="px-5">
           <UserAuthHeader />
           {/* Progress Bar */}
           <View className="my-6">
-            <ProgressBar step={2} totalSteps={3} />
+            <ProgressBar step={3} totalSteps={4} />
           </View>
 
           <Formik
             initialValues={{
-              idType: "",
-              nationalId: "",
+              location: "",
+              state: "",
+              lga: "",
+              ccac_document: "",
+              govt_id_type: "",
             }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
           >
             {({
-              handleSubmit,
               isValid,
               setFieldValue,
               values,
@@ -241,134 +449,310 @@ const MechanicStep3 = () => {
               touched,
             }) => (
               <View>
-                {/* ID Type Select */}
+                {/* SECTION 1: LOCATION & BUSINESS INFO */}
+                <View className="mb-4">
+                  <View className="shadow-sm bg-white rounded-xl p-4 mb-6">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
+                      Location & Business Information
+                    </Text>
+
+                    {/* Location Input */}
+                    <FormikInput
+                      name="location"
+                      label="Location"
+                      placeholder="Enter your location (e.g., Lagos, Ikeja)"
+                      keyboardType="default"
+                      required
+                    />
+
+                    {/* State Select */}
                 <SelectField
-                  name="idType"
-                  label="Government ID Type"
-                  placeholder="Select your ID type"
-                  options={idTypes}
-                  value={values.idType}
-                  onValueChange={(value: string) => setFieldValue("idType", value)}
-                  error={errors.idType}
-                  touched={touched.idType}
+                      name="state"
+                      label="State"
+                      placeholder="Select your state"
+                      options={states}
+                      value={values.state}
+                      onValueChange={(value: string) => {
+                        setFieldValue("state", value);
+                        setFieldValue("lga", ""); // Reset LGA when state changes
+                      }}
+                      error={errors.state}
+                      touched={touched.state}
                   required={true}
                 />
 
-                {/* National ID Input */}
-                <FormikInput
-                  name="nationalId"
-                  label={`National Identification Number (${
-                    values.idType === "nin"
-                      ? "NIN"
-                      : values.idType === "drivers_license"
-                      ? "License No."
-                      : values.idType === "voters_card"
-                      ? "VIN"
-                      : values.idType === "passport"
-                      ? "Passport No."
-                      : values.idType === "pvc"
-                      ? "PVC No."
-                      : "ID No."
-                  })`}
-                  placeholder={`Enter ${
-                    values.idType === "nin"
-                      ? "NIN"
-                      : values.idType === "drivers_license"
-                      ? "License Number"
-                      : values.idType === "voters_card"
-                      ? "VIN"
-                      : values.idType === "passport"
-                      ? "Passport Number"
-                      : values.idType === "pvc"
-                      ? "PVC Number"
-                      : "ID Number"
-                  }`}
-                  keyboardType="numeric"
-                  maxLength={11}
-                  required
-                />
-
-                {/* Front ID Card Upload */}
-                <View className="mb-6">
-                  <Text className="text-base font-NunitoBold text-gray-900 mb-3">
-                    Upload Front National ID Card
-                    <Text className="text-red-500"> *</Text>
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() => pickDocument("front")}
-                    className="border-2 border-dashed border-gray-300 rounded-xl p-8 items-center justify-center bg-gray-50"
-                    activeOpacity={0.7}
-                  >
-                    <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
-                      <View className="w-8 h-8 bg-red-600 rounded items-center justify-center">
-                        <Text className="text-white font-bold text-lg">📄</Text>
+                    {/* LGA Select - Only show if state is selected */}
+                    {values.state && (
+                      <SelectField
+                        name="lga"
+                        label="Local Government Area (LGA)"
+                        placeholder="Select your LGA"
+                        options={getLGAsForState(values.state)}
+                        value={values.lga}
+                        onValueChange={(value: string) => setFieldValue("lga", value)}
+                        error={errors.lga}
+                        touched={touched.lga}
+                        required={true}
+                      />
+                    )}
                       </View>
                     </View>
 
-                    <Text className="text-red-600 font-NunitoBold text-base text-center mb-2">
-                      {frontIdCard
-                        ? "Change Front Side of Card"
-                        : "Click to Upload Front Side of Card"}
+                {/* SECTION 2: VEHICLE EXPERTISE */}
+                <View className="mb-4">
+                  <View className="bg-white shadow-sm rounded-[.8rem] p-4 mb-6">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
+                      Vehicle Expertise
+                    </Text>
+                    <Text className="text-sm text-gray-600 font-NunitoMedium mb-4">
+                      Select vehicle makes you specialize in and your experience level
                     </Text>
 
-                    <Text className="text-gray-500 font-NunitoMedium text-sm text-center">
-                      (Max. File size: 15 MB)
-                    </Text>
-
-                    {frontIdCard && (
-                      <Text className="text-green-600 font-NunitoMedium text-sm mt-2">
-                        ✓ {frontIdCard.name}
+                    {/* Available Vehicle Makes */}
+                    <View className="mb-4">
+                      <Text className="text-sm font-NunitoSemiBold text-gray-700 mb-3">
+                        Available Vehicle Makes:
                       </Text>
+                      {vehicleMakesLoading ? (
+                        <View className="bg-white rounded-lg p-4 items-center">
+                          <Text className="text-gray-500">Loading vehicle makes...</Text>
+                        </View>
+                      ) : (
+                        <View className="bg-white rounded-lg p-3">
+                          <View className="flex-row flex-wrap">
+                            {vehicleMakes?.filter(make =>
+                              make.is_active &&
+                              !selectedMakes.some(selected => selected.id === make.id)
+                            ).map((make) => (
+                              <TouchableOpacity
+                                key={make.id}
+                                onPress={() => addVehicleMake(make)}
+                                className="bg-primary-500 border border-primary-500 rounded-[.8rem] px-4 py-2 mr-2 mb-2"
+                                activeOpacity={0.7}
+                              >
+                                <Text className="text-white font-NunitoMedium text-md">
+                                  + {make.name}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Selected Vehicle Makes with Individual Expertise */}
+                    {selectedMakes.length > 0 && (
+                      <View className="mb-4">
+                        <Text className="text-sm font-NunitoSemiBold text-gray-700 mb-3">
+                          Configure Expertise for Each Make:
+                        </Text>
+
+                        {selectedMakes.map((make) => (
+                          <View key={make.id} className="bg-white border border-gray-200 rounded-[.8rem] p-3 mb-3">
+                            {/* Make Header */}
+                            <View className="flex-row justify-between items-center mb-3">
+                              <Text className="text-base font-NunitoBold text-gray-900">
+                                {make.name}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => removeVehicleMake(make.id)}
+                                className="bg-red-100 rounded-full w-6 h-6 items-center justify-center"
+                                activeOpacity={0.7}
+                              >
+                                <Text className="text-red-600 font-bold text-sm">×</Text>
+                              </TouchableOpacity>
+                            </View>
+
+                            {/* Years of Experience */}
+                            <View className="mb-3">
+                              <Text className="text-sm font-NunitoSemiBold text-gray-700 mb-2">
+                                Years of Experience:
+                              </Text>
+                              <View className="flex-row flex-wrap">
+                                {yearsOfExperience.map((option) => (
+                                  <TouchableOpacity
+                                    key={option.value}
+                                    onPress={() => updateExpertiseDetail(make.id, 'years_of_experience', option.value)}
+                                    className={`border rounded-[.6rem] px-3 py-2 mr-2 mb-2 ${make.years_of_experience === option.value
+                                      ? 'bg-primary-100 border-primary-400'
+                                      : 'bg-gray-50 border-gray-300'
+                                      }`}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Text className={`text-sm font-NunitoMedium ${make.years_of_experience === option.value
+                                      ? 'text-primary-700'
+                                      : 'text-gray-600'
+                                      }`}>
+                                      {option.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+
+                            {/* Certification Level */}
+                            <View>
+                              <Text className="text-sm font-NunitoSemiBold text-gray-700 mb-2">
+                                Certification Level:
+                              </Text>
+                              <View className="flex-row flex-wrap">
+                                {certificationLevels.map((level) => (
+                                  <TouchableOpacity
+                                    key={level.value}
+                                    onPress={() => updateExpertiseDetail(make.id, 'certification_level', level.value)}
+                                    className={`border rounded-[.8rem] px-3 py-2 mr-2 mb-2 ${make.certification_level === level.value
+                                      ? 'bg-green-100 border-green-400'
+                                      : 'bg-gray-50 border-gray-300'
+                                      }`}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Text className={`text-sm font-NunitoMedium ${make.certification_level === level.value
+                                      ? 'text-green-700'
+                                      : 'text-gray-600'
+                                      }`}>
+                                      {level.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
                     )}
-                  </TouchableOpacity>
+
+                    {selectedMakes.length === 0 && (
+                      <View className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+                        <Text className="text-yellow-800 font-NunitoMedium text-sm text-center">
+                          Please select at least one vehicle make to continue.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
-                {/* Back ID Card Upload - Only show for non-passport documents */}
-                {values.idType !== "passport" && (
-                  <View className="mb-8">
-                    <Text className="text-base font-NunitoBold text-gray-900 mb-3">
-                      Upload Back National ID Card
-                      <Text className="text-red-500"> *</Text>
+                {/* SECTION 3: GOVERNMENT IDENTIFICATION & DOCUMENTS */}
+                <View className="mb-4">
+                  <View className="bg-white shadow-sm rounded-[.8rem] p-4 mb-6">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
+                      Government Identification
+                    </Text>
+                    <Text className="text-sm text-gray-600 font-NunitoMedium mb-6">
+                      Select your ID type and upload required documents
                     </Text>
 
-                    <TouchableOpacity
-                      onPress={() => pickDocument("back")}
-                      className="border-2 border-dashed border-gray-300 rounded-xl p-8 items-center justify-center bg-gray-50"
-                      activeOpacity={0.7}
-                    >
-                      <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
-                        <View className="w-8 h-8 bg-red-600 rounded items-center justify-center">
-                          <Text className="text-white font-bold text-lg">📄</Text>
+                    {/* Government ID Type Select */}
+                    <SelectField
+                      name="govt_id_type"
+                      label="Government ID Type"
+                      placeholder="Select your government ID type"
+                      options={govtIdTypes}
+                      value={values.govt_id_type}
+                      onValueChange={(value: string) => setFieldValue("govt_id_type", value)}
+                      error={errors.govt_id_type}
+                      touched={touched.govt_id_type}
+                      required={true}
+                    />
+
+                    {/* Government ID Uploads - Show immediately after selection */}
+                    {values.govt_id_type && (
+                      <View className="mt-4">
+                        <Text className="text-sm font-NunitoSemiBold text-gray-700 mb-3">
+                          Upload Government ID Documents:
+                        </Text>
+
+                        {/* Government ID Front Upload */}
+                        <View className="mb-4">
+                          <ImageUpload
+                            label="Front of Government ID"
+                            isUploaded={!!governmentIdFront && !!governmentIdFront.uri}
+                            onPress={() => pickDocument("govt_front")}
+                            uploadedText="Government ID Front Uploaded"
+                            maxFileSize="15 MB"
+                            required={true}
+                            imageUri={governmentIdFront?.uri}
+                          />
+                        </View>
+
+                        {/* Government ID Back Upload - Only show for non-passport documents */}
+                        {values.govt_id_type !== "international_passport" && (
+                          <View className="mb-4">
+                            <ImageUpload
+                              label="Back of Government ID"
+                              isUploaded={!!governmentIdBack && !!governmentIdBack.uri}
+                              onPress={() => pickDocument("govt_back")}
+                              uploadedText="Government ID Back Uploaded"
+                              maxFileSize="15 MB"
+                              required={true}
+                              imageUri={governmentIdBack?.uri}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    )}
                         </View>
                       </View>
 
-                      <Text className="text-red-600 font-NunitoBold text-base text-center mb-2">
-                        {backIdCard
-                          ? "Change Back Side of Card"
-                          : "Click to Upload Back Side of Card"}
+                {/* SECTION 4: ADDITIONAL DOCUMENTS */}
+                <View className="mb-4">
+                  <View className="bg-white shadow-sm rounded-[.8rem] p-4 mb-6">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
+                      Additional Documents
+                      </Text>
+                    <Text className="text-sm text-gray-600 font-NunitoMedium mb-6">
+                      Upload your CAC document and selfie for verification
                       </Text>
 
-                      <Text className="text-gray-500 font-NunitoMedium text-sm text-center">
-                        (Max. File size: 15 MB)
-                      </Text>
 
-                      {backIdCard && (
-                        <Text className="text-green-600 font-NunitoMedium text-sm mt-2">
-                          ✓ {backIdCard.name}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                    {/* CAC Document Input */}
+                    <FormikInput
+                      name="ccac_document"
+                      label="CAC Document Number"
+                      placeholder="Enter your CAC document number"
+                      keyboardType="default"
+                      required
+                    />
+
+                    {/* CAC Document Upload */}
+                    <View className="mb-4">
+                      <DocumentUpload
+                        label="CAC Document"
+                        placeholder="Upload CAC Document"
+                        maxFileSize="15 MB"
+                        acceptedTypes={["pdf", "jpg", "jpeg", "png"]}
+                        value={cacDocument && cacDocument.uri ? cacDocument : null}
+                        onChange={(file) => {
+                          if (file) {
+                            setCacDocument(file);
+                          } else {
+                            setCacDocument(null);
+                          }
+                        }}
+                        required={true}
+                      />
+                    </View>
+
+                    {/* Selfie Upload */}
+                    <View className="mb-4">
+                      <ImageUpload
+                        label="Selfie Photo"
+                        isUploaded={!!selfie && !!selfie.uri}
+                        onPress={() => pickDocument("selfie")}
+                        uploadedText="Selfie Uploaded"
+                        maxFileSize="15 MB"
+                        required={true}
+                        imageUri={selfie?.uri}
+                      />
+                    </View>
                   </View>
-                )}
+                </View>
 
                 {/* Proceed Button */}
                 <View className="mb-6">
                   <FormikButton
                     title="Proceed"
-                    onPress={handleSubmit}
-                    disabled={!isValid || !frontIdCard || (values.idType !== "passport" && !backIdCard)}
-                    loading={isLoading}
+                    disabled={!isValid || !cacDocument || !selfie || !governmentIdFront || (values.govt_id_type !== "international_passport" && !governmentIdBack) || selectedMakes.length === 0}
+                    loading={registerStep4Mutation.isPending}
                   />
                 </View>
 

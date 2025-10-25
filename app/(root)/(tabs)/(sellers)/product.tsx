@@ -13,6 +13,7 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import { useQuery } from '@tanstack/react-query'
 import { useActiveRoleProfile } from '@/hooks/useUserProfile'
 import { useCategories } from '@/hooks/useProducts'
+import AndroidNavBarSpacer from '@/components/AndroidNavBarSpacer'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -587,6 +588,9 @@ const Product = () => {
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {/* Android Navigation Bar Spacer */}
+                <AndroidNavBarSpacer />
               </View>
             </View>
           </View>

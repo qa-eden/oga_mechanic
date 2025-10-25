@@ -21,6 +21,7 @@ import { useCustomAlert } from "@/hooks/useCustomAlert";
 import { userAPI } from "@/lib/api/user";
 import { useQueryClient } from "@tanstack/react-query";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -296,38 +297,69 @@ const SwitchUserModal = ({
     }
   };
 
-  const handleSignUp = () => {
-    hideAlert();
-    onClose(); // Close the switch modal first
-    
-    // Get the original role name for navigation
-    const selectedOption = userOptions.find(option => option.id === selectedUser);
-    const roleName = selectedOption?.roleName || selectedUser;
-    
-    // Navigate to the specific role's step 1 registration page
-    let targetRoute: string = routes?.signUp; // fallback
-    
-    switch (roleName) {
-      case 'primary_user': 
-        targetRoute = routes?.userStep1; 
-        break;
-      case 'driver': 
-        targetRoute = driverRoutes?.step1; 
-        break;
-      case 'mechanic': 
-        targetRoute = mechanicRoutes?.step1; 
-        break;
-      case 'rider': 
-        targetRoute = driverRoutes?.chooseOptions; // Rider uses driver's choose options
-        break;
-      case 'merchant': 
-        targetRoute = sellerRoutes?.step1; 
-        break;
-      default: 
-        targetRoute = routes?.signUp;
+  const handleSignUp = async () => {
+    try {
+      setIsSwitching(true);
+      hideAlert();
+
+      // Get the original role name and ID for navigation
+      const selectedOption = userOptions.find(option => option.id === selectedUser);
+      const roleName = selectedOption?.roleName || selectedUser;
+      const roleId = selectedOption?.roleId;
+
+      if (!roleId) {
+        showError(
+          "Error",
+          "Unable to determine role ID. Please try again."
+        );
+        setIsSwitching(false);
+        return;
+      }
+
+      // Call step 1 registration endpoint to initiate the signup process
+      const step1Response = await userAPI.registerStep(1, {
+        role_id: roleId
+      });
+
+      // Store role data for the registration flow
+      // This would typically be stored in a registration store or context
+      await AsyncStorage.setItem('registration_role_id', roleId.toString());
+      await AsyncStorage.setItem('registration_session_id', step1Response.sessionId || step1Response.session_id || '');
+
+      onClose(); // Close the switch modal
+
+      // Navigate to the specific role's step 1 registration page
+      let targetRoute: string = routes?.signUp; // fallback
+
+      switch (roleName) {
+        case 'primary_user':
+          targetRoute = routes?.userStep1;
+          break;
+        case 'driver':
+          targetRoute = driverRoutes?.step1;
+          break;
+        case 'mechanic':
+          targetRoute = mechanicRoutes?.step1;
+          break;
+        case 'rider':
+          targetRoute = driverRoutes?.chooseOptions; // Rider uses driver's choose options
+          break;
+        case 'merchant':
+          targetRoute = sellerRoutes?.step1;
+          break;
+        default:
+          targetRoute = routes?.signUp;
+      }
+
+      router.push(targetRoute as any);
+    } catch (error) {
+      showError(
+        "Sign Up Failed",
+        "Failed to initiate sign up. Please try again."
+      );
+    } finally {
+      setIsSwitching(false);
     }
-    
-    router.push(targetRoute as any);
   }
 
   return (
@@ -441,8 +473,6 @@ const SwitchUserModal = ({
 
             {/* Action Buttons */}
             <View className="px-6 pb-8 border-t border-gray-100 pt-4">
-
-
               <CustomButton
                 title={
                   isSwitching
@@ -469,7 +499,8 @@ const SwitchUserModal = ({
                 textVariant="outline"
               />
 
-
+              {/* Android Navigation Bar Spacer */}
+              <AndroidNavBarSpacer />
             </View>
           </Animated.View>
         </View>
@@ -482,7 +513,7 @@ const SwitchUserModal = ({
         message={alertConfig?.message || ""}
         onClose={hideAlert}
         onButtonPress={handleSignUp}
-        type={alertConfig?.type || "error"}
+        type={ "info"}
         buttonText="Sign Up"
       />
     </Modal>

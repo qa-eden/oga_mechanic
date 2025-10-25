@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
 import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput } from 'react-native'
 import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
+import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface SelectOption {
   label: string
@@ -247,6 +248,9 @@ const SelectField: React.FC<SelectFieldProps> = ({
                     </Text>
                   </View>
                 )}
+
+                {/* Android Navigation Bar Spacer */}
+                <AndroidNavBarSpacer />
               </View>
             </ScrollView>
           </Pressable>

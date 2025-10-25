@@ -5,6 +5,7 @@ import { useState } from "react";
 import { XMarkIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { icons } from "@/constants";
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer";
 
 interface PaymentMethodModalProps {
   isVisible: boolean;
@@ -120,6 +121,9 @@ const PaymentMethodModal = ({
                 Proceed
               </Text>
             </TouchableOpacity>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </View>
       </View>

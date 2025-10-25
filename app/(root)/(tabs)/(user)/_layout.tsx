@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { icons } from "@/constants";
 import { Dimensions } from "react-native";
 import { routes } from "@/constants/routes";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 
 // Import your actual tab screen components
@@ -104,7 +105,7 @@ export default function Layout() {
         type="DOWN"
         style={[
           styles.bottomBar,
-          Platform.OS === "android" && { paddingBottom: 35 }, // match the red bar height
+          // Platform.OS === "android" && { paddingBottom: 35 }, // match the red bar height
         ]}
         height={Platform.OS === "android" ? 75 : 80}
         width={width}
@@ -172,6 +173,9 @@ export default function Layout() {
           component={ShopScreen}
         />
       </CurvedBottomBarExpo.Navigator>
+      
+      {/* Android Navigation Bar Spacer */}
+      <AndroidNavBarSpacer />
     </View>
   );
 }

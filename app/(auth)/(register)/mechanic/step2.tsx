@@ -13,10 +13,18 @@ import { mechanicRoutes } from "@/constants/routes";
 import ProgressBar from "@/components/ProgressBar";
 import UserAuthHeader from "@/components/UserAuthHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRegistrationStore } from "@/stores/registrationStore";
+import { useRegisterStep3, useResendOTP } from "@/hooks/useRegistration";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import CustomAlert from "@/components/CustomAlert";
+import { StatusBar } from "expo-status-bar";
 
 const MechanicStep2 = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { getStepByStepData } = useRegistrationStore();
+  const registerStep3Mutation = useRegisterStep3();
+  const resendOTPMutation = useResendOTP();
+  const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
   const [countdown, setCountdown] = useState(60); // Initial countdown value
 
   // Countdown effect
@@ -31,20 +39,75 @@ const MechanicStep2 = () => {
   }, [countdown]);
 
   const handleOtpComplete = (otp: string | number) => {
-    setLoading(true); // Start loader
+    // Get email from registration data
+    const stepByStepData = getStepByStepData();
+    const email = stepByStepData.email || '';
 
-    setTimeout(() => {
-      router.push(mechanicRoutes?.step3);
-      setLoading(false); // Stop loader after navigation
-    }, 1500); // Simulating API call delay
+    // Use TanStack Query mutation for step 3
+    registerStep3Mutation.mutate({
+      email: email,
+      verification_code: otp.toString()
+    }, {
+      onSuccess: () => {
+        // Navigate to next step
+        router.push(mechanicRoutes?.step3);
+      },
+      onError: (error: any) => {
+        // Extract error message from API response
+        let errorMessage = 'OTP verification failed. Please try again.';
+        
+        if (error?.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          if (errors.verification_code && errors.verification_code.length > 0) {
+            errorMessage = errors.verification_code[0];
+          } else if (errors.message) {
+            errorMessage = errors.message;
+          }
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Show custom error alert
+        showError('OTP Verification Error', errorMessage);
+        
+        // Don't navigate on error - let user try again
+      }
+    });
   };
 
   const handleResendCode = () => {
-    setCountdown(60);
+    resendOTPMutation.mutate(undefined, {
+      onSuccess: () => {
+        setCountdown(60);
+        showSuccess('OTP Sent', 'A new verification code has been sent to your email.');
+      },
+      onError: (error: any) => {
+        // Extract error message from API response
+        let errorMessage = 'Failed to resend OTP. Please try again.';
+        
+        if (error?.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          if (errors.email && errors.email.length > 0) {
+            errorMessage = errors.email[0];
+          } else if (errors.message) {
+            errorMessage = errors.message;
+          }
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        showError('Resend Failed', errorMessage);
+      }
+    });
   };
 
   return (
     <SafeAreaView>
+      <StatusBar style="dark" />
       <View className="">
         <View className=" w-full px-4">
           <UserAuthHeader />
@@ -60,7 +123,7 @@ const MechanicStep2 = () => {
 
           <Text className="font-NunitoSemiBold text-[19px] pt-5 pb-2">
             Enter the 6-digit code we texted to your linked email{" "}
-            {maskEmail("emmzzyvibes@gmail.com")}
+            {maskEmail(getStepByStepData().email || "user@example.com")}
           </Text>
           <Text className="text-text-100 text-[16px]">
             This helps keep your account safe by verifying it's you
@@ -72,7 +135,7 @@ const MechanicStep2 = () => {
             countdown={countdown}
           />
 
-          {loading ? (
+          {registerStep3Mutation.isPending ? (
             <ActivityIndicator size="large" color="#D30309" className="pt-4" />
           ) : (
             <>
@@ -81,12 +144,17 @@ const MechanicStep2 = () => {
                 <TouchableOpacity>
                   <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
                     {`Resend Code (${countdown}s)`}
-                  </Text>
+                        </Text>
                 </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={handleResendCode}>
-                  <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
-                    {"Resend Code"}
+                            ) : (
+                <TouchableOpacity 
+                  onPress={handleResendCode}
+                  disabled={resendOTPMutation.isPending}
+                >
+                  <Text className={`text-[16px] font-NunitoSemiBold ${
+                    resendOTPMutation.isPending ? 'text-gray-400' : 'text-primary-500'
+                  }`}>
+                    {resendOTPMutation.isPending ? "Sending..." : "Resend Code"}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -94,6 +162,17 @@ const MechanicStep2 = () => {
           )}
         </View>
       </View>
+      
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onClose={hideAlert}
+        />
+      )}
     </SafeAreaView>
   );
 };

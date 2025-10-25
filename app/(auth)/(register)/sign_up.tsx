@@ -339,11 +339,28 @@ const SignUp = () => {
           >
             {isLoadingRoles ? (
               // Loading state
-              <View className="flex-1 justify-center items-center py-20">
-                <ActivityIndicator size="large" color="#D30309" />
-                <Text className="text-gray-500 font-NunitoMedium mt-4">
-                  Loading Roles...
-                </Text>
+              <View className="flex-1 justify-center items-center py-20 px-6">
+                <View className="items-center">
+                  {/* Animated loading icon */}
+                  <View className="w-20 h-20 bg-red-50 rounded-full items-center justify-center mb-6">
+                    <ActivityIndicator size="large" color="#D30309" />
+                  </View>
+                  
+                  {/* Loading text with better styling */}
+                  <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
+                    Loading Roles
+                  </Text>
+                  <Text className="text-gray-500 font-NunitoMedium text-center leading-6">
+                    Please wait while we fetch available roles...
+                  </Text>
+                  
+                  {/* Loading dots animation */}
+                  <View className="flex-row items-center mt-6">
+                    <View className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse" />
+                    <View className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                    <View className="w-2 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                  </View>
+                </View>
               </View>
             ) : (
               // Roles FlatList

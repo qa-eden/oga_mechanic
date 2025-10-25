@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Alert, Image } from 'react-native'
 import { DocumentIcon, XMarkIcon } from 'react-native-heroicons/outline'
+import * as ImagePicker from 'expo-image-picker'
 
 interface DocumentUploadProps {
   label?: string
@@ -42,52 +43,113 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       [
         {
           text: 'Camera',
-          onPress: () => {
-            // TODO: Implement camera capture
-            simulateUpload()
-          }
+          onPress: () => takePhoto()
         },
         {
           text: 'Gallery',
-          onPress: () => {
-            // TODO: Implement gallery picker
-            simulateUpload()
-          }
-        },
-        {
-          text: 'Files',
-          onPress: () => {
-            // TODO: Implement file picker
-            simulateUpload()
-          }
+          onPress: () => pickFromLibrary()
         },
         { text: 'Cancel', style: 'cancel' }
       ]
     )
   }
 
-  const simulateUpload = () => {
-    setIsUploading(true)
-    
-    // Simulate upload process
-    setTimeout(() => {
-      const mockFile = {
-        name: 'CAC_Document.pdf',
-        size: '2.5 MB',
-        type: 'application/pdf',
-        uri: 'mock://document.pdf',
-        uploadedAt: new Date().toISOString()
+  const takePhoto = async () => {
+    try {
+      setIsUploading(true)
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant camera permissions to take photos.'
+        )
+        setIsUploading(false)
+        return
       }
-      
-      onChange?.(mockFile)
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 10],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0]
+        const file = {
+          uri: asset.uri,
+          name: `document_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+          size: asset.fileSize || 0,
+        }
+
+        // Check file size (15MB limit)
+        const maxSize = 15 * 1024 * 1024 // 15MB in bytes
+        if (file.size > maxSize) {
+          Alert.alert(
+            'File Too Large',
+            'Please select an image smaller than 15MB.'
+          )
+          setIsUploading(false)
+          return
+        }
+
+        onChange?.(file)
+      }
       setIsUploading(false)
-      
-      Alert.alert(
-        'Upload Successful',
-        'Your document has been uploaded successfully',
-        [{ text: 'OK' }]
-      )
-    }, 2000)
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take photo. Please try again.')
+      setIsUploading(false)
+    }
+  }
+
+  const pickFromLibrary = async () => {
+    try {
+      setIsUploading(true)
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant camera roll permissions to upload documents.'
+        )
+        setIsUploading(false)
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 10],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0]
+        const file = {
+          uri: asset.uri,
+          name: `document_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+          size: asset.fileSize || 0,
+        }
+
+        // Check file size (15MB limit)
+        const maxSize = 15 * 1024 * 1024 // 15MB in bytes
+        if (file.size > maxSize) {
+          Alert.alert(
+            'File Too Large',
+            'Please select an image smaller than 15MB.'
+          )
+          setIsUploading(false)
+          return
+        }
+
+        onChange?.(file)
+      }
+      setIsUploading(false)
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image. Please try again.')
+      setIsUploading(false)
+    }
   }
 
   const handleRemove = () => {
@@ -121,16 +183,16 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       <TouchableOpacity
         onPress={handleUpload}
         disabled={disabled || isUploading}
-        className={`w-full p-2 bg-gray-100 rounded-xl border-2 border-dashed items-center justify-center ${
-          hasError 
-            ? "border-red-500 bg-red-50" 
+        className={`w-full min-h-[140px] p-4 bg-gray-100 rounded-xl border-2 border-dashed items-center justify-center ${
+          hasError
+            ? "border-red-500 bg-red-50"
             : "border-gray-300"
         } ${disabled ? "opacity-50" : ""}`}
         activeOpacity={0.7}
       >
         {value ? (
           // Document Preview
-          <View className="w-full h-full p-4">
+          <View className="w-full p-4">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center flex-1">
                 <View className="w-10 h-10 bg-blue-100 rounded-lg items-center justify-center mr-3">
@@ -147,7 +209,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
               </View>
               <TouchableOpacity
                 onPress={handleRemove}
-                className="w-6 h-6 bg-red-100 rounded-full items-center justify-center"
+                className="w-6 h-6 bg-red-100 rounded-full items-center justify-center ml-2"
                 activeOpacity={0.7}
               >
                 <XMarkIcon size={14} color="#EF4444" />

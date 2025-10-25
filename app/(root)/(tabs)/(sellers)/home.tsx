@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
 import OrderItemCard from "@/components/cards/OrderItemCard";
 import RentalAnalyticsChart from "@/components/charts/RentalAnalyticsChart";
+import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 import CustomerInsightsChart from "@/components/charts/CustomerInsightsChart";
 import ProductPerformanceChart from "@/components/charts/ProductPerformanceChart";
 import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
@@ -296,6 +297,9 @@ const SellerHome = () => {
                 </Text>
               </TouchableOpacity>
             ))}
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </Pressable>
         </Pressable>
       </Modal>

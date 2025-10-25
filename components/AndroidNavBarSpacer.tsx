@@ -30,7 +30,7 @@ const AndroidNavBarSpacer: React.FC<AndroidNavBarSpacerProps> = ({
   className = '',
 }) => {
   // Android navigation bar height is typically 40px, plus any extra height
-  const androidHeight = 40 + extraHeight;
+  const androidHeight = 30 + extraHeight;
   // iOS safe area is handled by SafeAreaView, so we use minimal height
   const iosHeight = 6 + extraHeight;
 

@@ -18,6 +18,7 @@ import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import CustomButton from "../CustomButton";
 import { router } from "expo-router";
 import { mechanicRoutes, sellerRoutes } from "@/constants/routes";
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer";
 
 const { width } = Dimensions.get("window");
 
@@ -222,6 +223,9 @@ const WithdrawFundsModal = ({
 
           <View className="px-5 pb-10 pt-4 bg-white border-t border-gray-100">
             <CustomButton title="Withdraw Now" onPress={handleWithdraw} />
+            
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </KeyboardAvoidingView>
       </View>

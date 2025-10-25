@@ -3,6 +3,7 @@
 import { View, Text, TouchableOpacity, Modal, Animated } from "react-native"
 import { useRef, useEffect } from "react"
 import { TrashIcon } from "react-native-heroicons/outline"
+import AndroidNavBarSpacer from "../AndroidNavBarSpacer"
 
 interface DeleteCarModalProps {
   isVisible: boolean
@@ -100,6 +101,9 @@ const DeleteCarModal = ({ isVisible, onClose, onConfirm, carName }: DeleteCarMod
             <TouchableOpacity onPress={onClose} className="bg-gray-200 py-4 px-6 rounded-full" activeOpacity={0.8}>
               <Text className="text-gray-700 font-NunitoBold text-lg text-center">Cancel</Text>
             </TouchableOpacity>
+
+            {/* Android Navigation Bar Spacer */}
+            <AndroidNavBarSpacer />
           </View>
         </Animated.View>
       </Animated.View>

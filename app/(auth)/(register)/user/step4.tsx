@@ -165,7 +165,7 @@ const Step4 = () => {
               <UserAuthHeader />
 
               <View className="py-4">
-                <ProgressBar step={4} totalSteps={4} />
+                <ProgressBar step={3} totalSteps={3} />
               </View>
 
               <HeaderAndDescTextCenter
