@@ -7,7 +7,7 @@ import {
   BellIcon,
   UserIcon,
 } from "react-native-heroicons/outline";
-import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useMechanicProfile } from "@/hooks/useUserProfile";
 
 const getTimeOfDay = () => {
   const hour = new Date().getHours();
@@ -33,11 +33,20 @@ const getTimeOfDay = () => {
 const Navbar = () => {
   const { label, icon } = getTimeOfDay();
   
-  // Use primary profile for all roles (no more role-specific endpoints)
-  const { data: profileData, isLoading } = usePrimaryUserProfile();
+  // Get primary profile to check user role
+  const { data: primaryProfileData, isLoading: primaryLoading } = usePrimaryUserProfile();
+  const activeRole = primaryProfileData?.data?.active_role?.name;
   
-  // Get user data from API or fallback to static data
-  const userData = profileData?.data;
+  // Use mechanic profile if user is a mechanic, otherwise use primary profile
+  const { data: mechanicProfileData, isLoading: mechanicLoading } = useMechanicProfile();
+  
+  // Determine which profile data to use
+  const isMechanic = activeRole === 'mechanic';
+  const profileData = isMechanic ? mechanicProfileData?.data : primaryProfileData?.data;
+  const isLoading = isMechanic ? mechanicLoading : primaryLoading;
+  
+  // Get user data from appropriate profile
+  const userData = profileData;
   const displayName = userData?.first_name || 'User';
   const isVerified = userData?.is_verified || false;
 

@@ -22,31 +22,64 @@ import { CalendarIcon, MagnifyingGlassIcon } from "react-native-heroicons/outlin
 import { useHomeProducts } from "@/hooks/useProducts";
 import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
+import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 
 const { width: screenWidth } = Dimensions.get("window");
 
-// Skeleton component for loading states
-const CardSkeleton = memo(({ width }: { width: number }) => (
-  <View style={{ width }} className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden">
-    {/* Image skeleton */}
-    <View className="w-full h-[140px] bg-gray-200 animate-pulse" />
-    
-    {/* Content skeleton */}
-    <View className="p-3 space-y-2">
-      {/* Title skeleton */}
-      <View className="h-4 bg-gray-200 rounded animate-pulse" />
+// Enhanced skeleton component with smooth animations
+const CardSkeleton = memo(({ width }: { width: number }) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+
+    return () => shimmer.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 0.7],
+    }),
+  };
+
+  return (
+    <View style={{ width }} className="bg-white rounded-2xl border border-gray-200 mt-4 overflow-hidden shadow-sm">
+      {/* Image skeleton */}
+      <Animated.View style={[shimmerStyle]} className="w-full h-[140px] bg-gray-200" />
       
-      {/* Rating skeleton */}
-      <View className="flex-row items-center space-x-1">
-        <View className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-        <View className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+      {/* Content skeleton */}
+      <View className="p-3 space-y-2">
+        {/* Title skeleton */}
+        <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-200 rounded" />
+        
+        {/* Rating skeleton */}
+        <View className="flex-row items-center space-x-1">
+          <Animated.View style={[shimmerStyle]} className="h-3 w-16 bg-gray-200 rounded" />
+          <Animated.View style={[shimmerStyle]} className="h-3 w-12 bg-gray-200 rounded" />
+        </View>
+        
+        {/* Price skeleton */}
+        <Animated.View style={[shimmerStyle]} className="h-4 w-20 bg-gray-200 rounded" />
       </View>
-      
-      {/* Price skeleton */}
-      <View className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
     </View>
-  </View>
-));
+  );
+});
+
 
 const HomePage = memo(() => {
   const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } =
@@ -58,6 +91,11 @@ const HomePage = memo(() => {
 
   // Fetch home products from API (includes mechanics, cars, and spare parts)
   const { data: homeProducts, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useHomeProducts();
+
+  // Check if individual sections have data or failed
+  const hasMechanics = (homeProducts?.data?.mechanics?.length ?? 0) > 0;
+  const hasCars = (homeProducts?.data?.best_selling_cars?.length ?? 0) > 0;
+  const hasSpareParts = (homeProducts?.data?.best_selling_spare_parts?.length ?? 0) > 0;
 
   // Extract category IDs from the actual products
   const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
@@ -318,16 +356,15 @@ const HomePage = memo(() => {
             isLoading={isNavigating}
           />
           
-          {/* Error Message */}
-          {productsError && (
-            <View className="bg-red-50 p-4 rounded-lg mb-4 mx-4">
-              <Text className="text-red-600 font-NunitoMedium text-center">
-                {getErrorMessage(productsError, 'products')}
-              </Text>
-              <Text className="text-gray-500 text-center mt-1 text-sm">
-                Pull down to refresh or try again
-              </Text>
-            </View>
+          {/* Beautiful animated error message for mechanics */}
+          {!productsLoading && !hasMechanics && (
+            <AnimatedErrorCard
+              emoji="🔧"
+              title="Mechanics are taking a break"
+              message="Our mechanics are currently unavailable. Check back later or browse our car collection!"
+              gradientColors={['#EBF8FF', '#BEE3F8', '#90CDF4']}
+              textColor="text-blue-800"
+            />
           )}
           
           {productsLoading ? (
@@ -388,6 +425,18 @@ const HomePage = memo(() => {
             }}
             isLoading={isNavigating}
           />
+          
+          {/* Beautiful animated error message for cars */}
+          {!productsLoading && !hasCars && (
+            <AnimatedErrorCard
+              emoji="🚗"
+              title="Cars are out for a drive"
+              message="Our car collection is temporarily unavailable. Try refreshing or check our spare parts!"
+              gradientColors={['#FFF7ED', '#FED7AA', '#FDBA74']}
+              textColor="text-orange-800"
+            />
+          )}
+          
           {productsLoading ? (
             <FlatList
               data={Array.from({ length: 4 }, (_, i) => ({ id: `skeleton-car-${i}` }))} // Generate 4 skeleton items
@@ -446,6 +495,18 @@ const HomePage = memo(() => {
             }}
             isLoading={isNavigating}
           />
+          
+          {/* Beautiful animated error message for spare parts */}
+          {!productsLoading && !hasSpareParts && (
+            <AnimatedErrorCard
+              emoji="🔧"
+              title="Parts are being restocked"
+              message="Our spare parts inventory is being updated. Check back soon or browse our cars!"
+              gradientColors={['#F0FDF4', '#BBF7D0', '#86EFAC']}
+              textColor="text-green-800"
+            />
+          )}
+          
           {productsLoading ? (
             <FlatList
               data={Array.from({ length: 4 }, (_, i) => ({ id: `skeleton-part-${i}` }))} // Generate 4 skeleton items

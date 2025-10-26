@@ -1,5 +1,5 @@
 import api from '../axios';
-import { SERVICE_ENDPOINTS } from '../endpoints';
+import { SERVICE_ENDPOINTS, MECHANIC_ENDPOINTS } from '../endpoints';
 
 // Types
 export interface CarDetails {
@@ -74,6 +74,24 @@ export const mechanicAPI = {
   // Get mechanic reviews
   getMechanicReviews: async (mechanicId: string): Promise<any[]> => {
     const response = await api.get(SERVICE_ENDPOINTS.MECHANIC_REVIEWS(mechanicId));
+    return response.data;
+  },
+
+  // Get repair requests for mechanic
+  getRepairRequests: async (): Promise<any> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.REPAIR_REQUESTS);
+    return response.data;
+  },
+
+  // Accept repair request
+  acceptRepairRequest: async (requestId: string): Promise<any> => {
+    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/accept/`);
+    return response.data;
+  },
+
+  // Decline repair request
+  declineRepairRequest: async (requestId: string): Promise<any> => {
+    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/decline/`);
     return response.data;
   }
 };

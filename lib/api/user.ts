@@ -298,6 +298,16 @@ export const userAPI = {
     }
   },
 
+  // Get mechanic profile
+  getMechanicProfile: async (): Promise<any> => {
+    try {
+      const response = await api.get('/users/profile/mechanic/');
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
   // Get merchant profile by UUID
   getMerchantProfileByUuid: async (merchantUuid: string): Promise<MerchantProfileResponse> => {
     const endpoint = `users/profile/merchant/?merchant_user_uuid=${merchantUuid}`;

@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query"
 import { productsAPI } from "@/lib/api/products"
 import { useVehicleMakes } from "@/hooks/useVehicleMakes"
 import LoadingSpinner from "@/components/LoadingSpinner"
+import AnimatedErrorCard from "@/components/AnimatedErrorCard"
 
 interface RentalCar {
   id: string
@@ -308,28 +309,31 @@ const RentACarScreen = () => {
 
       case 'error':
         return (
-          <View className={`${CONTAINER_PADDING} items-center justify-center py-12`}>
-            <Text className="text-lg font-NunitoBold text-red-500 mb-2">Error Loading Cars</Text>
-            <Text className="text-base font-NunitoMedium text-gray-400 text-center mb-4">
-              Failed to load rental cars. Please try again.
-            </Text>
-            <TouchableOpacity
-              onPress={() => refetch()}
-              className="bg-primary-500 px-6 py-3 rounded-xl"
-            >
-              <Text className="text-white font-NunitoBold">Retry</Text>
-            </TouchableOpacity>
-          </View>
+          <AnimatedErrorCard
+            emoji="🚗"
+            title="Error Loading Cars"
+            message="Failed to load rental cars. Please try again."
+            gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+            textColor="text-red-800"
+            actionButton={{
+              text: "Retry",
+              onPress: () => refetch(),
+              backgroundColor: "#A80207"
+            }}
+            className={`${CONTAINER_PADDING}`}
+          />
         )
 
       case 'empty':
         return (
-          <View className={`${CONTAINER_PADDING} items-center justify-center py-12`}>
-            <Text className="text-lg font-NunitoBold text-gray-500 mb-2">No Cars Found</Text>
-            <Text className="text-base font-NunitoMedium text-gray-400 text-center">
-              Try Adjusting your Search or Category Filter
-            </Text>
-          </View>
+          <AnimatedErrorCard
+            emoji="🚗"
+            title="No Cars Found"
+            message="Try adjusting your search or category filter"
+            gradientColors={['#F0F9FF', '#E0F2FE', '#BAE6FD']}
+            textColor="text-blue-800"
+            className={`${CONTAINER_PADDING}`}
+          />
         )
 
       default:

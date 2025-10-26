@@ -18,16 +18,16 @@ import { useCallback } from "react";
 import MechanicCard from "@/components/cards/MechanicCard";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { useGetAvailableMechanics } from "@/hooks/useMechanics";
+import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 interface Mechanic {
   id: number;
-  userId: string;
   name: string;
   rating: number;
   reviewCount: number;
-  image: string | null;
+  image: any;
   isVip?: boolean;
   specialization?: string;
   location?: string;
@@ -50,17 +50,16 @@ const AllMechanic = () => {
   // Transform API data to local format
   const mechanics: Mechanic[] = (() => {
     try {
-      if (!mechanicsData?.data) {
+      if (!mechanicsData) {
         return [];
       }
       
-      if (!Array.isArray(mechanicsData.data)) {
+      if (!Array.isArray(mechanicsData)) {
         return [];
       }
       
-      return mechanicsData.data.map((mechanic: any) => ({
+      return mechanicsData.map((mechanic: any) => ({
         id: mechanic.id || 0,
-        userId: mechanic.user?.id || '', // Add user.id for navigation
         name: mechanic.user ? `${mechanic.user.first_name} ${mechanic.user.last_name}`.trim() : `Mechanic ${mechanic.id}`,
         rating: mechanic.rating || 0, // Use rating from API
         reviewCount: 0, // Not provided in API response
@@ -86,7 +85,7 @@ const AllMechanic = () => {
     router.push({
       pathname: routes.mechanicProfile,
       params: {
-        mechanicId: mechanic.userId, // Use user.id instead of mechanic id
+        mechanicId: mechanic.id.toString(), // Use mechanic id
         mechanicName: mechanic.name,
         mechanicRating: mechanic.rating,
         mechanicImage: mechanic.image,
@@ -193,32 +192,31 @@ const AllMechanic = () => {
 
             {/* Error State */}
             {error && (
-              <View className="flex-1 items-center justify-center px-5">
-                <Text className="text-red-500 text-center text-lg mb-4">
-                  Failed to load mechanics
-                </Text>
-                <TouchableOpacity
-                  onPress={() => refetch()}
-                  className="bg-primary-500 px-6 py-3 rounded-lg"
-                >
-                  <Text className="text-white font-NunitoBold">Try Again</Text>
-                </TouchableOpacity>
-              </View>
+              <AnimatedErrorCard
+                emoji="🔧"
+                title="Failed to load mechanics"
+                message="We couldn't load the mechanics list. Please try again."
+                gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+                textColor="text-red-800"
+                actionButton={{
+                  text: "Try Again",
+                  onPress: () => refetch(),
+                  backgroundColor: "#A80207"
+                }}
+                className=""
+              />
             )}
 
             {/* Empty State */}
             {!isLoading && !error && filteredMechanics.length === 0 && (
-              <View className="flex-1 justify-center items-center px-5">
-                <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
-                  <Text className="text-4xl">🔧</Text>
-                </View>
-                <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-                  No mechanics found
-                </Text>
-                <Text className="text-gray-500 text-center font-NunitoMedium">
-                  {searchQuery ? 'Try adjusting your search terms' : 'No mechanics are currently available'}
-                </Text>
-              </View>
+              <AnimatedErrorCard
+                emoji="🔧"
+                title="No mechanics found"
+                message={searchQuery ? 'Try adjusting your search terms' : 'No mechanics are currently available'}
+                gradientColors={['#F0F9FF', '#E0F2FE', '#BAE6FD']}
+                textColor="text-blue-800"
+                className=""
+              />
             )}
 
             {/* Mechanics List */}

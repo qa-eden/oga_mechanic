@@ -61,6 +61,7 @@ export const MECHANIC_ENDPOINTS = {
   REVIEWS: '/mechanic/reviews',
   SCHEDULE: '/mechanic/schedule',
   VEHICLE_MAKES: '/mechanics/vehicle-makes/',
+  REPAIR_REQUESTS: '/mechanics/repair-requests/',
 } as const;
 
 // Driver endpoints (transportation providers)

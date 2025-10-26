@@ -336,22 +336,37 @@ export const productsAPI = {
   // Get home products (cars and spare parts)
   getHomeProducts: async (): Promise<HomeProductsResponse> => {
     try {
-      // Make three separate API calls for each data type
-      const [mechanicsResponse, carsResponse, sparePartsResponse] = await Promise.all([
+      // Make three separate API calls for each data type using Promise.allSettled
+      // This allows individual calls to fail without affecting others
+      const [mechanicsResult, carsResult, sparePartsResult] = await Promise.allSettled([
         api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=mechanics`),
         api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=best_selling_cars`),
         api.get(`${SERVICE_ENDPOINTS.PRODUCTS_HOME}?requestType=best_selling_spare_parts`),
       ]);
 
+      // Extract data from successful responses, use empty array for failed ones
+      const mechanicsData = mechanicsResult.status === 'fulfilled' 
+        ? mechanicsResult.value.data?.data?.mechanics || []
+        : [];
+      
+      const carsData = carsResult.status === 'fulfilled'
+        ? carsResult.value.data?.data?.best_selling_cars || []
+        : [];
+      
+      const sparePartsData = sparePartsResult.status === 'fulfilled'
+        ? sparePartsResult.value.data?.data?.best_selling_spare_parts || []
+        : [];
 
-
-      // Extract the actual data arrays from nested structure
-      const mechanicsData = mechanicsResponse.data?.data?.mechanics || [];
-      const carsData = carsResponse.data?.data?.best_selling_cars || [];
-      const sparePartsData = sparePartsResponse.data?.data?.best_selling_spare_parts || 
-                             sparePartsResponse.data?.data?.mechanics || []; // Fallback for backend bug
-
-
+      // Log any failed requests for debugging
+      if (mechanicsResult.status === 'rejected') {
+        console.warn('Mechanics endpoint failed:', mechanicsResult.reason);
+      }
+      if (carsResult.status === 'rejected') {
+        console.warn('Cars endpoint failed:', carsResult.reason);
+      }
+      if (sparePartsResult.status === 'rejected') {
+        console.warn('Spare parts endpoint failed:', sparePartsResult.reason);
+      }
 
       // Combine the responses
       return {

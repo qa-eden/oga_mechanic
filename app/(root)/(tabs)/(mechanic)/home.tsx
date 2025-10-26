@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ImageBackground,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -16,41 +17,48 @@ import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
+import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest } from "@/hooks/useRepairRequests";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 
 const MechanicHome = () => {
+  // Fetch repair requests from API
+  const { 
+    data: repairRequestsData, 
+    isLoading: requestsLoading, 
+    error: requestsError, 
+    refetch: refetchRequests 
+  } = useRepairRequests();
 
-  const currentOrders: Order[] = [
-    {
-      id: "1",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedes Benz",
-      carIssue: "Bad engine response",
-    },
-    {
-      id: "2",
-      clientName: "David Wilson",
-      phoneNumber: "08076543210",
-      carType: "BMW X5",
-      carIssue: "Transmission repair",
-    },
-    {
-      id: "3",
-      clientName: "Sarah Connor",
-      phoneNumber: "08065432109",
-      carType: "Audi A4",
-      carIssue: "Air conditioning not working",
-    },
-  ];
+  // Mutations for accepting/declining requests
+  const acceptRequestMutation = useAcceptRepairRequest();
+  const declineRequestMutation = useDeclineRepairRequest();
 
-  const handleAccept = (orderId: string) => {
-    console.log("Accept order:", orderId);
-    // Handle accept logic here
+  // Transform API data to match OrderCard interface
+  const currentOrders: Order[] = repairRequestsData?.data?.map((request: any) => ({
+    id: request.id,
+    clientName: request.customer_name || request.client_name || 'Unknown Customer',
+    phoneNumber: request.customer_phone || request.phone_number || 'N/A',
+    carType: request.vehicle_make || request.car_type || 'Unknown Vehicle',
+    carIssue: request.issue_description || request.problem_description || 'Repair needed',
+  })) || [];
+
+  const handleAccept = async (orderId: string) => {
+    try {
+      await acceptRequestMutation.mutateAsync(orderId);
+      console.log("Request accepted:", orderId);
+    } catch (error) {
+      console.error("Error accepting request:", error);
+    }
   };
 
-  const handleDecline = (orderId: string) => {
-    console.log("Decline order:", orderId);
-    // Handle decline logic here
+  const handleDecline = async (orderId: string) => {
+    try {
+      await declineRequestMutation.mutateAsync(orderId);
+      console.log("Request declined:", orderId);
+    } catch (error) {
+      console.error("Error declining request:", error);
+    }
   };
 
   const ratingData = [
@@ -65,13 +73,24 @@ const MechanicHome = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1 px-5" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={requestsLoading}
+            onRefresh={refetchRequests}
+            colors={['#A80207']}
+            tintColor="#A80207"
+          />
+        }
+      >
         {/* Header */}
         <Navbar />
 
         <View className="py-4">
           {/* Let's fix some cars card */}
-          <View className="rounded-2xl mb-6 overflow-hidden">
+          {/* <View className="rounded-2xl mb-6 overflow-hidden">
             <ImageBackground
               source={images?.adsbackground}
               className="w-full h-[150px] bg-cover bg-center"
@@ -85,14 +104,10 @@ const MechanicHome = () => {
                   <Text className="text-gray-300 text-md font-NunitoMedium text-start">
                     Connecting with car owners
                   </Text>
-                  {/* <TouchableOpacity className="bg-white px-4 py-2 rounded-full self-start flex-row items-center space-x-2 gap-2">
-                    <EyeIcon size={17} />
-                    <Text className="text-black font-NunitoBold">View all consultation</Text>
-                  </TouchableOpacity> */}
                 </View>
               </View>
             </ImageBackground>
-          </View>
+          </View> */}
 
           {/* Key Metrics Header */}
           <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
@@ -125,28 +140,68 @@ const MechanicHome = () => {
             ratingData={ratingData}
           />
 
-          {/* New Consultations */}
-          <View >
+          {/* Repair Requests Section */}
+          <View>
             <View className="flex-row items-center justify-between my-4">
               <Text className="text-lg font-NunitoBold text-gray-900">
-                Recent Current Orders
+                Recent Repair Requests
               </Text>
               <TouchableOpacity onPress={() => router?.push("./order")}>
                 <Text className="text-red-600 font-NunitoBold">View All</Text>
               </TouchableOpacity>
             </View>
 
-           <View className="">
-             {currentOrders.slice(0, 3).map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                type="current"
-                onAccept={handleAccept}
-                onDecline={handleDecline}
+            {/* Loading State */}
+            {requestsLoading && (
+              <View className="items-center py-8">
+                <LoadingSpinner size="large" />
+                <Text className="text-gray-600 font-NunitoMedium mt-2">
+                  Loading repair requests...
+                </Text>
+              </View>
+            )}
+
+            {/* Error State */}
+            {requestsError && !requestsLoading && (
+              <AnimatedErrorCard
+                emoji="🔧"
+                title="No repair requests available"
+                message="No repair requests found at the moment. Pull down to refresh or check back later!"
+                gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+                textColor="text-red-800"
+                actionButton={{
+                  text: "Refresh",
+                  onPress: () => refetchRequests(),
+                  backgroundColor: "#DC2626"
+                }}
               />
-            ))}
-           </View>
+            )}
+
+            {/* Success State - Show Orders */}
+            {!requestsLoading && !requestsError && currentOrders.length > 0 && (
+              <View className="">
+                {currentOrders.slice(0, 3).map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    type="current"
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Empty State */}
+            {!requestsLoading && !requestsError && currentOrders.length === 0 && (
+              <AnimatedErrorCard
+                emoji="🚗"
+                title="No repair requests yet"
+                message="You'll see repair requests from customers here. Pull down to refresh!"
+                gradientColors={['#F0F9FF', '#E0F2FE', '#BAE6FD']}
+                textColor="text-blue-800"
+              />
+            )}
           </View>
 
           {/* <View className="h-10" /> */}

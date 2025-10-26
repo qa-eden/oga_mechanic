@@ -24,13 +24,11 @@ import { useRegisterStep4 } from "@/hooks/useRegistration";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import CustomAlert from "@/components/CustomAlert";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from "@/hooks/useAuth";
 
 const MechanicStep4 = () => {
   const router = useRouter();
   const registerStep4Mutation = useRegisterStep4();
   const { visible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
-  const { checkAuthStatus } = useAuth();
 
   const handleStep4Submit = async (values: any, { setSubmitting }: any) => {
     registerStep4Mutation.mutate({
@@ -52,8 +50,7 @@ const MechanicStep4 = () => {
             })]
           ]);
 
-          // Refresh auth status to update context
-          await checkAuthStatus();
+          // Auth status will be updated automatically when user navigates to dashboard
 
           showSuccess(
             "Account Created Successfully!",

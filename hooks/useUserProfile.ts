@@ -32,6 +32,16 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   });
 };
 
+// Hook to get mechanic profile
+export const useMechanicProfile = () => {
+  return useQuery({
+    queryKey: ['mechanic', 'profile'],
+    queryFn: () => userAPI.getMechanicProfile(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
 // Hook to get merchant profile by UUID
 export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
