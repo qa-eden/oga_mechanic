@@ -245,7 +245,7 @@ const EditSparePart = () => {
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
           <TouchableOpacity
-            onPress={() => router.back()}
+             onPress={() => router.push(sellerRoutes?.products)}
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
@@ -277,16 +277,7 @@ const EditSparePart = () => {
             flexGrow: 1
           }}
         >
-          {/* Debug Info */}
-          <View className="bg-yellow-50 rounded-xl p-4 my-4 border border-yellow-200">
-            <Text className="text-xs font-NunitoBold text-gray-900 mb-2">Debug Info:</Text>
-            <Text className="text-xs text-gray-700">Product ID: {productId || 'N/A'}</Text>
-            <Text className="text-xs text-gray-700">Product Name: {parsedProductData?.name || 'N/A'}</Text>
-            <Text className="text-xs text-gray-700">Category ID: {parsedProductData?.category_id || parsedProductData?.category?.id || 'N/A'}</Text>
-            <Text className="text-xs text-gray-700">Category Name: {parsedProductData?.category?.name || 'N/A'}</Text>
-            <Text className="text-xs text-gray-700">Vehicle Compat: {vehicleCompatibility.length} items</Text>
-            <Text className="text-xs text-gray-700">Price: {parsedProductData?.price || 'N/A'}</Text>
-          </View>
+         
 
           <Formik
             initialValues={initialValues}
@@ -295,18 +286,11 @@ const EditSparePart = () => {
             enableReinitialize={true}
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, isSubmitting, setFieldValue }) => {
-              // Debug current form values
+             
               
               return (
               <View className="space-y-6">
-                {/* Form Values Debug */}
-                <View className="bg-blue-50 rounded-xl p-3 my-2 border border-blue-200">
-                  <Text className="text-xs font-NunitoBold text-gray-900 mb-1">Current Form Values:</Text>
-                  <Text className="text-xs text-gray-700">Category: {values.category || 'Empty'}</Text>
-                  <Text className="text-xs text-gray-700">Custom Name: {values.custom_category_name || 'Empty'}</Text>
-                  <Text className="text-xs text-gray-700">Price: {values.price || 'Empty'}</Text>
-                  <Text className="text-xs text-gray-700">Stock: {values.stock || 'Empty'}</Text>
-                </View>
+              
 
                 {/* Basic Information */}
                 <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">

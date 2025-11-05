@@ -3,8 +3,12 @@
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_URL: process.env.EXPO_PUBLIC_API_URL || 'http://YOUR_LOCAL_IP:8000/api/v1',
-  API_KEY: process.env.EXPO_PUBLIC_API_KEY || 'DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq',
+  API_URL: process.env.EXPO_PUBLIC_API_URL || (() => {
+    throw new Error('EXPO_PUBLIC_API_URL is required but not set');
+  })(),
+  API_KEY: process.env.EXPO_PUBLIC_API_KEY || (() => {
+    throw new Error('EXPO_PUBLIC_API_KEY is required but not set');
+  })(),
   
   // Environment
   ENV: process.env.EXPO_PUBLIC_ENV || 'development',
@@ -27,6 +31,13 @@ export const ENV_CONFIG = {
   // File Upload Configuration
   MAX_FILE_SIZE: parseInt(process.env.EXPO_PUBLIC_MAX_FILE_SIZE || '10485760'),
   ALLOWED_FILE_TYPES: process.env.EXPO_PUBLIC_ALLOWED_FILE_TYPES?.split(',') || ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
+  
+  // Security Configuration
+  ENABLE_CERTIFICATE_PINNING: process.env.EXPO_PUBLIC_ENABLE_CERTIFICATE_PINNING === 'true',
+  ENABLE_REQUEST_SIGNING: process.env.EXPO_PUBLIC_ENABLE_REQUEST_SIGNING === 'true',
+  ENABLE_BIOMETRIC_AUTH: process.env.EXPO_PUBLIC_ENABLE_BIOMETRIC_AUTH === 'true',
+  ENABLE_RATE_LIMITING: process.env.EXPO_PUBLIC_ENABLE_RATE_LIMITING === 'true',
+  ENABLE_DATA_ENCRYPTION: process.env.EXPO_PUBLIC_ENABLE_DATA_ENCRYPTION === 'true',
 } as const;
 
 // Validation

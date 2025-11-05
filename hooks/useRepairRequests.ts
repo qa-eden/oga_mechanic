@@ -12,6 +12,16 @@ export const useRepairRequests = () => {
   });
 };
 
+// Hook to fetch mechanic analytics
+export const useMechanicAnalytics = () => {
+  return useQuery({
+    queryKey: ['mechanic', 'analytics'],
+    queryFn: () => mechanicAPI.getMechanicAnalytics(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
 // Hook to accept repair request
 export const useAcceptRepairRequest = () => {
   const queryClient = useQueryClient();

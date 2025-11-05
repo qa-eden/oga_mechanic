@@ -52,15 +52,8 @@ const MechanicStep4 = () => {
 
           // Auth status will be updated automatically when user navigates to dashboard
 
-          showSuccess(
-            "Account Created Successfully!",
-            "Your mechanic account has been created. Redirecting to success page..."
-          );
-
-          // Navigate to success page after a short delay
-          setTimeout(() => {
-            router.push(mechanicRoutes?.accountCreated);
-          }, 2000);
+          // Navigate directly to success page
+          router.push(mechanicRoutes?.accountCreated);
         } catch (error) {
           console.error('Error storing user data:', error);
           showError(

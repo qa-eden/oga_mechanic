@@ -11,24 +11,33 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { images } from "@/constants";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
 import Navbar from "@/components/Navbar";
-import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest } from "@/hooks/useRepairRequests";
+import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest, useMechanicAnalytics } from "@/hooks/useRepairRequests";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 
 const MechanicHome = () => {
   // Fetch repair requests from API
-  const { 
-    data: repairRequestsData, 
-    isLoading: requestsLoading, 
-    error: requestsError, 
-    refetch: refetchRequests 
+  const {
+    data: repairRequestsData,
+    isLoading: requestsLoading,
+    error: requestsError,
+    refetch: refetchRequests
   } = useRepairRequests();
+
+  // Fetch mechanic analytics from API
+  const {
+    data: analyticsData,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+    refetch: refetchAnalytics
+  } = useMechanicAnalytics();
 
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
@@ -73,8 +82,8 @@ const MechanicHome = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      <ScrollView 
-        className="flex-1 px-5" 
+      <ScrollView
+        className="flex-1 px-5"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -118,18 +127,27 @@ const MechanicHome = () => {
           <View className="flex-row gap-4 space-x-4 mb-4">
             <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4 ">
               <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                Today's Earning
+                Total Repair Requests
               </Text>
-              <NairaCurrency
-                value={500000}
-                className="text-2xl font-NunitoBold text-gray-900"
-              />
+              {analyticsLoading ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text className="text-2xl font-NunitoBold text-gray-900">
+                  {analyticsData?.data?.total_repair_requests || 0}
+                </Text>
+              )}
             </View>
             <View className="flex-1 gradient-to-r from-[#D7CFF1] to-[#D3C8E4] bg-[#D3C8E4] rounded-[.4rem] p-4">
               <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                Total Consultation
+                Completed Requests
               </Text>
-              <Text className="text-2xl font-NunitoBold text-gray-900">500</Text>
+              {analyticsLoading ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text className="text-2xl font-NunitoBold text-gray-900">
+                  {analyticsData?.data?.completed_repair_requests || 0}
+                </Text>
+              )}
             </View>
           </View>
 

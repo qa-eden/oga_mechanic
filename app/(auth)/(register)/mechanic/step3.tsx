@@ -20,8 +20,7 @@ import { getStatesByCountry, getCitiesByState } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import DocumentUpload from "@/components/forms/DocumentUpload";
 import ImageUpload from "@/components/ImageUpload";
-import { useMutation } from "@tanstack/react-query";
-import { userAPI } from "@/lib/api/user";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const validationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
@@ -66,21 +65,7 @@ const MechanicStep3 = () => {
   const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
   const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
   const [selectedMakes, setSelectedMakes] = useState<SelectedMake[]>([]);
-
-  // API mutation for step 4 registration (documents and expertise)
-  const registerStep4Mutation = useMutation({
-    mutationFn: (data: any) => userAPI.registerStep(4, data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
-    onSuccess: (response) => {
-      console.log('✅ Step 4 registration successful:', response);
-    },
-    onError: (error: any) => {
-      console.error('❌ Error in step 4 registration:', error);
-    },
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch vehicle makes
   const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
@@ -317,87 +302,108 @@ const MechanicStep3 = () => {
       return;
     }
 
-    // Convert selected makes to expertise details format
-    const expertiseDetails: ExpertiseDetail[] = selectedMakes.map(make => ({
-      vehicle_make_id: make.id,
-      years_of_experience: make.years_of_experience,
-      certification_level: make.certification_level
-    }));
+    // Directly call the endpoint
+    continueSubmission(values);
+  };
 
-    // Prepare FormData payload (matching seller step4 structure)
-    const formData = new FormData();
-    
-    // Add request type
-    formData.append('requestType', 'inbound');
-    
-    // Add text fields directly (not wrapped in data object)
-    formData.append('location', values.location);
-    formData.append('state', values.state);
-    formData.append('lga', values.lga);
-    formData.append('cac_number', values.ccac_document);
-    formData.append('govt_id_type', values.govt_id_type);
-    formData.append('expertise_details', JSON.stringify(expertiseDetails));
-    
-    // Add file uploads
-    if (cacDocument) {
-      formData.append('cac_document', {
-        uri: cacDocument.uri,
-        name: `cac_document_${Date.now()}.jpg`,
-        type: 'image/jpeg'
-      } as any);
-    }
-    
-    if (selfie) {
-      formData.append('selfie', {
-        uri: selfie.uri,
-        name: `selfie_${Date.now()}.jpg`,
-        type: 'image/jpeg'
-      } as any);
-    }
-    
-    if (governmentIdFront) {
-      formData.append('government_id_front', {
-        uri: governmentIdFront.uri,
-        name: `government_id_front_${Date.now()}.jpg`,
-        type: 'image/jpeg'
-      } as any);
-    }
-    
-    if (governmentIdBack) {
-      formData.append('government_id_back', {
-        uri: governmentIdBack.uri,
-        name: `government_id_back_${Date.now()}.jpg`,
-        type: 'image/jpeg'
-      } as any);
-    }
+  const continueSubmission = async (values: FormValues) => {
+    setIsSubmitting(true);
 
-    // Call the API with FormData
-    registerStep4Mutation.mutate(formData, {
-      onSuccess: (response) => {
-        console.log('✅ Step 4 registration successful:', response);
-        // Navigate to step 4 with all data
+    try {
+      // Convert selected makes to expertise details format
+      const expertiseDetails: ExpertiseDetail[] = selectedMakes.map(make => ({
+        vehicle_make_id: make.id,
+        years_of_experience: make.years_of_experience,
+        certification_level: make.certification_level
+      }));
+
+      // Prepare FormData payload (matching seller step4 structure)
+      const formData = new FormData();
+      formData.append('requestType', 'inbound');
+      formData.append('location', values.location);
+      formData.append('lga', values.lga);
+      formData.append('cac_number', values.ccac_document);
+      formData.append('govt_id_type', values.govt_id_type);
+      formData.append('expertise_details', JSON.stringify(expertiseDetails));
+
+      // Add files as proper file objects
+      if (cacDocument) {
+        formData.append('cac_document', {
+          uri: cacDocument.uri,
+          name: `cac_document_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
+
+      if (selfie) {
+        formData.append('selfie', {
+          uri: selfie.uri,
+          name: `selfie_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
+
+      if (governmentIdFront) {
+        formData.append('government_id_front', {
+          uri: governmentIdFront.uri,
+          name: `government_id_front_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
+
+      if (governmentIdBack) {
+        formData.append('government_id_back', {
+          uri: governmentIdBack.uri,
+          name: `government_id_back_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
+
+      const token = await AsyncStorage.getItem('auth_token');
+
+      // Use direct fetch to bypass axios interceptor that converts FormData to JSON
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/register/step/4/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+          // Don't set Content-Type - let browser set it for FormData
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorData}`);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Step 4 registration successful:', responseData);
+
+      // Navigate to step 4 with all data
       router.push({
         pathname: mechanicRoutes.step4,
         params: {
           ...params,
-            location: values.location,
-            state: values.state,
-            lga: values.lga,
-            ccac_document: values.ccac_document,
-            govt_id_type: values.govt_id_type,
-            expertise_details: JSON.stringify(expertiseDetails),
+          location: values.location,
+          state: values.state,
+          lga: values.lga,
+          ccac_document: values.ccac_document,
+          govt_id_type: values.govt_id_type,
+          expertise_details: JSON.stringify(expertiseDetails),
           documentsUploaded: "true",
         },
       });
-      },
-      onError: (error: any) => {
-        console.error('❌ Step 4 registration failed:', error);
-        Alert.alert(
-          "Registration Failed",
-          error?.response?.data?.message || "Failed to submit documents. Please try again."
-        );
-      }
-    });
+
+    } catch (error: any) {
+      console.error('❌ Step 4 registration failed:', error);
+      Alert.alert(
+        "Registration Failed",
+        error?.response?.data?.message || error.message || "Failed to submit documents. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSignIn = () => {
@@ -752,7 +758,7 @@ const MechanicStep3 = () => {
                   <FormikButton
                     title="Proceed"
                     disabled={!isValid || !cacDocument || !selfie || !governmentIdFront || (values.govt_id_type !== "international_passport" && !governmentIdBack) || selectedMakes.length === 0}
-                    loading={registerStep4Mutation.isPending}
+                    loading={isSubmitting}
                   />
                 </View>
 

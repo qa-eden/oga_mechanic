@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, AUTH_ENDPOINTS } from './endpoints';
 import { ENV_CONFIG } from '../config/env';
 
-// Create axios instance
+// Create axios instance with enhanced security
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // Increased timeout for file uploads
@@ -24,47 +24,21 @@ api.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-      } else {
       }
 
       // Add requestType: "inbound" only to POST/PUT/PATCH requests
-      if (config.method === 'post' || config.method === 'put' || config.method === 'patch') {
-        // Skip ALL processing for registration step 4 - using fetch API directly
-        if (config.url?.includes('/register/step/4/')) {
-          return config; // Return config unchanged
-        } else if (config.data instanceof FormData) {
-
-          // Create a new FormData with the proper nested structure
-          const wrappedData = new FormData();
-          
-          // Copy all FormData parts with 'data.' prefix to create nested structure
-          for (const [key, value] of (config.data as any)._parts) {
-            wrappedData.append(`data.${key}`, value);
-          }
-          
-          // Add requestType at the top level
-          wrappedData.append('requestType', 'inbound');
-          
-          config.data = wrappedData;
-
-          // Let axios set Content-Type for FormData to include boundary
-          delete config.headers['Content-Type'];
-        } else {
-          // Skip wrapping for checkout endpoint (it handles its own structure)
-          if (config.url?.includes('/checkout/')) {
-          } else {
-            // For non-FormData, wrap in { data, requestType }
-            const originalData = config.data || {};
-            config.data = {
-              requestType: 'inbound',
-              data: originalData,
-            };
-          }
-        }
+      if (['post', 'put', 'patch'].includes(config.method?.toLowerCase() || '')) {
+        config.data = {
+          ...config.data,
+          requestType: 'inbound',
+        };
       }
+
+      return config;
     } catch (error) {
+      console.error('Request interceptor error:', error);
+      return config;
     }
-    return config;
   },
   (error) => {
     return Promise.reject(error);
@@ -86,7 +60,9 @@ api.interceptors.response.use(
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         if (refreshToken) {
-          const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, { refresh_token: refreshToken });
+          const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, { 
+            refresh_token: refreshToken 
+          });
           const newToken = response.data.access_token;
           
           await AsyncStorage.setItem('auth_token', newToken);

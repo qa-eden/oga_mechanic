@@ -210,9 +210,9 @@ const UploadSparePart = () => {
         ]);
       } else {
         // For creation, navigate to image upload page
-    router.push({
+        router.push({
           pathname: sellerRoutes.uploadCarImages as any,
-      params: {
+          params: {
             formData: JSON.stringify(payload),
             productId: updatedProductId,
             productType: 'spare-part', // Identify as spare part
@@ -253,23 +253,23 @@ const UploadSparePart = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
           <TouchableOpacity
-            onPress={() => router.back()}
+             onPress={() => router.push(sellerRoutes?.products)}
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
-        </TouchableOpacity>
+          </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
               {isEditMode ? 'Edit Product' : 'Product Details'}
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
               {isEditMode ? 'Update Product Information' : 'Enter Product Information'}
-        </Text>
+            </Text>
           </View>
           <View className="w-10" />
         </View>
@@ -290,15 +290,15 @@ const UploadSparePart = () => {
             flexGrow: 1
           }}
         >
-        {/* Form Fields */}
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
+          {/* Form Fields */}
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
             enableReinitialize={true}
-        >
-          {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
-            <View className="space-y-6">
+          >
+            {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
+              <View className="space-y-6">
                 {/* Basic Information */}
                 <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
                   <View className="flex-row items-center mb-4">
@@ -329,12 +329,12 @@ const UploadSparePart = () => {
                   />
 
                   {/* Product Name */}
-              <FormikInput
+                  <FormikInput
                     name="name"
                     label="Product Name"
                     placeholder="e.g., Brake Pads, Engine Oil Filter, Spark Plugs"
-                type="text"
-              />
+                    type="text"
+                  />
 
                   {/* Condition */}
                   <SelectField
@@ -403,7 +403,7 @@ const UploadSparePart = () => {
                                 </TouchableOpacity>
                               </View>
 
-              <SelectField
+                              <SelectField
                                 name={`vehicle_make_${index}`}
                                 label=""
                                 placeholder="Select make"
@@ -493,13 +493,13 @@ const UploadSparePart = () => {
                     </Text>
                     <View className="flex-row gap-3">
                       <View className="flex-1">
-              <FormikInput
+                        <FormikInput
                           name="price"
                           label=""
                           placeholder="e.g., 25000.00"
-                keyboardType="numeric"
-                type="text"
-              />
+                          keyboardType="numeric"
+                          type="text"
+                        />
                       </View>
                       <View className="w-32">
                         <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
@@ -540,13 +540,13 @@ const UploadSparePart = () => {
                   </View>
 
                   {/* Stock */}
-              <FormikInput
+                  <FormikInput
                     name="stock"
                     label="Stock Quantity"
                     placeholder="e.g., 100"
-                keyboardType="numeric"
-                type="text"
-              />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
                   {/* Availability */}
                   <SelectField
@@ -575,12 +575,12 @@ const UploadSparePart = () => {
 
                 {/* Submit Button */}
                 <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
-              <FormikButton
+                  <FormikButton
                     title={isEditMode ? "Update Product Details" : "Continue to Images"}
-                type="submit"
-                onPress={formikHandleSubmit}
-                disabled={!isValid || !dirty || isSubmitting}
-                loading={isSubmitting}
+                    type="submit"
+                    onPress={formikHandleSubmit}
+                    disabled={!isValid || !dirty || isSubmitting}
+                    loading={isSubmitting}
                     loadingText="Processing..."
                     className="mb-3"
                   />
@@ -591,10 +591,10 @@ const UploadSparePart = () => {
                     }
                   </Text>
                 </View>
-            </View>
-          )}
-        </Formik>
-      </ScrollView>
+              </View>
+            )}
+          </Formik>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

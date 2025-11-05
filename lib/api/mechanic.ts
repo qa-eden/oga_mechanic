@@ -93,5 +93,11 @@ export const mechanicAPI = {
   declineRepairRequest: async (requestId: string): Promise<any> => {
     const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/decline/`);
     return response.data;
+  },
+
+  // Get mechanic analytics
+  getMechanicAnalytics: async (): Promise<any> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.ANALYTICS);
+    return response.data;
   }
 };
