@@ -378,6 +378,12 @@ export const userAPI = {
     return response.data;
   },
 
+  // Get single car by ID
+  getCarById: async (carId: string): Promise<any> => {
+    const response = await api.get(`${USER_ENDPOINTS.CARS}/${carId}`);
+    return response.data;
+  },
+
   // Add new car
   addCar: async (carData: any): Promise<any> => {
     const response = await api.post(USER_ENDPOINTS.ADD_CAR, carData);

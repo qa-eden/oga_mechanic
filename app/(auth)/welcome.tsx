@@ -94,7 +94,8 @@ const Welcome = () => {
   const bgFlatListRef = useRef<FlatList>(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const overlayFadeAnim = useRef(new Animated.Value(1)).current;
   const overlayScaleAnim = useRef(new Animated.Value(0.98)).current;
@@ -104,38 +105,47 @@ const Welcome = () => {
   } = useRoles();
   // Navigation handlers with debouncing
   const handleSignUp = async () => {
-    if (isNavigating) return;
+    if (isSigningUp || isSigningIn) return;
     try {
-      setIsNavigating(true);
+      setIsSigningUp(true);
       // Mark that user has seen welcome screen
       await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.signUp as any);
     } catch (error) {
-      setIsNavigating(false);
+      setIsSigningUp(false);
     }
   };
 
   const handleSignIn = async () => {
-    if (isNavigating) return;
+    if (isSigningUp || isSigningIn) return;
     try {
-      setIsNavigating(true);
+      setIsSigningIn(true);
       // Mark that user has seen welcome screen
       await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.signIn as any);
     } catch (error) {
-      setIsNavigating(false);
+      setIsSigningIn(false);
     }
   };
 
   // Reset navigation state after timeout
   useEffect(() => {
-    if (isNavigating) {
+    if (isSigningUp) {
       const timer = setTimeout(() => {
-        setIsNavigating(false);
+        setIsSigningUp(false);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isNavigating]);
+  }, [isSigningUp]);
+
+  useEffect(() => {
+    if (isSigningIn) {
+      const timer = setTimeout(() => {
+        setIsSigningIn(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSigningIn]);
 
   // Infinite auto-slide animation
   useEffect(() => {
@@ -287,7 +297,7 @@ const Welcome = () => {
                     top: 0,
                     left: 0,
                     width: bgWidth,
-                    height: Math.round(screenHeight * 0.45),
+                    height: Math.round(screenHeight * 0.47),
                   }}
                   contentContainerStyle={{
                     alignItems: "center",
@@ -296,7 +306,7 @@ const Welcome = () => {
                     <View
                       style={{
                         width: bgWidth,
-                        height: Math.round(screenHeight * 0.45),
+                        height: Math.round(screenHeight * 0.47),
                         alignItems: "center",
                         justifyContent: "center",
                       }}
@@ -324,7 +334,7 @@ const Welcome = () => {
                     top: 0,
                     left: 0,
                     width: bgWidth,
-                    height: Math.round(screenHeight * 0.45),
+                    height: Math.round(screenHeight * 0.47),
                   }}
                   contentContainerStyle={{
                     alignItems: "center",
@@ -362,7 +372,7 @@ const Welcome = () => {
                   flexDirection: "row",
                   justifyContent: "center",
                   marginBottom: 6,
-                  marginTop: 8,
+                  marginTop: 20,
                 }}
               >
                 {slides.map((_, i) => (
@@ -401,25 +411,25 @@ const Welcome = () => {
             className={"bg-[#fafafa] p-4"}
           >
             <CustomButton
-              title={isNavigating ? "Loading..." : "Sign up"}
+              title={isSigningUp ? "Loading..." : "Sign up"}
               className="py-5 mb-3 mt-2 shadow-lg"
               onPress={handleSignUp}
-              disabled={isNavigating}
+              disabled={isSigningUp || isSigningIn}
             />
             <CustomButton
               onPress={handleSignIn}
-              title={isNavigating ? "Loading..." : "Sign in"}
+              title={isSigningIn ? "Loading..." : "Sign in"}
               bgVariant="dangerborder"
               textVariant="dangerborder"
               className="py-5 my-2 shadow-sm"
-              disabled={isNavigating}
+              disabled={isSigningUp || isSigningIn}
             />
           </Animated.View>
         </View>
         
         {/* Loading Overlay */}
         <LoadingOverlay
-          visible={isNavigating}
+          visible={isSigningUp || isSigningIn}
           title="Loading..."
           subtitle="Please wait a moment"
         />

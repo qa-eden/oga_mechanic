@@ -12,6 +12,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { userAPI } from "@/lib/api/user";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   CalendarIcon,
   TrashIcon,
@@ -67,6 +70,8 @@ interface CarDetails {
 
 const CarDetail = () => {
   const params = useLocalSearchParams();
+  const carId = params.carId as string;
+  const queryClient = useQueryClient();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -75,70 +80,116 @@ const CarDetail = () => {
     message: "",
   });
 
-  // Mock car data - in real app, this would be fetched based on car ID from params
-  const [carData, setCarData] = useState<CarDetails>({
-    id: 1,
-    name: "Cadillac Escalade",
-    year: 2022,
-    plateNumber: "KJA-459BC",
-    vin: "1GYKNGRS4NZ123456",
-    status: "Active",
-    image: images?.brabus,
-    color: "#1F2937",
-    mileage: 12500,
-    fuelType: "Petrol",
-    lastService: "2 months ago",
-    nextService: "3 months from now",
-    location: "Lagos, Nigeria",
-    insurance: {
-      provider: "Leadway Assurance",
-      policyNumber: "LWA-2024-001234",
-      expiryDate: "December 31, 2024",
-      status: "Active",
-    },
-    subscription: {
-      plan: "Premium",
-      price: 20000,
-      status: "Active",
-      nextRenewal: "July 10, 2025",
-      paymentMethod: "Mastercard **** 4242",
-    },
-    contact: {
-      phone: "+234 801 234 5678",
-      email: "support@ogamechanic.com",
-    },
+  // Fetch car data from API
+  const {
+    data: carDataResponse,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["userCar", carId],
+    queryFn: () => userAPI.getCarById(carId),
+    enabled: !!carId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
   });
+
+  // Transform API response to CarDetails format
+  const carData: CarDetails | null = carDataResponse
+    ? {
+        id: carDataResponse.id || parseInt(carId),
+        name: carDataResponse.car_make && carDataResponse.car_model
+          ? `${carDataResponse.car_make} ${carDataResponse.car_model}`
+          : carDataResponse.name || "Unknown Car",
+        year: carDataResponse.car_year || carDataResponse.year || new Date().getFullYear(),
+        plateNumber: carDataResponse.license_plate || carDataResponse.plateNumber || "N/A",
+        vin: carDataResponse.vin || "N/A",
+        status: carDataResponse.status || "Active",
+        image: images?.brabus, // Default image, can be updated if API provides image
+        color: carDataResponse.color || "#1F2937",
+        mileage: carDataResponse.mileage || 0,
+        fuelType: carDataResponse.fuel_type || carDataResponse.fuelType || "N/A",
+        lastService: carDataResponse.last_service || carDataResponse.lastService || "N/A",
+        nextService: carDataResponse.next_service || carDataResponse.nextService || "N/A",
+        location: carDataResponse.location || "N/A",
+        insurance: {
+          provider: carDataResponse.insurance?.provider || "N/A",
+          policyNumber: carDataResponse.insurance?.policy_number || carDataResponse.insurance?.policyNumber || "N/A",
+          expiryDate: carDataResponse.insurance?.expiry_date || carDataResponse.insurance?.expiryDate || "N/A",
+          status: carDataResponse.insurance?.status || "Active",
+        },
+        subscription: {
+          plan: carDataResponse.subscription?.plan || "N/A",
+          price: carDataResponse.subscription?.price || 0,
+          status: carDataResponse.subscription?.status || "Inactive",
+          nextRenewal: carDataResponse.subscription?.next_renewal || carDataResponse.subscription?.nextRenewal || "N/A",
+          paymentMethod: carDataResponse.subscription?.payment_method || carDataResponse.subscription?.paymentMethod || "N/A",
+        },
+        contact: {
+          phone: carDataResponse.contact?.phone || "+234 801 234 5678",
+          email: carDataResponse.contact?.email || "support@ogamechanic.com",
+        },
+      }
+    : null;
 
   const handleDeactivate = () => {
     setShowDeactivateModal(true);
   };
 
+  const deactivateMutation = useMutation({
+    mutationFn: (carId: string) => userAPI.updateCar(carId, { status: "Inactive" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCar", carId] });
+      queryClient.invalidateQueries({ queryKey: ["userCars"] });
+      setSuccessConfig({
+        title: "Success!",
+        message: `Car has been deactivated successfully.`,
+      });
+      setShowSuccessModal(true);
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || "Failed to deactivate car. Please try again.";
+      setSuccessConfig({
+        title: "Error",
+        message: errorMessage,
+      });
+      setShowSuccessModal(true);
+    },
+  });
+
   const handleConfirmDeactivate = () => {
-    const newStatus = carData.status === "Active" ? "Inactive" : "Active";
-    const actionText =
-      carData.status === "Active" ? "deactivated" : "activated";
-
-    setCarData((prev) => ({ ...prev, status: newStatus }));
-
-    // Show success modal
-    setSuccessConfig({
-      title: "Success!",
-      message: `${carData.name} has been ${actionText} successfully.`,
-    });
-    setShowSuccessModal(true);
+    if (carId && carData) {
+      deactivateMutation.mutate(carId);
+    }
   };
 
   const handleDelete = () => {
     setShowDeleteModal(true);
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: (carId: string) => userAPI.deleteCar(carId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userCars"] });
+      setSuccessConfig({
+        title: "Car Deleted!",
+        message: `Car has been permanently deleted from your account.`,
+      });
+      setShowSuccessModal(true);
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || "Failed to delete car. Please try again.";
+      setSuccessConfig({
+        title: "Error",
+        message: errorMessage,
+      });
+      setShowSuccessModal(true);
+    },
+  });
+
   const handleConfirmDelete = () => {
-    // Show success modal instead of Alert
-    setSuccessConfig({
-      title: "Car Deleted!",
-      message: `${carData.name} has been permanently deleted from your account.`,
-    });
-    setShowSuccessModal(true);
+    if (carId) {
+      deleteMutation.mutate(carId);
+    }
   };
 
   const handleSuccessClose = () => {
@@ -159,6 +210,42 @@ const CarDetail = () => {
   };
 
   const { width: screenWidth } = Dimensions.get("window");
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <LoadingSpinner
+          message="Loading car details..."
+          subMessage="Please wait while we fetch the information"
+          size="medium"
+          logoSize={32}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error || !carData) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
+          <BackArrowBtn />
+          <Text className="text-xl font-NunitoBold text-gray-900 ml-4">
+            Car Details
+          </Text>
+        </View>
+        <View className="flex-1 justify-center items-center px-5">
+          <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
+            Unable to load car details
+          </Text>
+          <Text className="text-gray-500 text-center">
+            {error instanceof Error ? error.message : "Please try again later"}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>

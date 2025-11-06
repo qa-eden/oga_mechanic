@@ -36,6 +36,7 @@ export const routes = {
   orderConfirmation: "/(root)/(screens)/(user)/order-confirmation",
   chatSeller: "/(root)/(screens)/(user)/chat-seller",
   carDetails: "/(root)/(screens)/(user)/car-detail",
+  addCar: "/(root)/(screens)/(user)/add-car",
   AllMechanic: "/(root)/(screens)/(mechanicScreens)/all-mechanic",
   mechanicProfile: "/(root)/(screens)/(mechanicScreens)/mechanic-profile",
   chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
