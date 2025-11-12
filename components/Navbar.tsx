@@ -35,13 +35,13 @@ const Navbar = () => {
   
   // Get primary profile to check user role
   const { data: primaryProfileData, isLoading: primaryLoading } = usePrimaryUserProfile();
-  const activeRole = primaryProfileData?.data?.active_role?.name;
+  const activeRole = primaryProfileData?.data?.active_role || null;
   
-  // Use mechanic profile if user is a mechanic, otherwise use primary profile
-  const { data: mechanicProfileData, isLoading: mechanicLoading } = useMechanicProfile();
+  // Only fetch mechanic profile if user is actually a mechanic
+  const isMechanic = activeRole === 'mechanic';
+  const { data: mechanicProfileData, isLoading: mechanicLoading } = useMechanicProfile(isMechanic);
   
   // Determine which profile data to use
-  const isMechanic = activeRole === 'mechanic';
   const profileData = isMechanic ? mechanicProfileData?.data : primaryProfileData?.data;
   const isLoading = isMechanic ? mechanicLoading : primaryLoading;
   

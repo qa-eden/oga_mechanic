@@ -1,5 +1,6 @@
 import { BASE_URL, AUTH_ENDPOINTS } from '../endpoints';
 import { mockRolesAPI } from './mockRoles';
+import api from '../axios';
 
 // Role interface
 export interface Role {
@@ -27,23 +28,10 @@ export const rolesAPI = {
   // Fetch all roles
   getRoles: async (): Promise<Role[]> => {
     try {
-
-      
-      const response = await fetch(`${BASE_URL}${AUTH_ENDPOINTS.ALL_ROLES}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
-
-
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: RolesResponse = await response.json();
+      // Use axios instance to handle redirects properly
+      // Axios will follow redirects once (maxRedirects: 1) to prevent loops
+      const response = await api.get(AUTH_ENDPOINTS.ALL_ROLES);
+      const data: RolesResponse = response.data;
 
       
       // Handle different response formats

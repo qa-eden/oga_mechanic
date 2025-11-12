@@ -87,8 +87,11 @@ const MechanicHome = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={requestsLoading}
-            onRefresh={refetchRequests}
+            refreshing={requestsLoading || analyticsLoading}
+            onRefresh={() => {
+              refetchRequests();
+              refetchAnalytics();
+            }}
             colors={['#A80207']}
             tintColor="#A80207"
           />

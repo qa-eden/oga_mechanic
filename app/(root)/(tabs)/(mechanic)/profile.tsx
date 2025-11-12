@@ -16,13 +16,12 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
-  Modal,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
-import { routes, mechanicRoutes } from "@/constants/routes";
+import { mechanicRoutes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";

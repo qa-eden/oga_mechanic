@@ -24,6 +24,8 @@ export const ENV_CONFIG = {
   // Third-party Services
   GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+  MAPBOX_ACCESS_TOKEN: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiZW1tenp5IiwiYSI6ImNtaG1tOW9oaDFzbGIya3M4OTk4eGp6cmsifQ.OBcfpqoOcFqNpi-LWKDfFw',
+  MAPBOX_PLACES_ENDPOINT: process.env.EXPO_PUBLIC_MAPBOX_PLACES_ENDPOINT || 'https://api.mapbox.com/geocoding/v5/mapbox.places',
   
   // WebSocket Configuration
   WEBSOCKET_URL: process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'wss://api.ogamechanic.com/ws',

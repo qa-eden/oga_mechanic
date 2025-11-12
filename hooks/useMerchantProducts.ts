@@ -39,11 +39,11 @@ export const useMerchantCars = (
       return response.data.results || [];
     },
     enabled: enabled && !!merchantId && !!carCategoryId,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Only refetch when connection is restored
   });
 };
 
@@ -71,11 +71,11 @@ export const useMerchantSpareParts = (
       return response.data.results || [];
     },
     enabled: enabled && !!merchantId && !!sparePartsCategoryId,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Only refetch when connection is restored
   });
 };
 
@@ -106,9 +106,9 @@ export const useRentalCars = (
     enabled: enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes for public data
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Only refetch when connection is restored
   });
 };
 

@@ -17,7 +17,10 @@ export const usePrimaryUserProfile = () => {
     queryKey: userProfileKeys.primary(),
     queryFn: userAPI.getPrimaryProfile,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Reduce retries
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
 
@@ -32,13 +35,17 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   });
 };
 
-// Hook to get mechanic profile
-export const useMechanicProfile = () => {
+// Hook to get mechanic profile (only when enabled)
+export const useMechanicProfile = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['mechanic', 'profile'],
     queryFn: () => userAPI.getMechanicProfile(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: enabled, // Only fetch when enabled
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    retry: 1, // Reduce retries
   });
 };
 

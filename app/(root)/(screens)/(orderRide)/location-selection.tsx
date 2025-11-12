@@ -1,19 +1,23 @@
 "use client";
 
-import { View, Text, FlatList, TouchableOpacity, TextInput, ScrollView } from "react-native";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { View, Text, FlatList, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from "react-native";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { MapPinIcon, MagnifyingGlassIcon } from "react-native-heroicons/solid";
 import { routes } from "@/constants/routes";
 import { useLocation } from "@/contexts/LocationContext";
+import { ENV_CONFIG } from "@/config/env";
 
 interface LocationItem {
   id: string;
   name: string;
   address: string;
-  type: "current_route" | "suggestion";
+  type: "recent" | "suggestion";
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
 }
 
 const LocationSelection = () => {
@@ -23,85 +27,142 @@ const LocationSelection = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const { setFromLocation, setToLocation } = useLocation();
-
-  // Mock location data - expanded for better suggestions
-  const [allLocations] = useState<LocationItem[]>([
+  const [recentLocations, setRecentLocations] = useState<LocationItem[]>([
     {
-      id: "1",
+      id: "recent-1",
       name: "Campus Mini Stadium",
       address: "102273 Lagos Island, Lagos",
-      type: "current_route",
+      type: "recent",
+      latitude: 6.4531,
+      longitude: 3.3958,
     },
     {
-      id: "2",
+      id: "recent-2",
       name: "Viva Cinema",
       address: "22 Simbiat Abiola Way, Lagos",
-      type: "current_route",
+      type: "recent",
+      latitude: 6.6018,
+      longitude: 3.3515,
     },
-    {
-      id: "3",
-      name: "Campus backyard",
-      address: "102273 Lagos Island, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "4",
-      name: "Lagos Mall",
-      address: "Victoria Island, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "5",
-      name: "Airport Terminal",
-      address: "Murtala Mohammed Airport, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "6",
-      name: "University of Lagos",
-      address: "Akoka, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "7",
-      name: "Lekki Conservation Centre",
-      address: "Lekki, Lagos",
-      type: "suggestion",
-    },
-    {
-      id: "8",
-      name: "National Theatre",
-      address: "Iganmu, Lagos",
-      type: "suggestion",
-    }
   ]);
+  const [apiSuggestions, setApiSuggestions] = useState<LocationItem[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const currentRoute = useMemo(() => 
-    allLocations.filter((loc) => loc.type === "current_route"), 
-    [allLocations]
-  );
-  
-  const suggestions = useMemo(() => 
-    allLocations.filter((loc) => loc.type === "suggestion"), 
-    [allLocations]
-  );
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setApiSuggestions([]);
+      setFetchError(null);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      return;
+    }
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(async () => {
+      if (!ENV_CONFIG.MAPBOX_ACCESS_TOKEN) {
+        setFetchError("Mapbox access token is missing. Please configure it in your environment.");
+        setApiSuggestions([]);
+        return;
+      }
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setIsLoadingSuggestions(true);
+      setFetchError(null);
+
+      try {
+        const encodedQuery = encodeURIComponent(searchQuery.trim());
+        const params = new URLSearchParams({
+          access_token: ENV_CONFIG.MAPBOX_ACCESS_TOKEN,
+          autocomplete: "true",
+          country: "ng",
+          language: "en",
+          limit: "8",
+          types: "address,place,poi",
+        });
+
+        const response = await fetch(
+          `${ENV_CONFIG.MAPBOX_PLACES_ENDPOINT}/${encodedQuery}.json?${params.toString()}`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Mapbox request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        const mappedSuggestions: LocationItem[] =
+          data?.features?.map((feature: any) => ({
+            id: feature.id,
+            name: feature.text || feature.place_name || searchQuery.trim(),
+            address: feature.place_name || "",
+            type: "suggestion" as const,
+            latitude: feature.center?.[1],
+            longitude: feature.center?.[0],
+            placeId: feature.id,
+          })) || [];
+
+        setApiSuggestions(mappedSuggestions);
+      } catch (error: any) {
+        if (error.name === "AbortError") {
+          return;
+        }
+        setFetchError(error.message || "Unable to fetch suggestions. Please try again.");
+        setApiSuggestions([]);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    }, 350);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   // Filter locations for dropdown based on search query
   const dropdownSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    
-    return allLocations.filter((loc) => 
-      loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.address.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 8); // Limit to 8 suggestions
-  }, [allLocations, searchQuery]);
+    return apiSuggestions;
+  }, [apiSuggestions, searchQuery]);
+
+  const fallbackMatches = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return recentLocations
+      .filter(
+        (loc) =>
+          loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          loc.address.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .slice(0, 5)
+      .map((loc) => ({ ...loc, type: "suggestion" as const }));
+  }, [recentLocations, searchQuery]);
+
+  const displayedResults =
+    dropdownSuggestions.length > 0 ? dropdownSuggestions : fallbackMatches;
 
   const handleCurrentLocation = useCallback(() => {
     // For now, we'll use a mock current location
     // In a real app, you would use geolocation API
     const currentLocation = {
       name: "Current Location",
-      address: "Your current location"
+      address: "Your current location",
+      latitude: undefined,
+      longitude: undefined,
+      placeId: undefined,
     };
     
     if (type === 'from') {
@@ -118,7 +179,10 @@ const LocationSelection = () => {
     // Update the location in the global context
     const locationData = {
       name: location.name,
-      address: location.address
+      address: location.address,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      placeId: location.placeId,
     };
     
     if (type === 'from') {
@@ -131,6 +195,17 @@ const LocationSelection = () => {
     router.back();
     
     console.log("Selected location:", location);
+    setRecentLocations((prev) => {
+      const withoutSelected = prev.filter((loc) => loc.id !== location.id);
+      return [
+        {
+          ...location,
+          id: location.id.startsWith("recent-") ? location.id : `recent-${location.id}`,
+          type: "recent" as const,
+        },
+        ...withoutSelected,
+      ].slice(0, 6);
+    });
   }, [type, setFromLocation, setToLocation]);
 
   const handleSearchChange = useCallback((text: string) => {
@@ -145,8 +220,8 @@ const LocationSelection = () => {
   }, [searchQuery]);
 
   const handleSearchBlur = useCallback(() => {
-    // Delay hiding dropdown to allow for taps
-    setTimeout(() => setShowDropdown(false), 200);
+    // Delay hiding dropdown to allow taps to register, but keep it snappy
+    setTimeout(() => setShowDropdown(false), 250);
   }, []);
 
   const renderLocationItem = useCallback(({ item }: { item: LocationItem }) => (
@@ -235,7 +310,7 @@ const LocationSelection = () => {
           <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 mt-1 max-h-80">
             <ScrollView 
               showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+              keyboardShouldPersistTaps="always"
             >
               {/* Current Location Option */}
               <TouchableOpacity
@@ -256,12 +331,39 @@ const LocationSelection = () => {
                 </View>
               </TouchableOpacity>
 
+              {isLoadingSuggestions && (
+                <View className="flex-row items-center gap-3 py-3 px-4 border-b border-gray-100">
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text className="text-sm text-gray-500 font-NunitoMedium">
+                    Searching Mapbox...
+                  </Text>
+                </View>
+              )}
+
+              {fetchError && (
+                <View className="py-3 px-4 border-b border-red-100 bg-red-50">
+                  <Text className="text-sm text-red-600 font-NunitoMedium">
+                    {fetchError}
+                  </Text>
+                </View>
+              )}
+
               {/* Search Results */}
-              {dropdownSuggestions.map((item) => (
+              {displayedResults.map((item) => (
                 <View key={item.id}>
                   {renderDropdownItem({ item })}
                 </View>
               ))}
+
+              {!isLoadingSuggestions &&
+                !fetchError &&
+                displayedResults.length === 0 && (
+                  <View className="py-3 px-4">
+                    <Text className="text-sm text-gray-500 font-NunitoMedium">
+                      No locations found. Try a different search term.
+                    </Text>
+                  </View>
+                )}
             </ScrollView>
           </View>
         )}
@@ -270,10 +372,17 @@ const LocationSelection = () => {
       {/* Main List - Only show when not searching */}
       {!showDropdown && (
         <FlatList
-          data={suggestions}
+          data={recentLocations}
           keyExtractor={keyExtractor}
           renderItem={renderLocationItem}
-          ListHeaderComponent={ListHeaderComponent}
+          ListHeaderComponent={recentLocations.length > 0 ? ListHeaderComponent : null}
+          ListEmptyComponent={
+            <View className="px-5 py-6">
+              <Text className="text-sm text-gray-500 font-NunitoMedium">
+                Start typing to search for locations and build your recent list.
+              </Text>
+            </View>
+          }
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}

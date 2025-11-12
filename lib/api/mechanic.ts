@@ -11,6 +11,20 @@ export interface CarDetails {
   carIssue: string;
 }
 
+export interface RepairRequestPayload {
+  mechanic_id: string;
+  service_type: string;
+  vehicle_model: string;
+  vehicle_year: number;
+  problem_description: string;
+  service_address: string;
+  service_latitude?: number;
+  service_longitude?: number;
+  preferred_date?: string;
+  preferred_time_slot?: string;
+  notes?: string;
+}
+
 export interface Mechanic {
   id: string;
   name: string;
@@ -71,6 +85,11 @@ export const mechanicAPI = {
     return response.data;
   },
 
+  createRepairRequest: async (payload: RepairRequestPayload): Promise<any> => {
+    const response = await api.post(MECHANIC_ENDPOINTS.REPAIR_REQUESTS, payload);
+    return response.data;
+  },
+
   // Get mechanic reviews
   getMechanicReviews: async (mechanicId: string): Promise<any[]> => {
     const response = await api.get(SERVICE_ENDPOINTS.MECHANIC_REVIEWS(mechanicId));
@@ -79,6 +98,7 @@ export const mechanicAPI = {
 
   // Get repair requests for mechanic
   getRepairRequests: async (): Promise<any> => {
+    // Use axios instance - it will handle redirects properly (maxRedirects: 1)
     const response = await api.get(MECHANIC_ENDPOINTS.REPAIR_REQUESTS);
     return response.data;
   },

@@ -13,13 +13,14 @@ export const useRoles = () => {
   return useQuery({
     queryKey: rolesQueryKeys.lists(),
     queryFn: rolesAPI.getRoles,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    retry: 2,
+    staleTime: 10 * 60 * 1000, // 10 minutes - roles don't change often
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
+    retry: 1, // Reduce retries to prevent excessive calls
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    refetchOnReconnect: true,
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnReconnect: false, // Don't refetch on reconnect for roles (they rarely change)
+    networkMode: 'online', // Only fetch when online
   });
 };
 

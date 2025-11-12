@@ -44,10 +44,10 @@ export const useApiQuery = <TData = unknown, TError = Error>(
     retryDelay: (attemptIndex) => Math.min(retryDelay * 2 ** attemptIndex, 30000),
     gcTime: cacheTime,
     staleTime,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    ...queryOptions,
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Only refetch when connection is restored
+    ...queryOptions, // Allow individual queries to override these defaults
   });
 
   // Parse error information
@@ -71,7 +71,7 @@ export const apiQueryPresets = {
   realtime: {
     staleTime: 30 * 1000,     // 30 seconds
     cacheTime: 2 * 60 * 1000, // 2 minutes
-    refetchInterval: 60 * 1000, // 1 minute
+    refetchInterval: false, // Disabled by default - enable manually if needed
   },
 
   // For moderately changing data (analytics, products)

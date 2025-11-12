@@ -77,8 +77,8 @@ export const useMerchantOrders = (merchantId: string) => {
     enabled: !!merchantId, // Only run query if merchantId is provided
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Only refetch when connection is restored
   });
 };

@@ -66,12 +66,17 @@ function AppContent() {
 }
 
 export default function RootLayout() {
-  // Create a client
+  // Create a client with optimized defaults to prevent excessive API calls
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes - cache time
         retry: 2,
+        refetchOnMount: false, // Don't refetch on mount if data exists
+        refetchOnWindowFocus: false, // Don't refetch when window regains focus
+        refetchOnReconnect: true, // Only refetch when connection is restored
+        refetchInterval: false, // Disable automatic polling by default
       },
     },
   });

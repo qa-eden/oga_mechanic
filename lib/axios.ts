@@ -7,6 +7,7 @@ import { ENV_CONFIG } from '../config/env';
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // Increased timeout for file uploads
+  maxRedirects: 1, // Follow redirects only once to prevent loops
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

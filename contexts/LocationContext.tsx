@@ -4,6 +4,9 @@ import React, { createContext, useContext, useReducer } from 'react';
 export interface LocationData {
   name: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
 }
 
 interface LocationState {
@@ -27,11 +30,17 @@ interface LocationContextType {
 const initialState: LocationState = {
   fromLocation: {
     name: "",
-    address: ""
+    address: "",
+    latitude: undefined,
+    longitude: undefined,
+    placeId: undefined,
   },
   toLocation: {
     name: "",
-    address: ""
+    address: "",
+    latitude: undefined,
+    longitude: undefined,
+    placeId: undefined,
   }
 };
 

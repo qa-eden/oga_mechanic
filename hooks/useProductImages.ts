@@ -42,11 +42,11 @@ export const useProductImages = ({ productId, merchantId }: UseProductImagesProp
       return finalData;
     },
     enabled: !!productId,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true
+    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true // Only refetch when connection is restored
   });
 
   // Query to fetch products list
@@ -69,11 +69,11 @@ export const useProductImages = ({ productId, merchantId }: UseProductImagesProp
       return response.data.results || [];
     },
     enabled: !!merchantId, // Only fetch when we have merchantId
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true
+    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true // Only refetch when connection is restored
   });
 
   // Mutation to upload image

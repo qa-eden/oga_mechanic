@@ -6,9 +6,14 @@ export const useRepairRequests = () => {
   return useQuery({
     queryKey: ['mechanic', 'repair-requests'],
     queryFn: () => mechanicAPI.getRepairRequests(),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
+    retry: 1, // Reduce retries to prevent excessive calls
+    refetchOnMount: false, // Don't refetch on mount if data exists and is fresh
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't auto-refetch on reconnect
+    refetchInterval: false, // Disable automatic polling - user can pull to refresh
+    networkMode: 'online', // Only fetch when online
   });
 };
 
@@ -19,6 +24,11 @@ export const useMechanicAnalytics = () => {
     queryFn: () => mechanicAPI.getMechanicAnalytics(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Reduce retries
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't auto-refetch on reconnect
+    networkMode: 'online', // Only fetch when online
   });
 };
 

@@ -58,6 +58,9 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             address.region,
             address.country
           ].filter(Boolean).join(', ') || "Your current location",
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          placeId: address.postalCode || undefined,
         };
 
         setLocation(locationData);
@@ -66,6 +69,8 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         const locationData = {
           name: "Current Location",
           address: `Lat: ${currentLocation.coords.latitude.toFixed(4)}, Lng: ${currentLocation.coords.longitude.toFixed(4)}`,
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
         };
 
         setLocation(locationData);

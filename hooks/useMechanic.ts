@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { mechanicAPI, CarDetails } from '../lib/api/mechanic';
+import { mechanicAPI, CarDetails, RepairRequestPayload } from '../lib/api/mechanic';
 import { useMechanicStore } from '../stores/mechanicStore';
 
 // Query keys
@@ -77,6 +77,12 @@ export const useBookMechanic = () => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: mechanicKeys.lists() });
     },
+  });
+};
+
+export const useCreateRepairRequest = () => {
+  return useMutation({
+    mutationFn: (payload: RepairRequestPayload) => mechanicAPI.createRepairRequest(payload),
   });
 };
 
