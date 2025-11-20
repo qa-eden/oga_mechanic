@@ -17,19 +17,119 @@ import { images } from "@/constants";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
+import { routes } from "@/constants/routes";
+import { mechanicRoutes } from "@/constants/routes";
 import Navbar from "@/components/Navbar";
 import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest, useMechanicAnalytics } from "@/hooks/useRepairRequests";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
+import { useVehicleMakes } from "@/hooks/useVehicleMakes";
+import { useEffect, useRef } from "react";
+import { Animated } from "react-native";
+
+// Metric Card Skeleton Loader
+const MetricCardSkeleton = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+
+    return () => shimmer.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 0.7],
+    }),
+  };
+
+  return (
+    <View className="flex-1 bg-gray-200 rounded-[.4rem] p-4">
+      {/* Label skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded mb-4 w-3/4" />
+      {/* Number skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-8 bg-gray-300 rounded w-16" />
+    </View>
+  );
+};
+
+// Order Card Skeleton Loader
+const OrderCardSkeleton = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+
+    return () => shimmer.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 0.7],
+    }),
+  };
+
+  return (
+    <View className="bg-white mb-4 p-4 rounded-[.4rem] border border-gray-200">
+      {/* Header skeleton */}
+      <View className="flex-row justify-between items-start mb-3">
+        <Animated.View style={[shimmerStyle]} className="h-5 bg-gray-300 rounded w-2/3" />
+        <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded w-16" />
+      </View>
+
+      {/* Car type skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded mb-2 w-1/2" />
+
+      {/* Car issue skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded mb-4 w-3/4" />
+
+      {/* Buttons skeleton */}
+      <View className="flex-row space-x-3 gap-3">
+        <Animated.View style={[shimmerStyle]} className="flex-1 h-12 bg-gray-300 rounded-[.4rem]" />
+        <Animated.View style={[shimmerStyle]} className="flex-1 h-12 bg-gray-300 rounded-[.4rem]" />
+      </View>
+    </View>
+  );
+};
 
 const MechanicHome = () => {
-  // Fetch repair requests from API
+  // Fetch repair requests from API with status="pending" filter
   const {
     data: repairRequestsData,
     isLoading: requestsLoading,
     error: requestsError,
     refetch: refetchRequests
-  } = useRepairRequests();
+  } = useRepairRequests('pending');
 
   // Fetch mechanic analytics from API
   const {
@@ -39,18 +139,88 @@ const MechanicHome = () => {
     refetch: refetchAnalytics
   } = useMechanicAnalytics();
 
+  // Fetch vehicle makes to resolve make/model names
+  const { data: vehicleMakes } = useVehicleMakes();
+
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
   const declineRequestMutation = useDeclineRepairRequest();
 
+  // Helper function to get make name from ID
+  const getMakeName = (makeId: string | number) => {
+    if (!vehicleMakes || !makeId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    return make?.name || `Make ID: ${makeId}`;
+  };
+
+  // Helper function to get model name from ID
+  const getModelName = (makeId: string | number, modelId: string | number) => {
+    if (!vehicleMakes || !makeId || !modelId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    const model = make?.models?.find((m) => m.id.toString() === modelId.toString());
+    return model?.name || `Model ID: ${modelId}`;
+  };
+
   // Transform API data to match OrderCard interface
-  const currentOrders: Order[] = repairRequestsData?.data?.map((request: any) => ({
-    id: request.id,
-    clientName: request.customer_name || request.client_name || 'Unknown Customer',
-    phoneNumber: request.customer_phone || request.phone_number || 'N/A',
-    carType: request.vehicle_make || request.car_type || 'Unknown Vehicle',
-    carIssue: request.issue_description || request.problem_description || 'Repair needed',
-  })) || [];
+  const currentOrders: Order[] = (() => {
+    try {
+      if (!repairRequestsData?.data) {
+        return [];
+      }
+
+      const ordersArray = Array.isArray(repairRequestsData.data) 
+        ? repairRequestsData.data 
+        : [];
+
+      return ordersArray.map((request: any) => {
+        // Get customer name
+        const customerName = request.customer
+          ? `${request.customer.first_name || ''} ${request.customer.last_name || ''}`.trim() || 'Unknown Customer'
+          : 'Unknown Customer';
+
+        // Get phone number
+        const phoneNumber = request.customer?.phone_number || 'N/A';
+
+        // Get vehicle make and model names
+        const makeId = request.vehicle_make;
+        const modelId = request.vehicle_model;
+        const makeName = getMakeName(makeId);
+        const modelName = getModelName(makeId, modelId);
+        const carType = `${makeName} ${modelName}`.trim() || 'Unknown Vehicle';
+
+        // Map API status to Order status
+        const mapStatus = (status: string): Order['status'] => {
+          switch (status) {
+            case 'pending':
+              return 'current';
+            case 'accepted':
+            case 'in_progress':
+              return 'ongoing';
+            case 'completed':
+              return 'completed';
+            case 'declined':
+            case 'cancelled':
+              return 'declined';
+            default:
+              return 'current';
+          }
+        };
+
+        return {
+          id: request.id?.toString() || '',
+          clientName: customerName,
+          phoneNumber: phoneNumber,
+          carType: carType,
+          carIssue: request.problem_description || request.issue_description || 'Repair needed',
+          status: mapStatus(request.status || 'pending'),
+          apiStatus: request.status || 'pending', // Actual API status for display
+        };
+      });
+    } catch (error) {
+      console.error('Error transforming orders data:', error);
+      return [];
+    }
+  })();
 
   const handleAccept = async (orderId: string) => {
     try {
@@ -68,6 +238,15 @@ const MechanicHome = () => {
     } catch (error) {
       console.error("Error declining request:", error);
     }
+  };
+
+  const handleView = (orderId: string) => {
+    router.push({
+      pathname: mechanicRoutes.orderDetails,
+      params: {
+        orderId: orderId,
+      },
+    });
   };
 
   const ratingData = [
@@ -128,30 +307,31 @@ const MechanicHome = () => {
 
           {/* Metrics */}
           <View className="flex-row gap-4 space-x-4 mb-4">
-            <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4 ">
-              <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                Total Repair Requests
-              </Text>
-              {analyticsLoading ? (
-                <LoadingSpinner size="small" />
-              ) : (
-                <Text className="text-2xl font-NunitoBold text-gray-900">
-                  {analyticsData?.data?.total_repair_requests || 0}
-                </Text>
-              )}
-            </View>
-            <View className="flex-1 gradient-to-r from-[#D7CFF1] to-[#D3C8E4] bg-[#D3C8E4] rounded-[.4rem] p-4">
-              <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                Completed Requests
-              </Text>
-              {analyticsLoading ? (
-                <LoadingSpinner size="small" />
-              ) : (
-                <Text className="text-2xl font-NunitoBold text-gray-900">
-                  {analyticsData?.data?.completed_repair_requests || 0}
-                </Text>
-              )}
-            </View>
+            {analyticsLoading ? (
+              <>
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+              </>
+            ) : (
+              <>
+                <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4 ">
+                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                    Total Repair Requests
+                  </Text>
+                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                    {analyticsData?.data?.total_repair_requests || 0}
+                  </Text>
+                </View>
+                <View className="flex-1 gradient-to-r from-[#D7CFF1] to-[#D3C8E4] bg-[#D3C8E4] rounded-[.4rem] p-4">
+                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                    Completed Requests
+                  </Text>
+                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                    {analyticsData?.data?.completed_repair_requests || 0}
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Customer Reviews */}
@@ -174,11 +354,10 @@ const MechanicHome = () => {
 
             {/* Loading State */}
             {requestsLoading && (
-              <View className="items-center py-8">
-                <LoadingSpinner size="large" />
-                <Text className="text-gray-600 font-NunitoMedium mt-2">
-                  Loading repair requests...
-                </Text>
+              <View className="">
+                {[1, 2, 3].map((index) => (
+                  <OrderCardSkeleton key={`skeleton-${index}`} />
+                ))}
               </View>
             )}
 
@@ -208,6 +387,7 @@ const MechanicHome = () => {
                     type="current"
                     onAccept={handleAccept}
                     onDecline={handleDecline}
+                    onView={handleView}
                   />
                 ))}
               </View>

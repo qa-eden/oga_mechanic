@@ -1,119 +1,171 @@
 "use client";
 
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Modal, RefreshControl, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
+import { routes } from "@/constants/routes";
 import { mechanicRoutes } from "@/constants/routes";
 import OrderCard, { Order } from "@/components/OrderCard";
+import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest } from "@/hooks/useRepairRequests";
+import { useVehicleMakes } from "@/hooks/useVehicleMakes";
+import AnimatedErrorCard from "@/components/AnimatedErrorCard";
+import CustomButton from "@/components/CustomButton";
+
+// Order Card Skeleton Loader
+const OrderCardSkeleton = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+
+    return () => shimmer.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 0.7],
+    }),
+  };
+
+  return (
+    <View className="bg-white mb-4 p-4 rounded-[.4rem] border border-gray-200">
+      {/* Header skeleton */}
+      <View className="flex-row justify-between items-start mb-3">
+        <Animated.View style={[shimmerStyle]} className="h-5 bg-gray-300 rounded w-2/3" />
+        <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded w-16" />
+      </View>
+
+      {/* Car type skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded mb-2 w-1/2" />
+
+      {/* Car issue skeleton */}
+      <Animated.View style={[shimmerStyle]} className="h-4 bg-gray-300 rounded mb-4 w-3/4" />
+
+      {/* Buttons skeleton */}
+      <View className="flex-row space-x-3 gap-3">
+        <Animated.View style={[shimmerStyle]} className="flex-1 h-12 bg-gray-300 rounded-[.4rem]" />
+        <Animated.View style={[shimmerStyle]} className="flex-1 h-12 bg-gray-300 rounded-[.4rem]" />
+      </View>
+    </View>
+  );
+};
 
 const MechanicOrder = () => {
-  const [activeTab, setActiveTab] = useState("current");
+  const [activeTab, setActiveTab] = useState("all");
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"accept" | "decline" | "complete">("accept");
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
-  // Sample data - replace with actual data from your API
-  const currentOrders: Order[] = [
-    {
-      id: "1",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedez Benz",
-      carIssue: "Bad engine response",
-    },
-    {
-      id: "2",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedez Benz",
-      carIssue: "Bad engine response",
-    },
-    {
-      id: "3",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedez Benz",
-      carIssue: "Bad engine response",
-    },
-    {
-      id: "4",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedez Benz",
-      carIssue: "Bad engine response",
-    },
-    {
-      id: "5",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedez Benz",
-      carIssue: "Bad engine response",
-    },
-  ];
+  // Fetch repair requests with status filter based on active tab
+  const statusParam = activeTab === 'all' ? undefined : activeTab;
+  const {
+    data: repairRequestsData,
+    isLoading: requestsLoading,
+    error: requestsError,
+    refetch: refetchRequests
+  } = useRepairRequests(statusParam);
 
-  const ongoingOrders: Order[] = [
-    {
-      id: "6",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedes Benz",
-      carIssue: "Bad engine response",
-      status: "ongoing",
-    },
-    {
-      id: "7",
-      clientName: "David Wilson",
-      phoneNumber: "08076543210",
-      carType: "BMW X5",
-      carIssue: "Transmission repair",
-      status: "ongoing",
-    },
-    {
-      id: "8",
-      clientName: "Sarah Connor",
-      phoneNumber: "08065432109",
-      carType: "Audi A4",
-      carIssue: "Air conditioning not working",
-      status: "ongoing",
-    },
-  ];
+  // Fetch vehicle makes to resolve make/model names
+  const { data: vehicleMakes } = useVehicleMakes();
 
-  const completedOrders: Order[] = [
-    {
-      id: "9",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedes Benz",
-      carIssue: "Bad engine response",
-      status: "completed",
-    },
-    {
-      id: "10",
-      clientName: "Michael Brown",
-      phoneNumber: "08054321098",
-      carType: "Toyota Corolla",
-      carIssue: "Brake system check",
-      status: "completed",
-    },
-    {
-      id: "11",
-      clientName: "Susan Sheidu",
-      phoneNumber: "09087654322",
-      carType: "Mercedes Benz",
-      carIssue: "Bad engine response",
-      status: "declined",
-    },
-    {
-      id: "12",
-      clientName: "Robert Taylor",
-      phoneNumber: "08043210987",
-      carType: "Honda Accord",
-      carIssue: "Engine tune-up",
-      status: "completed",
-    },
-  ];
+  // Mutations for accepting/declining requests
+  const acceptRequestMutation = useAcceptRepairRequest();
+  const declineRequestMutation = useDeclineRepairRequest();
+
+  // Helper function to get make name from ID
+  const getMakeName = (makeId: string | number) => {
+    if (!vehicleMakes || !makeId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    return make?.name || `Make ID: ${makeId}`;
+  };
+
+  // Helper function to get model name from ID
+  const getModelName = (makeId: string | number, modelId: string | number) => {
+    if (!vehicleMakes || !makeId || !modelId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    const model = make?.models?.find((m) => m.id.toString() === modelId.toString());
+    return model?.name || `Model ID: ${modelId}`;
+  };
+
+  // Transform API data to match OrderCard interface
+  const allOrders: Order[] = (() => {
+    try {
+      if (!repairRequestsData?.data) {
+        return [];
+      }
+
+      const ordersArray = Array.isArray(repairRequestsData.data) 
+        ? repairRequestsData.data 
+        : [];
+
+      return ordersArray.map((request: any) => {
+        // Get customer name
+        const customerName = request.customer
+          ? `${request.customer.first_name || ''} ${request.customer.last_name || ''}`.trim() || 'Unknown Customer'
+          : 'Unknown Customer';
+
+        // Get vehicle make and model names
+        const makeId = request.vehicle_make;
+        const modelId = request.vehicle_model;
+        const makeName = getMakeName(makeId);
+        const modelName = getModelName(makeId, modelId);
+        const carType = `${makeName} ${modelName}`.trim() || 'Unknown Vehicle';
+
+        // Map API status to Order status
+        const mapStatus = (status: string): Order['status'] => {
+          switch (status) {
+            case 'pending':
+              return 'current';
+            case 'accepted':
+            case 'in_progress':
+              return 'ongoing';
+            case 'completed':
+              return 'completed';
+            case 'declined':
+            case 'cancelled':
+              return 'declined';
+            default:
+              return 'current';
+          }
+        };
+
+        return {
+          id: request.id?.toString() || '',
+          clientName: customerName,
+          phoneNumber: request.customer?.phone_number || 'N/A',
+          carType: carType,
+          carIssue: request.problem_description || request.issue_description || 'Repair needed',
+          status: mapStatus(request.status || 'pending'),
+          apiStatus: request.status || 'pending', // Actual API status for display and filtering
+        };
+      });
+    } catch (error) {
+      console.error('Error transforming orders data:', error);
+      return [];
+    }
+  })();
+
+  // Get current orders (no filtering needed - API handles it)
+  const getCurrentOrders = () => {
+    return allOrders;
+  };
 
   const handleAccept = (orderId: string) => {
     setSelectedOrderId(orderId);
@@ -127,20 +179,25 @@ const MechanicOrder = () => {
     setModalVisible(true);
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
+    try {
     if (modalType === "accept") {
-      console.log("Confirmed accept for order:", selectedOrderId);
-      router.push(mechanicRoutes.ConfirmOrder)
-      // Handle accept logic here
+        await acceptRequestMutation.mutateAsync(selectedOrderId);
+        setModalVisible(false);
+        // Optionally navigate to confirm order page
+        // router.push(mechanicRoutes.ConfirmOrder);
     } else if (modalType === "decline") {
-      console.log("Confirmed decline for order:", selectedOrderId);
-      // Handle decline logic here
+        await declineRequestMutation.mutateAsync(selectedOrderId);
+        setModalVisible(false);
     } else if (modalType === "complete") {
+        // Handle mark as complete logic here
       console.log("Confirmed complete for order:", selectedOrderId);
-      // Handle mark as complete logic here
-      // You might want to move the order from ongoing to completed
+        setModalVisible(false);
+      }
+    } catch (error) {
+      console.error("Error processing action:", error);
+      // Keep modal open on error so user can retry
     }
-    setModalVisible(false);
   };
 
   const cancelAction = () => {
@@ -153,17 +210,13 @@ const MechanicOrder = () => {
     setModalVisible(true);
   };
 
-  const getCurrentOrders = () => {
-    switch (activeTab) {
-      case "current":
-        return currentOrders;
-      case "ongoing":
-        return ongoingOrders;
-      case "completed":
-        return completedOrders;
-      default:
-        return currentOrders;
-    }
+  const handleView = (orderId: string) => {
+    router.push({
+      pathname: mechanicRoutes.orderDetails,
+      params: {
+        orderId: orderId,
+      },
+    });
   };
 
   return (
@@ -179,48 +232,147 @@ const MechanicOrder = () => {
 
       {/* Tab Navigation */}
       <View className="bg-white px-4 py-3 border-b border-gray-100">
-        <View className="flex-row bg-gray-100 rounded-[.3rem] p-1 overflow-hidden">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
           {[
-            { key: "current", label: "Current orders" },
-            { key: "ongoing", label: "Ongoing orders" },
-            { key: "completed", label: "Completed orders" }
-          ].map((tab, index) => (
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "accepted", label: "Accepted" },
+            { key: "in_progress", label: "In Progress" },
+            { key: "completed", label: "Completed" },
+            { key: "cancelled", label: "Cancelled" },
+            { key: "declined", label: "Declined" }
+          ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
-              className={`flex-1 py-3 flex justify-center items-center rounded-[.3rem] ${index < 2 ? "mr-0" : ""
-                } ${activeTab === tab.key
-                  ? "bg-white shadow-sm px-1"
-                  : "bg-transparent"
-                }`}
+              className={`px-4 py-2 mx-1 rounded-[.3rem] ${
+                activeTab === tab.key
+                  ? "bg-red-600"
+                  : "bg-gray-100"
+              }`}
             >
-              <Text className={`font-NunitoBold text-center text-[.95rem] ${activeTab === tab.key ? "text-red-600" : "text-gray-500"
+              <Text className={`font-NunitoBold text-center text-[.9rem] ${
+                activeTab === tab.key ? "text-white" : "text-gray-600"
                 }`}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Orders List */}
-      <ScrollView className="flex-1 pt-4 mx-4">
-        {getCurrentOrders().length > 0 ? (
-          getCurrentOrders().map((order) => (
+      <ScrollView 
+        className="flex-1 pt-4 mx-4"
+        refreshControl={
+          <RefreshControl
+            refreshing={requestsLoading}
+            onRefresh={refetchRequests}
+            colors={['#A80207']}
+            tintColor="#A80207"
+          />
+        }
+      >
+        {/* Loading State */}
+        {requestsLoading && (
+          <View className="">
+            {[1, 2, 3].map((index) => (
+              <OrderCardSkeleton key={`skeleton-${index}`} />
+            ))}
+          </View>
+        )}
+
+        {/* Error State */}
+        {requestsError && !requestsLoading && (
+          <AnimatedErrorCard
+            emoji="🔧"
+            title="Unable to load orders"
+            message="Failed to fetch repair requests. Pull down to refresh or try again later."
+            gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+            textColor="text-red-800"
+            actionButton={{
+              text: "Retry",
+              onPress: () => refetchRequests(),
+              backgroundColor: "#DC2626"
+            }}
+          />
+        )}
+
+        {/* Success State - Show Orders */}
+        {!requestsLoading && !requestsError && getCurrentOrders().length > 0 && (
+          getCurrentOrders().map((order) => {
+            // Determine card type based on API status
+            let cardType: "current" | "ongoing" | "completed" = "current";
+            const apiStatus = (order as any).apiStatus;
+            if (apiStatus === 'accepted' || apiStatus === 'in_progress') {
+              cardType = 'ongoing';
+            } else if (apiStatus === 'completed') {
+              cardType = 'completed';
+            } else if (apiStatus === 'pending') {
+              cardType = 'current';
+            }
+
+            return (
             <OrderCard
               key={order.id}
               order={order}
-              type={activeTab.toLowerCase() as "current" | "ongoing" | "completed"}
+                type={cardType}
               onAccept={handleAccept}
               onDecline={handleDecline}
               onMarkComplete={handleMarkComplete}
+              onView={handleView}
             />
-          ))
-        ) : (
-          <View className="flex-1 items-center justify-center py-20">
-            <Text className="text-gray-500 font-NunitoSemiBold text-base">
-              No {activeTab} orders
+            );
+          })
+        )}
+
+        {/* Empty State */}
+        {!requestsLoading && !requestsError && getCurrentOrders().length === 0 && (
+          <View className="flex-1 items-center justify-center px-6 py-20">
+            <View className="items-center">
+              {/* Icon */}
+              <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
+                <Text className="text-5xl">🔧</Text>
+              </View>
+              
+              {/* Title */}
+              <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-2">
+                {activeTab === 'all' 
+                  ? 'No Orders Yet' 
+                  : activeTab === 'pending'
+                  ? 'No Pending Orders'
+                  : activeTab === 'accepted'
+                  ? 'No Accepted Orders'
+                  : activeTab === 'in_progress'
+                  ? 'No Orders In Progress'
+                  : activeTab === 'completed'
+                  ? 'No Completed Orders'
+                  : activeTab === 'cancelled'
+                  ? 'No Cancelled Orders'
+                  : activeTab === 'declined'
+                  ? 'No Declined Orders'
+                  : 'No Orders Found'}
+              </Text>
+              
+              {/* Description */}
+              <Text className="text-gray-500 font-NunitoMedium text-center text-base leading-6 max-w-xs">
+                {activeTab === 'all'
+                  ? "You don't have any repair requests at the moment. New orders will appear here when customers request your services."
+                  : activeTab === 'pending'
+                  ? "There are no pending repair requests waiting for your response. Check back later for new orders."
+                  : activeTab === 'accepted'
+                  ? "You haven't accepted any orders yet. Accept pending requests to see them here."
+                  : activeTab === 'in_progress'
+                  ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
+                  : activeTab === 'completed'
+                  ? "You haven't completed any orders yet. Mark orders as completed to see them here."
+                  : activeTab === 'cancelled'
+                  ? "No cancelled orders found. Cancelled requests will appear here."
+                  : activeTab === 'declined'
+                  ? "No declined orders found. Declined requests will appear here."
+                  : "No orders match this filter."}
             </Text>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -243,7 +395,7 @@ const MechanicOrder = () => {
             <View className="items-center mb-4">
               {modalType === "accept" ? (
                 <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center">
-                  <Text className="text-green-600 text-2xl font-bold">✓</Text>
+                  <Text className="text-green-700 text-2xl font-bold">✓</Text>
                 </View>
               ) : modalType === "decline" ? (
                 <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
@@ -264,41 +416,43 @@ const MechanicOrder = () => {
             {/* Message */}
             <Text className="text-gray-600 text-left mb-8 font-NunitoRegular leading-6">
               {modalType === "complete"
-                ? "Are you sure you want to mark this service order as completed? This action cannot be undone."
-                : `Are you sure you want to ${modalType} this client's service order?`
+                ? "Are you sure you want to mark this Service Order as Completed? This action cannot be undone."
+                : `Are you sure you want to ${modalType} this Client's Service Order?`
               }
             </Text>
 
             {/* Buttons */}
             <View className="space-y-3">
-              <TouchableOpacity
+              <CustomButton
                 onPress={confirmAction}
-                className={`${
+                title={
                   modalType === "complete"
-                    ? "bg-green-600"
-                    : modalType === "accept"
-                    ? "bg-green-600"
-                    : "bg-red-600"
-                } rounded-xl py-4`}
-              >
-                <Text className="text-white font-NunitoBold text-center text-base">
-                  {modalType === "complete"
                     ? "Mark as Completed"
                     : modalType === "accept"
                     ? "Accept Order"
                     : "Decline Order"
                   }
-                </Text>
-              </TouchableOpacity>
+                bgVariant={modalType === "decline" ? "danger" : "primary"}
+                textVariant="default"
+                className=""
+                loading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+                loadingText={
+                  modalType === "accept"
+                    ? "Accepting"
+                    : modalType === "decline"
+                    ? "Declining"
+                    : "Completing"
+                }
+              />
 
-              <TouchableOpacity
+              <CustomButton
                 onPress={cancelAction}
-                className="bg-gray-100 rounded-xl py-4 mt-3"
-              >
-                <Text className="text-gray-700 font-NunitoBold text-center text-base">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
+                title="Cancel"
+                bgVariant="outline"
+                textVariant="outline"
+                className="mt-3"
+                disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+              />
             </View>
           </View>
         </View>

@@ -1,11 +1,13 @@
-import { View, Text, ScrollView, Image, ActivityIndicator } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { ChevronDownIcon, ChevronUpIcon } from "react-native-heroicons/outline";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import Rating from "@/components/Rating";
 import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
-import { useGetMechanicDetail } from "@/hooks/useMechanics";
+import { useGetMechanicDetail, useGetMechanicReviews } from "@/hooks/useMechanics";
 import { getErrorMessage } from "@/utils/errorMessages";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
@@ -30,7 +32,7 @@ interface MechanicProfile {
 const MechanicProfile = () => {
   const params = useLocalSearchParams();
   const mechanicId = params.mechanicId as string;
-
+  const [showReviews, setShowReviews] = useState(false);
 
   // Fetch mechanic details from API
   const {
@@ -38,6 +40,13 @@ const MechanicProfile = () => {
     isLoading,
     error
   } = useGetMechanicDetail(mechanicId);
+
+  // Fetch mechanic reviews from API
+  const {
+    data: reviewsData,
+    isLoading: reviewsLoading,
+    error: reviewsError
+  } = useGetMechanicReviews(mechanicId);
 
   // Transform API data to component format
   const mechanic: MechanicProfile = (() => {
@@ -60,11 +69,16 @@ const MechanicProfile = () => {
     }
 
     const apiMechanic = mechanicData.data;
+    
+    // Get review count from reviews data
+    const reviewsArray = reviewsData?.data || (Array.isArray(reviewsData) ? reviewsData : []);
+    const reviewCount = Array.isArray(reviewsArray) ? reviewsArray.length : 0;
+    
     return {
       id: apiMechanic.id || 0,
       name: apiMechanic.user ? `${apiMechanic.user.first_name} ${apiMechanic.user.last_name}`.trim() : "Unknown Mechanic",
       rating: apiMechanic.rating || 0,
-      reviewCount: 0,
+      reviewCount: reviewCount,
       image: apiMechanic.selfie || null, // Use selfie URL from API
       bio: apiMechanic.bio || "",
       specialty: [], // Not provided in API
@@ -77,11 +91,48 @@ const MechanicProfile = () => {
     };
   })();
 
+  // Transform reviews data
+  const reviews = (() => {
+    if (!reviewsData) return [];
+    
+    const reviewsArray = reviewsData?.data || (Array.isArray(reviewsData) ? reviewsData : []);
+    if (!Array.isArray(reviewsArray)) return [];
+    
+    return reviewsArray.map((review: any) => {
+      // Extract customer name from user email or use fallback
+      let customerName = 'Customer';
+      if (review.user) {
+        if (typeof review.user === 'string') {
+          // If user is an email string, extract name from email (part before @)
+          const emailParts = review.user.split('@');
+          customerName = emailParts[0] || 'Customer';
+          // Capitalize first letter
+          customerName = customerName.charAt(0).toUpperCase() + customerName.slice(1);
+        } else if (review.user?.first_name) {
+          customerName = review.user.first_name;
+        }
+      }
+      
+      // Fallback to other possible fields
+      if (customerName === 'Customer') {
+        customerName = review.customer_name || review.customer?.name || 'Customer';
+      }
+      
+      return {
+        id: review.id?.toString() || '',
+        customerName: customerName,
+        rating: review.rating || 0,
+        comment: review.comment || review.review || '',
+        createdAt: review.created_at || review.createdAt || '',
+      };
+    });
+  })();
+
   const handleOrderPress = () => {
     router.push({
       pathname: routes.orderMechanic,
       params: {
-        mechanicId: mechanic.id,
+        mechanicId: mechanicData?.data?.user?.id || '',
         mechanicName: mechanic.name,
         mechanicRating: mechanic.rating,
         mechanicImage: mechanic.image,
@@ -131,7 +182,7 @@ const MechanicProfile = () => {
         <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
           <BackArrowBtn />
           <Text className="text-xl font-NunitoBold text-gray-900">
-            Mechanics
+            Mechanics Profile
           </Text>
           <View className="w-10" />
         </View>
@@ -153,7 +204,7 @@ const MechanicProfile = () => {
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
         <BackArrowBtn />
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Mechanics
+          Mechanics Profile
         </Text>
         <View className="w-10" />
       </View>
@@ -250,6 +301,79 @@ const MechanicProfile = () => {
               title="Payment method"
               content={mechanic.paymentMethods}
             />
+          )}
+        </View>
+
+        {/* Reviews Section */}
+        <View className="px-5 py-6 border-t border-gray-100">
+          <TouchableOpacity
+            onPress={() => setShowReviews(!showReviews)}
+            className="flex-row items-center justify-between mb-4"
+            activeOpacity={0.7}
+          >
+            <Text className="text-xl font-NunitoBold text-gray-900">
+              Reviews ({reviews.length})
+            </Text>
+            {showReviews ? (
+              <ChevronUpIcon size={24} color="#374151" />
+            ) : (
+              <ChevronDownIcon size={24} color="#374151" />
+            )}
+          </TouchableOpacity>
+
+          {showReviews && (
+            <>
+              {reviewsLoading ? (
+                <View className="py-8 items-center">
+                  <ActivityIndicator size="small" color="#D30309" />
+                  <Text className="text-gray-500 mt-2 font-NunitoMedium">
+                    Loading reviews...
+                  </Text>
+                </View>
+              ) : reviewsError ? (
+                <View className="py-8 items-center">
+                  <Text className="text-red-500 text-center font-NunitoMedium">
+                    {getErrorMessage(reviewsError)}
+                  </Text>
+                </View>
+              ) : reviews.length === 0 ? (
+                <View className="py-8 items-center">
+                  <Text className="text-gray-500 text-center font-NunitoMedium">
+                    No reviews yet
+                  </Text>
+                </View>
+              ) : (
+                <View className="space-y-4">
+                  {reviews.map((review) => (
+                    <View
+                      key={review.id}
+                      className="bg-gray-50 rounded-xl p-4 border border-gray-200"
+                    >
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-base font-NunitoBold text-gray-900">
+                          {review.customerName}
+                        </Text>
+                        <Rating rating={review.rating} size={14} />
+                      </View>
+                      {review.comment && (
+                        <Text className="text-sm font-NunitoMedium text-gray-700 leading-5 mt-2">
+                          {review.comment}
+                        </Text>
+                      )}
+                      {review.createdAt && (
+                        <Text className="text-xs font-NunitoMedium text-gray-500 mt-2">
+                          {new Date(review.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </View>
       </ScrollView>

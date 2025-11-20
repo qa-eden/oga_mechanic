@@ -1,38 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { productsAPI, VehicleMake } from '@/lib/api/products';
 
 export const useVehicleMakes = () => {
-  const [data, setData] = useState<VehicleMake[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery<VehicleMake[], Error>({
+    queryKey: ['vehicle-makes'],
+    queryFn: () => productsAPI.getVehicleMakes(),
+    staleTime: 10 * 60 * 1000, // 10 minutes - vehicle makes don't change often
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
+    retry: 1,
+    refetchOnMount: false, // Don't refetch on mount if data exists and is fresh
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't auto-refetch on reconnect
+    refetchInterval: false, // Disable automatic polling
+    networkMode: 'online', // Only fetch when online
+  });
 
-  useEffect(() => {
-    const fetchVehicleMakes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await productsAPI.getVehicleMakes();
-        setData(response);
-      } catch (err) {
-        console.error('Error fetching vehicle makes:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch vehicle makes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVehicleMakes();
-  }, []);
-
-  return { data, loading, error, refetch: () => {
-    setLoading(true);
-    setError(null);
-    productsAPI.getVehicleMakes()
-      .then(setData)
-      .catch(err => {
-        console.error('Error refetching vehicle makes:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch vehicle makes');
-      })
-      .finally(() => setLoading(false));
-  }};
+  // Return with backward compatibility for 'loading' property
+  return {
+    ...query,
+    loading: query.isLoading,
+    data: query.data || [],
+  };
 };

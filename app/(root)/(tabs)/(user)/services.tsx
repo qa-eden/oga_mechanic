@@ -50,7 +50,8 @@ const Services = () => {
       return "Transport";
     } else if (
       serviceName.includes("parts") ||
-      serviceName.includes("Specialist")
+      serviceName.includes("Specialist") ||
+      serviceName.includes("Mechanic")
     ) {
       return "Maintenance";
     } else if (serviceName.includes("Buy")) {
@@ -114,6 +115,9 @@ const Services = () => {
         break;
       case "Find a Mechanic":
         router.push(routes.findMechanic);
+        break;
+      case "My Mechanic Orders":
+        router.push(routes.myMechanicOrders);
         break;
       default:
         console.log("Navigate to:", service.name);

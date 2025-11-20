@@ -1,3 +1,4 @@
+
 export const BankNameLogo = [
     {
         name: "Access Bank",
@@ -425,3 +426,45 @@ export const featureOptions = [
     'Lane Assist',
     'Blind Spot Monitor'
 ]
+
+export const serviceTypeOptions = [
+  { label: 'Diagnostics', value: 'diagnostics' },
+  { label: 'Routine Maintenance', value: 'maintenance' },
+  { label: 'Repair', value: 'repair' },
+  { label: 'Emergency Callout', value: 'emergency' },
+  { label: 'Oil Change', value: 'oil_change' },
+  { label: 'Brake Service', value: 'brake_service' },
+  { label: 'Tire Replacement', value: 'tire_replacement' },
+  { label: 'Tire Repair', value: 'tire_repair' },
+  { label: 'Battery Replacement', value: 'battery_replacement' },
+  { label: 'Battery Jump Start', value: 'battery_jump' },
+  { label: 'Engine Repair', value: 'engine_repair' },
+  { label: 'Transmission Service', value: 'transmission_service' },
+  { label: 'AC Repair', value: 'ac_repair' },
+  { label: 'AC Recharge', value: 'ac_recharge' },
+  { label: 'Electrical System', value: 'electrical' },
+  { label: 'Suspension Repair', value: 'suspension' },
+  { label: 'Exhaust System', value: 'exhaust' },
+  { label: 'Fuel System', value: 'fuel_system' },
+  { label: 'Cooling System', value: 'cooling_system' },
+  { label: 'Timing Belt Replacement', value: 'timing_belt' },
+  { label: 'Spark Plug Replacement', value: 'spark_plugs' },
+  { label: 'Air Filter Replacement', value: 'air_filter' },
+  { label: 'Cabin Filter Replacement', value: 'cabin_filter' },
+  { label: 'Wheel Alignment', value: 'wheel_alignment' },
+  { label: 'Wheel Balancing', value: 'wheel_balancing' },
+  { label: 'Windshield Wiper Replacement', value: 'wiper_replacement' },
+  { label: 'Headlight Repair', value: 'headlight_repair' },
+  { label: 'Tail Light Repair', value: 'taillight_repair' },
+  { label: 'Door Lock Repair', value: 'door_lock' },
+  { label: 'Window Motor Repair', value: 'window_motor' },
+  { label: 'Starter Motor Repair', value: 'starter_motor' },
+  { label: 'Alternator Repair', value: 'alternator' },
+  { label: 'Radiator Repair', value: 'radiator' },
+  { label: 'Water Pump Replacement', value: 'water_pump' },
+  { label: 'Power Steering', value: 'power_steering' },
+  { label: 'Clutch Repair', value: 'clutch' },
+  { label: 'Pre-Purchase Inspection', value: 'pre_purchase' },
+  { label: 'Annual Service', value: 'annual_service' },
+  { label: 'Other', value: 'other' },
+];

@@ -10,6 +10,7 @@ import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
+import AddressInput from "@/components/forms/AddressInput";
 import ProgressBar from "@/components/ProgressBar";
 import { mechanicRoutes, routes } from "@/constants/routes";
 import SelectField from "@/components/forms/SelectField";
@@ -450,6 +451,7 @@ const MechanicStep3 = () => {
             {({
               isValid,
               setFieldValue,
+              setFieldTouched,
               values,
               errors,
               touched,
@@ -463,16 +465,130 @@ const MechanicStep3 = () => {
                     </Text>
 
                     {/* Location Input */}
-                    <FormikInput
-                      name="location"
+                    <AddressInput
                       label="Location"
                       placeholder="Enter your location (e.g., Lagos, Ikeja)"
-                      keyboardType="default"
+                      value={values.location}
+                      onChangeText={(text) => {
+                        setFieldValue("location", text);
+                        setFieldTouched("location", true);
+                      }}
+                      onLocationSelect={(location: any) => {
+                        // Update location field
+                        setFieldValue("location", location.address || location.name || "");
+                        setFieldTouched("location", true);
+
+                        // Try to extract and set state from location data
+                        // Check for region, administrativeArea, or extract from address string
+                        let stateName = location.region || location.administrativeArea || "";
+                        let lgaName = location.district || location.sublocality || location.subAdministrativeArea || "";
+
+                        // If no direct state field, try to extract from address string
+                        if (!stateName && location.address) {
+                          const addressParts = location.address.split(',').map((part: string) => part.trim());
+                          // Nigerian addresses often have format: "Street, City, State, Country"
+                          // Try to find a state name in the address parts
+                          for (const part of addressParts) {
+                            const matchingState = states.find(state => {
+                              const stateLabel = state.label.toLowerCase();
+                              const partLower = part.toLowerCase();
+                              return stateLabel === partLower ||
+                                stateLabel.includes(partLower) ||
+                                partLower.includes(stateLabel);
+                            });
+                            if (matchingState) {
+                              stateName = matchingState.label;
+                              break;
+                            }
+                          }
+                        }
+
+                        // Find matching state in the states array
+                        let matchedStateValue = "";
+                        if (stateName) {
+                          const matchingState = states.find(state => {
+                            const stateLabel = state.label.toLowerCase();
+                            const stateValue = state.value.replace(/_/g, ' ').toLowerCase();
+                            const locationState = stateName.toLowerCase();
+
+                            return stateLabel === locationState ||
+                              stateValue === locationState ||
+                              stateLabel.includes(locationState) ||
+                              locationState.includes(stateLabel);
+                          });
+
+                          if (matchingState) {
+                            matchedStateValue = matchingState.value;
+                            setFieldValue("state", matchedStateValue);
+
+                            // Now try to match LGA if we have a state
+                            // Get LGAs for the matched state
+                            const stateNameForLGA = matchingState.label;
+                            const availableLGAs = getLGAs(stateNameForLGA);
+
+                            // Try to find matching LGA
+                            let matchedLGA = "";
+
+                            // First try direct LGA name from location data (district, sublocality, etc.)
+                            if (lgaName) {
+                              const matchingLGA = availableLGAs.find(lga => {
+                                const lgaLower = lga.toLowerCase();
+                                const lgaNameLower = lgaName.toLowerCase();
+                                return lgaLower === lgaNameLower ||
+                                  lgaLower.includes(lgaNameLower) ||
+                                  lgaNameLower.includes(lgaLower);
+                              });
+
+                              if (matchingLGA) {
+                                matchedLGA = matchingLGA.toLowerCase().replace(/\s+/g, '_').replace(/[\/\-]/g, '_');
+                              }
+                            }
+
+                            // If no direct match, try extracting from address string
+                            // Address format is usually: "Street, Area/LGA, City, State, Country"
+                            if (!matchedLGA && location.address && availableLGAs.length > 0) {
+                              const addressParts = location.address.split(',').map((part: string) => part.trim());
+
+                              // Check each address part against available LGAs
+                              // Skip the last parts (usually state and country)
+                              for (let i = 0; i < addressParts.length - 1; i++) {
+                                const part = addressParts[i];
+                                const matchingLGA = availableLGAs.find(lga => {
+                                  const lgaLower = lga.toLowerCase();
+                                  const partLower = part.toLowerCase();
+                                  // Try exact match first, then partial matches
+                                  return lgaLower === partLower ||
+                                    lgaLower.includes(partLower) ||
+                                    partLower.includes(lgaLower);
+                                });
+
+                                if (matchingLGA) {
+                                  matchedLGA = matchingLGA.toLowerCase().replace(/\s+/g, '_').replace(/[\/\-]/g, '_');
+                                  break;
+                                }
+                              }
+                            }
+
+                            // Set LGA if found
+                            if (matchedLGA) {
+                              setFieldValue("lga", matchedLGA);
+                            } else {
+                              setFieldValue("lga", ""); // Reset LGA if no match found
+                            }
+                          } else {
+                            setFieldValue("lga", ""); // Reset LGA if state not matched
+                          }
+                        } else {
+                          setFieldValue("lga", ""); // Reset LGA if no state found
+                        }
+                      }}
+                      error={errors.location}
+                      touched={touched.location}
                       required
                     />
 
                     {/* State Select */}
-                <SelectField
+                    <SelectField
                       name="state"
                       label="State"
                       placeholder="Select your state"
@@ -484,8 +600,8 @@ const MechanicStep3 = () => {
                       }}
                       error={errors.state}
                       touched={touched.state}
-                  required={true}
-                />
+                      required={true}
+                    />
 
                     {/* LGA Select - Only show if state is selected */}
                     {values.state && (
@@ -501,8 +617,8 @@ const MechanicStep3 = () => {
                         required={true}
                       />
                     )}
-                      </View>
-                    </View>
+                  </View>
+                </View>
 
                 {/* SECTION 2: VEHICLE EXPERTISE */}
                 <View className="mb-4">
@@ -696,18 +812,18 @@ const MechanicStep3 = () => {
                         )}
                       </View>
                     )}
-                        </View>
-                      </View>
+                  </View>
+                </View>
 
                 {/* SECTION 4: ADDITIONAL DOCUMENTS */}
                 <View className="mb-4">
                   <View className="bg-white shadow-sm rounded-[.8rem] p-4 mb-6">
                     <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
                       Additional Documents
-                      </Text>
+                    </Text>
                     <Text className="text-sm text-gray-600 font-NunitoMedium mb-6">
                       Upload your CAC document and selfie for verification
-                      </Text>
+                    </Text>
 
 
                     {/* CAC Document Input */}

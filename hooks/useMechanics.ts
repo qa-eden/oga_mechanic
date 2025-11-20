@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mechanicAPI } from "@/lib/api/mechanic";
 
 // Query keys for mechanics
@@ -62,5 +62,19 @@ export const useGetMechanicReviews = (mechanicId: string) => {
     enabled: !!mechanicId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+// Hook to create mechanic review
+export const useCreateMechanicReview = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ mechanicId, payload }: { mechanicId: string; payload: { data: { mechanic_id: string | number; rating: number; comment: string }; requestType: string } }) =>
+      mechanicAPI.createMechanicReview(mechanicId, payload),
+    onSuccess: (_, variables) => {
+      // Invalidate reviews query to refetch updated reviews
+      queryClient.invalidateQueries({ queryKey: mechanicKeys.reviews(variables.mechanicId) });
+    },
   });
 };

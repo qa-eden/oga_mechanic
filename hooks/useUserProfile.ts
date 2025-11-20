@@ -12,7 +12,7 @@ export const userProfileKeys = {
 };
 
 // Hook to get primary user profile
-export const usePrimaryUserProfile = () => {
+export const usePrimaryUserProfile = (enabled: boolean = true) => {
   return useQuery<PrimaryUserProfileResponse>({
     queryKey: userProfileKeys.primary(),
     queryFn: userAPI.getPrimaryProfile,
@@ -21,6 +21,7 @@ export const usePrimaryUserProfile = () => {
     retry: 1, // Reduce retries
     refetchOnMount: false, // Don't refetch on mount if data exists
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    enabled: enabled, // Only fetch when enabled
   });
 };
 
@@ -127,8 +128,11 @@ export const useUserRoles = () => {
   return useQuery<UserRolesResponse>({
     queryKey: userProfileKeys.roles(),
     queryFn: userAPI.getUserRoles,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minute - shorter stale time to get fresh role data
+    gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
+    refetchOnMount: true, // Always refetch on mount to get latest role
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 };
 

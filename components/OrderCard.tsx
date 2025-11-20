@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { EyeIcon } from "react-native-heroicons/outline";
 
 export interface Order {
   id: string;
@@ -8,14 +9,16 @@ export interface Order {
   carType: string;
   carIssue: string;
   status?: "current" | "ongoing" | "completed" | "declined";
+  apiStatus?: string; // Actual API status: pending, accepted, in_progress, completed, cancelled, declined
 }
 
 interface OrderCardProps {
   order: Order;
-  type: "current" | "ongoing" | "completed";
+  type?: "current" | "ongoing" | "completed"; // Optional - kept for backward compatibility, but we use apiStatus now
   onAccept?: (orderId: string) => void;
   onDecline?: (orderId: string) => void;
   onMarkComplete?: (orderId: string) => void;
+  onView?: (orderId: string) => void;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
@@ -24,30 +27,53 @@ const OrderCard: React.FC<OrderCardProps> = ({
   onAccept,
   onDecline,
   onMarkComplete,
+  onView,
 }) => {
   const getStatusColor = () => {
-    switch (order.status || type) {
-      case "ongoing":
+    const status = order.apiStatus || order.status;
+    switch (status) {
+      case "pending":
+        return "text-yellow-600";
+      case "accepted":
+        return "text-blue-600";
+      case "in_progress":
         return "text-blue-600";
       case "completed":
         return "text-green-600";
+      case "cancelled":
+        return "text-red-600";
       case "declined":
         return "text-red-600";
+      // Fallback for mapped statuses
+      case "ongoing":
+        return "text-blue-600";
       default:
         return "text-gray-600";
     }
   };
 
   const getStatusText = () => {
-    switch (order.status || type) {
-      case "ongoing":
-        return "Ongoing";
+    const status = order.apiStatus || order.status;
+    switch (status) {
+      case "pending":
+        return "Pending";
+      case "accepted":
+        return "Accepted";
+      case "in_progress":
+        return "In Progress";
       case "completed":
         return "Completed";
+      case "cancelled":
+        return "Cancelled";
       case "declined":
         return "Declined";
+      // Fallback for mapped statuses
+      case "ongoing":
+        return "Ongoing";
+      case "current":
+        return "Pending";
       default:
-        return "";
+        return status ? status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ') : "";
     }
   };
 
@@ -59,51 +85,60 @@ const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const renderButtons = () => {
-    if (type === "current") {
+    // Use apiStatus to determine which buttons to show
+    const status = order.apiStatus || (type === "current" ? "pending" : type === "ongoing" ? "in_progress" : "completed");
+
+    // If pending, show all 3 buttons: Accept, Decline, View
+    if (status === "pending") {
       return (
-        <View className="flex-row space-x-3 gap-3">
-          <TouchableOpacity
-            onPress={() => onAccept?.(order.id)}
-            className="flex-1 bg-green-100 border border-[#00984C] rounded-[.4rem] py-3"
-          >
-            <Text className="text-green-700 font-NunitoSemiBold text-center">
-              ✓ Accept
-            </Text>
-          </TouchableOpacity>
+        <View className="space-y-3">
+          <View className="flex-row space-x-3 gap-3">
+            <TouchableOpacity
+              onPress={() => onAccept?.(order.id)}
+              className="flex-1 bg-green-100 border border-[#00984C] rounded-[.4rem] py-3"
+            >
+              <Text className="text-green-700 font-NunitoSemiBold text-center">
+                ✓ Accept
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onDecline?.(order.id)}
+              className="flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3"
+            >
+              <Text className="text-[#E10000] font-NunitoSemiBold text-center">
+                ✗ Decline
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
-            onPress={() => onDecline?.(order.id)}
-            className="flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3"
+            onPress={() => onView?.(order.id)}
+            className="bg-blue-100 flex-row items-center justify-center gap-2 border border-blue-500 rounded-[.4rem] py-3 mt-2"
           >
-            <Text className="text-[#E10000] font-NunitoSemiBold text-center">
-              ✗ Decline
-            </Text>
+            <EyeIcon size={20} color="#3B82F6" />
+            <Text className="text-blue-700 font-NunitoSemiBold text-center">View</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (type === "ongoing") {
-      return (
-        <TouchableOpacity
-          onPress={() => onMarkComplete?.(order.id)}
-          className="bg-green-100 border border-green-300 rounded-[.4rem] py-3"
-        >
-          <Text className="text-green-700 font-NunitoSemiBold text-center">
-            ✓ Mark as completed
-          </Text>
-        </TouchableOpacity>
-      );
-    }
-
-    // For completed orders, no buttons needed
-    return null;
+    // For other statuses (accepted, in_progress, completed, cancelled, declined), only show View button
+    return (
+      <TouchableOpacity
+        onPress={() => onView?.(order.id)}
+        className="bg-blue-100 border flex-row items-center justify-center gap-2 border-blue-500 rounded-[.4rem] py-3"
+      >
+        <EyeIcon size={20} color="#3B82F6" />
+        <Text className="text-blue-700 font-NunitoSemiBold text-center">View</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
     <View
       key={order.id}
-      className={`bg-white mb-4 p-4 rounded-[.4rem] border ${getCardBorderStyle()}`}
+      className={`bg-white mb-4 p-4 rounded-[1rem] border border-gray-300 ${getCardBorderStyle()}`}
     >
       {/* Header with client name and status */}
       <View className="flex-row justify-between items-start mb-3">
@@ -116,10 +151,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </Text>
         )}
       </View>
-
-      <Text className="text-sm text-gray-600 mb-2">
-        Phone number: {order.phoneNumber}
-      </Text>
 
       <Text className="text-sm text-gray-600 mb-2">
         Car type: <Text className="font-NunitoSemiBold">{order.carType}</Text>

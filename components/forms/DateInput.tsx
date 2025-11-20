@@ -1,0 +1,253 @@
+import React, { useState, useRef, useCallback, useMemo } from 'react'
+import { View, Text, TouchableOpacity, Modal, Platform, Animated } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import { CalendarIcon } from 'react-native-heroicons/outline'
+
+interface DateInputProps {
+  label?: string
+  placeholder?: string
+  value?: Date | null
+  onDateChange?: (date: Date) => void
+  error?: string
+  touched?: boolean
+  required?: boolean
+  minimumDate?: Date
+  maximumDate?: Date
+  containerClassName?: string
+  labelClassName?: string
+  noMargin?: boolean
+  dateFormat?: (date: Date) => string
+  showTodayButton?: boolean
+}
+
+const DateInput: React.FC<DateInputProps> = ({
+  label = "Date",
+  placeholder = "Select date",
+  value = null,
+  onDateChange,
+  error,
+  touched,
+  required = false,
+  minimumDate,
+  maximumDate,
+  containerClassName = "",
+  labelClassName = "",
+  noMargin = false,
+  dateFormat,
+  showTodayButton = false
+}) => {
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const animatedValue = useRef(new Animated.Value(0)).current
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null)
+
+  const hasError = touched && error
+
+  // Memoized border colors to prevent recalculation
+  const borderColors = useMemo(
+    () => ({
+      default: hasError ? "#EF4444" : "#D1D5DB",
+      focused: hasError ? "#EF4444" : "#F59E42",
+    }),
+    [hasError]
+  )
+
+  const handleFocus = useCallback(() => {
+    if (!isFocused) {
+      setIsFocused(true)
+
+      // Cancel any existing animation
+      if (animationRef.current) {
+        animationRef.current.stop()
+      }
+
+      animationRef.current = Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      })
+
+      animationRef.current.start()
+    }
+  }, [isFocused, animatedValue])
+
+  const handleBlur = useCallback(() => {
+    if (isFocused) {
+      setIsFocused(false)
+
+      // Cancel any existing animation
+      if (animationRef.current) {
+        animationRef.current.stop()
+      }
+
+      animationRef.current = Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      })
+
+      animationRef.current.start()
+    }
+  }, [isFocused, animatedValue])
+
+  // Stable border color interpolation
+  const borderColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [borderColors.default, borderColors.focused],
+    extrapolate: "clamp",
+  })
+
+  const openDatePicker = () => {
+    handleFocus()
+    setShowDatePicker(true)
+  }
+
+  const closeDatePicker = () => {
+    setShowDatePicker(false)
+    handleBlur()
+  }
+
+  const handleDateChange = (_event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      onDateChange?.(selectedDate)
+    }
+    if (Platform.OS === 'android') {
+      closeDatePicker()
+    }
+  }
+
+  const handleDone = () => {
+    closeDatePicker()
+  }
+
+  const handleTodayPress = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    onDateChange?.(today)
+  }
+
+  const formatDate = (date: Date | null): string => {
+    if (!date) return placeholder
+    
+    if (dateFormat) {
+      return dateFormat(date)
+    }
+    
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  return (
+    <View className={`w-full ${containerClassName} ${!noMargin && "mb-4"}`}>
+      {/* Label */}
+      {label && (
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className={`text-base font-NunitoSemiBold text-gray-700 ${labelClassName}`}>
+            {label}
+            {required && <Text className="text-red-500 ml-1">*</Text>}
+          </Text>
+          {showTodayButton && (
+            <TouchableOpacity
+              onPress={handleTodayPress}
+              activeOpacity={0.7}
+            >
+              <Text className="text-md font-NunitoMedium text-primary-500">
+               Use Today's Date
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Date Input Container */}
+      <Animated.View
+        className="flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1"
+        style={{
+          borderWidth: 1.5,
+          borderColor: borderColor,
+          ...Platform.select({
+            ios: {
+              shadowColor: hasError
+                ? "#EF4444"
+                : isFocused
+                ? "#F59E42"
+                : "transparent",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+            },
+            android: {
+              elevation: isFocused ? 2 : 0,
+            },
+          }),
+        }}
+      >
+        <TouchableOpacity 
+          onPress={openDatePicker}
+          className="flex-1 flex-row items-center justify-between py-3"
+          activeOpacity={0.7}
+        >
+          <Text className={`text-[1.2rem] font-NunitoMedium ${value ? "text-gray-900" : "text-gray-400"}`}>
+            {formatDate(value)}
+          </Text>
+          <CalendarIcon size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Error Message */}
+      {hasError && (
+        <View className="flex-row items-center mt-2">
+          <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
+          <Text className="text-md font-NunitoMedium text-red-500 flex-1">
+            {error}
+          </Text>
+        </View>
+      )}
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={closeDatePicker}
+      >
+        <View 
+          className="flex-1 justify-end"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <View className="bg-white rounded-t-3xl p-6 max-h-[60%]">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-xl font-NunitoBold text-gray-900">
+                {label || 'Select Date'}
+              </Text>
+              <TouchableOpacity onPress={handleDone}>
+                <Text className="text-primary-500 font-NunitoBold">Done</Text>
+              </TouchableOpacity>
+            </View>
+            <View className="items-center">
+              <DateTimePicker
+                value={value || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={minimumDate}
+                maximumDate={maximumDate}
+                onChange={handleDateChange}
+                style={{
+                  width: Platform.OS === 'ios' ? 300 : '100%',
+                  height: Platform.OS === 'ios' ? 200 : 50,
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  )
+}
+
+export default DateInput
+

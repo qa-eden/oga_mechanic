@@ -97,7 +97,10 @@ export default function RootLayout() {
     
     if (loaded) {
       // Hide the splash screen after fonts are loaded
-      SplashScreen.hideAsync().catch(console.error);
+      // Only hide if it hasn't been hidden already
+      SplashScreen.hideAsync().catch(() => {
+        // Silently catch errors - splash screen may already be hidden
+      });
     }
   }, [loaded, error]);
 

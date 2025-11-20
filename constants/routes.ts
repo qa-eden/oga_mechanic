@@ -42,6 +42,8 @@ export const routes = {
   chatMechanic: "/(root)/(screens)/(mechanicScreens)/chat-mechanic",
   findMechanic: "/(root)/(screens)/(user)/(ordermechanic)/find-mechanic",
   orderMechanic: "/(root)/(screens)/(user)/(ordermechanic)/order-mechanic",
+  trackMechanicOrder: "/(root)/(screens)/(user)/(ordermechanic)/track-mechanic-order",
+  myMechanicOrders: "/(root)/(screens)/(user)/(ordermechanic)/my-mechanic-orders",
   merchantProfile: "/(root)/(screens)/(user)/merchant-profile",
 
 
@@ -89,6 +91,7 @@ export const mechanicRoutes = {
   ConfirmOrder: "/(root)/(screens)/(mechanic)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(mechanic)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(mechanic)/editProfile",
+  orderDetails: "/(root)/(screens)/(mechanic)/order-details",
 } as const;
 
 export type MechanicRouteKeys = keyof typeof mechanicRoutes;

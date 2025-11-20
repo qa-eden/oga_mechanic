@@ -1,14 +1,21 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity, Platform, Modal } from 'react-native';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, Alert, Keyboard, Platform, Dimensions, KeyboardAvoidingView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
 import SelectField from '@/components/forms/SelectField';
 import TextArea from '@/components/forms/TextArea';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import AddressInput from '@/components/forms/AddressInput';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateInput from '@/components/forms/DateInput';
 import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { router, useLocalSearchParams } from 'expo-router';
+import { serviceTypeOptions } from '@/constants/data';
+import { useVehicleMakes } from '@/hooks/useVehicleMakes';
+import { getErrorMessage } from '@/utils/errorMessages';
+import { routes } from '@/constants/routes';
+import { useRepairRequestDetail, useUpdateRepairRequest } from '@/hooks/useRepairRequests';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
 
 const OrderMechanic = () => {
   const params = useLocalSearchParams();
@@ -18,8 +25,13 @@ const OrderMechanic = () => {
   const mechanicName = Array.isArray(params?.mechanicName)
     ? params?.mechanicName[0]
     : (params?.mechanicName as string | undefined);
+  const orderIdParam = Array.isArray(params?.orderId)
+    ? params?.orderId[0]
+    : (params?.orderId as string | undefined);
+  const editMode = params?.editMode === 'true';
 
   const [serviceType, setServiceType] = useState('');
+  const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
@@ -27,39 +39,64 @@ const OrderMechanic = () => {
   const [serviceLatitude, setServiceLatitude] = useState<number | undefined>(undefined);
   const [serviceLongitude, setServiceLongitude] = useState<number | undefined>(undefined);
   const [preferredDate, setPreferredDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
   const [notes, setNotes] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const inputRefs = useRef<{ [key: string]: View | null }>({});
 
   const { mutate: createRepairRequest, isPending, error } = useCreateRepairRequest();
+  const { mutate: updateRepairRequest, isPending: isUpdating, error: updateError } = useUpdateRepairRequest();
 
-  const serviceTypeOptions = useMemo(
-    () => [
-      { label: 'Diagnostics', value: 'diagnostics' },
-      { label: 'Routine Maintenance', value: 'maintenance' },
-      { label: 'Repair', value: 'repair' },
-      { label: 'Emergency Callout', value: 'emergency' },
-    ],
-    []
-  );
+  // Fetch existing order data if in edit mode
+  const { 
+    data: existingOrderData, 
+    isLoading: isLoadingOrder,
+    error: orderError 
+  } = useRepairRequestDetail(editMode ? orderIdParam : undefined);
 
-  const vehicleModelOptions = useMemo(
-    () => [
-      { label: 'Toyota Camry', value: 'toyota camry' },
-      { label: 'Honda Civic', value: 'honda civic' },
-      { label: 'Ford Focus', value: 'ford focus' },
-      { label: 'BMW X3', value: 'bmw x3' },
-      { label: 'Mercedes C-Class', value: 'mercedes c-class' },
-      { label: 'Audi A4', value: 'audi a4' },
-      { label: 'Volkswagen Golf', value: 'volkswagen golf' },
-      { label: 'Nissan Altima', value: 'nissan altima' },
-    ],
-    []
-  );
+  // Fetch vehicle makes from API
+  const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
+
+  // Convert vehicle makes to select options
+  const vehicleMakeOptions = useMemo(() => {
+    if (!vehicleMakes || vehicleMakes.length === 0) return [];
+
+    return vehicleMakes
+      .filter((make) => make.is_active)
+      .map((make) => ({
+        label: make.name,
+        value: make.id.toString(),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [vehicleMakes]);
+
+  // Get models for selected make
+  const getModelsForSelectedMake = useCallback((makeId: string) => {
+    if (!makeId || !vehicleMakes) return [];
+    const selectedMake = vehicleMakes.find((make) => make.id.toString() === makeId);
+    return selectedMake?.models || [];
+  }, [vehicleMakes]);
+
+  // Map models for selected make to options
+  const vehicleModelOptions = useMemo(() => {
+    if (!vehicleMake) return [];
+    const models = getModelsForSelectedMake(vehicleMake);
+    return models
+      .filter((model) => model.is_active)
+      .map((model) => ({
+        label: model.name,
+        value: model.id.toString(),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [vehicleMake, getModelsForSelectedMake]);
 
   const vehicleYearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: 30 }, (_, i) => {
+    return Array.from({ length: 50 }, (_, i) => {
       const year = currentYear - i;
       return { label: year.toString(), value: year.toString() };
     });
@@ -74,18 +111,102 @@ const OrderMechanic = () => {
     []
   );
 
-  const formattedDate = preferredDate
-    ? preferredDate.toLocaleDateString(undefined, {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : 'Select date';
+  // Track currently focused input
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  // Get mechanic ID from order data or params
+  const mechanicId = useMemo(() => {
+    if (editMode && existingOrderData?.data?.mechanic?.id) {
+      return existingOrderData.data.mechanic.id.toString();
+    }
+    return mechanicIdParam;
+  }, [editMode, existingOrderData, mechanicIdParam]);
+
+  // Prefill form when in edit mode and order data is loaded
+  useEffect(() => {
+    if (editMode && existingOrderData?.data && !isLoadingOrder) {
+      const order = existingOrderData.data;
+      
+      // Set form values from existing order
+      if (order.service_type) setServiceType(order.service_type);
+      if (order.vehicle_make) setVehicleMake(order.vehicle_make.toString());
+      if (order.vehicle_model) setVehicleModel(order.vehicle_model.toString());
+      if (order.vehicle_year) setVehicleYear(order.vehicle_year.toString());
+      if (order.problem_description) setProblemDescription(order.problem_description);
+      if (order.service_address) setServiceAddress(order.service_address);
+      if (order.service_latitude) setServiceLatitude(parseFloat(order.service_latitude));
+      if (order.service_longitude) setServiceLongitude(parseFloat(order.service_longitude));
+      if (order.preferred_date) {
+        const date = new Date(order.preferred_date);
+        setPreferredDate(date);
+      }
+      if (order.preferred_time_slot) setPreferredTimeSlot(order.preferred_time_slot);
+      if (order.notes) setNotes(order.notes);
+    }
+  }, [editMode, existingOrderData, isLoadingOrder]);
+
+  // Function to scroll input into view
+  const scrollInputIntoView = useCallback((inputKey: string) => {
+    if (!scrollViewRef.current || !inputRefs.current[inputKey]) return;
+
+    // Wait a bit for keyboard to fully show and layout to settle
+    setTimeout(() => {
+      // Use measureInWindow for more reliable positioning
+      inputRefs.current[inputKey]?.measureInWindow((x, y, width, height) => {
+        if (!scrollViewRef.current) return;
+
+        const screenHeight = Dimensions.get('window').height;
+        // Use current keyboardHeight or estimate 300px if not set yet
+        const currentKeyboardHeight = keyboardHeight || 300;
+        const visibleAreaBottom = screenHeight - currentKeyboardHeight;
+        const inputBottom = y + height;
+        const padding = 30; // Padding above keyboard
+
+        // If input would be hidden by keyboard, scroll it into view
+        if (inputBottom > visibleAreaBottom - padding) {
+          // Calculate scroll offset needed
+          const scrollOffset = inputBottom - (visibleAreaBottom - padding);
+
+          // Scroll to make input visible
+          scrollViewRef.current.scrollTo({
+            y: Math.max(0, scrollOffset),
+            animated: true,
+          });
+        }
+      });
+    }, Platform.OS === 'ios' ? 100 : 200);
+  }, [keyboardHeight]);
+
+  // Keyboard listeners to track keyboard height and auto-scroll
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Auto-scroll if an input is focused
+        if (focusedInput) {
+          setTimeout(() => {
+            scrollInputIntoView(focusedInput);
+          }, Platform.OS === 'ios' ? 100 : 200);
+        }
+      }
+    );
+
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+        setFocusedInput(null);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, [focusedInput, scrollInputIntoView]);
 
   const handleSubmitRequest = () => {
-    const mechanicId = mechanicIdParam;
-
     if (!mechanicId) {
       Alert.alert('Missing mechanic', 'Unable to submit request. Mechanic details are missing.');
       return;
@@ -93,6 +214,7 @@ const OrderMechanic = () => {
 
     if (
       !serviceType ||
+      !vehicleMake ||
       !vehicleModel ||
       !vehicleYear ||
       !problemDescription.trim() ||
@@ -111,210 +233,365 @@ const OrderMechanic = () => {
     }
 
     const payload = {
-      mechanic_id: mechanicId,
-      service_type: serviceType,
-      vehicle_model: vehicleModel,
-      vehicle_year: vehicleYearNumber,
-      problem_description: problemDescription.trim(),
-      service_address: serviceAddress.trim(),
-      service_latitude: serviceLatitude,
-      service_longitude: serviceLongitude,
-      preferred_date: preferredDate.toISOString().split('T')[0],
-      preferred_time_slot: preferredTimeSlot,
-      notes: notes.trim() || undefined,
+      data: {
+        mechanic_id: mechanicId,
+        service_type: serviceType,
+        vehicle_make: vehicleMake,
+        vehicle_model: vehicleModel,
+        vehicle_year: vehicleYearNumber,
+        problem_description: problemDescription.trim(),
+        service_address: serviceAddress.trim(),
+        service_latitude: serviceLatitude ? serviceLatitude.toFixed(5) : undefined,
+        service_longitude: serviceLongitude ? serviceLongitude.toFixed(5) : undefined,
+        preferred_date: preferredDate.toISOString().split('T')[0],
+        preferred_time_slot: preferredTimeSlot,
+        notes: notes.trim() || undefined,
+      },
+      requestType: 'inbound',
     };
 
-    createRepairRequest(payload, {
-      onSuccess: () => {
-        Alert.alert(
-          'Request submitted',
-          'Your repair request has been sent to the mechanic. You will be notified once they respond.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                router.back();
-              },
+    try {
+      if (editMode && orderIdParam) {
+        // Update existing request
+        updateRepairRequest(
+          { requestId: orderIdParam, payload },
+          {
+            onSuccess: (response: any) => {
+              // Show success modal
+              setSuccessOrderId(orderIdParam);
+              setShowSuccessModal(true);
             },
-          ]
+            onError: (err: any) => {
+              try {
+                const errorMessage = getErrorMessage(err, 'general');
+                Alert.alert('Update failed', errorMessage);
+              } catch (alertError) {
+                console.error('Error displaying error message:', alertError);
+                Alert.alert('Update failed', 'An error occurred. Please try again.');
+              }
+            },
+          }
         );
-      },
-      onError: (err: any) => {
-        const message =
-          err?.response?.data?.message ||
-          err?.message ||
-          'We could not submit the request. Please try again.';
-        Alert.alert('Submission failed', message);
-      },
-    });
+      } else {
+        // Create new request
+        createRepairRequest(payload, {
+          onSuccess: (response: any) => {
+            // Extract order ID from response
+            const orderId = response?.data?.id || response?.id || response?.data?.repair_request_id;
+            
+            if (orderId) {
+              // Show success modal
+              setSuccessOrderId(orderId.toString());
+              setShowSuccessModal(true);
+            } else {
+              // Fallback to alert if no order ID
+              Alert.alert(
+                'Request submitted',
+                'Your repair request has been sent to the mechanic. You will be notified once they respond.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      router.back();
+                    },
+                  },
+                ]
+              );
+            }
+          },
+          onError: (err: any) => {
+            try {
+              // Use the utility function for user-friendly error messages
+              const errorMessage = getErrorMessage(err, 'general');
+              Alert.alert('Submission failed', errorMessage);
+            } catch (alertError) {
+              // Fallback if Alert.alert itself fails
+              console.error('Error displaying error message:', alertError);
+              Alert.alert('Submission failed', 'An error occurred. Please try again.');
+            }
+          },
+        });
+      }
+    } catch (error) {
+      // Catch any synchronous errors
+      console.error('Error submitting repair request:', error);
+      Alert.alert(
+        'Submission failed',
+        error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'
+      );
+    }
   };
 
-  const handleDateChange = (_event: any, selectedDate?: Date) => {
-    if (selectedDate) {
-      setPreferredDate(selectedDate);
-    }
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
+  const handleViewOrder = () => {
+    setShowSuccessModal(false);
+    if (successOrderId) {
+      router.push({
+        pathname: routes.trackMechanicOrder,
+        params: {
+          orderId: successOrderId,
+        },
+      });
     }
   };
+
+  const handleGoHome = () => {
+    setShowSuccessModal(false);
+    router.replace(routes.home);
+  };
+
 
   return (
     <SafeAreaView className="bg-white flex-1">
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-      <BackArrowBtn />
-        
+        <BackArrowBtn />
+
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Order mechanic
+          {editMode ? 'Edit Request' : 'Order mechanic'}
         </Text>
-        
+
         <View className="w-10" />
       </View>
 
-      <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
-        {/* Instruction Text */}
-        <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-          Share the details below and we’ll send your repair request to the mechanic.
-        </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 px-5 pt-6"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Loading state for edit mode */}
+          {editMode && isLoadingOrder && (
+            <View className="py-8 items-center">
+              <LoadingSpinner size="medium" />
+              <Text className="text-gray-600 mt-4 font-NunitoMedium">
+                Loading order details...
+              </Text>
+            </View>
+          )}
 
-        {mechanicName && (
+          {/* Error state for edit mode */}
+          {editMode && orderError && (
+            <View className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <Text className="text-red-600 text-sm font-NunitoMedium text-center">
+                {getErrorMessage(orderError, 'general')}
+              </Text>
+            </View>
+          )}
+
+          {/* Instruction Text */}
+          {!isLoadingOrder && (
+            <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
+              {editMode 
+                ? 'Update the details below to modify your repair request.'
+                : "Share the details below and we'll send your repair request to the mechanic."}
+            </Text>
+          )}
+
+          {/* {mechanicName && (
           <View className="mb-6 rounded-2xl bg-primary-50 border border-primary-100 p-4">
             <Text className="text-sm font-NunitoMedium text-primary-700">Sending to</Text>
             <Text className="text-lg font-NunitoBold text-primary-900 mt-1">{mechanicName}</Text>
           </View>
-        )}
+        )} */}
 
-        <SelectField
-          name="serviceType"
-          label="Service Type"
-          placeholder="Select the service you need"
-          options={serviceTypeOptions}
-          value={serviceType}
-          onValueChange={setServiceType}
-        />
+          <SelectField
+            name="serviceType"
+            label="Service Type"
+            placeholder="Select the service you need"
+            options={serviceTypeOptions}
+            value={serviceType}
+            onValueChange={setServiceType}
+          />
 
-        <SelectField
-          name="vehicleModel"
-          label="Vehicle Model"
-          placeholder="Select your vehicle model"
-          options={vehicleModelOptions}
-          value={vehicleModel}
-          onValueChange={setVehicleModel}
-        />
-
-        <SelectField
-          name="vehicleYear"
-          label="Vehicle Year"
-          placeholder="Select your vehicle year"
-          options={vehicleYearOptions}
-          value={vehicleYear}
-          onValueChange={setVehicleYear}
-        />
-
-        <View className="mb-6">
-          <AddressInput
-            label="Service Address"
-            placeholder="Where should the mechanic meet you?"
-            value={serviceAddress}
-            onChangeText={(text) => setServiceAddress(text)}
-            onLocationSelect={(location) => {
-              setServiceAddress(location.address || location.name);
-              setServiceLatitude(location.latitude);
-              setServiceLongitude(location.longitude);
+          <SelectField
+            name="vehicleMake"
+            label="Vehicle Make"
+            placeholder={vehicleMakesLoading ? "Loading makes..." : "Select your vehicle make"}
+            options={vehicleMakeOptions}
+            value={vehicleMake}
+            onValueChange={(value) => {
+              setVehicleMake(value);
+              setVehicleModel(''); // Reset model when make changes
             }}
-            required
-            numberOfLines={2}
-            multiline={true}
           />
-        </View>
 
-        <View className="mb-6">
-          <Text className="text-base font-NunitoSemiBold text-gray-700 mb-2">
-            Preferred Date
-            <Text className="text-red-500 ml-1">*</Text>
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-4 border border-gray-200"
-            activeOpacity={0.7}
+          <SelectField
+            name="vehicleModel"
+            label="Vehicle Model"
+            placeholder={vehicleMake ? (vehicleMakesLoading ? "Loading models..." : "Select your vehicle model") : "Select make first"}
+            options={vehicleModelOptions}
+            value={vehicleModel}
+            onValueChange={setVehicleModel}
+          />
+
+          <SelectField
+            name="vehicleYear"
+            label="Vehicle Year"
+            placeholder="Select your vehicle year"
+            options={vehicleYearOptions}
+            value={vehicleYear}
+            onValueChange={setVehicleYear}
+          />
+
+          <View
+            ref={(ref) => {
+              inputRefs.current['problemDescription'] = ref;
+            }}
           >
-            <Text className="text-[1.1rem] font-NunitoMedium text-gray-900">{formattedDate}</Text>
-            <Text className="text-sm font-NunitoMedium text-primary-500">Change</Text>
-          </TouchableOpacity>
-        </View>
-
-        <SelectField
-          name="timeSlot"
-          label="Preferred Time Slot"
-          placeholder="Select a time slot"
-          options={timeSlotOptions}
-          value={preferredTimeSlot}
-          onValueChange={setPreferredTimeSlot}
-        />
-
-        <TextArea
-          label="Problem Description"
-          placeholder="Tell the mechanic what’s wrong with your vehicle"
-          value={problemDescription}
-          onChangeText={setProblemDescription}
-          rows={6}
-        />
-
-        <TextArea
-          label="Additional Notes (Optional)"
-          placeholder="Share access instructions, parking info or other helpful notes"
-          value={notes}
-          onChangeText={setNotes}
-          rows={4}
-        />
-
-        {/* Proceed Button */}
-        <View className="mt-8 mb-6">
-          <CustomButton
-            title={isPending ? "Submitting request..." : "Submit Request"}
-            onPress={handleSubmitRequest}
-            bgVariant="primary"
-            className="py-4"
-            loading={isPending}
-            disabled={isPending}
-          />
-        </View>
-
-        {/* Error Display */}
-        {(error as any)?.message && (
-          <View className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <Text className="text-red-600 text-sm font-NunitoMedium text-center">
-              {(error as any).message}
-            </Text>
+            <TextArea
+              label="Problem Description"
+              placeholder="Tell the Mechanic what's Wrong with your Vehicle"
+              value={problemDescription}
+              onChangeText={setProblemDescription}
+              rows={6}
+              onFocus={() => {
+                setFocusedInput('problemDescription');
+                scrollInputIntoView('problemDescription');
+              }}
+              onBlur={() => setFocusedInput(null)}
+            />
           </View>
-        )}
-      </ScrollView>
 
-      <Modal
-        visible={showDatePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDatePicker(false)}
-      >
-        <View className="flex-1 bg-gray-600 bg-opacity-20 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[60%]">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-NunitoBold text-gray-900">Select Preferred Date</Text>
-              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                <Text className="text-primary-500 font-NunitoBold">Done</Text>
-              </TouchableOpacity>
+          <View
+            className="mb-2"
+            ref={(ref) => {
+              inputRefs.current['address'] = ref;
+            }}
+          >
+            <AddressInput
+              label="Service Address"
+              placeholder="Where should the mechanic meet you?"
+              value={serviceAddress}
+              onChangeText={(text) => setServiceAddress(text)}
+              onLocationSelect={(location) => {
+                setServiceAddress(location.address || location.name);
+                setServiceLatitude(location.latitude);
+                setServiceLongitude(location.longitude);
+              }}
+              required
+              numberOfLines={2}
+              multiline={true}
+              scrollViewRef={scrollViewRef as React.RefObject<ScrollView>}
+              showCurrentLocationButton
+            />
+          </View>
+
+          <View
+            ref={(ref) => {
+              inputRefs.current['date'] = ref;
+            }}
+          >
+            <DateInput
+              label="Preferred Date"
+              placeholder="Select date"
+              value={preferredDate}
+              onDateChange={setPreferredDate}
+              required
+              minimumDate={new Date()}
+              showTodayButton
+            />
+          </View>
+
+          <SelectField
+            name="timeSlot"
+            label="Preferred Time Slot"
+            placeholder="Select a time slot"
+            options={timeSlotOptions}
+            value={preferredTimeSlot}
+            onValueChange={setPreferredTimeSlot}
+          />
+
+          <View
+            ref={(ref) => {
+              inputRefs.current['notes'] = ref;
+            }}
+          >
+            <TextArea
+              label="Additional Notes (Optional)"
+              placeholder="Share access instructions, parking info or other helpful notes"
+              value={notes}
+              onChangeText={setNotes}
+              rows={4}
+              onFocus={() => {
+                setFocusedInput('notes');
+                scrollInputIntoView('notes');
+              }}
+              onBlur={() => setFocusedInput(null)}
+            />
+          </View>
+
+          {/* Proceed Button */}
+          {!isLoadingOrder && (
+            <View className="mt-8 mb-6">
+              <CustomButton
+                title={
+                  editMode
+                    ? (isUpdating ? "Updating request..." : "Update Request")
+                    : (isPending ? "Submitting request..." : "Submit Request")
+                }
+                onPress={handleSubmitRequest}
+                bgVariant="primary"
+                className="py-4"
+                loading={isPending || isUpdating}
+                disabled={isPending || isUpdating}
+              />
             </View>
-            <View className="items-center">
-              <DateTimePicker
-                value={preferredDate || new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={new Date()}
-                onChange={handleDateChange}
-                style={{
-                  width: Platform.OS === 'ios' ? 300 : '100%',
-                  height: Platform.OS === 'ios' ? 200 : 50,
-                }}
+          )}
+
+          {/* Error Display */}
+          {(error || updateError) && (
+            <View className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <Text className="text-red-600 text-sm font-NunitoMedium text-center">
+                {getErrorMessage(error || updateError, 'general')}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-5">
+          <View className="bg-white rounded-2xl w-full max-w-sm p-6 items-center">
+            {/* Success Icon */}
+            <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
+              <CheckCircleIcon size={48} color="#10B981" />
+            </View>
+
+            {/* Success Message */}
+            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
+              {editMode ? 'Request Updated!' : 'Request Submitted!'}
+            </Text>
+            <Text className="text-base font-NunitoMedium text-gray-600 mb-6 text-center">
+              {editMode 
+                ? 'Your Repair Request has been Successfully Updated.'
+                : 'Your Repair Request has been Sent to the Mechanic. You will be notified once they respond.'}
+            </Text>
+
+            {/* Action Buttons */}
+            <View className="w-full space-y-3">
+              <CustomButton
+                title="View Order"
+                onPress={handleViewOrder}
+                bgVariant="primary"
+                className="py-3 mb-3"
+              />
+              <CustomButton
+                title="Go Home"
+                onPress={handleGoHome}
+                bgVariant="outline"
+                textVariant="outline"
+                className="py-3"
               />
             </View>
           </View>

@@ -14,7 +14,9 @@ export default function Index() {
     if (animationComplete && !isLoading && shouldNavigate && navigationTarget) {
       // Small delay to ensure smooth transition
       const timer = setTimeout(() => {
-        SplashScreen.hideAsync();
+        SplashScreen.hideAsync().catch(() => {
+          // Silently catch errors - splash screen may already be hidden
+        });
       }, 200);
 
       return () => clearTimeout(timer);

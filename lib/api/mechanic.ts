@@ -11,18 +11,24 @@ export interface CarDetails {
   carIssue: string;
 }
 
-export interface RepairRequestPayload {
+export interface RepairRequestData {
   mechanic_id: string;
   service_type: string;
+  vehicle_make: string;
   vehicle_model: string;
   vehicle_year: number;
   problem_description: string;
   service_address: string;
-  service_latitude?: number;
-  service_longitude?: number;
+  service_latitude?: string;
+  service_longitude?: string;
   preferred_date?: string;
   preferred_time_slot?: string;
   notes?: string;
+}
+
+export interface RepairRequestPayload {
+  data: RepairRequestData;
+  requestType: string;
 }
 
 export interface Mechanic {
@@ -91,15 +97,53 @@ export const mechanicAPI = {
   },
 
   // Get mechanic reviews
-  getMechanicReviews: async (mechanicId: string): Promise<any[]> => {
-    const response = await api.get(SERVICE_ENDPOINTS.MECHANIC_REVIEWS(mechanicId));
+  getMechanicReviews: async (mechanicId: string): Promise<any> => {
+    const response = await api.get(`/users/mechanics/${mechanicId}/reviews/`);
+    return response.data;
+  },
+
+  // Create mechanic review
+  createMechanicReview: async (mechanicId: string, payload: { data: { mechanic_id: string | number; rating: number; comment: string }; requestType: string }): Promise<any> => {
+    const response = await api.post(`/users/mechanics/${mechanicId}/reviews/`, payload);
     return response.data;
   },
 
   // Get repair requests for mechanic
-  getRepairRequests: async (): Promise<any> => {
+  getRepairRequests: async (status?: string): Promise<any> => {
     // Use axios instance - it will handle redirects properly (maxRedirects: 1)
-    const response = await api.get(MECHANIC_ENDPOINTS.REPAIR_REQUESTS);
+    const params = status ? { status } : {};
+    const response = await api.get(MECHANIC_ENDPOINTS.REPAIR_REQUESTS, { params });
+    return response.data;
+  },
+
+  // Get user's repair requests
+  getUserRepairRequests: async (status?: string): Promise<any> => {
+    const params = status && status !== 'all' ? { status } : {};
+    const response = await api.get(MECHANIC_ENDPOINTS.REPAIR_REQUESTS, { params });
+    return response.data;
+  },
+
+  // Get repair request detail by ID
+  getRepairRequestDetail: async (requestId: string): Promise<any> => {
+    const response = await api.get(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`);
+    return response.data;
+  },
+
+  // Update repair request
+  updateRepairRequest: async (requestId: string, payload: RepairRequestPayload): Promise<any> => {
+    const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, payload);
+    return response.data;
+  },
+
+  // Cancel repair request
+  cancelRepairRequest: async (requestId: string, cancellationReason: string): Promise<any> => {
+    const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, {
+      data: {
+        cancellation_reason: cancellationReason,
+        status: 'cancelled',
+      },
+      requestType: 'inbound',
+    });
     return response.data;
   },
 

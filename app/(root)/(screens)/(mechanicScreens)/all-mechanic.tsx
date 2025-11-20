@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
 import { useCallback } from "react";
@@ -19,11 +19,17 @@ import MechanicCard from "@/components/cards/MechanicCard";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { useGetAvailableMechanics } from "@/hooks/useMechanics";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
+import { useUserRepairRequests } from "@/hooks/useRepairRequests";
+import { useVehicleMakes } from "@/hooks/useVehicleMakes";
+import MechanicOrderCard, { MechanicOrder } from "@/components/cards/MechanicOrderCard";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { getErrorMessage } from "@/utils/errorMessages";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 interface Mechanic {
   id: number;
+  userId?: string;
   name: string;
   rating: number;
   reviewCount: number;
@@ -34,18 +40,36 @@ interface Mechanic {
   isOnline?: boolean;
 }
 
+type TabStatus = 'all' | 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+
 const AllMechanic = () => {
   const [activeTab, setActiveTab] = useState("Mechanics");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const params = useLocalSearchParams<{ status?: string }>();
+  
+  // Get active status filter from URL params, default to 'all'
+  const activeStatus: TabStatus = (params.status as TabStatus) || 'all';
 
   // Fetch available mechanics from API
   const { 
     data: mechanicsData, 
-    isLoading, 
-    error, 
-    refetch 
+    isLoading: isLoadingMechanics, 
+    error: mechanicsError, 
+    refetch: refetchMechanics 
   } = useGetAvailableMechanics();
+
+  // Fetch user's repair requests for "All orders" tab with status filter
+  const statusParam = activeStatus === 'all' ? undefined : activeStatus;
+  const { 
+    data: ordersData, 
+    isLoading: isLoadingOrders, 
+    error: ordersError, 
+    refetch: refetchOrders 
+  } = useUserRepairRequests(statusParam);
+
+  // Fetch vehicle makes to resolve make/model names
+  const { data: vehicleMakes } = useVehicleMakes();
 
   // Transform API data to local format
   const mechanics: Mechanic[] = (() => {
@@ -54,12 +78,17 @@ const AllMechanic = () => {
         return [];
       }
       
-      if (!Array.isArray(mechanicsData)) {
+      // The API response has the mechanics array in the 'data' property
+      // Handle both cases: if it's already an array or if it's wrapped in a data property
+      const mechanicsArray = (mechanicsData as any)?.data || (Array.isArray(mechanicsData) ? mechanicsData : []);
+      
+      if (!Array.isArray(mechanicsArray)) {
         return [];
       }
       
-      return mechanicsData.map((mechanic: any) => ({
+      return mechanicsArray.map((mechanic: any) => ({
         id: mechanic.id || 0,
+        userId: mechanic.user?.id || '',
         name: mechanic.user ? `${mechanic.user.first_name} ${mechanic.user.last_name}`.trim() : `Mechanic ${mechanic.id}`,
         rating: mechanic.rating || 0, // Use rating from API
         reviewCount: 0, // Not provided in API response
@@ -70,6 +99,7 @@ const AllMechanic = () => {
         isVip: false, // Not provided in API response
       }));
     } catch (error) {
+      console.error('Error transforming mechanics data:', error);
       return [];
     }
   })();
@@ -81,11 +111,80 @@ const AllMechanic = () => {
       mechanic.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper function to get make name from ID
+  const getMakeName = (makeId: string | number) => {
+    if (!vehicleMakes || !makeId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    return make?.name || `Make ID: ${makeId}`;
+  };
+
+  // Helper function to get model name from ID
+  const getModelName = (makeId: string | number, modelId: string | number) => {
+    if (!vehicleMakes || !makeId || !modelId) return 'N/A';
+    const make = vehicleMakes.find((m) => m.id.toString() === makeId.toString());
+    const model = make?.models?.find((m) => m.id.toString() === modelId.toString());
+    return model?.name || `Model ID: ${modelId}`;
+  };
+
+  // Transform API data to local format for orders
+  const orders: MechanicOrder[] = (() => {
+    try {
+      if (!ordersData) {
+        return [];
+      }
+
+      // The API response has the orders array in the 'data' property
+      const ordersArray = (ordersData as any)?.data || (Array.isArray(ordersData) ? ordersData : []);
+
+      if (!Array.isArray(ordersArray)) {
+        return [];
+      }
+
+      return ordersArray.map((request: any) => {
+        const mechanicName = request.mechanic
+          ? `${request.mechanic.first_name || ''} ${request.mechanic.last_name || ''}`.trim() || 'Unknown Mechanic'
+          : 'Unknown Mechanic';
+
+        const makeId = request.vehicle_make;
+        const modelId = request.vehicle_model;
+        const makeName = getMakeName(makeId);
+        const modelName = getModelName(makeId, modelId);
+
+        return {
+          id: request.id?.toString() || '',
+          mechanicName: mechanicName,
+          mechanicImage: request.mechanic?.selfie || request.mechanic_image || undefined,
+          serviceType: request.service_type || '',
+          vehicleMake: makeName,
+          vehicleModel: modelName,
+          vehicleYear: request.vehicle_year || 0,
+          problemDescription: request.problem_description || request.description || '',
+          serviceAddress: request.service_address || request.address || '',
+          preferredDate: request.preferred_date || request.requested_at || '',
+          preferredTimeSlot: request.preferred_time_slot || request.time_slot || '',
+          status: (request.status || 'pending') as MechanicOrder['status'],
+          createdAt: request.requested_at || request.created_at || request.createdAt || '',
+          notes: request.notes || undefined,
+        };
+      });
+    } catch (error) {
+      console.error('Error transforming orders data:', error);
+      return [];
+    }
+  })();
+
+  // Orders are already filtered by the API based on status param
+  const filteredOrders = orders;
+
+  const handleStatusChange = (status: TabStatus) => {
+    router.setParams({ status });
+  };
+
   const handleMechanicPress = (mechanic: Mechanic) => {
     router.push({
       pathname: routes.mechanicProfile,
       params: {
-        mechanicId: mechanic.id.toString(), // Use mechanic id
+        mechanicId: mechanic?.userId?.toString(), // Use mechanic profile id for fetching detail
         mechanicName: mechanic.name,
         mechanicRating: mechanic.rating,
         mechanicImage: mechanic.image,
@@ -116,31 +215,37 @@ const AllMechanic = () => {
       {/* Tabs */}
       <View className="flex-row bg-white px-5 py-3 border-b border-gray-100">
         <TouchableOpacity
-          onPress={() => setActiveTab("Mechanics")}
-          className={`flex-1 py-3 rounded-lg mr-2 ${
-            activeTab === "Mechanics" ? "bg-primary-500" : "bg-gray-100"
+          onPress={() => {
+            setActiveTab("Mechanics");
+            setSearchQuery(""); // Clear search when switching tabs
+          }}
+          className={`flex-1 py-3 mr-2 rounded-[.4rem] ${
+            activeTab === "Mechanics" ? "bg-primary-500" : "bg-gray-200"
           }`}
           activeOpacity={0.8}
         >
           <Text
             className={`text-center font-NunitoBold text-base ${
-              activeTab === "Mechanics" ? "text-white" : "text-gray-600"
+              activeTab === "Mechanics" ? "text-white" : "text-gray-700"
             }`}
           >
-            Mechanics
+           All Mechanics
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveTab("All orders")}
-          className={`flex-1 py-3 rounded-lg ml-2 ${
-            activeTab === "All orders" ? "bg-primary-500" : "bg-gray-100"
+          onPress={() => {
+            setActiveTab("All orders");
+            setSearchQuery(""); // Clear search when switching tabs
+          }}
+          className={`flex-1 py-3 rounded-[.4rem] ml-2 ${
+            activeTab === "All orders" ? "bg-primary-500" : "bg-gray-200"
           }`}
           activeOpacity={0.8}
         >
           <Text
             className={`text-center font-NunitoBold text-base ${
-              activeTab === "All orders" ? "text-white" : "text-gray-600"
+              activeTab === "All orders" ? "text-white" : "text-gray-700"
             }`}
           >
             All orders
@@ -149,41 +254,92 @@ const AllMechanic = () => {
       </View>
 
       {/* Search and Filter */}
-      <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
-        <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mr-3">
-          
-          <MagnifyingGlassIcon/>
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search"
-            placeholderTextColor="#9CA3AF"
-            className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
-          />
-        </View>
-
-        <TouchableOpacity
-          onPress={() => setShowFilter(!showFilter)}
-          className="bg-red-50 rounded-xl px-4 py-3 flex-row items-center"
-          activeOpacity={0.8}
-        >
-          <View className="w-4 h-4 mr-2">
-            <View className="w-full h-0.5 bg-primary-500 mb-1" />
-            <View className="w-3 h-0.5 bg-primary-500 mb-1" />
-            <View className="w-full h-0.5 bg-primary-500" />
+      {activeTab === "Mechanics" && (
+        <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
+          <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mr-3">
+            
+            <MagnifyingGlassIcon/>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search mechanics..."
+              placeholderTextColor="#9CA3AF"
+              className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
+            />
           </View>
-          <Text className="text-primary-500 font-NunitoBold text-sm">
-            Filter
-          </Text>
-        </TouchableOpacity>
-      </View>
+
+          <TouchableOpacity
+            onPress={() => setShowFilter(!showFilter)}
+            className="bg-red-50 rounded-xl px-4 py-3 flex-row items-center"
+            activeOpacity={0.8}
+          >
+            <View className="w-4 h-4 mr-2">
+              <View className="w-full h-0.5 bg-primary-500 mb-1" />
+              <View className="w-3 h-0.5 bg-primary-500 mb-1" />
+              <View className="w-full h-0.5 bg-primary-500" />
+            </View>
+            <Text className="text-primary-500 font-NunitoBold text-sm">
+              Filter
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Status Filter Tabs for Orders */}
+      {activeTab === "All orders" && (
+        <View className="bg-white px-5 py-3 border-b border-gray-100">
+          {/* First Row: 3 tabs */}
+          <View className="flex-row mb-2">
+            {(['all', 'pending', 'accepted'] as TabStatus[]).map((status) => (
+              <TouchableOpacity
+                key={status}
+                onPress={() => handleStatusChange(status)}
+                className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
+                  activeStatus === status ? 'bg-primary-500' : 'bg-gray-200'
+                }`}
+                activeOpacity={0.8}
+              >
+                <Text
+                  className={`text-center font-NunitoBold text-sm ${
+                    activeStatus === status ? 'text-white' : 'text-gray-700'
+                  }`}
+                >
+                  {status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Second Row: 3 tabs */}
+          <View className="flex-row">
+            {(['in_progress', 'completed', 'cancelled'] as TabStatus[]).map((status) => (
+              <TouchableOpacity
+                key={status}
+                onPress={() => handleStatusChange(status)}
+                className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
+                  activeStatus === status ? 'bg-primary-500' : 'bg-gray-200'
+                }`}
+                activeOpacity={0.8}
+              >
+                <Text
+                  className={`text-center font-NunitoBold text-sm ${
+                    activeStatus === status ? 'text-white' : 'text-gray-700'
+                  }`}
+                >
+                  {status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Content */}
       <View className="flex-1">
         {activeTab === "Mechanics" ? (
           <>
             {/* Loading State */}
-            {isLoading && (
+            {isLoadingMechanics && (
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color="#D30309" />
                 <Text className="text-gray-600 mt-4">Loading mechanics...</Text>
@@ -191,7 +347,7 @@ const AllMechanic = () => {
             )}
 
             {/* Error State */}
-            {error && (
+            {mechanicsError && (
               <AnimatedErrorCard
                 emoji="🔧"
                 title="Failed to load mechanics"
@@ -200,7 +356,7 @@ const AllMechanic = () => {
                 textColor="text-red-800"
                 actionButton={{
                   text: "Try Again",
-                  onPress: () => refetch(),
+                  onPress: () => refetchMechanics(),
                   backgroundColor: "#A80207"
                 }}
                 className=""
@@ -208,7 +364,7 @@ const AllMechanic = () => {
             )}
 
             {/* Empty State */}
-            {!isLoading && !error && filteredMechanics.length === 0 && (
+            {!isLoadingMechanics && !mechanicsError && filteredMechanics.length === 0 && (
               <AnimatedErrorCard
                 emoji="🔧"
                 title="No mechanics found"
@@ -220,8 +376,9 @@ const AllMechanic = () => {
             )}
 
             {/* Mechanics List */}
-            {!isLoading && !error && filteredMechanics.length > 0 && (
+            {!isLoadingMechanics && !mechanicsError && filteredMechanics.length > 0 && (
               <FlatList
+                key="mechanics-list"
                 data={filteredMechanics}
                 renderItem={renderMechanicCard}
                 keyExtractor={item => item.id.toString()}
@@ -244,17 +401,78 @@ const AllMechanic = () => {
             )}
           </>
         ) : (
-          <View className="flex-1 justify-center items-center px-5">
-            <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
-              <Text className="text-4xl">📋</Text>
-            </View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              No orders yet
-            </Text>
-            <Text className="text-gray-500 text-center font-NunitoMedium">
-              Order a mechanic to see your orders here
-            </Text>
-          </View>
+          <>
+            {/* Loading State */}
+            {isLoadingOrders && (
+              <View className="flex-1 items-center justify-center py-20">
+                <LoadingSpinner size="large" />
+                <Text className="text-gray-600 mt-4 font-NunitoMedium">
+                  Loading orders...
+                </Text>
+              </View>
+            )}
+
+            {/* Error State */}
+            {ordersError && !isLoadingOrders && (
+              <View className="px-5 py-8">
+                <AnimatedErrorCard
+                  emoji="🔧"
+                  title="Failed to load orders"
+                  message={getErrorMessage(ordersError)}
+                  gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+                  textColor="text-red-800"
+                  actionButton={{
+                    text: "Try Again",
+                    onPress: () => {
+                      refetchOrders();
+                    },
+                    backgroundColor: "#DC2626"
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Empty State */}
+            {!isLoadingOrders && !ordersError && filteredOrders.length === 0 && (
+              <View className="flex-1 justify-center items-center px-5 py-20">
+                <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
+                  <Text className="text-4xl">📋</Text>
+                </View>
+                <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
+                  No Orders yet
+                </Text>
+                <Text className="text-gray-500 text-center font-NunitoMedium mb-6">
+                  {activeStatus === 'all'
+                    ? "You haven't placed any mechanic orders yet"
+                    : `No ${activeStatus} orders at the moment`}
+                </Text>
+                {activeStatus === 'all' && (
+                  <TouchableOpacity
+                    onPress={() => router.push(routes.findMechanic)}
+                    className="bg-primary-500 px-6 py-3 rounded-lg"
+                  >
+                    <Text className="text-white font-NunitoBold">Find a Mechanic</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Orders List */}
+            {!isLoadingOrders && !ordersError && filteredOrders.length > 0 && (
+              <FlatList
+                key="orders-list"
+                data={filteredOrders}
+                renderItem={({ item }) => <MechanicOrderCard order={item} />}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingTop: 20,
+                  paddingBottom: 100,
+                }}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </>
         )}
       </View>
     </SafeAreaView>

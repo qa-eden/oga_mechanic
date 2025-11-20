@@ -17,7 +17,7 @@ const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
     case "secondary":
       return "bg-[#DDDDDD]";
     case "danger":
-      return "bg-red-500";
+      return "bg-red-600";
     case "dangerborder":
       return "border-red-500 border bg-white";
     case "success":

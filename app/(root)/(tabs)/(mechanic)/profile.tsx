@@ -26,6 +26,9 @@ import { MapPinIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
+import { useMechanicProfile } from "@/hooks/useUserProfile";
+import { useUserRoles } from "@/hooks/useUserProfile";
+import { useRepairRequests } from "@/hooks/useRepairRequests";
 
 const MechanicProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -35,6 +38,11 @@ const MechanicProfile = () => {
   
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
+
+  // Fetch profile, roles, and repair requests list on component mount
+  const { data: mechanicProfile, isLoading: isLoadingProfile, error: profileError } = useMechanicProfile(true);
+  const { data: userRoles, isLoading: isLoadingRoles, error: rolesError } = useUserRoles();
+  const { data: repairRequests, isLoading: isLoadingRequests, error: requestsError } = useRepairRequests();
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -98,28 +106,39 @@ const MechanicProfile = () => {
           <ProfileHeader title="Profile" />
 
           <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
-            <Image
-              source={images.dummyProfile}
-              className="w-[60px] h-[60px] rounded-full"
-              resizeMode="cover"
-              alt="Profile"
-            />
+            {mechanicProfile?.data?.selfie ? (
+              <Image
+                source={{ uri: mechanicProfile.data.selfie }}
+                className="w-[60px] h-[60px] rounded-full"
+                resizeMode="cover"
+                alt="Profile"
+              />
+            ) : (
+              <Image
+                source={images.dummyProfile}
+                className="w-[60px] h-[60px] rounded-full"
+                resizeMode="cover"
+                alt="Profile"
+              />
+            )}
           </View>
 
           <Text className="font-NunitoBold text-primary-800 text-[1.5rem] pt-3">
-            {userInfo.name}
+            {mechanicProfile?.data?.user?.first_name && mechanicProfile?.data?.user?.last_name
+              ? `${mechanicProfile.data.user.first_name} ${mechanicProfile.data.user.last_name}`
+              : mechanicProfile?.data?.user?.first_name || userInfo.name}
           </Text>
-          <View className="flex-row items-center gap-2 pt-2">
+          <View className="flex-col items-center gap-2 pt-2">
             <View className="flex-row items-center justify-center gap-2 pr-3 py-1">
               <MapPinIcon size={16} color={"#D30309"} />
               <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {userInfo.location}
+                {mechanicProfile?.data?.location || userInfo.location}
               </Text>
             </View>
-            <View className="flex-row items-center justify-center gap-2 pl-3 py-1 border-l-2 border-gray-200">
+            <View className="flex-row items-center justify-center gap-2 pl-3 py-1">
               <icons.redPhone width={20} height={20} />
               <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {userInfo.phone}
+                {mechanicProfile?.data?.user?.phone_number || userInfo.phone}
               </Text>
             </View>
           </View>

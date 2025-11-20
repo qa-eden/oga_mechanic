@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mechanicAPI } from '@/lib/api/mechanic';
 
 // Hook to fetch repair requests
-export const useRepairRequests = () => {
+export const useRepairRequests = (status?: string) => {
   return useQuery({
-    queryKey: ['mechanic', 'repair-requests'],
-    queryFn: () => mechanicAPI.getRepairRequests(),
+    queryKey: ['mechanic', 'repair-requests', status || 'all'],
+    queryFn: () => mechanicAPI.getRepairRequests(status),
     staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 1, // Reduce retries to prevent excessive calls
@@ -54,6 +54,71 @@ export const useDeclineRepairRequest = () => {
     onSuccess: () => {
       // Invalidate and refetch repair requests
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+    },
+  });
+};
+
+// Hook to fetch user's repair requests
+export const useUserRepairRequests = (status?: string) => {
+  return useQuery({
+    queryKey: ['user', 'repair-requests', status || 'all'],
+    queryFn: () => mechanicAPI.getUserRepairRequests(status),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    networkMode: 'online',
+  });
+};
+
+// Hook to fetch repair request detail by ID
+export const useRepairRequestDetail = (requestId: string | undefined) => {
+  return useQuery({
+    queryKey: ['repair-request', requestId],
+    queryFn: () => mechanicAPI.getRepairRequestDetail(requestId!),
+    enabled: !!requestId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    networkMode: 'online',
+  });
+};
+
+// Hook to update repair request
+export const useUpdateRepairRequest = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ requestId, payload }: { requestId: string; payload: any }) =>
+      mechanicAPI.updateRepairRequest(requestId, payload),
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+      // Invalidate user repair requests list
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
+    },
+  });
+};
+
+// Hook to cancel repair request
+export const useCancelRepairRequest = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ requestId, cancellationReason }: { requestId: string; cancellationReason: string }) =>
+      mechanicAPI.cancelRepairRequest(requestId, cancellationReason),
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+      // Invalidate user repair requests list
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
     },
   });
 };

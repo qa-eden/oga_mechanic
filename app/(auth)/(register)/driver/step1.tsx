@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 import CustomButton from '@/components/CustomButton'
 import FormikInput from '@/components/forms/FormikInput'
 import FormikCheckbox from '@/components/forms/FormikCheckbox'
+import AddressInput from '@/components/forms/AddressInput'
 import { Formik } from 'formik'
 import * as Yup from 'yup'
 import { ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline'
@@ -157,7 +158,7 @@ const Step1 = () => {
                     validationSchema={validationSchema}
                     onSubmit={handleSubmit}
                 >
-                    {({ handleSubmit, isValid, values, setFieldValue, setFieldTouched }) => {
+                    {({ handleSubmit, isValid, values, setFieldValue, setFieldTouched, errors, touched }) => {
                         // Check if all required fields are filled including local state
                         const isFormValid = values.driverName &&
                             values.email &&
@@ -188,12 +189,18 @@ const Step1 = () => {
                                     autoCapitalize="none"
                                 />
                                 {/* Address Field */}
-                                <FormikInput
-                                    name="address"
-                                    placeholder="Enter home address"
+                                <AddressInput
                                     label="Home Address"
-                                    multiline
+                                    placeholder="Enter home address"
+                                    value={values.address}
+                                    onChangeText={(text) => {
+                                        setFieldValue('address', text);
+                                        setFieldTouched('address', true);
+                                    }}
+                                    error={errors.address}
+                                    touched={touched.address}
                                     required
+                                    multiline
                                     numberOfLines={3}
                                 />
 

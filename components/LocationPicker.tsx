@@ -120,7 +120,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             <Text className={`text-sm font-NunitoMedium ml-1 ${
               isGettingLocation ? 'text-gray-400' : 'text-blue-600'
             }`}>
-              {isGettingLocation ? 'Getting...' : 'Pick Current Location'}
+              {isGettingLocation ? 'Getting Current Location...' : 'Pick Current Location'}
             </Text>
           </TouchableOpacity>
         )}

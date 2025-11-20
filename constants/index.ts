@@ -275,6 +275,14 @@ export const Services: ServicesProps[] = [
     border: "#ACA6FF",
   },
   {
+    id: 8,
+    name: "My Mechanic Orders",
+    description: "View all your repair requests",
+    image: mechanic2,
+    bgColor: "#FEF2F2",
+    border: "#FCA5A5",
+  },
+  {
     id: 2,
     name: "Buy spare parts",
     description: "Find the right spare parts",
@@ -314,7 +322,6 @@ export const Services: ServicesProps[] = [
     bgColor: "#F3FFF1",
     border: "#189804",
   },
-  
   {
     id: 7,
     name: "Chat a Specialist",
@@ -323,6 +330,7 @@ export const Services: ServicesProps[] = [
     bgColor: "#F8FFD8",
     border: "#F6B80D",
   },
+
 ];
 
 export const OrderRideOptions = [
