@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
-import { useRepairRequestDetail } from '@/hooks/useRepairRequests';
+import CustomButton from '@/components/CustomButton';
+import TextArea from '@/components/forms/TextArea';
+import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
+import { getErrorMessage } from '@/utils/errorMessages';
 import { 
   UserIcon, 
   TruckIcon, 
@@ -24,6 +27,8 @@ const MechanicOrderDetails = () => {
   const orderId = Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined);
   
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Fetch repair request detail from API
   const { 
@@ -35,6 +40,12 @@ const MechanicOrderDetails = () => {
 
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
+
+  // Mutations for accepting/declining requests
+  const acceptRequestMutation = useAcceptRepairRequest();
+  const declineRequestMutation = useDeclineRepairRequest();
+  const updateStatusMutation = useUpdateRepairRequestStatus();
+  const cancelRequestMutation = useCancelRepairRequest();
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -62,6 +73,7 @@ const MechanicOrderDetails = () => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'accepted':
+      case 'in_transit':
       case 'in_progress':
         return 'bg-blue-100 text-blue-800';
       case 'completed':
@@ -79,11 +91,13 @@ const MechanicOrderDetails = () => {
       case 'pending':
         return 'Pending';
       case 'accepted':
-        return 'Accepted';
+        return 'Accepted User Request';
+      case 'in_transit':
+        return 'In Transit to Customer';
       case 'in_progress':
         return 'In Progress';
       case 'completed':
-        return 'Completed';
+        return 'Completed by Mechanic';
       case 'cancelled':
         return 'Cancelled';
       case 'declined':
@@ -107,6 +121,131 @@ const MechanicOrderDetails = () => {
   const formatTime = (timeSlot: string) => {
     if (!timeSlot) return 'N/A';
     return timeSlot.charAt(0).toUpperCase() + timeSlot.slice(1);
+  };
+
+  // Helper function to extract error message from API response
+  const getApiErrorMessage = (error: any): string => {
+    // Check for API response with status: false and message field
+    if (error?.response?.data?.message) {
+      return error.response.data.message;
+    }
+    
+    // Check for error in response data directly (in case response is successful HTTP but business logic failed)
+    if (error?.response?.data?.status === false && error?.response?.data?.message) {
+      return error.response.data.message;
+    }
+    
+    // Fallback to generic error message handler
+    return getErrorMessage(error, 'general');
+  };
+
+  const handleAccept = async () => {
+    if (!orderId) return;
+    
+    try {
+      await acceptRequestMutation.mutateAsync(orderId);
+      Alert.alert(
+        'Success',
+        'Repair request accepted successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => refetch(), // Refetch to get updated status
+          },
+        ]
+      );
+    } catch (error: any) {
+      try {
+        const errorMessage = getApiErrorMessage(error);
+        Alert.alert('Accept failed', errorMessage);
+      } catch (alertError) {
+        console.error('Error displaying error message:', alertError);
+        Alert.alert('Accept failed', 'An error occurred. Please try again.');
+      }
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!orderId) return;
+    
+    try {
+      await declineRequestMutation.mutateAsync(orderId);
+      Alert.alert(
+        'Success',
+        'Repair request declined successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => refetch(), // Refetch to get updated status
+          },
+        ]
+      );
+    } catch (error: any) {
+      try {
+        const errorMessage = getApiErrorMessage(error);
+        Alert.alert('Decline failed', errorMessage);
+      } catch (alertError) {
+        console.error('Error displaying error message:', alertError);
+        Alert.alert('Decline failed', 'An error occurred. Please try again.');
+      }
+    }
+  };
+
+  const handleUpdateStatus = async (action: string) => {
+    if (!orderId) return;
+    
+    try {
+      await updateStatusMutation.mutateAsync({ requestId: orderId, action });
+      Alert.alert(
+        'Success',
+        'Status updated successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => refetch(),
+          },
+        ]
+      );
+    } catch (error: any) {
+      try {
+        const errorMessage = getApiErrorMessage(error);
+        Alert.alert('Update failed', errorMessage);
+      } catch (alertError) {
+        console.error('Error displaying error message:', alertError);
+        Alert.alert('Update failed', 'An error occurred. Please try again.');
+      }
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!orderId || !cancelReason.trim()) {
+      Alert.alert('Validation', 'Please provide a reason for cancellation.');
+      return;
+    }
+    
+    try {
+      await cancelRequestMutation.mutateAsync({ requestId: orderId, reason: cancelReason.trim() });
+      setCancelModalVisible(false);
+      setCancelReason('');
+      Alert.alert(
+        'Success',
+        'Repair request cancelled successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => refetch(),
+          },
+        ]
+      );
+    } catch (error: any) {
+      try {
+        const errorMessage = getApiErrorMessage(error);
+        Alert.alert('Cancellation failed', errorMessage);
+      } catch (alertError) {
+        console.error('Error displaying error message:', alertError);
+        Alert.alert('Cancellation failed', 'An error occurred. Please try again.');
+      }
+    }
   };
 
   if (isLoadingData) {
@@ -177,8 +316,8 @@ const MechanicOrderDetails = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#A80207']}
-            tintColor="#A80207"
+            colors={['#D30309']}
+            tintColor="#D30309"
           />
         }
       >
@@ -444,12 +583,189 @@ const MechanicOrderDetails = () => {
             </View>
           )}
 
-          <View className="h-10" />
+          <View className="" />
         </View>
       </ScrollView>
+
+      {/* Action Buttons - Conditional based on status */}
+      {orderId && (status === 'pending' || status === 'accepted' || status === 'in_transit' || status === 'in_progress') && (
+        <View className="bg-white border-t border-gray-200 px-5 py-4 pb-12">
+          <View className="flex-row space-x-3 gap-3">
+            {/* Pending: Accept and Decline */}
+            {status === 'pending' && (
+              <>
+                <TouchableOpacity
+                  onPress={handleAccept}
+                  disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+                  className={`flex-1 bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
+                    acceptRequestMutation.isPending || declineRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-green-700 font-NunitoSemiBold text-center">
+                    {acceptRequestMutation.isPending ? 'Accepting...' : '✓ Accept'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleDecline}
+                  disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                    acceptRequestMutation.isPending || declineRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
+                    {declineRequestMutation.isPending ? 'Declining...' : '✗ Decline'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Accepted: In Transit and Cancel */}
+            {status === 'accepted' && (
+              <>
+                <TouchableOpacity
+                  onPress={() => handleUpdateStatus('in_transit')}
+                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                  className={`flex-1 bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
+                    updateStatusMutation.isPending || cancelRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-blue-700 font-NunitoSemiBold text-center">
+                    {updateStatusMutation.isPending ? 'Updating...' : '🚚 In Transit'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setCancelModalVisible(true)}
+                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                    updateStatusMutation.isPending || cancelRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
+                    ✗ Cancel
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* In Transit or In Progress: Cancel only */}
+            {(status === 'in_transit' || status === 'in_progress') && (
+              <TouchableOpacity
+                onPress={() => setCancelModalVisible(true)}
+                disabled={cancelRequestMutation.isPending}
+                className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                  cancelRequestMutation.isPending ? 'opacity-50' : ''
+                }`}
+              >
+                <Text className="text-[#E10000] font-NunitoSemiBold text-center">
+                  {cancelRequestMutation.isPending ? 'Cancelling...' : '✗ Cancel'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Cancel Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={cancelModalVisible}
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+        >
+          <View className="flex-1 justify-end">
+            {/* Backdrop - tap to dismiss keyboard */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View className="absolute inset-0 bg-black/50" />
+            </TouchableWithoutFeedback>
+            
+            {/* Modal Content */}
+            <View className="bg-white rounded-t-3xl px-6 pt-4 pb-8 max-h-[80%]">
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Drawer Handle */}
+                <View className="items-center mb-6">
+                  <View className="w-12 h-1 bg-gray-300 rounded-full" />
+                </View>
+
+                {/* Icon */}
+                <View className="items-center mb-4">
+                  <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
+                    <Text className="text-red-600 text-2xl font-bold">✗</Text>
+                  </View>
+                </View>
+
+                {/* Title */}
+                <Text className="text-xl font-NunitoBold text-left text-gray-800 mb-3">
+                  Cancel Repair Request
+                </Text>
+
+                {/* Message */}
+                <Text className="text-gray-600 text-left mb-6 font-NunitoRegular leading-6">
+                  Please provide a reason for cancelling this repair request. This action cannot be undone.
+                </Text>
+
+                {/* Reason Input */}
+                <View className="mb-6">
+                  <TextArea
+                    label="Cancellation Reason"
+                    placeholder="Enter reason for cancellation..."
+                    value={cancelReason}
+                    onChangeText={setCancelReason}
+                    rows={4}
+                    required
+                  />
+                </View>
+
+                {/* Buttons */}
+                <View className="space-y-3 pb-4">
+                  <CustomButton
+                    onPress={handleCancelRequest}
+                    title="Cancel Request"
+                    bgVariant="danger"
+                    textVariant="default"
+                    className=""
+                    loading={cancelRequestMutation.isPending}
+                    loadingText="Cancelling"
+                    disabled={!cancelReason.trim() || cancelRequestMutation.isPending}
+                  />
+
+                  <CustomButton
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setCancelModalVisible(false);
+                      setCancelReason('');
+                    }}
+                    title="Back"
+                    bgVariant="outline"
+                    textVariant="outline"
+                    className="mt-3"
+                    disabled={cancelRequestMutation.isPending}
+                  />
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 export default MechanicOrderDetails;
-

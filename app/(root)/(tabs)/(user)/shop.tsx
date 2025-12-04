@@ -13,7 +13,7 @@ import { routes } from "@/constants/routes"
 import CartIconBtn from "@/components/CartIconBtn"
 import { useProducts, useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
 import { ProductListResponse } from "@/lib/api/products"
-import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages"
+import { getErrorMessage } from "@/utils/errorMessages"
 import usePullToRefresh from "@/hooks/usePullToRefresh"
 import LoadingSpinner from "@/components/LoadingSpinner"
 
@@ -31,7 +31,16 @@ const Shop = () => {
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
 
-  // Apply category filter from URL params on mount
+  // Manual filtering - only trigger when Apply button is clicked
+  // Initialize from params if they exist (for navigation from home page)
+  const [filtersApplied, setFiltersApplied] = useState(!!(params.categoryId && params.category));
+  const [appliedCategoryId, setAppliedCategoryId] = useState<number | null>(
+    params.categoryId ? parseInt(params.categoryId) : null
+  );
+  const [appliedMinPrice, setAppliedMinPrice] = useState("");
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
+
+  // Apply category filter from URL params on mount or when params change
   useEffect(() => {
     if (params.categoryId && params.category) {
       const categoryId = parseInt(params.categoryId);
@@ -41,6 +50,10 @@ const Shop = () => {
       setSelectedCategoryId(categoryId);
       setAppliedCategoryId(categoryId);
       setFiltersApplied(true);
+    } else if (!params.categoryId && !params.category) {
+      // If params are cleared, reset filters
+      setFiltersApplied(false);
+      setAppliedCategoryId(null);
     }
   }, [params.categoryId, params.category]);
 
@@ -64,13 +77,6 @@ const Shop = () => {
       setSearchTriggered(false);
     }
   }, [debouncedSearchQuery, selectedCategoryId, minPrice, maxPrice]);
-
-
-  // Manual filtering - only trigger when Apply button is clicked
-  const [filtersApplied, setFiltersApplied] = useState(false);
-  const [appliedCategoryId, setAppliedCategoryId] = useState<number | null>(null);
-  const [appliedMinPrice, setAppliedMinPrice] = useState("");
-  const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
 
   // Fetch products and categories from API with pagination
   // Main products API only triggers when filters are applied
@@ -131,6 +137,18 @@ const Shop = () => {
     ];
     return options;
   }, [categories]);
+
+  // Sync category name from categories list when categories are loaded
+  useEffect(() => {
+    if (categories && params.categoryId && selectedCategoryId) {
+      // Find the category in the categories list by ID
+      const matchedCategory = categories.find(cat => cat.id === selectedCategoryId);
+      if (matchedCategory && matchedCategory.name !== selectedCategory) {
+        // Update the selected category name to match the one from the API
+        setSelectedCategory(matchedCategory.name);
+      }
+    }
+  }, [categories, params.categoryId, selectedCategoryId, selectedCategory]);
 
   // Flatten paginated products data
   const products = useMemo(() => {

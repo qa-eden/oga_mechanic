@@ -112,7 +112,7 @@ const MyMechanicOrders = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
-        <BackArrowBtn />
+        <BackArrowBtn onPress={() => router.push(routes.services)} />
         <Text className="text-xl font-NunitoBold text-gray-900">
           My Mechanic Orders
         </Text>
@@ -170,7 +170,12 @@ const MyMechanicOrders = () => {
       <ScrollView
         className="flex-1"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']}
+            tintColor="#D30309"
+          />
         }
         showsVerticalScrollIndicator={false}
       >

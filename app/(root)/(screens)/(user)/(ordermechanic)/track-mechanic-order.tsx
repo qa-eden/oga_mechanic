@@ -32,6 +32,7 @@ interface OrderStatus {
   description: string;
   completed: boolean;
   active: boolean;
+  timestamp?: string | null;
 }
 
 const TrackMechanicOrder = () => {
@@ -131,7 +132,7 @@ const TrackMechanicOrder = () => {
   ];
 
   // Map API status to status flow
-  const getStatusFlow = (currentStatus: string) => {
+  const getStatusFlow = (currentStatus: string, orderTimestamps?: any) => {
     const statusMap: Record<string, number> = {
       'pending': 0,
       'accepted': 1,
@@ -145,10 +146,23 @@ const TrackMechanicOrder = () => {
 
     const currentIndex = statusMap[currentStatus] ?? 0;
 
+    // Map timestamps to status steps
+    // Note: started_at might be used for multiple statuses (on_way, arrived, in_progress)
+    // We'll use it for 'on_way' as it's the first status that requires the mechanic to start
+    const timestampMap: Record<string, string | null> = {
+      'pending': orderTimestamps?.requested_at || null,
+      'accepted': orderTimestamps?.accepted_at || null,
+      'on_way': orderTimestamps?.started_at || null,
+      'arrived': orderTimestamps?.started_at || null,
+      'in_progress': orderTimestamps?.started_at || null,
+      'completed': orderTimestamps?.completed_at || null,
+    };
+
     return statusFlow.map((status, index) => ({
       ...status,
       completed: index < currentIndex,
       active: index === currentIndex,
+      timestamp: timestampMap[status.id] || null,
     }));
   };
 
@@ -201,11 +215,23 @@ const TrackMechanicOrder = () => {
       preferred_time_slot: request.preferred_time_slot || request.time_slot || '',
       status: request.status || 'pending',
       notes: request.notes || '',
+      // Status timestamps
+      requested_at: request.requested_at || null,
+      accepted_at: request.accepted_at || null,
+      started_at: request.started_at || null,
+      completed_at: request.completed_at || null,
+      cancelled_at: request.cancelled_at || null,
     };
   })();
 
   const currentStatus = order.status || 'pending';
-  const statusSteps = getStatusFlow(currentStatus);
+  const statusSteps = getStatusFlow(currentStatus, {
+    requested_at: (order as any).requested_at,
+    accepted_at: (order as any).accepted_at,
+    started_at: (order as any).started_at,
+    completed_at: (order as any).completed_at,
+    cancelled_at: (order as any).cancelled_at,
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -396,7 +422,7 @@ const TrackMechanicOrder = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
-        <BackArrowBtn />
+        <BackArrowBtn onPress={() => router.push(routes.myMechanicOrders)} />
         <Text className="text-xl font-NunitoBold text-gray-900">
           Track Order
         </Text>
@@ -412,7 +438,12 @@ const TrackMechanicOrder = () => {
       <ScrollView
         className="flex-1"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']}
+            tintColor="#D30309"
+          />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -456,9 +487,22 @@ const TrackMechanicOrder = () => {
                 >
                   {step.label}
                 </Text>
-                <Text className="text-base font-NunitoMedium text-gray-600">
+                <Text className="text-base font-NunitoMedium text-gray-600 mb-1">
                   {step.description}
                 </Text>
+                {step.timestamp && (step.completed || step.active) && (
+                  <Text className="text-xs font-NunitoMedium text-gray-500">
+                    {new Date(step.timestamp).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                )}
               </View>
             </View>
           ))}

@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Animated,
+  RefreshControl,
 } from "react-native";
 import { useState, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,18 +25,26 @@ const Cars = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch cars from API
   const {
     data: carsData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["userCars"],
     queryFn: userAPI.getCars,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   // Handle both array response and wrapped response
   const cars = Array.isArray(carsData) 
@@ -269,6 +278,14 @@ const Cars = () => {
             maxToRenderPerBatch={8}
             windowSize={7}
             removeClippedSubviews={true}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#D30309']}
+                tintColor="#D30309"
+              />
+            }
           />
         ) : (
           <View className="flex-1 justify-center items-center">

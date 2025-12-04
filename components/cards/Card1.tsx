@@ -221,14 +221,21 @@ const Card1 = memo(({
           </Text>
 
           {/* Rating */}
-          {rating && rating > 0 && (
+          {/* {rating && rating > 0 && (
             <View className="flex-row items-center space-x-1">
               <Rating rating={rating} size={12} />
               <Text className="text-sm font-NunitoMedium text-gray-700 ml-1">
                 {rating.toFixed(1)} ({reviewCount || 0})
               </Text>
             </View>
-          )}
+          )} */}
+
+          <View className="flex-row items-center space-x-1">
+            <Rating rating={rating || 0} size={12} />
+            <Text className="text-sm font-NunitoMedium text-gray-700 ml-1">
+              {rating?.toFixed(1) || 0.0} ({reviewCount || 0})
+            </Text>
+          </View>
 
           {/* Address/Location */}
           {address && typeof address === 'string' && (

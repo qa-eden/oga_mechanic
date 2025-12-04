@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { ChevronDownIcon, ChevronUpIcon } from "react-native-heroicons/outline";
@@ -33,20 +33,29 @@ const MechanicProfile = () => {
   const params = useLocalSearchParams();
   const mechanicId = params.mechanicId as string;
   const [showReviews, setShowReviews] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch mechanic details from API
   const {
     data: mechanicData,
     isLoading,
-    error
+    error,
+    refetch: refetchMechanic
   } = useGetMechanicDetail(mechanicId);
 
   // Fetch mechanic reviews from API
   const {
     data: reviewsData,
     isLoading: reviewsLoading,
-    error: reviewsError
+    error: reviewsError,
+    refetch: refetchReviews
   } = useGetMechanicReviews(mechanicId);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMechanic(), refetchReviews()]);
+    setRefreshing(false);
+  };
 
   // Transform API data to component format
   const mechanic: MechanicProfile = (() => {
@@ -213,6 +222,14 @@ const MechanicProfile = () => {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']}
+            tintColor="#D30309"
+          />
+        }
       >
         {/* Profile Header */}
         <View className="px-5 py-6 border-b border-gray-100">

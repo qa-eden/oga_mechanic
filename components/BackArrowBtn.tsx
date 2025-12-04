@@ -7,7 +7,11 @@ const BackArrowBtn = ({ onPress, text, className }: { onPress?: () => void, text
   return (
     <TouchableOpacity
       onPress={() => {
-        onPress || router?.back();
+        if (onPress) {
+          onPress();
+        } else {
+          router?.back();
+        }
       }}
       className={`flex-row items-center shadow-sm ${className}`}
     >

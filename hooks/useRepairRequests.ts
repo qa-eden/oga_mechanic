@@ -38,9 +38,11 @@ export const useAcceptRepairRequest = () => {
   
   return useMutation({
     mutationFn: (requestId: string) => mechanicAPI.acceptRepairRequest(requestId),
-    onSuccess: () => {
-      // Invalidate and refetch repair requests
+    onSuccess: (_, requestId) => {
+      // Invalidate and refetch repair requests list
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', requestId] });
     },
   });
 };
@@ -51,9 +53,11 @@ export const useDeclineRepairRequest = () => {
   
   return useMutation({
     mutationFn: (requestId: string) => mechanicAPI.declineRepairRequest(requestId),
-    onSuccess: () => {
-      // Invalidate and refetch repair requests
+    onSuccess: (_, requestId) => {
+      // Invalidate and refetch repair requests list
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', requestId] });
     },
   });
 };
@@ -107,18 +111,34 @@ export const useUpdateRepairRequest = () => {
   });
 };
 
-// Hook to cancel repair request
+// Hook to update repair request status (e.g., in_transit, in_progress)
+export const useUpdateRepairRequestStatus = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ requestId, action }: { requestId: string; action: string }) =>
+      mechanicAPI.updateRepairRequestStatus(requestId, action),
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch repair requests list
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+    },
+  });
+};
+
+// Hook to cancel repair request (for mechanics after accepting)
 export const useCancelRepairRequest = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ requestId, cancellationReason }: { requestId: string; cancellationReason: string }) =>
-      mechanicAPI.cancelRepairRequest(requestId, cancellationReason),
+    mutationFn: ({ requestId, reason }: { requestId: string; reason: string }) =>
+      mechanicAPI.cancelRepairRequest(requestId, reason),
     onSuccess: (_, variables) => {
+      // Invalidate and refetch repair requests list
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
       // Invalidate and refetch repair request detail
       queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
-      // Invalidate user repair requests list
-      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
     },
   });
 };

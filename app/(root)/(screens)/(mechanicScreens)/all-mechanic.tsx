@@ -9,6 +9,7 @@ import {
   TextInput,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -46,6 +47,7 @@ const AllMechanic = () => {
   const [activeTab, setActiveTab] = useState("Mechanics");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const params = useLocalSearchParams<{ status?: string }>();
   
   // Get active status filter from URL params, default to 'all'
@@ -190,6 +192,16 @@ const AllMechanic = () => {
         mechanicImage: mechanic.image,
       },
     });
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (activeTab === "Mechanics") {
+      await refetchMechanics();
+    } else {
+      await refetchOrders();
+    }
+    setRefreshing(false);
   };
 
   const cardWidth = (screenWidth - 60) / 2;
@@ -397,6 +409,14 @@ const AllMechanic = () => {
                 }}
                 showsVerticalScrollIndicator={false}
                 ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#D30309']}
+                    tintColor="#D30309"
+                  />
+                }
               />
             )}
           </>
@@ -470,6 +490,14 @@ const AllMechanic = () => {
                   paddingBottom: 100,
                 }}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#D30309']}
+                    tintColor="#D30309"
+                  />
+                }
               />
             )}
           </>

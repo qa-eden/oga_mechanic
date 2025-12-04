@@ -111,8 +111,8 @@ const MechanicOrder = () => {
         return [];
       }
 
-      const ordersArray = Array.isArray(repairRequestsData.data) 
-        ? repairRequestsData.data 
+      const ordersArray = Array.isArray(repairRequestsData.data)
+        ? repairRequestsData.data
         : [];
 
       return ordersArray.map((request: any) => {
@@ -181,17 +181,17 @@ const MechanicOrder = () => {
 
   const confirmAction = async () => {
     try {
-    if (modalType === "accept") {
+      if (modalType === "accept") {
         await acceptRequestMutation.mutateAsync(selectedOrderId);
         setModalVisible(false);
         // Optionally navigate to confirm order page
         // router.push(mechanicRoutes.ConfirmOrder);
-    } else if (modalType === "decline") {
+      } else if (modalType === "decline") {
         await declineRequestMutation.mutateAsync(selectedOrderId);
         setModalVisible(false);
-    } else if (modalType === "complete") {
+      } else if (modalType === "complete") {
         // Handle mark as complete logic here
-      console.log("Confirmed complete for order:", selectedOrderId);
+        console.log("Confirmed complete for order:", selectedOrderId);
         setModalVisible(false);
       }
     } catch (error) {
@@ -245,14 +245,12 @@ const MechanicOrder = () => {
             <TouchableOpacity
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 mx-1 rounded-[.3rem] ${
-                activeTab === tab.key
+              className={`px-4 py-2 mx-1 rounded-[.3rem] ${activeTab === tab.key
                   ? "bg-red-600"
                   : "bg-gray-100"
-              }`}
+                }`}
             >
-              <Text className={`font-NunitoBold text-center text-[.9rem] ${
-                activeTab === tab.key ? "text-white" : "text-gray-600"
+              <Text className={`font-NunitoBold text-center text-[.9rem] ${activeTab === tab.key ? "text-white" : "text-gray-600"
                 }`}>
                 {tab.label}
               </Text>
@@ -262,14 +260,14 @@ const MechanicOrder = () => {
       </View>
 
       {/* Orders List */}
-      <ScrollView 
+      <ScrollView
         className="flex-1 pt-4 mx-4"
         refreshControl={
           <RefreshControl
             refreshing={requestsLoading}
             onRefresh={refetchRequests}
-            colors={['#A80207']}
-            tintColor="#A80207"
+            colors={['#D30309']}
+            tintColor="#D30309"
           />
         }
       >
@@ -313,15 +311,15 @@ const MechanicOrder = () => {
             }
 
             return (
-            <OrderCard
-              key={order.id}
-              order={order}
+              <OrderCard
+                key={order.id}
+                order={order}
                 type={cardType}
-              onAccept={handleAccept}
-              onDecline={handleDecline}
-              onMarkComplete={handleMarkComplete}
-              onView={handleView}
-            />
+                onAccept={handleAccept}
+                onDecline={handleDecline}
+                onMarkComplete={handleMarkComplete}
+                onView={handleView}
+              />
             );
           })
         )}
@@ -334,44 +332,44 @@ const MechanicOrder = () => {
               <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
                 <Text className="text-5xl">🔧</Text>
               </View>
-              
+
               {/* Title */}
               <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-2">
-                {activeTab === 'all' 
-                  ? 'No Orders Yet' 
+                {activeTab === 'all'
+                  ? 'No Orders Yet'
                   : activeTab === 'pending'
-                  ? 'No Pending Orders'
-                  : activeTab === 'accepted'
-                  ? 'No Accepted Orders'
-                  : activeTab === 'in_progress'
-                  ? 'No Orders In Progress'
-                  : activeTab === 'completed'
-                  ? 'No Completed Orders'
-                  : activeTab === 'cancelled'
-                  ? 'No Cancelled Orders'
-                  : activeTab === 'declined'
-                  ? 'No Declined Orders'
-                  : 'No Orders Found'}
+                    ? 'No Pending Orders'
+                    : activeTab === 'accepted'
+                      ? 'No Accepted Orders'
+                      : activeTab === 'in_progress'
+                        ? 'No Orders In Progress'
+                        : activeTab === 'completed'
+                          ? 'No Completed Orders'
+                          : activeTab === 'cancelled'
+                            ? 'No Cancelled Orders'
+                            : activeTab === 'declined'
+                              ? 'No Declined Orders'
+                              : 'No Orders Found'}
               </Text>
-              
+
               {/* Description */}
               <Text className="text-gray-500 font-NunitoMedium text-center text-base leading-6 max-w-xs">
                 {activeTab === 'all'
                   ? "You don't have any repair requests at the moment. New orders will appear here when customers request your services."
                   : activeTab === 'pending'
-                  ? "There are no pending repair requests waiting for your response. Check back later for new orders."
-                  : activeTab === 'accepted'
-                  ? "You haven't accepted any orders yet. Accept pending requests to see them here."
-                  : activeTab === 'in_progress'
-                  ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
-                  : activeTab === 'completed'
-                  ? "You haven't completed any orders yet. Mark orders as completed to see them here."
-                  : activeTab === 'cancelled'
-                  ? "No cancelled orders found. Cancelled requests will appear here."
-                  : activeTab === 'declined'
-                  ? "No declined orders found. Declined requests will appear here."
-                  : "No orders match this filter."}
-            </Text>
+                    ? "There are no pending repair requests waiting for your response. Check back later for new orders."
+                    : activeTab === 'accepted'
+                      ? "You haven't accepted any orders yet. Accept pending requests to see them here."
+                      : activeTab === 'in_progress'
+                        ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
+                        : activeTab === 'completed'
+                          ? "You haven't completed any orders yet. Mark orders as completed to see them here."
+                          : activeTab === 'cancelled'
+                            ? "No cancelled orders found. Cancelled requests will appear here."
+                            : activeTab === 'declined'
+                              ? "No declined orders found. Declined requests will appear here."
+                              : "No orders match this filter."}
+              </Text>
             </View>
           </View>
         )}
@@ -429,9 +427,9 @@ const MechanicOrder = () => {
                   modalType === "complete"
                     ? "Mark as Completed"
                     : modalType === "accept"
-                    ? "Accept Order"
-                    : "Decline Order"
-                  }
+                      ? "Accept Order"
+                      : "Decline Order"
+                }
                 bgVariant={modalType === "decline" ? "danger" : "primary"}
                 textVariant="default"
                 className=""
@@ -440,8 +438,8 @@ const MechanicOrder = () => {
                   modalType === "accept"
                     ? "Accepting"
                     : modalType === "decline"
-                    ? "Declining"
-                    : "Completing"
+                      ? "Declining"
+                      : "Completing"
                 }
               />
 

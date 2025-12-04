@@ -337,8 +337,8 @@ const EditImage = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            // tintColor="#3B82F6"
-            // colors={['#3B82F6']}
+            tintColor="#D30309"
+            colors={['#D30309']}
             title="Pull to refresh images"
             titleColor="#6B7280"
           />

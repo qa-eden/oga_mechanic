@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   Image,
+  RefreshControl,
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,9 +21,16 @@ import { useHomeProducts } from "@/hooks/useProducts";
 const Services = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch home products to get category IDs
-  const { data: homeProducts } = useHomeProducts();
+  const { data: homeProducts, refetch: refetchHomeProducts } = useHomeProducts();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetchHomeProducts();
+    setRefreshing(false);
+  };
 
   // Extract category IDs from the actual products
   const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
@@ -273,6 +281,14 @@ const Services = () => {
             maxToRenderPerBatch={8}
             windowSize={7}
             removeClippedSubviews={true}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#D30309']}
+                tintColor="#D30309"
+              />
+            }
           />
         ) : (
           <View className="flex-1 justify-center items-center">

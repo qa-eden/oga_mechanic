@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StatusBar, Image } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   SunIcon,
   MoonIcon,
@@ -7,7 +7,9 @@ import {
   BellIcon,
   UserIcon,
 } from "react-native-heroicons/outline";
-import { usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
+import { router } from "expo-router";
+import { routes } from "@/constants/routes";
+import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -36,6 +38,25 @@ const Navbar = () => {
   const { label, icon } = getTimeOfDay();
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  
+  // Fetch notifications from API to get unread count
+  const { data: notificationsData } = useNotifications();
+  
+  // Calculate unread count from API data
+  const unreadCount = useMemo(() => {
+    if (!notificationsData) return 0;
+    
+    // Handle different possible response structures
+    const data = notificationsData?.data || notificationsData;
+    const notificationsArray = Array.isArray(data) ? data : (data?.notifications || data?.results || []);
+    
+    if (!Array.isArray(notificationsArray)) return 0;
+
+    return notificationsArray.filter((item: any) => {
+      const isRead = item.read || item.is_read || item.read_status || false;
+      return !isRead;
+    }).length;
+  }, [notificationsData]);
   
   // Get user roles to check active role - refetch on mount to get latest role
   const { data: rolesData, refetch: refetchRoles } = useUserRoles();
@@ -118,6 +139,10 @@ const Navbar = () => {
     ? userData?.selfie 
     : userData?.profile_image || userData?.profile_picture;
 
+  const handleNotificationPress = () => {
+    router.push(routes.notifications);
+  };
+
   return (
     <View className="flex-row justify-between items-center pt-3">
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -153,8 +178,19 @@ const Navbar = () => {
         </View>
       </View>
 
-      <TouchableOpacity className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full">
+      <TouchableOpacity 
+        className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full relative"
+        onPress={handleNotificationPress}
+        activeOpacity={0.7}
+      >
         <BellIcon size={24} color="#D30309" />
+        {unreadCount > 0 && (
+          <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center border-2 border-white">
+            <Text className="text-white text-xs font-NunitoBold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     </View>
   );

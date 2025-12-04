@@ -9,6 +9,7 @@ export const userProfileKeys = {
   merchantByUuid: (uuid: string) => [...userProfileKeys.all, 'merchant', 'uuid', uuid] as const,
   profile: () => [...userProfileKeys.all, 'profile'] as const,
   roles: () => [...userProfileKeys.all, 'roles'] as const,
+  notifications: () => [...userProfileKeys.all, 'notifications'] as const,
 };
 
 // Hook to get primary user profile
@@ -150,5 +151,21 @@ export const useUpdateUserProfile = () => {
     onError: (error) => {
       console.error('❌ Error updating profile:', error);
     },
+  });
+};
+
+// Hook to get notifications
+export const useNotifications = () => {
+  return useQuery({
+    queryKey: userProfileKeys.notifications(),
+    queryFn: userAPI.getNotifications,
+    staleTime: 2 * 60 * 1000, // 2 minutes - notifications change frequently
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    networkMode: 'online',
   });
 };

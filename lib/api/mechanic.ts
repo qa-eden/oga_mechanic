@@ -135,12 +135,60 @@ export const mechanicAPI = {
     return response.data;
   },
 
-  // Cancel repair request
-  cancelRepairRequest: async (requestId: string, cancellationReason: string): Promise<any> => {
+  // Update repair request status (e.g., in_transit, in_progress)
+  updateRepairRequestStatus: async (requestId: string, action: string): Promise<any> => {
     const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, {
       data: {
-        cancellation_reason: cancellationReason,
-        status: 'cancelled',
+        action: action,
+      },
+      requestType: 'inbound',
+    });
+    
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+    
+    return response.data;
+  },
+
+  // Cancel repair request with reason
+  cancelRepairRequest: async (requestId: string, reason: string): Promise<any> => {
+    const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, {
+      data: {
+        action: 'cancel',
+        reason: reason,
+      },
+      requestType: 'inbound',
+    });
+    
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+    
+    return response.data;
+  },
+
+  // Respond to repair request (accept or decline)
+  respondToRepairRequest: async (requestId: string, action: 'accept' | 'decline'): Promise<any> => {
+    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/respond/`, {
+      data: {
+        action: action,
       },
       requestType: 'inbound',
     });
@@ -149,13 +197,49 @@ export const mechanicAPI = {
 
   // Accept repair request
   acceptRepairRequest: async (requestId: string): Promise<any> => {
-    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/accept/`);
+    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/respond/`, {
+      data: {
+        action: 'accept',
+      },
+      requestType: 'inbound',
+    });
+    
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+    
     return response.data;
   },
 
   // Decline repair request
   declineRepairRequest: async (requestId: string): Promise<any> => {
-    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/decline/`);
+    const response = await api.post(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/respond/`, {
+      data: {
+        action: 'decline',
+      },
+      requestType: 'inbound',
+    });
+    
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+    
     return response.data;
   },
 

@@ -17,6 +17,7 @@ import {
   Switch,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
@@ -35,14 +36,21 @@ const MechanicProfile = () => {
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
 
   // Fetch profile, roles, and repair requests list on component mount
-  const { data: mechanicProfile, isLoading: isLoadingProfile, error: profileError } = useMechanicProfile(true);
-  const { data: userRoles, isLoading: isLoadingRoles, error: rolesError } = useUserRoles();
-  const { data: repairRequests, isLoading: isLoadingRequests, error: requestsError } = useRepairRequests();
+  const { data: mechanicProfile, isLoading: isLoadingProfile, error: profileError, refetch: refetchProfile } = useMechanicProfile(true);
+  const { data: userRoles, isLoading: isLoadingRoles, error: rolesError, refetch: refetchRoles } = useUserRoles();
+  const { data: repairRequests, isLoading: isLoadingRequests, error: requestsError, refetch: refetchRequests } = useRepairRequests();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProfile(), refetchRoles(), refetchRequests()]);
+    setRefreshing(false);
+  };
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -101,6 +109,14 @@ const MechanicProfile = () => {
         contentContainerStyle={{
           // paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#D30309']}
+            tintColor="#D30309"
+          />
+        }
       >
         <View className="flex-col justify-center items-center">
           <ProfileHeader title="Profile" />

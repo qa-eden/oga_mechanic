@@ -21,6 +21,8 @@ import { routes } from "@/constants/routes";
 import { mechanicRoutes } from "@/constants/routes";
 import Navbar from "@/components/Navbar";
 import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest, useMechanicAnalytics } from "@/hooks/useRepairRequests";
+import { useQuery } from "@tanstack/react-query";
+import { mechanicAPI } from "@/lib/api/mechanic";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
@@ -125,11 +127,47 @@ const OrderCardSkeleton = () => {
 const MechanicHome = () => {
   // Fetch repair requests from API with status="pending" filter
   const {
-    data: repairRequestsData,
-    isLoading: requestsLoading,
-    error: requestsError,
-    refetch: refetchRequests
+    data: pendingRequestsData,
+    isLoading: pendingLoading,
+    error: pendingError,
+    refetch: refetchPending
   } = useRepairRequests('pending');
+
+  // Check if pending requests are empty (only check after loading is done)
+  const hasPendingRequests = !pendingLoading && pendingRequestsData?.data && Array.isArray(pendingRequestsData.data) && pendingRequestsData.data.length > 0;
+
+  // Fetch all repair requests if no pending requests available (conditionally enabled)
+  const {
+    data: allRequestsData,
+    isLoading: allLoading,
+    error: allError,
+    refetch: refetchAll
+  } = useQuery({
+    queryKey: ['mechanic', 'repair-requests', 'all-fallback'],
+    queryFn: () => mechanicAPI.getRepairRequests(undefined),
+    enabled: !pendingLoading && !hasPendingRequests, // Only fetch if pending is done and empty
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    networkMode: 'online',
+  });
+
+  // Determine which data to use
+  const repairRequestsData = hasPendingRequests ? pendingRequestsData : allRequestsData;
+  const requestsLoading = hasPendingRequests ? pendingLoading : (pendingLoading || allLoading);
+  const requestsError = hasPendingRequests ? pendingError : allError;
+
+  // Combined refetch function
+  const refetchRequests = () => {
+    refetchPending();
+    if (!hasPendingRequests) {
+      refetchAll();
+    }
+  };
 
   // Fetch mechanic analytics from API
   const {
@@ -271,8 +309,8 @@ const MechanicHome = () => {
               refetchRequests();
               refetchAnalytics();
             }}
-            colors={['#A80207']}
-            tintColor="#A80207"
+            colors={['#D30309']}
+            tintColor="#D30309"
           />
         }
       >

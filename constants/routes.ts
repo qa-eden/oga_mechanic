@@ -45,6 +45,7 @@ export const routes = {
   trackMechanicOrder: "/(root)/(screens)/(user)/(ordermechanic)/track-mechanic-order",
   myMechanicOrders: "/(root)/(screens)/(user)/(ordermechanic)/my-mechanic-orders",
   merchantProfile: "/(root)/(screens)/(user)/merchant-profile",
+  notifications: "/(root)/(screens)/(notifications)/notification",
 
 
   //calls

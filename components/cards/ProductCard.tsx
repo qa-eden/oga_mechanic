@@ -30,7 +30,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   address,
   reviewCount,
   price,
-  stock = 10,
+  stock = 0,
   love = false,
   showLove = false,
   onPress,
@@ -42,13 +42,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isFavorite = false,
 }) => {
   const cartItem: Omit<CartItem, 'quantity'> = {
-    id: productId || 1,
+    id: productId?.toString() || '1',
     name: name || 'Product',
     price: price || 0,
     stock,
     image: 'sparePart', // Default image
-    originalPrice: price ? price * 1.2 : 0,
-    discount: 15,
+    originalPrice: price ? price : 0,
+    discount: 0,
   };
 
   return (

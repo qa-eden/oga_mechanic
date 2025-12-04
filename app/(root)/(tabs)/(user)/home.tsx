@@ -20,7 +20,7 @@ import { LAYOUT } from "@/constants/units";
 import { routes } from "@/constants/routes";
 import { CalendarIcon, MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { useHomeProducts } from "@/hooks/useProducts";
-import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages";
+// import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 

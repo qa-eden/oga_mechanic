@@ -424,8 +424,8 @@ const Product = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#0A6DEE"
-              colors={['#0A6DEE']}
+              tintColor="#D30309"
+              colors={['#D30309']}
               title="Pull to refresh"
               titleColor="#6B7280"
             />

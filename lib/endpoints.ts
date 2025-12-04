@@ -40,6 +40,7 @@ export const USER_ENDPOINTS = {
   CART: '/user/cart',
   ORDERS: '/user/orders',
   PAYMENTS: '/user/payments',
+  NOTIFICATIONS: '/users/notifications/',
 } as const;
 
 // Mechanic endpoints (service providers)

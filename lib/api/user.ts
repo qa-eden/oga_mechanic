@@ -415,4 +415,14 @@ export const userAPI = {
       throw error;
     }
   },
+
+  // Get notifications
+  getNotifications: async (): Promise<any> => {
+    try {
+      const response = await api.get(USER_ENDPOINTS.NOTIFICATIONS);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
 };

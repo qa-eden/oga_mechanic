@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { ShoppingBagIcon, WrenchScrewdriverIcon, UsersIcon } from "react-native-heroicons/solid";
 import CustomButton from "../CustomButton";
-import { useUserRoles } from "@/hooks/useUserProfile";
+import { useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
 import { useRoles } from "@/hooks/useRoles";
 import { router } from "expo-router";
 import { routes, mechanicRoutes, driverRoutes, sellerRoutes } from "@/constants/routes";
@@ -225,6 +225,11 @@ const SwitchUserModal = ({
           
           // Invalidate all roles query to trigger refetch
           queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
+          
+          // Invalidate and refetch notifications query after role switch
+          queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
+          // Explicitly refetch notifications to ensure they're called immediately
+          queryClient.refetchQueries({ queryKey: userProfileKeys.notifications() });
           
           // Wait a moment for queries to refetch
           await new Promise(resolve => setTimeout(resolve, 500));
