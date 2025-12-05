@@ -116,8 +116,8 @@ export const useUpdateRepairRequestStatus = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ requestId, action }: { requestId: string; action: string }) =>
-      mechanicAPI.updateRepairRequestStatus(requestId, action),
+    mutationFn: ({ requestId, status }: { requestId: string; status: string }) =>
+      mechanicAPI.updateRepairRequestStatus(requestId, status),
     onSuccess: (_, variables) => {
       // Invalidate and refetch repair requests list
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });

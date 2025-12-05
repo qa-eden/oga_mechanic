@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
 import CustomButton from '@/components/CustomButton';
 import TextArea from '@/components/forms/TextArea';
+import CustomAlert from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage } from '@/utils/errorMessages';
@@ -29,6 +31,7 @@ const MechanicOrderDetails = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const { showSuccess, showError, showWarning, visible, alertConfig, hideAlert } = useCustomAlert();
 
   // Fetch repair request detail from API
   const { 
@@ -144,23 +147,18 @@ const MechanicOrderDetails = () => {
     
     try {
       await acceptRequestMutation.mutateAsync(orderId);
-      Alert.alert(
+      refetch(); // Refetch to get updated status
+      showSuccess(
         'Success',
-        'Repair request accepted successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => refetch(), // Refetch to get updated status
-          },
-        ]
+        'Repair request accepted successfully.'
       );
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        Alert.alert('Accept failed', errorMessage);
+        showError('Accept failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        Alert.alert('Accept failed', 'An error occurred. Please try again.');
+        showError('Accept failed', 'An error occurred. Please try again.');
       }
     }
   };
@@ -170,56 +168,46 @@ const MechanicOrderDetails = () => {
     
     try {
       await declineRequestMutation.mutateAsync(orderId);
-      Alert.alert(
+      refetch(); // Refetch to get updated status
+      showSuccess(
         'Success',
-        'Repair request declined successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => refetch(), // Refetch to get updated status
-          },
-        ]
+        'Repair request declined successfully.'
       );
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        Alert.alert('Decline failed', errorMessage);
+        showError('Decline failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        Alert.alert('Decline failed', 'An error occurred. Please try again.');
+        showError('Decline failed', 'An error occurred. Please try again.');
       }
     }
   };
 
-  const handleUpdateStatus = async (action: string) => {
+  const handleUpdateStatus = async (status: string) => {
     if (!orderId) return;
     
     try {
-      await updateStatusMutation.mutateAsync({ requestId: orderId, action });
-      Alert.alert(
+      await updateStatusMutation.mutateAsync({ requestId: orderId, status });
+      refetch();
+      showSuccess(
         'Success',
-        'Status updated successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => refetch(),
-          },
-        ]
+        'Status updated successfully.'
       );
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        Alert.alert('Update failed', errorMessage);
+        showError('Update failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        Alert.alert('Update failed', 'An error occurred. Please try again.');
+        showError('Update failed', 'An error occurred. Please try again.');
       }
     }
   };
 
   const handleCancelRequest = async () => {
     if (!orderId || !cancelReason.trim()) {
-      Alert.alert('Validation', 'Please provide a reason for cancellation.');
+      showWarning('Validation', 'Please provide a reason for cancellation.');
       return;
     }
     
@@ -227,23 +215,18 @@ const MechanicOrderDetails = () => {
       await cancelRequestMutation.mutateAsync({ requestId: orderId, reason: cancelReason.trim() });
       setCancelModalVisible(false);
       setCancelReason('');
-      Alert.alert(
+      refetch();
+      showSuccess(
         'Success',
-        'Repair request cancelled successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => refetch(),
-          },
-        ]
+        'Repair request cancelled successfully.'
       );
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        Alert.alert('Cancellation failed', errorMessage);
+        showError('Cancellation failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        Alert.alert('Cancellation failed', 'An error occurred. Please try again.');
+        showError('Cancellation failed', 'An error occurred. Please try again.');
       }
     }
   };
@@ -657,8 +640,41 @@ const MechanicOrderDetails = () => {
               </>
             )}
 
-            {/* In Transit or In Progress: Cancel only */}
-            {(status === 'in_transit' || status === 'in_progress') && (
+            {/* In Transit: In Progress and Cancel */}
+            {status === 'in_transit' && (
+              <>
+                <TouchableOpacity
+                  onPress={() => handleUpdateStatus('in_progress')}
+                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                  className={`flex-1 bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
+                    updateStatusMutation.isPending || cancelRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-green-700 font-NunitoSemiBold text-center">
+                    {updateStatusMutation.isPending ? 'Updating...' : '🔧 In Progress'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setCancelModalVisible(true)}
+                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                    updateStatusMutation.isPending || cancelRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
+                    ✗ Cancel
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* In Progress: Cancel only */}
+            {status === 'in_progress' && (
               <TouchableOpacity
                 onPress={() => setCancelModalVisible(true)}
                 disabled={cancelRequestMutation.isPending}
@@ -764,6 +780,17 @@ const MechanicOrderDetails = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={visible}
+        title={alertConfig?.title || ""}
+        message={alertConfig?.message || ""}
+        type={alertConfig?.type || 'info'}
+        onClose={hideAlert}
+        autoDismiss={alertConfig?.autoDismiss}
+        autoDismissDelay={alertConfig?.autoDismissDelay}
+      />
     </SafeAreaView>
   );
 };

@@ -136,10 +136,10 @@ export const mechanicAPI = {
   },
 
   // Update repair request status (e.g., in_transit, in_progress)
-  updateRepairRequestStatus: async (requestId: string, action: string): Promise<any> => {
+  updateRepairRequestStatus: async (requestId: string, status: string): Promise<any> => {
     const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, {
       data: {
-        action: action,
+        status: status,
       },
       requestType: 'inbound',
     });
