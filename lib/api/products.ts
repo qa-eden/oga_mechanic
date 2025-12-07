@@ -274,6 +274,34 @@ export interface VehicleMakesAPIResponse {
   status: boolean;
 }
 
+// Payment Verification Response Types
+export interface PaymentVerificationResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    payment_status: 'pending' | 'success' | 'failed' | 'cancelled';
+    order_id: string;
+    amount: number;
+    reference: string;
+    payment_method: string;
+    paid_at?: string;
+    gateway_response?: string;
+  };
+}
+
+export interface PaymentStatusResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    order_id: string;
+    payment_status: 'pending' | 'success' | 'failed' | 'cancelled';
+    order_status: string;
+    total_amount: number;
+    payment_reference?: string;
+    paid_at?: string;
+  };
+}
+
 // Merchant Analytics Types
 export interface MerchantAnalytics {
   total_sales: number;
@@ -637,6 +665,22 @@ export const productsAPI = {
   getOrderById: async (orderId: string): Promise<any> => {
     const response = await api.get(SERVICE_ENDPOINTS.ORDER_STATUS(orderId));
 
+    return response.data;
+  },
+
+  // Verify payment by reference
+  verifyPayment: async (reference: string): Promise<PaymentVerificationResponse> => {
+    const response = await api.get<PaymentVerificationResponse>(
+      SERVICE_ENDPOINTS.VERIFY_PAYMENT(reference)
+    );
+    return response.data;
+  },
+
+  // Get payment status for an order
+  getPaymentStatus: async (orderId: string): Promise<PaymentStatusResponse> => {
+    const response = await api.get<PaymentStatusResponse>(
+      SERVICE_ENDPOINTS.PAYMENT_STATUS(orderId)
+    );
     return response.data;
   },
 };

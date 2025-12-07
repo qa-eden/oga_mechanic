@@ -53,7 +53,7 @@ import { StatusBar } from "expo-status-bar";
       }, {
         onSuccess: (response) => {
           // Navigate to next step
-          router.push(sellerRoutes?.step4);
+          router.push(sellerRoutes?.step3);
         },
         onError: (error: any) => {
           

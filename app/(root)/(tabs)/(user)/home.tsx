@@ -23,6 +23,7 @@ import { useHomeProducts } from "@/hooks/useProducts";
 // import { getErrorMessage, getLoadingMessage } from "@/utils/errorMessages";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
+import FloatingCartButton from "@/components/FloatingCartButton";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -286,6 +287,9 @@ const HomePage = memo(() => {
 
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
+      {/* Floating Cart Button - only shows when cart has items */}
+      <FloatingCartButton bottom={100} right={20} />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

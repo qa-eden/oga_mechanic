@@ -6,9 +6,6 @@ import {
   View,
   Text,
   Image,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
   Platform,
   TouchableOpacity,
   Animated,
@@ -130,12 +127,7 @@ const InputField = ({
   });
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      enabled={!props.multiline} // Disable for multiline to prevent conflicts
-    >
-      <TouchableWithoutFeedback onPress={props.multiline ? undefined : Keyboard.dismiss}>
-        <View className={clsx("mb-4 w-full", containerStyle1, !noMargin && "mb-4")}>
+    <View className={clsx("w-full", containerStyle1, !noMargin && "mb-4")}>
           {/* Label */}
           {label && (
             <Text
@@ -238,15 +230,13 @@ const InputField = ({
             </View>
           )}
 
-          {/* Helper Text */}
-          {!hasError && helperText && (
-            <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
-              {helperText}
-            </Text>
-          )}
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+      {/* Helper Text */}
+      {!hasError && helperText && (
+        <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
+          {helperText}
+        </Text>
+      )}
+    </View>
   );
 };
 

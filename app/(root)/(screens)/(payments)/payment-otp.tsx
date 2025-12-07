@@ -1,112 +1,74 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-} from "react-native";
-import React, { useState, useEffect } from "react";
+/**
+ * @deprecated This screen is DEPRECATED and should NOT be used.
+ *
+ * SECURITY WARNING: This screen has simulated OTP verification without
+ * actual API integration. OTP verification should be handled by the
+ * payment gateway, not the app.
+ */
+
+import { View, Text } from "react-native";
+import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
-import { icons } from "@/constants";
-import { maskEmail, maskPhoneNumber } from "@/utils/emailUtils";
-import OTPInput from "@/components/OTPInput";
 import { useRouter } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
+import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
 
-const paymentOTP = () => {
+const PaymentOTP = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(60); // Initial countdown value
 
-  // Countdown effect
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
+    console.warn("[DEPRECATED] PaymentOTP screen is deprecated.");
+  }, []);
 
-      return () => clearInterval(timer); // Cleanup on unmount
-    }
-  }, [countdown]);
-
-  const handleOtpComplete = (otp: string | number) => {
-    setLoading(true); // Start loader
-
-    setTimeout(() => {
-      router.push(routes?.paymentConfirm);
-      setLoading(false); // Stop loader after navigation
-    }, 1500); // Simulating API call delay
-  };
-
-  const handleResendCode = () => {
-    setCountdown(60);
+  const handleGoToCart = () => {
+    router.replace(routes?.cart);
   };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
-      <View>
-        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-          <BackArrowBtn />
-          <Text className="text-xl font-NunitoBold text-gray-900">Payment</Text>
-          <View className="w-10" />
+      <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+        <BackArrowBtn />
+        <Text className="text-xl font-NunitoBold text-gray-900">Payment</Text>
+        <View className="w-10" />
+      </View>
+
+      <View className="flex-1 px-5 py-6 items-center justify-center">
+        {/* Deprecation Notice */}
+        <View className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+          <Text className="text-2xl font-NunitoBold text-yellow-800 mb-4 text-center">
+            ⚠️ Verification Unavailable
+          </Text>
+          <Text className="text-base text-yellow-700 text-center mb-4">
+            This verification method is no longer available.
+          </Text>
+          <Text className="text-sm text-yellow-600 text-center">
+            OTP verification is now handled securely through our payment gateway.
+          </Text>
+        </View>
+
+        <View className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
+          <Text className="text-base font-NunitoBold text-blue-800 mb-2 text-center">
+            🔒 Secure Verification
+          </Text>
+          <Text className="text-sm text-blue-700 text-center">
+            All payment verifications are handled securely by our payment provider.
+          </Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 py-6">
-        {/* Bank Transfer Section */}
-        <View className="mb-8 px-4">
-          <Text className="text-2xl font-NunitoBold text-gray-900 mb-2">
-            Bank transfer
-          </Text>
-          <Text className="text-base text-gray-500">
-            Fund your wallet today for quick and easy payments
-          </Text>
-        </View>
-
-        <View className="px-5 pt-6">
-          <icons.tick1 />
-
-          <Text className="font-NunitoSemiBold text-[19px] pt-5 pb-2">
-            Enter the 6-digit code we texted to your linked phone number{" "}
-            {maskPhoneNumber("07084844214")}
-          </Text>
-          <Text className="text-text-100 text-[16px]">
-            This helps keep your account safe by verifying it’s you
-          </Text>
-
-          <OTPInput
-            numberOfDigits={6}
-            onComplete={handleOtpComplete}
-            countdown={countdown}
-          />
-
-          {loading ? (
-            <ActivityIndicator size="large" color="#D30309" className="pt-4" />
-          ) : (
-            <>
-              <Text className="pt-2 pb-4 text-[15px]">Didn't receive OTP?</Text>
-              {countdown > 0 ? (
-                <TouchableOpacity>
-                  <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
-                    {`Resend Code (${countdown}s)`}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={handleResendCode}>
-                  <Text className="text-primary-500 text-[16px] font-NunitoSemiBold">
-                    {"Resend Code"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      </ScrollView>
+      {/* Bottom Button */}
+      <View className="px-5 pt-6 pb-[5rem] border-t border-gray-100">
+        <CustomButton
+          title="Go to Cart"
+          onPress={handleGoToCart}
+          className="py-4"
+          bgVariant="primary"
+        />
+      </View>
     </SafeAreaView>
   );
 };
 
-export default paymentOTP;
+export default PaymentOTP;

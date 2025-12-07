@@ -1,4 +1,4 @@
-import { View, ScrollView } from "react-native";
+import { View } from "react-native";
 import React from "react";
 import { Formik } from "formik";
 import { useRouter } from "expo-router";
@@ -9,6 +9,7 @@ import { routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import { forgotPasswordSchema } from "@/utils/validationSchemas";
+import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 
 
 const forgetPassword = () => {
@@ -25,7 +26,7 @@ const forgetPassword = () => {
 
   return (
     <SafeAreaView className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView keyboardVerticalOffset={90}>
         <View className="pt-[2rem]">
           <HeaderAndDescTextCenter
             header="Forgot Password?"
@@ -61,7 +62,7 @@ const forgetPassword = () => {
             />
           </View>
         </Formik>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

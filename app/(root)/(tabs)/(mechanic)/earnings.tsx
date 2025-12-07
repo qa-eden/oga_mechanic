@@ -14,41 +14,11 @@ import { mechanicRoutes, routes } from "@/constants/routes";
 const MechanicEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const earningsData = [
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-  ];
 
-  const yesterdayEarnings = [
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-    {
-      id: "#0CAC6C64",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 30750,
-    },
-  ];
+  // TODO: Replace with actual API data when available
+  const earningsData: { id: string; date: string; amount: number }[] = [];
+  const yesterdayEarnings: { id: string; date: string; amount: number }[] = [];
+  const totalBalance = 0;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -77,7 +47,7 @@ const MechanicEarnings = () => {
             <View className="flex-row items-center justify-center mb-4">
               {showBalance ? (
                 <NairaCurrency
-                  value={223000}
+                  value={totalBalance}
                   className="text-white text-3xl font-NunitoBold"
                 />
               ) : (
@@ -126,57 +96,75 @@ const MechanicEarnings = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Today Section */}
-          <Text className="text-base font-NunitoBold text-gray-900 mb-4">
-            Today
-          </Text>
-
-          {earningsData.map((earning, index) => (
-            <View
-              key={`today-${index}`}
-              className="flex-row items-center justify-between py-4 border-b border-gray-100"
-            >
-              <View className="flex-1">
-                <Text className="font-NunitoBold text-gray-900 mb-1">
-                  {earning.id}
-                </Text>
-                <Text className="text-sm text-gray-600 font-NunitoMedium">
-                  {earning.date}
-                </Text>
-              </View>
-              <NairaCurrency
-                value={earning.amount}
-                className="text-lg font-NunitoBold text-gray-900"
-              />
+          {/* Earnings List */}
+          {earningsData.length === 0 && yesterdayEarnings.length === 0 ? (
+            <View className="items-center justify-center py-12">
+              <Text className="text-gray-500 font-NunitoMedium text-center">
+                No earnings yet
+              </Text>
+              <Text className="text-gray-400 font-NunitoRegular text-sm text-center mt-2">
+                Complete repair jobs to start earning
+              </Text>
             </View>
-          ))}
+          ) : (
+            <>
+              {/* Today Section */}
+              {earningsData.length > 0 && (
+                <>
+                  <Text className="text-base font-NunitoBold text-gray-900 mb-4">
+                    Today
+                  </Text>
+                  {earningsData.map((earning, index) => (
+                    <View
+                      key={`today-${index}`}
+                      className="flex-row items-center justify-between py-4 border-b border-gray-100"
+                    >
+                      <View className="flex-1">
+                        <Text className="font-NunitoBold text-gray-900 mb-1">
+                          {earning.id}
+                        </Text>
+                        <Text className="text-sm text-gray-600 font-NunitoMedium">
+                          {earning.date}
+                        </Text>
+                      </View>
+                      <NairaCurrency
+                        value={earning.amount}
+                        className="text-lg font-NunitoBold text-gray-900"
+                      />
+                    </View>
+                  ))}
+                </>
+              )}
 
-          {/* Yesterday Section */}
-          <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
-            Yesterday
-          </Text>
-
-          {yesterdayEarnings.map((earning, index) => (
-            <View
-              key={`yesterday-${index}`}
-              className="flex-row items-center justify-between py-4 border-b border-gray-100"
-            >
-              <View className="flex-1">
-                <Text className="font-NunitoBold text-gray-900 mb-1">
-                  {earning.id}
-                </Text>
-                <Text className="text-sm text-gray-600 font-NunitoMedium">
-                  {earning.date}
-                </Text>
-              </View>
-              <NairaCurrency
-                value={earning.amount}
-                className="text-lg font-NunitoBold text-gray-900"
-              />
-            </View>
-          ))}
-
-          {/* <View className="h-20" /> */}
+              {/* Yesterday Section */}
+              {yesterdayEarnings.length > 0 && (
+                <>
+                  <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
+                    Yesterday
+                  </Text>
+                  {yesterdayEarnings.map((earning, index) => (
+                    <View
+                      key={`yesterday-${index}`}
+                      className="flex-row items-center justify-between py-4 border-b border-gray-100"
+                    >
+                      <View className="flex-1">
+                        <Text className="font-NunitoBold text-gray-900 mb-1">
+                          {earning.id}
+                        </Text>
+                        <Text className="text-sm text-gray-600 font-NunitoMedium">
+                          {earning.date}
+                        </Text>
+                      </View>
+                      <NairaCurrency
+                        value={earning.amount}
+                        className="text-lg font-NunitoBold text-gray-900"
+                      />
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -184,7 +172,7 @@ const MechanicEarnings = () => {
       <WithdrawFundsModal
         isVisible={showWithdrawModal}
         onClose={() => setShowWithdrawModal(false)}
-        availableBalance={223000}
+        availableBalance={totalBalance}
       />
     </SafeAreaView>
   );

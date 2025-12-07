@@ -425,4 +425,36 @@ export const userAPI = {
       throw error;
     }
   },
+
+  // Get a specific notification
+  getNotification: async (id: number | string): Promise<any> => {
+    try {
+      const response = await api.get(USER_ENDPOINTS.NOTIFICATION_DETAIL(id));
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Mark notification as read
+  markNotificationAsRead: async (id: number | string): Promise<any> => {
+    try {
+      const response = await api.patch(USER_ENDPOINTS.NOTIFICATION_DETAIL(id), {
+        is_read: true,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Mark all notifications as read
+  markAllNotificationsAsRead: async (): Promise<any> => {
+    try {
+      const response = await api.patch(USER_ENDPOINTS.NOTIFICATION_MARK_ALL_READ);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
 };

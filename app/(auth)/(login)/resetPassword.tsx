@@ -1,4 +1,4 @@
-import { View, ScrollView } from "react-native";
+import { View } from "react-native";
 import React from "react";
 import { Formik } from "formik";
 import { useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import { routes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import { resetPasswordSchema } from "@/utils/validationSchemas";
+import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 
 const ResetPassword = () => {
   const router = useRouter();
@@ -30,13 +31,13 @@ const ResetPassword = () => {
 
   return (
     <SafeAreaView className="flex-1">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView keyboardVerticalOffset={90}>
         <View className="pt-[2rem]">
-        <HeaderAndDescTextCenter
-          header="Reset Password"
-          text1="Please create a new password"
-        />
-      </View>
+          <HeaderAndDescTextCenter
+            header="Reset Password"
+            text1="Please create a new password"
+          />
+        </View>
 
         <Formik
           initialValues={{
@@ -46,38 +47,38 @@ const ResetPassword = () => {
           validationSchema={resetPasswordSchema}
           onSubmit={handleProceed}
         >
-      <View className="px-5 pt-[1rem]">
+          <View className="px-5 pt-[1rem]">
             <FormikInput
               name="password"
-          label="Password"
-          placeholder="*********"
+              label="Password"
+              placeholder="*********"
               containerStyle="mb-4"
               type="password"
               autoCapitalize="none"
               autoCorrect={false}
-        />
+            />
 
             <FormikInput
               name="confirmPassword"
-          label="Confirm password"
-          placeholder="*********"
+              label="Confirm password"
+              placeholder="*********"
               containerStyle="mb-6"
               type="password"
               autoCapitalize="none"
               autoCorrect={false}
-        />
+            />
 
             <FormikButton title="Reset password" className="mb-6" />
 
-        <AuthNavigateLink
-          onPress={() => router?.replace(routes?.signIn)}
+            <AuthNavigateLink
+              onPress={() => router?.replace(routes?.signIn)}
               text="Didn't Forget Password?"
-          textLink="Sign In"
+              textLink="Sign In"
               containerClassName="mb-4"
-        />
-      </View>
+            />
+          </View>
         </Formik>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

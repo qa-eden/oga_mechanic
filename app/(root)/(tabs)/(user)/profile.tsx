@@ -15,10 +15,10 @@ import {
   TouchableOpacity,
   // Modal,
   ActivityIndicator,
-  StatusBar,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
@@ -143,7 +143,6 @@ const Profile = () => {
       <LoadingSpinner
         message="Loading Profile..."
         size="medium"
-        logoSize={40}
       />
     );
   }
@@ -161,7 +160,7 @@ const Profile = () => {
 
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar style="auto" />
       <ScrollView
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}

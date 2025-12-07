@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, TextInput } from "react-native";
+import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 import { Formik } from "formik";
 import { router, useLocalSearchParams } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
@@ -132,7 +133,7 @@ const SignIn = () => {
   };
 
   return (
-    <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <KeyboardAwareScrollView keyboardVerticalOffset={90}>
       <View className="pt-[2rem]">
         <HeaderAndDescTextCenter
           header={userType ? `Sign in as ${userType.charAt(0).toUpperCase() + userType.slice(1)}` : "Sign in"}
@@ -327,7 +328,7 @@ const SignIn = () => {
           type={alertConfig.type}
         />
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 };
 

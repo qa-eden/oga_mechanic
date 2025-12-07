@@ -17,23 +17,36 @@ import {
   Switch,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes, riderRoutes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
+import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 
 const RiderProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
   const [isEnabledEnablePass, setIsEnabledEnablePass] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
-  
+  const [refreshing, setRefreshing] = useState(false);
+
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
+
+  // Fetch profile data
+  const { refetch: refetchProfile } = usePrimaryUserProfile();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetchProfile();
+    setRefreshing(false);
+  };
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -123,12 +136,16 @@ const RiderProfile = () => {
 
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+      <StatusBar style="dark" />
       <ScrollView
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View className="flex-col justify-center items-center">
           <ProfileHeader title="Profile" />

@@ -37,26 +37,43 @@ const CustomerReviewCard: React.FC<CustomerReviewCardProps> = ({
       </View>
 
       <View className="flex-row items-center mb-6">
-        <Text className="text-2xl font-NunitoBold text-gray-900 mr-3">
-          {totalReviews} ({averageRating})
-        </Text>
+        <View className="mr-4">
+          <Text className="text-3xl font-NunitoExtraBold text-gray-900">
+            {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
+          </Text>
+          <Text className="text-sm text-gray-500 font-NunitoMedium">
+            {totalReviews} {parseInt(totalReviews) === 1 ? 'review' : 'reviews'}
+          </Text>
+        </View>
         <View className="flex-row">
           {[1, 2, 3, 4, 5].map((star) => (
-            <Text key={star} className="text-yellow-400 text-lg">⭐</Text>
+            <Text 
+              key={star} 
+              className={`text-lg ${star <= Math.round(averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+            >
+              ⭐
+            </Text>
           ))}
         </View>
       </View>
 
       {/* Horizontal Bar Chart */}
-      <View className="flex-row h-3 rounded-full overflow-hidden mb-4">
-        {ratingData.map((item, index) => (
-          <View
-            key={item.stars}
-            className={`${item.color} flex-1`}
-            style={{ flex: item.percentage / 100 }}
-          />
-        ))}
-      </View>
+      {parseInt(totalReviews) > 0 ? (
+        <View className="flex-row h-3 rounded-full overflow-hidden mb-4">
+          {ratingData.map((item, index) => (
+            <View
+              key={item.stars}
+              className={`${item.color}`}
+              style={{ 
+                width: `${item.percentage}%`,
+                minWidth: item.percentage > 0 ? 2 : 0,
+              }}
+            />
+          ))}
+        </View>
+      ) : (
+        <View className="h-3 rounded-full bg-gray-200 mb-4" />
+      )}
 
       {/* Star Ratings with Colors */}
       <View className="flex-row justify-between mb-2">

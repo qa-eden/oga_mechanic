@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import {
   BellIcon,
@@ -8,11 +9,15 @@ import {
   ExclamationCircleIcon,
   InformationCircleIcon,
 } from 'react-native-heroicons/outline';
-import { useNotifications } from '@/hooks/useUserProfile';
+import {
+  useNotifications,
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead
+} from '@/hooks/useUserProfile';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
 import { getErrorMessage } from '@/utils/errorMessages';
-import { useQueryClient } from '@tanstack/react-query';
+import { routes } from '@/constants/routes';
 
 export interface Notification {
   id: string;
@@ -25,15 +30,17 @@ export interface Notification {
 }
 
 const Notification = () => {
-  const queryClient = useQueryClient();
-  
   // Fetch notifications from API
-  const { 
-    data: notificationsData, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: notificationsData,
+    isLoading,
+    error,
+    refetch
   } = useNotifications();
+
+  // Mutation hooks
+  const markAsReadMutation = useMarkNotificationAsRead();
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
 
   // Transform API response to Notification interface
   const notifications: Notification[] = useMemo(() => {
@@ -81,16 +88,22 @@ const Notification = () => {
   };
 
   const handleNotificationPress = (notification: Notification) => {
-    // TODO: Implement mark as read API call when endpoint is available
-    // For now, just handle action if exists
-    if (notification.action) {
-      notification.action();
+    // Mark as read if not already read
+    if (!notification.read) {
+      markAsReadMutation.mutate(notification.id);
     }
+
+    // Navigate to notification detail page
+    router.push({
+      pathname: routes.notificationDetail as any,
+      params: { id: notification.id }
+    });
   };
 
-  const markAllAsRead = () => {
-    // TODO: Implement mark all as read API call when endpoint is available
-    console.log('Mark all as read - API call needed');
+  const handleMarkAllAsRead = () => {
+    if (unreadCount > 0) {
+      markAllAsReadMutation.mutate();
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -214,22 +227,23 @@ const Notification = () => {
           {unreadCount > 0 && (
             <View className="ml-3 bg-primary-500 rounded-full px-3 py-1">
               <Text className="text-white text-xs font-NunitoBold">
-                {unreadCount} new
+                {unreadCount}
               </Text>
             </View>
           )}
         </View>
-        <View className="w-10">
-          {/* {unreadCount > 0 && (
+        <View className="">
+          {unreadCount > 0 && (
             <TouchableOpacity
-              onPress={markAllAsRead}
+              onPress={handleMarkAllAsRead}
               className="px-2 py-1"
+              disabled={markAllAsReadMutation.isPending}
             >
-              <Text className="text-primary-500 text-sm font-NunitoMedium">
-                Mark all read
+              <Text className={`text-sm font-NunitoMedium ${markAllAsReadMutation.isPending ? 'text-gray-400' : 'text-primary-500'}`}>
+                {markAllAsReadMutation.isPending ? 'Marking...' : 'Mark all read'}
               </Text>
             </TouchableOpacity>
-          )} */}
+          )}
         </View>
       </View>
 

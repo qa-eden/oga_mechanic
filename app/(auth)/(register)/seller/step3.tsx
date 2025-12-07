@@ -2,12 +2,10 @@ import React, { useState, useMemo } from 'react'
 import {
     View,
     StatusBar,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
     Alert
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import * as ImagePicker from 'expo-image-picker'
 import * as DocumentPicker from 'expo-document-picker'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -23,7 +21,6 @@ import HeaderAndDescTextCenter from '@/components/HeaderAndDescTextCenter'
 import FormikButton from '@/components/forms/FormikButton'
 import AuthNavigateLink from '@/components/AuthNavigateLink'
 import SelectField from '@/components/forms/SelectField'
-import { userAPI } from '@/lib/api/user'
 import CustomAlert from '@/components/CustomAlert'
 import { getStates, getLGAs } from '@/constants/nigeriaData'
 
@@ -87,16 +84,16 @@ const Step3 = () => {
     }
 
     const handleSubmit = async (values: typeof initialValues) => {
-        
+
         // Prevent multiple submissions
         if (isSubmitting) {
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
-            
+
             // Just navigate to next step without API call
             // API call will be made in step 4 with both CAC document and selfie
             const navigationParams = {
@@ -109,16 +106,16 @@ const Step3 = () => {
                 // Only pass the URI string, not the entire object
                 cacDocumentUri: values.cacDocument?.uri || values.cacDocument?.path || null
             };
-            
-            
+
+
             router.push({
                 pathname: sellerRoutes.step4,
                 params: navigationParams
             });
-            
+
         } catch (error: any) {
             setIsSubmitting(false);
-            
+
             // Show error alert
             setAlertConfig({
                 title: 'Navigation Error',
@@ -126,7 +123,7 @@ const Step3 = () => {
                 type: 'error'
             });
             setShowAlert(true);
-            
+
             // Auto-hide error after 3 seconds
             setTimeout(() => {
                 setShowAlert(false);
@@ -235,19 +232,23 @@ const Step3 = () => {
     }
 
 
-  return (
-        <SafeAreaView className="flex-1 bg-white">
+    return (
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
+            <KeyboardAwareScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                enableOnAndroid={true}
+                extraScrollHeight={200}
+                extraHeight={200}
+                enableAutomaticScroll={true}
+                enableResetScrollToCoords={false}
+                viewIsInsideTabBar={false}
+                keyboardOpeningTime={0}
             >
-                <ScrollView
-                    className="flex-1"
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
                     {/* Header */}
                     <View className="px-6 py-2">
                         <UserAuthHeader />
@@ -258,7 +259,7 @@ const Step3 = () => {
                     </View>
 
                     {/* Main Content */}
-                    <View className="px-6 flex-1">
+                    <View className="px-6">
                         <HeaderAndDescTextCenter
                             header="Add other details"
                             text1="Kindly input your other details to continue"
@@ -272,95 +273,132 @@ const Step3 = () => {
                             onSubmit={handleSubmit}
                         >
                             {({ handleSubmit: formikHandleSubmit, isValid, dirty, setFieldValue, values, errors, touched }) => {
-                                
+                                // Handler to extract state and LGA from location
+                                const handleLocationSelect = (location: any) => {
+                                    if (!location?.address) return
+
+                                    const address = location.address.toLowerCase()
+                                    const states = getStates()
+
+                                    // Find matching state from address
+                                    for (const state of states) {
+                                        if (address.includes(state.toLowerCase())) {
+                                            setFieldValue('state', state)
+
+                                            // Try to find matching LGA
+                                            const lgas = getLGAs(state)
+                                            for (const lga of lgas) {
+                                                if (address.includes(lga.toLowerCase())) {
+                                                    setFieldValue('lga', lga)
+                                                    break
+                                                }
+                                            }
+                                            break
+                                        }
+                                    }
+
+                                    // Special handling for FCT/Abuja
+                                    if (address.includes('abuja') || address.includes('fct')) {
+                                        setFieldValue('state', 'FCT')
+                                        const fctLgas = getLGAs('FCT')
+                                        for (const lga of fctLgas) {
+                                            if (address.includes(lga.toLowerCase())) {
+                                                setFieldValue('lga', lga)
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
+
                                 return (
-                                <View className="space-y-6">
-                                    {/* State Select */}
-                                    <SelectField
-                                        name="state"
-                                        label="State"
-                                        placeholder="Select state"
-                                        options={stateOptions}
-                                        value={values.state}
-                                        onValueChange={(value) => {
-                                            setFieldValue('state', value)
-                                            setFieldValue('lga', '') // Reset LGA when state changes
-                                        }}
-                                        error={errors.state}
-                                        touched={touched.state}
-                                        required
-                                    />
-
-                                    {/* LGA Select */}
-                                    <SelectField
-                                        name="lga"
-                                        label="LGA"
-                                        placeholder={values.state ? "Select local government area" : "Select state first"}
-                                        options={getLGAOptions(values.state)}
-                                        value={values.lga}
-                                        onValueChange={(value) => setFieldValue('lga', value)}
-                                        error={errors.lga}
-                                        touched={touched.lga}
-                                        required
-                                    />
-
-                                    {/* Address */}
-                                    <AddressInput
-                                        label="Address"
-                                        placeholder="Enter your business address"
-                                        value={values.address}
-                                        onChangeText={(text) => setFieldValue('address', text)}
-                                        error={errors.address}
-                                        touched={touched.address}
-                                        required
-                                    />
-
-                                    {/* CAC Number */}
-                                    <FormikInput
-                                        name="cacNumber"
-                                        label="CAC number"
-                                        placeholder="Enter your CAC number"
-                                        type="text"
-                                    />
-
-                                    {/* CAC Document Upload */}
-                                    <ImageUpload
-                                        label="CAC document"
-                                        isUploaded={!!values.cacDocument}
-                                        onPress={() => handleDocumentUpload(setFieldValue)}
-                                        uploadedText="CAC Document Uploaded"
-                                        maxFileSize="15 MB"
-                                        required
-                                        imageUri={values.cacDocument?.uri}
-                                    />
-
-                                    {/* Bottom Actions */}
-                                    <View className="pt-6">
-                                        <FormikButton
-                                            title={isSubmitting ? "Processing..." : "Proceed"}
-                                            type="submit"
-                                            onPress={() => formikHandleSubmit()}
-                                            disabled={!isValid || !dirty || isSubmitting}
-                                            loading={isSubmitting}
-                                            loadingText="Processing..."
+                                    <View className="space-y-6">
+                                        {/* Address - First field */}
+                                        <AddressInput
+                                            label="Address"
+                                            placeholder="Enter your business address"
+                                            value={values.address}
+                                            onChangeText={(text) => setFieldValue('address', text)}
+                                            onLocationSelect={handleLocationSelect}
+                                            error={errors.address}
+                                            touched={touched.address}
+                                            required
+                                            showCurrentLocationButton={true}
                                         />
 
-                                        <AuthNavigateLink
-                                            onPress={() => router.push(routes.signIn)}
-                                            text="Already have an account?"
-                                            textLink="Sign in"
-                                            containerClassName="mt-4"
+                                        {/* State Select */}
+                                        <SelectField
+                                            name="state"
+                                            label="State"
+                                            placeholder="Select state"
+                                            options={stateOptions}
+                                            value={values.state}
+                                            onValueChange={(value) => {
+                                                setFieldValue('state', value)
+                                                setFieldValue('lga', '') // Reset LGA when state changes
+                                            }}
+                                            error={errors.state}
+                                            touched={touched.state}
+                                            required
                                         />
+
+                                        {/* LGA Select */}
+                                        <SelectField
+                                            name="lga"
+                                            label="LGA"
+                                            placeholder={values.state ? "Select local government area" : "Select state first"}
+                                            options={getLGAOptions(values.state)}
+                                            value={values.lga}
+                                            onValueChange={(value) => setFieldValue('lga', value)}
+                                            error={errors.lga}
+                                            touched={touched.lga}
+                                            required
+                                        />
+
+                                        {/* CAC Number */}
+                                        <FormikInput
+                                            name="cacNumber"
+                                            label="CAC number"
+                                            placeholder="Enter your CAC number"
+                                            type="text"
+                                        />
+
+                                        {/* CAC Document Upload */}
+                                        <ImageUpload
+                                            label="CAC document"
+                                            isUploaded={!!values.cacDocument}
+                                            onPress={() => handleDocumentUpload(setFieldValue)}
+                                            uploadedText="CAC Document Uploaded"
+                                            maxFileSize="15 MB"
+                                            required
+                                            imageUri={values.cacDocument?.uri}
+                                        />
+
+                                        {/* Bottom Actions */}
+                                        <View className="pt-6">
+                                            <FormikButton
+                                                title={isSubmitting ? "Processing..." : "Proceed"}
+                                                type="submit"
+                                                onPress={() => formikHandleSubmit()}
+                                                disabled={!isValid || !dirty || isSubmitting}
+                                                loading={isSubmitting}
+                                                loadingText="Processing..."
+                                            />
+
+                                            <AuthNavigateLink
+                                                onPress={() => router.push(routes.signIn)}
+                                                text="Already have an account?"
+                                                textLink="Sign in"
+                                                containerClassName="mt-4"
+                                            />
+                                        </View>
+
                                     </View>
-
-                                </View>
                                 )
                             }}
                         </Formik>
-    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-            
+                    </View>
+            </KeyboardAwareScrollView>
+
             {/* Error Alert Modal */}
             <CustomAlert
                 visible={showAlert}
@@ -370,7 +408,7 @@ const Step3 = () => {
                 onClose={() => setShowAlert(false)}
             />
         </SafeAreaView>
-  )
+    )
 }
 
 export default Step3

@@ -1,41 +1,40 @@
 "use client";
 
-import { View, Text, TouchableOpacity, Alert } from "react-native";
+/**
+ * @deprecated This screen is DEPRECATED and should NOT be used for checkout payments.
+ *
+ * SECURITY WARNING: This screen has hardcoded bank details and simulated payment
+ * confirmation which is insecure. Payment verification should always be done
+ * server-side.
+ *
+ * Use the secure payment flow instead:
+ * 1. Call checkout API with payment_method: 'online'
+ * 2. Navigate to payment.tsx with the payment_url from the response
+ * 3. The WebView will handle the payment securely through the payment gateway
+ *
+ * This screen is kept only for reference and will redirect users to the cart.
+ */
+
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
-import { icons } from "@/constants";
-import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import { DocumentDuplicateIcon } from "react-native-heroicons/outline";
-import * as Clipboard from "@react-native-clipboard/clipboard";
+import { router } from "expo-router";
 import CustomButton from "@/components/CustomButton";
-import CartIconBtn from "@/components/CartIconBtn";
 import BackArrowBtn from "@/components/BackArrowBtn";
-import { useState } from "react";
+import { useEffect } from "react";
 import { routes } from "@/constants/routes";
 
 const BankTransfer = () => {
-  const params = useLocalSearchParams();
-  const totalAmount = Number(params.totalAmount) || 252000;
+  // Log deprecation warning on mount
+  useEffect(() => {
+    console.warn(
+      '[DEPRECATED] BankTransfer screen is deprecated. ' +
+      'Hardcoded bank details and simulated confirmation are insecure. ' +
+      'Use the secure payment flow via payment.tsx instead.'
+    );
+  }, []);
 
-  const bankDetails = {
-    bankName: "Sterling bank",
-    accountNumber: "3425618209",
-    accountName: "OGA MECHANIC",
-  };
-
-  const copyToClipboard = (text: string) => {
-    // Clipboard.setString(text)
-    Alert.alert("Copied", "Account number copied to clipboard");
-  };
-
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleTransferComplete = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push(routes?.paymentConfirm);
-    }, 1500);
+  const handleGoToCart = () => {
+    router.replace(routes?.cart);
   };
 
   return (
@@ -47,73 +46,28 @@ const BankTransfer = () => {
         <View className="w-10" />
       </View>
 
-      <View className="flex-1 px-5 py-6">
-        {/* Bank Transfer Section */}
-        <View className="mb-8">
-          <Text className="text-2xl font-NunitoBold text-gray-900 mb-2">
-            Bank transfer
+      <View className="flex-1 px-5 py-6 items-center justify-center">
+        {/* Deprecation Notice */}
+        <View className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+          <Text className="text-2xl font-NunitoBold text-yellow-800 mb-4 text-center">
+            ⚠️ Payment Method Unavailable
           </Text>
-          <Text className="text-base text-gray-500">
-            Fund your wallet today for quick and easy payments
+          <Text className="text-base text-yellow-700 text-center mb-4">
+            Manual bank transfer for checkout is no longer available.
           </Text>
-        </View>
-
-        {/* Bank Icon */}
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-gray-200 rounded-full items-center justify-center">
-            <icons.bankIcon
-              width={50}
-              height={50}
-              // style={{ marginRight: 16 }}
-            />
-          </View>
-        </View>
-
-        {/* Virtual Account Number Section */}
-        <View className="mb-8">
-          <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-4">
-            Virtual Account Number
-          </Text>
-          <Text className="text-base text-gray-500 text-center leading-6">
-            Make a transfer to the account details below and your payment will
-            be verified immediately
+          <Text className="text-sm text-yellow-600 text-center">
+            Please use our secure online payment option which supports bank transfers,
+            cards, and other payment methods through our trusted payment gateway.
           </Text>
         </View>
 
-        {/* Amount to Pay */}
-        <View className="flex-row justify-between items-center mb-8">
-          <Text className="text-lg text-green-600 font-NunitoMedium">
-            Amount to pay
+        <View className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
+          <Text className="text-base font-NunitoBold text-blue-800 mb-2 text-center">
+            🔒 Secure Payment
           </Text>
-          <NairaCurrency
-            value={totalAmount}
-            className="text-2xl font-NunitoBold text-green-600"
-          />
-        </View>
-
-        {/* Bank Details */}
-        <View className="mb-8">
-          <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-            {bankDetails.bankName}
-          </Text>
-
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-2xl font-NunitoBold text-gray-900">
-              {bankDetails.accountNumber}
-            </Text>
-            <TouchableOpacity
-              onPress={() => copyToClipboard(bankDetails.accountNumber)}
-              className="w-10 h-10 items-center justify-center"
-            >
-              <DocumentDuplicateIcon size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          <Text className="text-base text-gray-600">
-            Account name -{" "}
-            <Text className="font-NunitoBold text-gray-900">
-              {bankDetails.accountName}
-            </Text>
+          <Text className="text-sm text-blue-700 text-center">
+            All payments are processed securely through our payment provider
+            with automatic verification.
           </Text>
         </View>
       </View>
@@ -121,12 +75,10 @@ const BankTransfer = () => {
       {/* Bottom Button */}
       <View className="px-5 pt-6 pb-[5rem] border-t border-gray-100">
         <CustomButton
-          title={isLoading ? "Confirming payment..." : "I have transferred"}
-          onPress={handleTransferComplete}
+          title="Go to Cart"
+          onPress={handleGoToCart}
           className="py-4"
           bgVariant="primary"
-          loading={isLoading}
-          disabled={isLoading}
         />
       </View>
     </SafeAreaView>

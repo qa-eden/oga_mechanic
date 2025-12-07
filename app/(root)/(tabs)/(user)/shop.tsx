@@ -44,7 +44,7 @@ const Shop = () => {
   useEffect(() => {
     if (params.categoryId && params.category) {
       const categoryId = parseInt(params.categoryId);
-      
+
       // Update both selected and applied states
       setSelectedCategory(params.category);
       setSelectedCategoryId(categoryId);
@@ -80,10 +80,10 @@ const Shop = () => {
 
   // Fetch products and categories from API with pagination
   // Main products API only triggers when filters are applied
-  const { 
-    data: productsData, 
-    isLoading: productsLoading, 
-    error: productsError, 
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    error: productsError,
     refetch: refetchProducts,
     fetchNextPage,
     hasNextPage,
@@ -96,21 +96,21 @@ const Shop = () => {
     true // Always load products initially
   );
   const { data: categories, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
-  
+
   // Search functionality - only search when manually triggered
   const [searchTriggered, setSearchTriggered] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategoryId, setSearchCategoryId] = useState<number | null>(null);
   const [searchMinPrice, setSearchMinPrice] = useState("");
   const [searchMaxPrice, setSearchMaxPrice] = useState("");
-  
-  const { 
-    data: searchResults, 
-    isLoading: searchLoading, 
-    error: searchError, 
-    refetch: refetchSearch 
+
+  const {
+    data: searchResults,
+    isLoading: searchLoading,
+    error: searchError,
+    refetch: refetchSearch
   } = useProductSearch(
-    searchQuery, 
+    searchQuery,
     searchCategoryId,
     searchTriggered, // Only search when manually triggered
     searchMinPrice,
@@ -160,15 +160,15 @@ const Shop = () => {
   const displayProducts = useMemo(() => {
     // If search was triggered, use search results
     if (searchTriggered) {
-     
+
       return (searchResults as ProductListResponse[]) || [];
     }
-    
+
     // If filters were applied, show products from main API
     if (filtersApplied) {
       return products || [];
     }
-    
+
     // Default: show all products (no filters applied)
     return products || [];
   }, [searchTriggered, searchResults, products, searchQuery, searchCategoryId, searchMinPrice, searchMaxPrice, searchLoading, searchError, filtersApplied, appliedCategoryId, appliedMinPrice, appliedMaxPrice]);
@@ -181,13 +181,13 @@ const Shop = () => {
   const handleApplySearch = (categoryId?: number | null) => {
     // Use provided categoryId or current selectedCategoryId
     const targetCategoryId = categoryId !== undefined ? categoryId : selectedCategoryId;
-    
+
     // Apply filters to main API
     setAppliedCategoryId(targetCategoryId);
     setAppliedMinPrice(minPrice);
     setAppliedMaxPrice(maxPrice);
     setFiltersApplied(true);
-    
+
     // Also trigger search if there's a query
     if (debouncedSearchQuery.trim()) {
       setSearchQuery(debouncedSearchQuery);
@@ -198,7 +198,7 @@ const Shop = () => {
     } else {
       setSearchTriggered(false);
     }
-    
+
   }
 
   const handleResetSearch = () => {
@@ -270,11 +270,10 @@ const Shop = () => {
   // Loading state
   if (productsLoading || categoriesLoading) {
     return (
-         <LoadingSpinner
+      <LoadingSpinner
         message="Loading Products..."
         subMessage="Please wait while we fetch available products"
         size="medium"
-        logoSize={55}
       />
     );
   }
@@ -283,8 +282,8 @@ const Shop = () => {
   if (productsError || (searchTriggered && searchError)) {
     return (
       <SafeAreaView className="bg-white flex-1" edges={["top"]}>
-        <ScrollView 
-          className="flex-1" 
+        <ScrollView
+          className="flex-1"
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl {...refreshControl} />}
         >
@@ -309,44 +308,44 @@ const Shop = () => {
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
       <View className="flex-1">
-      {/* Header */}
-      <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
-        <BackArrowBtn />
-        <ProfileHeader title="Shop" />
-        <CartIconBtn />
-      </View>
+        {/* Header */}
+        <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
+          <BackArrowBtn />
+          <ProfileHeader title="Shop" />
+          <CartIconBtn />
+        </View>
 
-      <SearchBarWithCategories
+        <SearchBarWithCategories
           searchQuery={inputQuery}
           setSearchQuery={handleSearchChange}
-        selectedCategory={selectedCategory}
+          selectedCategory={selectedCategory}
           setSelectedCategory={handleCategoryChange}
           categories={categoryOptions}
-        onFilterPress={handleFilterPress}
+          onFilterPress={handleFilterPress}
           minPrice={minPrice}
           maxPrice={maxPrice}
           onPriceChange={handlePriceChange}
           onApplySearch={handleApplySearch}
           onResetSearch={handleResetSearch}
           isSearching={searchLoading}
-      />
+        />
 
-      {/* Products Grid */}
+        {/* Products Grid */}
         {(displayProducts as ProductListResponse[]).length > 0 ? (
-      <FlatList
+          <FlatList
             data={displayProducts}
-        renderItem={renderProductCard}
+            renderItem={renderProductCard}
             keyExtractor={(item) => item.id}
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: CARD_PADDING,
-          paddingBottom: SCROLL_PADDING_BOTTOM,
-        }}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews={true}
+            numColumns={2}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: CARD_PADDING,
+              paddingBottom: SCROLL_PADDING_BOTTOM,
+            }}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
+            removeClippedSubviews={true}
             refreshControl={<RefreshControl {...refreshControl} />}
             onEndReached={() => {
               // Only load more if not searching and there are more pages
@@ -363,7 +362,7 @@ const Shop = () => {
                   </View>
                 );
               }
-              
+
               // Show "Load more data" button when there are no more pages
               if (!searchTriggered && !hasNextPage && products.length > 0) {
                 return (
@@ -377,17 +376,17 @@ const Shop = () => {
                   </View>
                 );
               }
-              
+
               return null;
             }}
           />
         ) : (
           <View className="flex-1 items-center justify-center px-4 py-20">
             <Text className="text-gray-600 text-center text-lg">
-              {searchTriggered 
-                ? (searchQuery.trim() 
-                    ? "No products found for your search" 
-                    : "No products found with these filters")
+              {searchTriggered
+                ? (searchQuery.trim()
+                  ? "No products found for your search"
+                  : "No products found with these filters")
                 : filtersApplied
                   ? "No products found with applied filters"
                   : "No products available"}

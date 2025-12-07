@@ -1,7 +1,44 @@
-import React, { memo, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, Image, ActivityIndicator } from "react-native";
+import React, { memo, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image } from "react-native";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import { TrashIcon, CheckIcon, PlusIcon, MinusIcon, PhotoIcon } from "react-native-heroicons/outline";
+import { useImageValidator, getImageSource } from "@/hooks/useImageValidator";
+
+// Image Skeleton with shimmer effect
+const ImageSkeleton = memo(() => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [shimmerAnim]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: shimmerAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.4, 0.8],
+        }),
+      }}
+      className="absolute inset-0 bg-gray-200 rounded-xl"
+    />
+  );
+});
 
 interface CartItem {
   id: number;
@@ -17,12 +54,12 @@ interface CartItem {
 interface CartItemCardProps {
   item: CartItem;
   index: number;
-  isSelected: boolean;
+  isSelected?: boolean;
   fadeAnim: Animated.Value;
   slideAnim: Animated.Value;
   bounceAnim: Animated.Value;
   isLoading?: boolean;
-  onSelect: (id: number) => void;
+  onSelect?: (id: number) => void;
   onRemove: (id: number) => void;
   onUpdateQuantity: (id: number, change: number) => void;
   onPress?: () => void;
@@ -31,7 +68,7 @@ interface CartItemCardProps {
 const CartItemCard = memo(({
   item,
   index,
-  isSelected,
+  isSelected = false,
   fadeAnim,
   slideAnim,
   bounceAnim,
@@ -41,8 +78,8 @@ const CartItemCard = memo(({
   onUpdateQuantity,
   onPress,
 }: CartItemCardProps) => {
-  const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
+  // Use the image validator hook to find a valid image
+  const { validImage, isLoading: imageLoading, isValid } = useImageValidator(item.image);
 
   return (
   <Animated.View
@@ -62,24 +99,26 @@ const CartItemCard = memo(({
         elevation: 8,
       }}
     >
-      <View className="flex-row items-center p-2">
-        {/* Select Button */}
-        <TouchableOpacity
-          onPress={() => onSelect(item.id)}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: isSelected ? "#111" : "#fff",
-            borderWidth: 2,
-            borderColor: "#111",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 8,
-          }}
-        >
-          {isSelected && <CheckIcon size={14} color="#fff" />}
-        </TouchableOpacity>
+      <View className="flex-row items-center p-3">
+        {/* Select Button - only show if onSelect is provided */}
+        {onSelect && (
+          <TouchableOpacity
+            onPress={() => onSelect(item.id)}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: isSelected ? "#111" : "#fff",
+              borderWidth: 2,
+              borderColor: "#111",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 10,
+            }}
+          >
+            {isSelected && <CheckIcon size={14} color="#fff" />}
+          </TouchableOpacity>
+        )}
 
         {/* Clickable Product Section */}
         <TouchableOpacity 
@@ -89,32 +128,22 @@ const CartItemCard = memo(({
           disabled={!onPress}
         >
           {/* Product Image */}
-          <View className="w-[70px] rounded-[1rem] h-[80px] overflow-hidden flex items-center justify-center mr-3 bg-gray-100">
-            {!item.image || imageError ? (
-              // Placeholder when no image or error
-              <View className="w-full h-full items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200">
-                <View className="w-10 h-10 bg-white rounded-full items-center justify-center mb-1">
-                  <PhotoIcon size={20} color="#9CA3AF" />
-                </View>
-                <Text className="text-[10px] text-gray-400 font-NunitoMedium">No Image</Text>
+          <View className="w-[70px] rounded-xl h-[80px] mr-3 bg-gray-100 overflow-hidden">
+            {imageLoading ? (
+              <ImageSkeleton />
+            ) : !isValid || !validImage ? (
+              <View className="w-full h-full items-center justify-center">
+                <PhotoIcon size={24} color="#9CA3AF" />
               </View>
-            ) : typeof item.image === "function" ? (
-              <item.image width={70} height={80} />
             ) : (
-              <>
-                <Image
-                  source={typeof item.image === "string" ? { uri: item.image } : item.image}
-                  style={{ width: 70, height: 80, resizeMode: "cover" }}
-                  onError={() => setImageError(true)}
-                  onLoadStart={() => setImageLoading(true)}
-                  onLoadEnd={() => setImageLoading(false)}
-                />
-                {imageLoading && (
-                  <View className="absolute w-full h-full items-center justify-center bg-gray-100">
-                    <ActivityIndicator size="small" color="#D30309" />
-                  </View>
-                )}
-              </>
+              <Image
+                source={getImageSource(validImage)!}
+                style={{
+                  width: 70,
+                  height: 80,
+                }}
+                resizeMode="cover"
+              />
             )}
           </View>
 
@@ -147,50 +176,52 @@ const CartItemCard = memo(({
         </TouchableOpacity>
 
         {/* Controls */}
-        <View className="items-end">
+        <View className="items-end" pointerEvents={isLoading ? 'none' : 'auto'}>
           {/* Remove Button */}
           <TouchableOpacity
             onPress={() => onRemove(item.id)}
             className="w-8 h-8 bg-red-50 rounded-full items-center justify-center mb-5"
             disabled={isLoading}
             style={{ opacity: isLoading ? 0.5 : 1 }}
+            activeOpacity={0.7}
           >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#EF4444" />
-            ) : (
-              <TrashIcon size={18} color="#EF4444" />
-            )}
+            <TrashIcon size={18} color="#EF4444" />
           </TouchableOpacity>
 
           {/* Quantity Controls */}
-          <Animated.View style={{ transform: [{ scale: bounceAnim }] }}>
+          <Animated.View
+            style={{ transform: [{ scale: bounceAnim }] }}
+            pointerEvents={isLoading ? 'none' : 'auto'}
+          >
             <View className="flex-row items-center bg-gray-100 rounded-full">
               <TouchableOpacity
                 onPress={() => onUpdateQuantity(item.id, -1)}
                 className="w-8 h-8 bg-gray-400 rounded-full items-center justify-center"
                 disabled={item.quantity <= 1 || isLoading}
                 style={{ opacity: item.quantity <= 1 || isLoading ? 0.5 : 1 }}
+                activeOpacity={0.7}
               >
-                <MinusIcon color={"#fff"} />
+                <MinusIcon color={"#fff"} size={16} />
               </TouchableOpacity>
-              
-              {isLoading ? (
-                <View className="mx-2 min-w-[16px] items-center justify-center">
+
+              <View className="mx-3 min-w-[20px] items-center justify-center">
+                {isLoading ? (
                   <ActivityIndicator size="small" color="#D30309" />
-                </View>
-              ) : (
-                <Text className="mx-2 text-sm font-NunitoBold text-gray-900 min-w-[16px] text-center">
-                  {item.quantity}
-                </Text>
-              )}
-              
+                ) : (
+                  <Text className="text-sm font-NunitoBold text-gray-900 text-center">
+                    {item.quantity}
+                  </Text>
+                )}
+              </View>
+
               <TouchableOpacity
                 onPress={() => onUpdateQuantity(item.id, 1)}
                 className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center"
                 disabled={item.quantity >= item.stock || isLoading}
                 style={{ opacity: item.quantity >= item.stock || isLoading ? 0.5 : 1 }}
+                activeOpacity={0.7}
               >
-                <PlusIcon color={"#fff"} />
+                <PlusIcon color={"#fff"} size={16} />
               </TouchableOpacity>
             </View>
           </Animated.View>

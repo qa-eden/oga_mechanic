@@ -1,36 +1,46 @@
 "use client";
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
-import CustomButton from '@/components/CustomButton';
-import TextArea from '@/components/forms/TextArea';
 import CustomAlert from '@/components/CustomAlert';
+import MechanicActionConfirmationModal, { MechanicActionType } from '@/components/modals/MechanicActionConfirmationModal';
+import MechanicCancelRequestModal from '@/components/modals/MechanicCancelRequestModal';
+import JobCompletedModal from '@/components/modals/JobCompletedModal';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage } from '@/utils/errorMessages';
-import { 
-  UserIcon, 
-  TruckIcon, 
-  CalendarIcon, 
+import {
+  UserIcon,
+  TruckIcon,
+  CalendarIcon,
   MapPinIcon,
   DocumentTextIcon,
   WrenchScrewdriverIcon,
-  ClockIcon
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClipboardDocumentIcon,
+  CalendarDaysIcon,
 } from 'react-native-heroicons/outline';
+import { CheckCircleIcon as CheckCircleSolidIcon } from 'react-native-heroicons/solid';
 
 const MechanicOrderDetails = () => {
   const params = useLocalSearchParams();
   const orderId = Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined);
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [selectedCancelReason, setSelectedCancelReason] = useState('');
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [actionType, setActionType] = useState<MechanicActionType | null>(null);
+  const [jobCompletedModalVisible, setJobCompletedModalVisible] = useState(false);
   const { showSuccess, showError, showWarning, visible, alertConfig, hideAlert } = useCustomAlert();
 
   // Fetch repair request detail from API
@@ -71,24 +81,6 @@ const MechanicOrderDetails = () => {
     setRefreshing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'accepted':
-      case 'in_transit':
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-      case 'declined':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
@@ -126,6 +118,65 @@ const MechanicOrderDetails = () => {
     return timeSlot.charAt(0).toUpperCase() + timeSlot.slice(1);
   };
 
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  // Copy address to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Using React Native's deprecated Clipboard API as fallback
+      // In production, use expo-clipboard
+      await Linking.openURL(`clipboard:${text}`);
+      showSuccess('Copied!', 'Address copied to clipboard');
+    } catch {
+      // Fallback: show the address in an alert for manual copying
+      Alert.alert('Address', text, [{ text: 'OK' }]);
+    }
+  };
+
+  // Open address in maps
+  const openInMaps = (address: string) => {
+    const encodedAddress = encodeURIComponent(address);
+    const url = Platform.select({
+      ios: `maps:0,0?q=${encodedAddress}`,
+      android: `geo:0,0?q=${encodedAddress}`,
+      default: `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
+    });
+
+    Linking.openURL(url as string).catch(() => {
+      showError('Error', 'Unable to open maps application');
+    });
+  };
+
+  // Add to calendar
+  const addToCalendar = (date: string, timeSlot: string, address: string, serviceType: string) => {
+    const eventDate = new Date(date);
+
+    // Create calendar event URL (works with Google Calendar)
+    const title = encodeURIComponent(`Repair Job - ${serviceType}`);
+    const location = encodeURIComponent(address || 'Customer Location');
+    const details = encodeURIComponent(`Scheduled repair job. Time slot: ${timeSlot}`);
+
+    // Format dates for Google Calendar
+    const startDate = eventDate.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, '');
+
+    const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}&sf=true&output=xml`;
+
+    Linking.openURL(calendarUrl).catch(() => {
+      showError('Error', 'Unable to open calendar');
+    });
+  };
+
   // Helper function to extract error message from API response
   const getApiErrorMessage = (error: any): string => {
     // Check for API response with status: false and message field
@@ -142,93 +193,106 @@ const MechanicOrderDetails = () => {
     return getErrorMessage(error, 'general');
   };
 
-  const handleAccept = async () => {
-    if (!orderId) return;
-    
+  const openActionConfirmation = (action: MechanicActionType) => {
+    setActionType(action);
+    setActionModalVisible(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!orderId || !actionType) return;
+
     try {
-      await acceptRequestMutation.mutateAsync(orderId);
-      refetch(); // Refetch to get updated status
-      showSuccess(
-        'Success',
-        'Repair request accepted successfully.'
-      );
+      if (actionType === 'accept') {
+        await acceptRequestMutation.mutateAsync(orderId);
+        // Await refetch to ensure data is updated before showing success alert
+        await refetch();
+        setActionModalVisible(false);
+        setActionType(null);
+        showSuccess('Success', 'Repair request accepted successfully.');
+      } else if (actionType === 'decline') {
+        await declineRequestMutation.mutateAsync(orderId);
+        // Await refetch to ensure data is updated before showing success alert
+        await refetch();
+        setActionModalVisible(false);
+        setActionType(null);
+        showSuccess('Success', 'Repair request declined successfully.');
+      } else {
+        // Status updates: in_transit, in_progress, completed
+        await updateStatusMutation.mutateAsync({ requestId: orderId, status: actionType });
+
+        // Show job completed modal for completed status
+        if (actionType === 'completed') {
+          setActionModalVisible(false);
+          setActionType(null);
+          // Await refetch before showing modal
+          await refetch();
+          setJobCompletedModalVisible(true);
+          return;
+        }
+
+        // Await refetch to ensure data is updated before showing success alert
+        await refetch();
+        setActionModalVisible(false);
+        setActionType(null);
+        showSuccess('Success', 'Status updated successfully.');
+      }
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        showError('Accept failed', errorMessage);
+        showError('Action failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        showError('Accept failed', 'An error occurred. Please try again.');
+        showError('Action failed', 'An error occurred. Please try again.');
       }
     }
   };
 
-  const handleDecline = async () => {
-    if (!orderId) return;
-    
-    try {
-      await declineRequestMutation.mutateAsync(orderId);
-      refetch(); // Refetch to get updated status
-      showSuccess(
-        'Success',
-        'Repair request declined successfully.'
-      );
-    } catch (error: any) {
-      try {
-        const errorMessage = getApiErrorMessage(error);
-        showError('Decline failed', errorMessage);
-      } catch (alertError) {
-        console.error('Error displaying error message:', alertError);
-        showError('Decline failed', 'An error occurred. Please try again.');
-      }
-    }
+  const handleCancelActionModal = () => {
+    setActionModalVisible(false);
+    setActionType(null);
   };
 
-  const handleUpdateStatus = async (status: string) => {
-    if (!orderId) return;
-    
-    try {
-      await updateStatusMutation.mutateAsync({ requestId: orderId, status });
-      refetch();
-      showSuccess(
-        'Success',
-        'Status updated successfully.'
-      );
-    } catch (error: any) {
-      try {
-        const errorMessage = getApiErrorMessage(error);
-        showError('Update failed', errorMessage);
-      } catch (alertError) {
-        console.error('Error displaying error message:', alertError);
-        showError('Update failed', 'An error occurred. Please try again.');
-      }
-    }
+  const isActionPending = () => {
+    return acceptRequestMutation.isPending ||
+           declineRequestMutation.isPending ||
+           updateStatusMutation.isPending;
   };
 
   const handleCancelRequest = async () => {
-    if (!orderId || !cancelReason.trim()) {
-      showWarning('Validation', 'Please provide a reason for cancellation.');
+    // Determine the reason to send
+    const reason = selectedCancelReason === 'Other' ? cancelReason.trim() : selectedCancelReason;
+
+    if (!orderId || !reason) {
+      showWarning('Validation', 'Please select a reason for cancellation.');
       return;
     }
-    
+
     try {
-      await cancelRequestMutation.mutateAsync({ requestId: orderId, reason: cancelReason.trim() });
+      await cancelRequestMutation.mutateAsync({ requestId: orderId, reason });
       setCancelModalVisible(false);
       setCancelReason('');
-      refetch();
+      setSelectedCancelReason('');
+      // Await refetch to ensure data is updated before showing success alert
+      await refetch();
       showSuccess(
-        'Success',
-        'Repair request cancelled successfully.'
+        'Job Cancelled',
+        'The repair request has been cancelled successfully.'
       );
     } catch (error: any) {
       try {
         const errorMessage = getApiErrorMessage(error);
-        showError('Cancellation failed', errorMessage);
+        showError('Cancellation Failed', errorMessage);
       } catch (alertError) {
         console.error('Error displaying error message:', alertError);
-        showError('Cancellation failed', 'An error occurred. Please try again.');
+        showError('Cancellation Failed', 'An error occurred. Please try again.');
       }
     }
+  };
+
+  const handleCloseCancelModal = () => {
+    setCancelModalVisible(false);
+    setCancelReason('');
+    setSelectedCancelReason('');
   };
 
   if (isLoadingData) {
@@ -305,247 +369,447 @@ const MechanicOrderDetails = () => {
         }
       >
         <View className="px-5 py-4">
-          {/* Status Badge */}
-          <View className="mb-6">
-            <View className={`self-start px-4 py-2 rounded-full ${getStatusColor(status)}`}>
-              <Text className={`text-sm font-NunitoBold`}>
-                {getStatusLabel(status)}
-              </Text>
+          {/* Status Banner */}
+          <View className={`rounded-2xl p-4 mb-5 ${
+            status === 'pending' ? 'bg-amber-50 border-2 border-amber-200' :
+            status === 'accepted' ? 'bg-blue-50 border-2 border-blue-200' :
+            status === 'in_transit' ? 'bg-indigo-50 border-2 border-indigo-200' :
+            status === 'in_progress' ? 'bg-orange-50 border-2 border-orange-200' :
+            status === 'completed' ? 'bg-green-50 border-2 border-green-200' :
+            status === 'cancelled' || status === 'declined' ? 'bg-red-50 border-2 border-red-200' :
+            'bg-gray-50 border-2 border-gray-200'
+          }`}>
+            <View className="flex-row items-center">
+              <View className={`w-12 h-12 rounded-full items-center justify-center mr-3 ${
+                status === 'pending' ? 'bg-amber-100' :
+                status === 'accepted' ? 'bg-blue-100' :
+                status === 'in_transit' ? 'bg-indigo-100' :
+                status === 'in_progress' ? 'bg-orange-100' :
+                status === 'completed' ? 'bg-green-100' :
+                status === 'cancelled' || status === 'declined' ? 'bg-red-100' :
+                'bg-gray-100'
+              }`}>
+                {status === 'pending' && <ClockIcon size={24} color="#D97706" />}
+                {status === 'accepted' && <CheckCircleIcon size={24} color="#2563EB" />}
+                {status === 'in_transit' && <TruckIcon size={24} color="#4F46E5" />}
+                {status === 'in_progress' && <WrenchScrewdriverIcon size={24} color="#EA580C" />}
+                {status === 'completed' && <CheckCircleSolidIcon size={24} color="#16A34A" />}
+                {(status === 'cancelled' || status === 'declined') && <XCircleIcon size={24} color="#DC2626" />}
+              </View>
+              <View className="flex-1">
+                <Text className={`text-lg font-NunitoBold ${
+                  status === 'pending' ? 'text-amber-800' :
+                  status === 'accepted' ? 'text-blue-800' :
+                  status === 'in_transit' ? 'text-indigo-800' :
+                  status === 'in_progress' ? 'text-orange-800' :
+                  status === 'completed' ? 'text-green-800' :
+                  status === 'cancelled' || status === 'declined' ? 'text-red-800' :
+                  'text-gray-800'
+                }`}>
+                  {getStatusLabel(status)}
+                </Text>
+                <Text className={`text-sm font-NunitoRegular mt-0.5 ${
+                  status === 'pending' ? 'text-amber-600' :
+                  status === 'accepted' ? 'text-blue-600' :
+                  status === 'in_transit' ? 'text-indigo-600' :
+                  status === 'in_progress' ? 'text-orange-600' :
+                  status === 'completed' ? 'text-green-600' :
+                  status === 'cancelled' || status === 'declined' ? 'text-red-600' :
+                  'text-gray-600'
+                }`}>
+                  {status === 'pending' && 'Waiting for your response'}
+                  {status === 'accepted' && 'Head to customer location'}
+                  {status === 'in_transit' && 'On your way to customer'}
+                  {status === 'in_progress' && 'Working on the repair'}
+                  {status === 'completed' && 'Job successfully completed'}
+                  {status === 'cancelled' && 'This job was cancelled'}
+                  {status === 'declined' && 'You declined this request'}
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Customer Information */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+          {/* Customer Information Card */}
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center mb-4">
               <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <UserIcon size={20} color="#6B7280" />
+                <UserIcon size={20} color="#374151" />
               </View>
               <Text className="text-lg font-NunitoBold text-gray-900">
-                Customer Information
+                Customer
               </Text>
             </View>
-            
-            <View className="space-y-2">
-              <View className="flex-row justify-between py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600">Name</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {customer?.first_name && customer?.last_name
-                    ? `${customer.first_name} ${customer.last_name}`
-                    : 'N/A'}
-                </Text>
-              </View>
-              
-              <View className="flex-row justify-between py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600">Email</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {customer?.email || 'N/A'}
-                </Text>
-              </View>
-              
-              <View className="flex-row justify-between py-2">
-                <Text className="text-sm font-NunitoMedium text-gray-600">Phone</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {customer?.phone_number || 'N/A'}
-                </Text>
-              </View>
+
+            <View className="bg-gray-50 rounded-xl p-3">
+              <Text className="text-base font-NunitoBold text-gray-900">
+                {customer?.first_name && customer?.last_name
+                  ? `${customer.first_name} ${customer.last_name}`
+                  : 'N/A'}
+              </Text>
             </View>
           </View>
 
           {/* Vehicle Information */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center mb-4">
               <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <TruckIcon size={20} color="#6B7280" />
+                <TruckIcon size={20} color="#374151" />
               </View>
               <Text className="text-lg font-NunitoBold text-gray-900">
-                Vehicle Information
+                Vehicle Details
               </Text>
             </View>
-            
-            <View className="space-y-2">
-              <View className="flex-row justify-between py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600">Make</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {makeName}
-                </Text>
+
+            <View className="bg-gray-50 rounded-xl p-3">
+              <Text className="text-base font-NunitoBold text-gray-900">
+                {makeName} {modelName}
+              </Text>
+              <View className="flex-row items-center mt-2 flex-wrap gap-2">
+                {request.vehicle_year && (
+                  <View className="bg-gray-200 px-3 py-1 rounded-full">
+                    <Text className="text-xs font-NunitoSemiBold text-gray-700">
+                      {request.vehicle_year}
+                    </Text>
+                  </View>
+                )}
+                {request.vehicle_registration && (
+                  <View className="bg-gray-200 px-3 py-1 rounded-full">
+                    <Text className="text-xs font-NunitoSemiBold text-gray-700">
+                      {request.vehicle_registration}
+                    </Text>
+                  </View>
+                )}
               </View>
-              
-              <View className="flex-row justify-between py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600">Model</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {modelName}
-                </Text>
-              </View>
-              
-              {request.vehicle_year && (
-                <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Year</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {request.vehicle_year}
-                  </Text>
-                </View>
-              )}
-              
-              {request.vehicle_registration && (
-                <View className="flex-row justify-between py-2">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Registration</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {request.vehicle_registration}
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
 
-          {/* Service Details */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+          {/* Service Type & Problem */}
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center mb-4">
               <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <WrenchScrewdriverIcon size={20} color="#6B7280" />
+                <WrenchScrewdriverIcon size={20} color="#374151" />
               </View>
               <Text className="text-lg font-NunitoBold text-gray-900">
-                Service Details
+                Service Required
               </Text>
             </View>
-            
-            <View className="space-y-3">
-              <View className="py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600 mb-1">Service Type</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                  {request.service_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}
-                </Text>
-              </View>
-              
-              <View className="py-2 border-b border-gray-100">
-                <Text className="text-sm font-NunitoMedium text-gray-600 mb-1">Problem Description</Text>
-                <Text className="text-sm font-NunitoMedium text-gray-900 leading-5">
-                  {request.problem_description || 'N/A'}
-                </Text>
-              </View>
-              
-              <View className="py-2 border-b border-gray-100">
-                <View className="flex-row items-center mb-2">
-                  <View className="mr-2">
-                    <CalendarIcon size={16} color="#6B7280" />
-                  </View>
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Schedule</Text>
-                </View>
-                <Text className="text-sm font-NunitoBold text-gray-900 ml-6">
-                  {formatDate(request.preferred_date || request.requested_at)}
-                </Text>
-                <Text className="text-sm font-NunitoMedium text-gray-600 ml-6 mt-1">
-                  {formatTime(request.preferred_time_slot)}
-                </Text>
-              </View>
-              
-              <View className="py-2 border-b border-gray-100">
-                <View className="flex-row items-center mb-2">
-                  <View className="mr-2">
-                    <MapPinIcon size={16} color="#6B7280" />
-                  </View>
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Service Address</Text>
-                </View>
-                <Text className="text-sm font-NunitoMedium text-gray-900 ml-6 leading-5">
-                  {request.service_address || 'N/A'}
-                </Text>
-              </View>
-              
-              {request.notes && (
-                <View className="py-2">
-                  <View className="flex-row items-center mb-2">
-                    <View className="mr-2">
-                      <DocumentTextIcon size={16} color="#6B7280" />
-                    </View>
-                    <Text className="text-sm font-NunitoMedium text-gray-600">Additional Notes</Text>
-                  </View>
-                  <Text className="text-sm font-NunitoMedium text-gray-900 ml-6 leading-5">
-                    {request.notes}
+
+            <View className="bg-gray-50 rounded-xl p-3 mb-3">
+              <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider mb-1">
+                Service Type
+              </Text>
+              <Text className="text-base font-NunitoBold text-gray-900">
+                {request.service_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}
+              </Text>
+            </View>
+
+            <View className="bg-gray-50 rounded-xl p-3">
+              <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider mb-1">
+                Problem Description
+              </Text>
+              <Text className="text-sm font-NunitoMedium text-gray-800 leading-5">
+                {request.problem_description || 'No description provided'}
+              </Text>
+            </View>
+
+            {request.notes && (
+              <View className="bg-gray-100 rounded-xl p-3 mt-3">
+                <View className="flex-row items-center mb-1">
+                  <DocumentTextIcon size={14} color="#6B7280" />
+                  <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider ml-1">
+                    Additional Notes
                   </Text>
                 </View>
-              )}
+                <Text className="text-sm font-NunitoMedium text-gray-800 leading-5">
+                  {request.notes}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Schedule Card */}
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
+                  <CalendarIcon size={20} color="#374151" />
+                </View>
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Schedule
+                </Text>
+              </View>
+              {/* Add to Calendar Button */}
+              <TouchableOpacity
+                onPress={() => addToCalendar(
+                  request.preferred_date || request.requested_at,
+                  request.preferred_time_slot,
+                  request.service_address,
+                  request.service_type || 'Repair'
+                )}
+                className="flex-row items-center bg-gray-900 px-3 py-2 rounded-lg"
+              >
+                <CalendarDaysIcon size={16} color="#FFFFFF" />
+                <Text className="text-xs font-NunitoSemiBold text-white ml-1">
+                  Add to Calendar
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="bg-gray-50 rounded-xl p-4">
+              <Text className="text-lg font-NunitoBold text-gray-900">
+                {formatDate(request.preferred_date || request.requested_at)}
+              </Text>
+              <View className="flex-row items-center mt-2">
+                <ClockIcon size={16} color="#6B7280" />
+                <Text className="text-sm font-NunitoSemiBold text-gray-600 ml-2">
+                  {formatTime(request.preferred_time_slot)} slot
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Order Timeline */}
-          <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+          {/* Service Address Card */}
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center mb-4">
               <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <ClockIcon size={20} color="#6B7280" />
+                <MapPinIcon size={20} color="#374151" />
               </View>
               <Text className="text-lg font-NunitoBold text-gray-900">
-                Order Timeline
+                Service Location
               </Text>
             </View>
-            
-            <View className="space-y-3">
-              {request.requested_at && (
-                <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Requested At</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {formatDate(request.requested_at)}
+
+            <View className="bg-gray-50 rounded-xl p-3 mb-3">
+              <Text className="text-sm font-NunitoMedium text-gray-800 leading-5">
+                {request.service_address || 'No address provided'}
+              </Text>
+            </View>
+
+            {/* Action Buttons */}
+            {request.service_address && (
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={() => openInMaps(request.service_address)}
+                  className="flex-1 flex-row items-center justify-center bg-gray-900 py-3 rounded-xl"
+                >
+                  <MapPinIcon size={18} color="#FFFFFF" />
+                  <Text className="text-sm font-NunitoSemiBold text-white ml-2">
+                    View on Map
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => copyToClipboard(request.service_address)}
+                  className="flex-row items-center justify-center bg-gray-100 px-4 py-3 rounded-xl"
+                >
+                  <ClipboardDocumentIcon size={18} color="#6B7280" />
+                  <Text className="text-sm font-NunitoSemiBold text-gray-700 ml-2">
+                    Copy
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Order Timeline - Visual Tracker */}
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
+            <View className="flex-row items-center mb-5">
+              <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
+                <ClockIcon size={20} color="#374151" />
+              </View>
+              <Text className="text-lg font-NunitoBold text-gray-900">
+                Job Progress
+              </Text>
+            </View>
+
+            {/* Timeline Steps */}
+            <View className="pl-2">
+              {/* Step 1: Request Received */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.requested_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`}>
+                    {request.requested_at ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                  <View className={`w-0.5 h-12 ${
+                    request.accepted_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                </View>
+                <View className="flex-1 pb-4">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.requested_at ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    Request Received
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.requested_at ? formatDateTime(request.requested_at) : 'Pending'}
                   </Text>
                 </View>
-              )}
-              
-              {request.accepted_at && (
-                <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Accepted At</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {formatDate(request.accepted_at)}
+              </View>
+
+              {/* Step 2: Job Accepted */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.accepted_at ? 'bg-green-500' :
+                    status === 'declined' ? 'bg-red-500' : 'bg-gray-200'
+                  }`}>
+                    {request.accepted_at ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : status === 'declined' ? (
+                      <XCircleIcon size={20} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                  <View className={`w-0.5 h-12 ${
+                    request.in_transit_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                </View>
+                <View className="flex-1 pb-4">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.accepted_at || status === 'declined' ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    {status === 'declined' ? 'Request Declined' : 'Job Accepted'}
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.accepted_at ? formatDateTime(request.accepted_at) :
+                     status === 'declined' ? 'Declined' : 'Waiting'}
                   </Text>
                 </View>
-              )}
-              
-              {request.started_at && (
-                <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Started At</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {formatDate(request.started_at)}
+              </View>
+
+              {/* Step 3: In Transit */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.in_transit_at ? 'bg-green-500' :
+                    status === 'in_transit' ? 'bg-blue-500' : 'bg-gray-200'
+                  }`}>
+                    {request.in_transit_at ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : status === 'in_transit' ? (
+                      <TruckIcon size={16} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                  <View className={`w-0.5 h-12 ${
+                    request.in_progress_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                </View>
+                <View className="flex-1 pb-4">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.in_transit_at || status === 'in_transit' ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    On The Way
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.in_transit_at ? formatDateTime(request.in_transit_at) :
+                     status === 'in_transit' ? 'In Progress' : 'Pending'}
                   </Text>
                 </View>
-              )}
-              
-              {request.completed_at && (
-                <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Completed At</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {formatDate(request.completed_at)}
+              </View>
+
+              {/* Step 4: Work Started */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.in_progress_at ? 'bg-green-500' :
+                    status === 'in_progress' ? 'bg-orange-500' : 'bg-gray-200'
+                  }`}>
+                    {request.in_progress_at && status === 'completed' ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : status === 'in_progress' ? (
+                      <WrenchScrewdriverIcon size={16} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                  <View className={`w-0.5 h-12 ${
+                    request.completed_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                </View>
+                <View className="flex-1 pb-4">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.in_progress_at || status === 'in_progress' ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    Repair In Progress
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.in_progress_at ? formatDateTime(request.in_progress_at) :
+                     status === 'in_progress' ? 'Working on it' : 'Pending'}
                   </Text>
                 </View>
-              )}
-              
-              {request.cancelled_at && (
-                <View className="flex-row justify-between py-2">
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Cancelled At</Text>
-                  <Text className="text-sm font-NunitoBold text-gray-900">
-                    {formatDate(request.cancelled_at)}
+              </View>
+
+              {/* Step 5: Completed or Cancelled */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.completed_at ? 'bg-green-500' :
+                    request.cancelled_at ? 'bg-red-500' : 'bg-gray-200'
+                  }`}>
+                    {request.completed_at ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : request.cancelled_at ? (
+                      <XCircleIcon size={20} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                </View>
+                <View className="flex-1">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.completed_at ? 'text-green-700' :
+                    request.cancelled_at ? 'text-red-700' : 'text-gray-400'
+                  }`}>
+                    {request.cancelled_at ? 'Job Cancelled' : 'Job Completed'}
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.completed_at ? formatDateTime(request.completed_at) :
+                     request.cancelled_at ? formatDateTime(request.cancelled_at) : 'Pending'}
                   </Text>
                 </View>
-              )}
+              </View>
             </View>
           </View>
 
           {/* Cost Information */}
           {(request.estimated_cost || request.actual_cost) && (
-            <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-              <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-                Cost Information
-              </Text>
-              
-              <View className="space-y-2">
+            <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
+              <View className="flex-row items-center mb-4">
+                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
+                  <Text className="text-lg">₦</Text>
+                </View>
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Earnings
+                </Text>
+              </View>
+
+              <View className="flex-row gap-3">
                 {request.estimated_cost && (
-                  <View className="flex-row justify-between py-2 border-b border-gray-100">
-                    <Text className="text-sm font-NunitoMedium text-gray-600">Estimated Cost</Text>
-                    <Text className="text-sm font-NunitoBold text-gray-900">
+                  <View className="flex-1 bg-gray-50 rounded-xl p-3">
+                    <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider">
+                      Estimated
+                    </Text>
+                    <Text className="text-lg font-NunitoBold text-gray-900 mt-1">
                       ₦{parseFloat(request.estimated_cost).toLocaleString()}
                     </Text>
                   </View>
                 )}
-                
+
                 {request.actual_cost && (
-                  <View className="flex-row justify-between py-2">
-                    <Text className="text-sm font-NunitoMedium text-gray-600">Actual Cost</Text>
-                    <Text className="text-sm font-NunitoBold text-gray-900">
+                  <View className="flex-1 bg-gray-100 rounded-xl p-3">
+                    <Text className="text-xs font-NunitoMedium text-gray-600 uppercase tracking-wider">
+                      Final Amount
+                    </Text>
+                    <Text className="text-lg font-NunitoBold text-gray-900 mt-1">
                       ₦{parseFloat(request.actual_cost).toLocaleString()}
                     </Text>
                   </View>
@@ -554,19 +818,25 @@ const MechanicOrderDetails = () => {
             </View>
           )}
 
-          {/* Cancellation Reason */}
+          {/* Cancellation Reason - keeping red since it's important status */}
           {request.cancellation_reason && (
-            <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
-              <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
-                Cancellation Reason
-              </Text>
-              <Text className="text-sm font-NunitoMedium text-gray-900">
+            <View className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
+              <View className="flex-row items-center mb-3">
+                <View className="w-8 h-8 bg-gray-200 rounded-full items-center justify-center mr-2">
+                  <XCircleIcon size={18} color="#374151" />
+                </View>
+                <Text className="text-base font-NunitoBold text-gray-900">
+                  Cancellation Reason
+                </Text>
+              </View>
+              <Text className="text-sm font-NunitoMedium text-gray-700 leading-5">
                 {request.cancellation_reason}
               </Text>
             </View>
           )}
 
-          <View className="" />
+          {/* Bottom spacing */}
+          <View className="h-4" />
         </View>
       </ScrollView>
 
@@ -578,30 +848,32 @@ const MechanicOrderDetails = () => {
             {status === 'pending' && (
               <>
                 <TouchableOpacity
-                  onPress={handleAccept}
+                  onPress={() => openActionConfirmation('accept')}
                   disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-                  className={`flex-1 bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
                     acceptRequestMutation.isPending || declineRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-green-700 font-NunitoSemiBold text-center">
-                    {acceptRequestMutation.isPending ? 'Accepting...' : '✓ Accept'}
+                  <CheckCircleIcon size={18} color="#16A34A" />
+                  <Text className="text-green-700 font-NunitoSemiBold ml-2">
+                    Accept
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={handleDecline}
+                  onPress={() => openActionConfirmation('decline')}
                   disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
                     acceptRequestMutation.isPending || declineRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
-                    {declineRequestMutation.isPending ? 'Declining...' : '✗ Decline'}
+                  <XCircleIcon size={18} color="#DC2626" />
+                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
+                    Decline
                   </Text>
                 </TouchableOpacity>
               </>
@@ -611,30 +883,32 @@ const MechanicOrderDetails = () => {
             {status === 'accepted' && (
               <>
                 <TouchableOpacity
-                  onPress={() => handleUpdateStatus('in_transit')}
+                  onPress={() => openActionConfirmation('in_transit')}
                   disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
                     updateStatusMutation.isPending || cancelRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-blue-700 font-NunitoSemiBold text-center">
-                    {updateStatusMutation.isPending ? 'Updating...' : '🚚 In Transit'}
+                  <TruckIcon size={18} color="#1D4ED8" />
+                  <Text className="text-blue-700 font-NunitoSemiBold ml-2">
+                    Start Transit
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setCancelModalVisible(true)}
                   disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
                     updateStatusMutation.isPending || cancelRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
-                    ✗ Cancel
+                  <XCircleIcon size={18} color="#DC2626" />
+                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
+                    Cancel Job
                   </Text>
                 </TouchableOpacity>
               </>
@@ -644,46 +918,49 @@ const MechanicOrderDetails = () => {
             {status === 'in_transit' && (
               <>
                 <TouchableOpacity
-                  onPress={() => handleUpdateStatus('in_progress')}
+                  onPress={() => openActionConfirmation('in_progress')}
                   disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
                     updateStatusMutation.isPending || cancelRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-green-700 font-NunitoSemiBold text-center">
-                    {updateStatusMutation.isPending ? 'Updating...' : '🔧 In Progress'}
+                  <WrenchScrewdriverIcon size={18} color="#16A34A" />
+                  <Text className="text-green-700 font-NunitoSemiBold ml-2">
+                    Start Work
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setCancelModalVisible(true)}
                   disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
                     updateStatusMutation.isPending || cancelRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <Text className="text-[#E10000] font-NunitoSemiBold text-center">
-                    ✗ Cancel
+                  <XCircleIcon size={18} color="#DC2626" />
+                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
+                    Cancel Job
                   </Text>
                 </TouchableOpacity>
               </>
             )}
 
-            {/* In Progress: Cancel only */}
+            {/* In Progress: Complete */}
             {status === 'in_progress' && (
               <TouchableOpacity
-                onPress={() => setCancelModalVisible(true)}
-                disabled={cancelRequestMutation.isPending}
-                className={`flex-1 bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
-                  cancelRequestMutation.isPending ? 'opacity-50' : ''
+                onPress={() => openActionConfirmation('completed')}
+                disabled={updateStatusMutation.isPending}
+                className={`flex-1 flex-row items-center justify-center bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
+                  updateStatusMutation.isPending ? 'opacity-50' : ''
                 }`}
               >
-                <Text className="text-[#E10000] font-NunitoSemiBold text-center">
-                  {cancelRequestMutation.isPending ? 'Cancelling...' : '✗ Cancel'}
+                <CheckCircleIcon size={18} color="#16A34A" />
+                <Text className="text-green-700 font-NunitoSemiBold ml-2">
+                  Job Completed
                 </Text>
               </TouchableOpacity>
             )}
@@ -692,94 +969,32 @@ const MechanicOrderDetails = () => {
       )}
 
       {/* Cancel Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <MechanicCancelRequestModal
         visible={cancelModalVisible}
-        onRequestClose={() => setCancelModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-        >
-          <View className="flex-1 justify-end">
-            {/* Backdrop - tap to dismiss keyboard */}
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View className="absolute inset-0 bg-black/50" />
-            </TouchableWithoutFeedback>
-            
-            {/* Modal Content */}
-            <View className="bg-white rounded-t-3xl px-6 pt-4 pb-8 max-h-[80%]">
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Drawer Handle */}
-                <View className="items-center mb-6">
-                  <View className="w-12 h-1 bg-gray-300 rounded-full" />
-                </View>
+        onClose={handleCloseCancelModal}
+        onConfirm={handleCancelRequest}
+        cancelReason={cancelReason}
+        selectedCancelReason={selectedCancelReason}
+        onReasonChange={setCancelReason}
+        onSelectedReasonChange={setSelectedCancelReason}
+        isLoading={cancelRequestMutation.isPending}
+      />
 
-                {/* Icon */}
-                <View className="items-center mb-4">
-                  <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
-                    <Text className="text-red-600 text-2xl font-bold">✗</Text>
-                  </View>
-                </View>
+      {/* Action Confirmation Modal */}
+      <MechanicActionConfirmationModal
+        visible={actionModalVisible}
+        actionType={actionType}
+        onConfirm={handleConfirmAction}
+        onCancel={handleCancelActionModal}
+        isLoading={isActionPending()}
+      />
 
-                {/* Title */}
-                <Text className="text-xl font-NunitoBold text-left text-gray-800 mb-3">
-                  Cancel Repair Request
-                </Text>
-
-                {/* Message */}
-                <Text className="text-gray-600 text-left mb-6 font-NunitoRegular leading-6">
-                  Please provide a reason for cancelling this repair request. This action cannot be undone.
-                </Text>
-
-                {/* Reason Input */}
-                <View className="mb-6">
-                  <TextArea
-                    label="Cancellation Reason"
-                    placeholder="Enter reason for cancellation..."
-                    value={cancelReason}
-                    onChangeText={setCancelReason}
-                    rows={4}
-                    required
-                  />
-                </View>
-
-                {/* Buttons */}
-                <View className="space-y-3 pb-4">
-                  <CustomButton
-                    onPress={handleCancelRequest}
-                    title="Cancel Request"
-                    bgVariant="danger"
-                    textVariant="default"
-                    className=""
-                    loading={cancelRequestMutation.isPending}
-                    loadingText="Cancelling"
-                    disabled={!cancelReason.trim() || cancelRequestMutation.isPending}
-                  />
-
-                  <CustomButton
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setCancelModalVisible(false);
-                      setCancelReason('');
-                    }}
-                    title="Back"
-                    bgVariant="outline"
-                    textVariant="outline"
-                    className="mt-3"
-                    disabled={cancelRequestMutation.isPending}
-                  />
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* Job Completed Success Modal */}
+      <JobCompletedModal
+        visible={jobCompletedModalVisible}
+        onClose={() => setJobCompletedModalVisible(false)}
+        showViewEarnings={true}
+      />
 
       {/* Custom Alert */}
       <CustomAlert

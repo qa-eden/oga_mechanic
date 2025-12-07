@@ -10,25 +10,22 @@ import {
   Dimensions,
   RefreshControl,
 } from "react-native";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import {
-  CheckIcon,
-} from "react-native-heroicons/outline";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState as useLocalState } from "react";
 import CustomButton from "@/components/CustomButton";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import PaymentMethodModal from "@/components/modals/PaymentMethodModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { routes } from "@/constants/routes";
 import CartItemCard from "@/components/cards/CartItemCard";
-import { useCart, useUpdateCartItem, useRemoveFromCart, useUpdateCartItemQuantity } from "@/hooks/useCart";
+import { useCart, useRemoveFromCart } from "@/hooks/useCart";
 import { useCheckout } from "@/hooks/useProducts";
 import { getErrorMessage } from "@/utils/errorMessages";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
+import { useDebouncedQuantityUpdate } from "@/hooks/useDebouncedQuantityUpdate";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -47,45 +44,51 @@ const Cart = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [loadingItems, setLoadingItems] = useState<Set<number>>(new Set());
+  const [removeLoadingItems, setRemoveLoadingItems] = useState<Set<number>>(new Set());
 
   // Cart API hooks
-  const { 
-    data: cartData, 
-    isLoading: cartLoading, 
-    error: cartError, 
-    refetch: refetchCart 
+  const {
+    data: cartData,
+    isLoading: cartLoading,
+    error: cartError,
+    refetch: refetchCart
   } = useCart();
-  
-  const updateCartItemMutation = useUpdateCartItem();
+
   const removeFromCartMutation = useRemoveFromCart();
-  const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
   const checkoutMutation = useCheckout();
+
+  // Debounced quantity update hook
+  const {
+    updateQuantity: debouncedUpdateQuantity,
+    getDisplayQuantity,
+    isItemLoading,
+    cleanup: cleanupDebouncedUpdates,
+  } = useDebouncedQuantityUpdate({
+    debounceMs: 800,
+    onSuccess: () => {
+      refetchCart();
+    },
+  });
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupDebouncedUpdates();
+    };
+  }, [cleanupDebouncedUpdates]);
 
   // Transform API data to local format for compatibility
   const cartItems: CartItem[] = (() => {
     try {
-      // Check if cart data exists and has items
-      if (!cartData?.data) {
+      if (!cartData?.data?.items || !Array.isArray(cartData.data.items)) {
         return [];
       }
-      
-      if (!cartData.data.items || !Array.isArray(cartData.data.items)) {
-        return [];
-      }
-      
+
       return cartData.data.items
-        .filter((item) => {
-          // Filter out invalid items
-          if (!item) {
-            return false;
-          }
-          
-          return true;
-        })
+        .filter((item) => !!item)
         .map((item) => ({
           id: parseInt(item.id || '0'),
-          name: item.product?.name || `Product ${item.id}`, // Fallback to product ID
+          name: item.product?.name || `Product ${item.id}`,
           price: parseFloat(item.product?.price || '0'),
           originalPrice: item.product?.original_price ? parseFloat(item.product.original_price) : undefined,
           discount: item.product?.discount || 0,
@@ -98,23 +101,7 @@ const Cart = () => {
     }
   })();
 
-  
-  // Note: The cart API only returns item IDs and quantities, not full product details
-  // For a complete cart experience, we would need to:
-  // 1. Fetch product details for each cart item ID separately, or
-  // 2. Modify the cart API to include product details in the response
-
-  const deliveryFee = 2000;
-  // const fadeAnim = useRef(new Animated.Value(1)).current;
-  // const slideAnim = useRef(new Animated.Value(0)).current;
-  // const scaleAnim = useRef(new Animated.Value(1)).current;
-  // const bounceAnim = useRef(new Animated.Value(1)).current;
-
-  const itemSlideAnim = useRef(new Animated.Value(50)).current;
-  const itemFadeAnim = useRef(new Animated.Value(0)).current;
-
-  const [selectedItems, setSelectedItems] = useLocalState<number[]>([]);
-  const [selectAll, setSelectAll] = useLocalState(false);
+  const deliveryFee = 0; // Free delivery
 
   const bounceAnims = useRef<{ [id: number]: Animated.Value }>({}).current;
   cartItems.forEach((item) => {
@@ -128,95 +115,45 @@ const Cart = () => {
     if (!fadeAnims[item.id]) fadeAnims[item.id] = new Animated.Value(1);
   });
 
-  // Staggered animation for cart items
-  useEffect(() => {
-    const animations = cartItems.map((_, index) =>
-      Animated.timing(new Animated.Value(0), {
-        toValue: 1,
-        duration: 300,
-        delay: index * 100,
-        useNativeDriver: true,
-      })
-    );
 
-    Animated.stagger(100, animations).start();
-  }, []);
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(itemSlideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(itemFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const updateQuantity = (id: number, change: number) => {
     // Find the cart item and determine action
     const cartItem = cartItems.find(item => item.id === id);
-    if (cartItem) {
-      // Check if we can increment/decrement based on stock
-      const canIncrement = change > 0 && cartItem.quantity < cartItem.stock;
-      const canDecrement = change < 0 && cartItem.quantity > 1;
-      
-      if ((change > 0 && canIncrement) || (change < 0 && canDecrement)) {
-        // Add item to loading state
-        setLoadingItems(prev => new Set(prev).add(id));
-        
-        // Find the original API item and get the product ID
-        const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
-        if (apiItem && apiItem.product?.id) {
-          // Use the product ID from the product object
-          updateCartItemQuantityMutation.mutate({
-            productId: apiItem.product.id, // Using actual product ID
-            action: change > 0 ? "increment" : "decrement"
-          }, {
-            onSuccess: () => {
-              // Remove from loading state on success
-              setLoadingItems(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(id);
-                return newSet;
-              });
-              
-              // Bounce animation for quantity change
-              Animated.sequence([
-                Animated.timing(bounceAnims[id], {
-                  toValue: 1.2,
-                  duration: 150,
-                  useNativeDriver: true,
-                }),
-                Animated.timing(bounceAnims[id], {
-                  toValue: 1,
-                  duration: 150,
-                  useNativeDriver: true,
-                }),
-              ]).start();
-            },
-            onError: () => {
-              // Remove from loading state on error
-              setLoadingItems(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(id);
-                return newSet;
-              });
-            }
-          });
-        }
-      }
-    }
+    if (!cartItem) return;
+
+    // Find the original API item and get the product ID
+    const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
+    if (!apiItem?.product?.id) return;
+
+    // Use the debounced update - it handles stock limits internally
+    debouncedUpdateQuantity(
+      id,
+      apiItem.product.id,
+      cartItem.quantity,
+      change,
+      cartItem.stock
+    );
+
+    // Bounce animation for immediate feedback
+    Animated.sequence([
+      Animated.timing(bounceAnims[id], {
+        toValue: 1.1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnims[id], {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const removeItem = (id: number) => {
     // Add item to loading state
-    setLoadingItems(prev => new Set(prev).add(id));
-    
+    setRemoveLoadingItems(prev => new Set(prev).add(id));
+
     // Find the original API item and get the product ID
     const apiItem = cartData?.data?.items?.find(item => parseInt(item.id) === id);
     if (apiItem && apiItem.product?.id) {
@@ -224,12 +161,12 @@ const Cart = () => {
       removeFromCartMutation.mutate(apiItem.product.id, {
         onSuccess: () => {
           // Remove from loading state on success
-          setLoadingItems(prev => {
+          setRemoveLoadingItems(prev => {
             const newSet = new Set(prev);
             newSet.delete(id);
             return newSet;
           });
-          
+
           // Start delete animation after successful API call
           Animated.parallel([
             Animated.timing(slideAnims[id], {
@@ -250,7 +187,7 @@ const Cart = () => {
         },
         onError: () => {
           // Remove from loading state on error
-          setLoadingItems(prev => {
+          setRemoveLoadingItems(prev => {
             const newSet = new Set(prev);
             newSet.delete(id);
             return newSet;
@@ -260,24 +197,20 @@ const Cart = () => {
     }
   };
 
-  // Only calculate for selected items
-  const selectedCartItems = cartItems.filter((item) =>
-    selectedItems.includes(item.id)
-  );
+  // Calculate totals for all cart items (no selection needed)
   const calculateTotal = () => {
-    return selectedCartItems.reduce(
+    return cartItems.reduce(
       (total, item) => total + item.price * item.quantity,
       0
     );
   };
 
   const calculateSubTotal = () => {
-    // Only add delivery fee if at least one item is selected
-    return selectedCartItems.length > 0 ? calculateTotal() + deliveryFee : 0;
+    return cartItems.length > 0 ? calculateTotal() + deliveryFee : 0;
   };
 
   const calculateSavings = () => {
-    return selectedCartItems.reduce((savings, item) => {
+    return cartItems.reduce((savings, item) => {
       if (item.originalPrice) {
         return savings + (item.originalPrice - item.price) * item.quantity;
       }
@@ -285,14 +218,16 @@ const Cart = () => {
     }, 0);
   };
 
+  const getTotalQuantity = () => {
+    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
   const handleMakePayment = () => {
     setIsLoading(true);
-    // Simulate loading
     setTimeout(() => {
       setIsLoading(false);
       setShowPaymentModal(true);
-      // router.push("/(root)/(screens)/payment");
-    }, 1500);
+    }, 500);
   };
 
   // Pull to refresh function
@@ -301,21 +236,11 @@ const Cart = () => {
     try {
       await refetchCart();
     } catch (error) {
+      // Handle silently
     } finally {
       setIsRefreshing(false);
     }
   }, [refetchCart]);
-
-  // Handle select all functionality
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedItems([]);
-      setSelectAll(false);
-    } else {
-      setSelectedItems(cartItems.map((item) => item.id));
-      setSelectAll(true);
-    }
-  };
 
   const handlePaymentMethodSelect = (paymentMethod: string) => {
     setShowPaymentModal(false);
@@ -324,7 +249,7 @@ const Cart = () => {
 
       checkoutMutation.mutate({
         paymentMethod,
-        mobileCallbackUrl: "/(root)/(screens)/(user)/payment-result"
+        mobileCallbackUrl: "ogamechanic://payment-callback"
       }, {
         onSuccess: (response) => {
           setIsLoading(false);
@@ -349,76 +274,62 @@ const Cart = () => {
             alert("Payment initialized successfully!");
           }
         },
-        onError: (error) => {
+        onError: () => {
           setIsLoading(false);
-          // Show error message
           alert("Payment failed. Please try again.");
         }
       });
     } else if (paymentMethod === "cash_on_delivery") {
-      // Handle cash on delivery with API call
-      
       checkoutMutation.mutate({
         paymentMethod
       }, {
-        onSuccess: (response) => {
+        onSuccess: () => {
           setIsLoading(false);
-
-          // Trigger cart refresh after successful checkout
           refetchCart();
-
-          // Show success message but don't navigate yet
           alert("Cash on delivery order created successfully!");
         },
-        onError: (error) => {
+        onError: () => {
           setIsLoading(false);
-          // Show error message
           alert("Order creation failed. Please try again.");
         }
       });
     } else {
-      // Handle legacy payment methods (if any)
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        if (paymentMethod === "transfer") {
-          router.push(routes?.bankTransfer);
-        } else {
-          router.push(routes?.cardPayment);
-        }
-      }, 1500);
+      // Unsupported payment method - show error
+      setIsLoading(false);
+      alert("This payment method is not currently supported. Please select 'Online Payment' or 'Cash on Delivery'.");
     }
   };
 
-  const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => (
-    <CartItemCard
-      item={item}
-      index={index}
-      isSelected={selectedItems.includes(item.id)}
-      fadeAnim={fadeAnims[item.id]}
-      slideAnim={slideAnims[item.id]}
-      bounceAnim={bounceAnims[item.id]}
-      isLoading={loadingItems.has(item.id)}
-      onSelect={(id) => {
-        setSelectedItems((prev) =>
-          prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-        );
-      }}
-      onRemove={removeItem}
-      onUpdateQuantity={updateQuantity}
-      onPress={() => {
-        const apiItem = cartData?.data?.items?.find(i => parseInt(i.id) === item.id);
-        if (apiItem?.product?.id) {
-          router.push({
-            pathname: routes.ProductDetail,
-            params: {
-              productId: apiItem.product.id.toString(),
-            },
-          });
-        }
-      }}
-    />
-  );
+  const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => {
+    // Get optimistic quantity for display (updates immediately on tap)
+    const displayQuantity = getDisplayQuantity(item.id, item.quantity);
+    // Combine loading states from both debounced updates and remove operations
+    const isItemCurrentlyLoading = isItemLoading(item.id) || removeLoadingItems.has(item.id);
+
+    return (
+      <CartItemCard
+        item={{ ...item, quantity: displayQuantity }}
+        index={index}
+        fadeAnim={fadeAnims[item.id]}
+        slideAnim={slideAnims[item.id]}
+        bounceAnim={bounceAnims[item.id]}
+        isLoading={isItemCurrentlyLoading}
+        onRemove={removeItem}
+        onUpdateQuantity={updateQuantity}
+        onPress={() => {
+          const apiItem = cartData?.data?.items?.find(i => parseInt(i.id) === item.id);
+          if (apiItem?.product?.id) {
+            router.push({
+              pathname: routes.ProductDetail,
+              params: {
+                productId: apiItem.product.id.toString(),
+              },
+            });
+          }
+        }}
+      />
+    );
+  };
 
   // Loading state
   if (cartLoading) {
@@ -588,31 +499,7 @@ const Cart = () => {
         )}
 
         {/* Cart Items */}
-        <View className="pt-4">
-          {/* Select All Button */}
-          <View className="mx-5 mb-2 flex-row items-center">
-            <TouchableOpacity
-              onPress={handleSelectAll}
-              className="flex-row items-center"
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: selectAll ? "#111" : "#fff",
-                borderWidth: 2,
-                borderColor: "#111",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}
-            >
-              {selectAll && <CheckIcon size={18} color="#fff" />}
-            </TouchableOpacity>
-            <Text className="text-base font-NunitoBold text-gray-900">
-              Select All ({cartItems.length} items)
-            </Text>
-          </View>
-
+        <View className="pt-2">
           <FlatList
             data={cartItems}
             renderItem={renderCartItem}
@@ -630,91 +517,71 @@ const Cart = () => {
         <View className="h-10" />
       </ScrollView>
 
-      {/* Enhanced Bottom Summary */}
-      <LinearGradient
-        colors={["#FFFFFF", "#F8FAFC"]}
-        style={{ borderTopWidth: 1, borderTopColor: "#e5e7eb" }} // #e5e7eb is Tailwind's gray-200
-        className=""
-      >
-        <View className="px-3 pb-6">
-          {/* Summary Details */}
-          <View className="p-4">
-            {/* Items Total */}
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-base font-NunitoMedium text-gray-600">
-                Items (
-                {selectedCartItems.reduce(
-                  (sum, item) => sum + item.quantity,
-                  0
-                )}
-                )
-              </Text>
-              <NairaCurrency
-                value={calculateTotal()}
-                className="text-base font-NunitoBold text-gray-900"
-              />
-            </View>
-
-            {/* Savings */}
-            {calculateSavings() > 0 && (
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-base font-NunitoMedium text-green-600">
-                  Savings
-                </Text>
-                <Text className="text-base font-NunitoBold text-green-600">
-                  -₦{calculateSavings().toLocaleString()}
-                </Text>
-              </View>
-            )}
-
-            {/* Delivery Fee */}
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-base font-NunitoMedium text-gray-600">
-                Delivery fee
-              </Text>
-              <NairaCurrency
-                value={deliveryFee}
-                className="text-base font-NunitoBold text-gray-900"
-              />
-            </View>
-
-            {/* Divider */}
-            <View className="h-px bg-gray-200 my-3" />
-
-            {/* Sub Total */}
-            <View className="flex-row justify-between items-center">
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Total
-              </Text>
-              <NairaCurrency
-                value={calculateSubTotal()}
-                className="text-xl font-NunitoExtraBold text-primary-500"
-              />
-            </View>
-          </View>
-
-          <CustomButton
-            title={`Make Payment ₦${calculateSubTotal().toLocaleString()}`}
-            onPress={handleMakePayment}
-            className=""
-            bgVariant="primary"
-            loading={isLoading}
-            loadingText="Processing"
-            disabled={selectedCartItems.length === 0}
+      {/* Order Summary */}
+      <View className="bg-white border-t border-gray-200 px-5 pt-4 pb-2">
+        {/* Summary Row */}
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-sm font-NunitoMedium text-gray-500">
+            Subtotal ({getTotalQuantity()} items)
+          </Text>
+          <NairaCurrency
+            value={calculateTotal()}
+            className="text-sm font-NunitoBold text-gray-900"
           />
+        </View>
 
-          {/* Security Badge */}
-          <View className="flex-row items-center justify-center mt-3">
-            <View className="w-4 h-4 bg-green-500 rounded-full mr-2" />
-            <Text className="text-sm text-gray-500">
-              🔒 Secure payment guaranteed
+        {/* Savings */}
+        {calculateSavings() > 0 && (
+          <View className="flex-row justify-between items-center mb-2">
+            <Text className="text-sm font-NunitoMedium text-green-600">
+              You save
+            </Text>
+            <Text className="text-sm font-NunitoBold text-green-600">
+              -₦{calculateSavings().toLocaleString()}
             </Text>
           </View>
+        )}
 
-          {/* Android Navigation Bar Spacer */}
-          <AndroidNavBarSpacer backgroundColor="transparent" extraHeight={6} />
+        {/* Delivery Fee */}
+        <View className="flex-row justify-between items-center mb-3">
+          <Text className="text-sm font-NunitoMedium text-gray-500">
+            Delivery
+          </Text>
+          <Text className="text-sm font-NunitoBold text-green-600">
+            Free
+          </Text>
         </View>
-      </LinearGradient>
+
+        {/* Divider */}
+        <View className="h-px bg-gray-100 mb-3" />
+
+        {/* Total */}
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-lg font-NunitoBold text-gray-900">Total</Text>
+          <NairaCurrency
+            value={calculateSubTotal()}
+            className="text-xl font-NunitoExtraBold text-gray-900"
+          />
+        </View>
+
+        {/* Checkout Button */}
+        <CustomButton
+          title="Proceed to Checkout"
+          onPress={handleMakePayment}
+          bgVariant="primary"
+          loading={isLoading}
+          loadingText="Processing..."
+          disabled={cartItems.length === 0}
+        />
+
+        {/* Security Note */}
+        <Text className="text-xs text-gray-400 text-center mt-3 mb-2">
+          🔒 Secure checkout
+        </Text>
+
+        {/* Android Navigation Bar Spacer */}
+        <AndroidNavBarSpacer backgroundColor="transparent" extraHeight={4} />
+      </View>
 
       <PaymentMethodModal
         isVisible={showPaymentModal}

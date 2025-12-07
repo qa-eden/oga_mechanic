@@ -169,3 +169,35 @@ export const useNotifications = () => {
     networkMode: 'online',
   });
 };
+
+// Hook to mark a notification as read
+export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number | string) => userAPI.markNotificationAsRead(id),
+    onSuccess: () => {
+      // Invalidate and refetch notifications
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
+    },
+    onError: (error) => {
+      console.error('❌ Error marking notification as read:', error);
+    },
+  });
+};
+
+// Hook to mark all notifications as read
+export const useMarkAllNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.markAllNotificationsAsRead,
+    onSuccess: () => {
+      // Invalidate and refetch notifications
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
+    },
+    onError: (error) => {
+      console.error('❌ Error marking all notifications as read:', error);
+    },
+  });
+};

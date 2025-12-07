@@ -1,33 +1,27 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  ImageBackground,
   RefreshControl,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { LinearGradient } from "expo-linear-gradient";
-import { NairaCurrency } from "@/utils/useCurrencyFormatter";
-import { images } from "@/constants";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
-import { routes } from "@/constants/routes";
 import { mechanicRoutes } from "@/constants/routes";
 import Navbar from "@/components/Navbar";
+import MechanicActionConfirmationModal, { MechanicActionType } from "@/components/modals/MechanicActionConfirmationModal";
 import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest, useMechanicAnalytics } from "@/hooks/useRepairRequests";
 import { useQuery } from "@tanstack/react-query";
 import { mechanicAPI } from "@/lib/api/mechanic";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
-import { useEffect, useRef } from "react";
-import { Animated } from "react-native";
 
 // Metric Card Skeleton Loader
 const MetricCardSkeleton = () => {
@@ -173,7 +167,6 @@ const MechanicHome = () => {
   const {
     data: analyticsData,
     isLoading: analyticsLoading,
-    error: analyticsError,
     refetch: refetchAnalytics
   } = useMechanicAnalytics();
 
@@ -183,6 +176,11 @@ const MechanicHome = () => {
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
   const declineRequestMutation = useDeclineRepairRequest();
+
+  // State for confirmation modal
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [actionType, setActionType] = useState<MechanicActionType | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -260,22 +258,44 @@ const MechanicHome = () => {
     }
   })();
 
-  const handleAccept = async (orderId: string) => {
+  const openActionConfirmation = (action: MechanicActionType, orderId: string) => {
+    setActionType(action);
+    setSelectedOrderId(orderId);
+    setActionModalVisible(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!selectedOrderId || !actionType) return;
+
     try {
-      await acceptRequestMutation.mutateAsync(orderId);
-      console.log("Request accepted:", orderId);
+      if (actionType === 'accept') {
+        await acceptRequestMutation.mutateAsync(selectedOrderId);
+        console.log("Request accepted:", selectedOrderId);
+      } else if (actionType === 'decline') {
+        await declineRequestMutation.mutateAsync(selectedOrderId);
+        console.log("Request declined:", selectedOrderId);
+      }
+
+      setActionModalVisible(false);
+      setActionType(null);
+      setSelectedOrderId(null);
     } catch (error) {
-      console.error("Error accepting request:", error);
+      console.error("Error processing action:", error);
     }
   };
 
-  const handleDecline = async (orderId: string) => {
-    try {
-      await declineRequestMutation.mutateAsync(orderId);
-      console.log("Request declined:", orderId);
-    } catch (error) {
-      console.error("Error declining request:", error);
-    }
+  const handleCancelActionModal = () => {
+    setActionModalVisible(false);
+    setActionType(null);
+    setSelectedOrderId(null);
+  };
+
+  const handleAccept = (orderId: string) => {
+    openActionConfirmation('accept', orderId);
+  };
+
+  const handleDecline = (orderId: string) => {
+    openActionConfirmation('decline', orderId);
   };
 
   const handleView = (orderId: string) => {
@@ -287,13 +307,50 @@ const MechanicHome = () => {
     });
   };
 
-  const ratingData = [
-    { stars: 5, count: 900, percentage: 90, color: "bg-green-500" },
-    { stars: 4, count: 50, percentage: 5, color: "bg-blue-500" },
-    { stars: 3, count: 25, percentage: 2.5, color: "bg-purple-500" },
-    { stars: 2, count: 15, percentage: 1.5, color: "bg-orange-500" },
-    { stars: 1, count: 15, percentage: 1.5, color: "bg-red-500" },
-  ];
+  // Transform rating distribution from API to ratingData format
+  const ratingData = (() => {
+    const distribution = analyticsData?.data?.ratings?.rating_distribution || {};
+    const totalReviews = analyticsData?.data?.ratings?.total_reviews || 0;
+    
+    return [
+      { 
+        stars: 5, 
+        count: distribution['5'] || 0, 
+        percentage: totalReviews > 0 ? ((distribution['5'] || 0) / totalReviews) * 100 : 0, 
+        color: "bg-green-500" 
+      },
+      { 
+        stars: 4, 
+        count: distribution['4'] || 0, 
+        percentage: totalReviews > 0 ? ((distribution['4'] || 0) / totalReviews) * 100 : 0, 
+        color: "bg-blue-500" 
+      },
+      { 
+        stars: 3, 
+        count: distribution['3'] || 0, 
+        percentage: totalReviews > 0 ? ((distribution['3'] || 0) / totalReviews) * 100 : 0, 
+        color: "bg-purple-500" 
+      },
+      { 
+        stars: 2, 
+        count: distribution['2'] || 0, 
+        percentage: totalReviews > 0 ? ((distribution['2'] || 0) / totalReviews) * 100 : 0, 
+        color: "bg-orange-500" 
+      },
+      { 
+        stars: 1, 
+        count: distribution['1'] || 0, 
+        percentage: totalReviews > 0 ? ((distribution['1'] || 0) / totalReviews) * 100 : 0, 
+        color: "bg-red-500" 
+      },
+    ];
+  })();
+
+  // Get average rating from API, default to 0
+  const averageRating = analyticsData?.data?.ratings?.avg_rating ?? 0;
+
+  // Get total reviews count from API
+  const totalReviews = String(analyticsData?.data?.ratings?.total_reviews || 0);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -339,9 +396,16 @@ const MechanicHome = () => {
           </View> */}
 
           {/* Key Metrics Header */}
-          <Text className="text-lg font-NunitoBold text-gray-900 mb-2">
-            Key Metrics
-          </Text>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-lg font-NunitoBold text-gray-900">
+              Key Metrics
+            </Text>
+            {!analyticsLoading && analyticsData?.data?.time_window && (
+              <Text className="text-xs text-gray-500 font-NunitoMedium">
+                Last 7 days: {analyticsData.data.time_window.last_7_days_requests || 0}
+              </Text>
+            )}
+          </View>
 
           {/* Metrics */}
           <View className="flex-row gap-4 space-x-4 mb-4">
@@ -349,33 +413,66 @@ const MechanicHome = () => {
               <>
                 <MetricCardSkeleton />
                 <MetricCardSkeleton />
+                <MetricCardSkeleton />
               </>
             ) : (
               <>
-                <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4 ">
+                <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4">
                   <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                    Total Repair Requests
+                    Total Requests
                   </Text>
                   <Text className="text-2xl font-NunitoBold text-gray-900">
-                    {analyticsData?.data?.total_repair_requests || 0}
+                    {analyticsData?.data?.summary?.total_repair_requests || 0}
                   </Text>
                 </View>
                 <View className="flex-1 gradient-to-r from-[#D7CFF1] to-[#D3C8E4] bg-[#D3C8E4] rounded-[.4rem] p-4">
                   <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                    Completed Requests
+                    Completed
                   </Text>
                   <Text className="text-2xl font-NunitoBold text-gray-900">
-                    {analyticsData?.data?.completed_repair_requests || 0}
+                    {analyticsData?.data?.summary?.completed_repair_requests || 0}
+                  </Text>
+                </View>
+                <View className="flex-1 gradient-to-r from-[#FED7D7] to-[#FEB2B2] bg-[#FEB2B2] rounded-[.4rem] p-4">
+                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                    In Progress
+                  </Text>
+                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                    {analyticsData?.data?.summary?.in_progress_repair_requests || 0}
                   </Text>
                 </View>
               </>
             )}
           </View>
 
+          {/* Additional Metrics Row */}
+          {!analyticsLoading && (
+            <View className="flex-row gap-4 space-x-4 mb-4">
+              <View className="flex-1 bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] bg-[#FDE68A] rounded-[.4rem] p-4">
+                <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                  Completion Rate
+                </Text>
+                <Text className="text-2xl font-NunitoBold text-gray-900">
+                  {analyticsData?.data?.summary?.completion_rate 
+                    ? `${(analyticsData.data.summary.completion_rate * 100).toFixed(1)}%`
+                    : '0%'}
+                </Text>
+              </View>
+              <View className="flex-1 bg-gradient-to-r from-[#D1FAE5] to-[#A7F3D0] bg-[#A7F3D0] rounded-[.4rem] p-4">
+                <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                  Total Customers
+                </Text>
+                <Text className="text-2xl font-NunitoBold text-gray-900">
+                  {analyticsData?.data?.summary?.distinct_customers || 0}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Customer Reviews */}
           <CustomerReviewCard
-            totalReviews="1K"
-            averageRating={4.7}
+            totalReviews={totalReviews}
+            averageRating={averageRating}
             ratingData={ratingData}
           />
 
@@ -446,6 +543,15 @@ const MechanicHome = () => {
           {/* <View className="h-10" /> */}
         </View>
       </ScrollView>
+
+      {/* Action Confirmation Modal */}
+      <MechanicActionConfirmationModal
+        visible={actionModalVisible}
+        actionType={actionType}
+        onConfirm={handleConfirmAction}
+        onCancel={handleCancelActionModal}
+        isLoading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+      />
     </SafeAreaView>
   );
 };

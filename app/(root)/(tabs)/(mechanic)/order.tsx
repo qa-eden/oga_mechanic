@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, RefreshControl, Animated } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { mechanicRoutes } from "@/constants/routes";
 import OrderCard, { Order } from "@/components/OrderCard";
+import MechanicActionConfirmationModal, { MechanicActionType } from "@/components/modals/MechanicActionConfirmationModal";
 import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest } from "@/hooks/useRepairRequests";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
-import CustomButton from "@/components/CustomButton";
 
 // Order Card Skeleton Loader
 const OrderCardSkeleton = () => {
@@ -69,8 +69,8 @@ const OrderCardSkeleton = () => {
 
 const MechanicOrder = () => {
   const [activeTab, setActiveTab] = useState("all");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<"accept" | "decline" | "complete">("accept");
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [actionType, setActionType] = useState<MechanicActionType | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
 
   // Fetch repair requests with status filter based on active tab
@@ -167,47 +167,50 @@ const MechanicOrder = () => {
     return allOrders;
   };
 
-  const handleAccept = (orderId: string) => {
+  const openActionConfirmation = (action: MechanicActionType, orderId: string) => {
+    setActionType(action);
     setSelectedOrderId(orderId);
-    setModalType("accept");
-    setModalVisible(true);
+    setActionModalVisible(true);
   };
 
-  const handleDecline = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setModalType("decline");
-    setModalVisible(true);
-  };
+  const handleConfirmAction = async () => {
+    if (!selectedOrderId || !actionType) return;
 
-  const confirmAction = async () => {
     try {
-      if (modalType === "accept") {
+      if (actionType === 'accept') {
         await acceptRequestMutation.mutateAsync(selectedOrderId);
-        setModalVisible(false);
-        // Optionally navigate to confirm order page
-        // router.push(mechanicRoutes.ConfirmOrder);
-      } else if (modalType === "decline") {
+      } else if (actionType === 'decline') {
         await declineRequestMutation.mutateAsync(selectedOrderId);
-        setModalVisible(false);
-      } else if (modalType === "complete") {
+      } else if (actionType === 'completed') {
         // Handle mark as complete logic here
         console.log("Confirmed complete for order:", selectedOrderId);
-        setModalVisible(false);
       }
+
+      setActionModalVisible(false);
+      setActionType(null);
+      setSelectedOrderId("");
     } catch (error) {
       console.error("Error processing action:", error);
       // Keep modal open on error so user can retry
     }
   };
 
-  const cancelAction = () => {
-    setModalVisible(false);
+  const handleCancelActionModal = () => {
+    setActionModalVisible(false);
+    setActionType(null);
+    setSelectedOrderId("");
+  };
+
+  const handleAccept = (orderId: string) => {
+    openActionConfirmation('accept', orderId);
+  };
+
+  const handleDecline = (orderId: string) => {
+    openActionConfirmation('decline', orderId);
   };
 
   const handleMarkComplete = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setModalType("complete");
-    setModalVisible(true);
+    openActionConfirmation('completed', orderId);
   };
 
   const handleView = (orderId: string) => {
@@ -375,86 +378,14 @@ const MechanicOrder = () => {
         )}
       </ScrollView>
 
-      {/* Confirmation Drawer */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={cancelAction}
-      >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl px-6 pt-4 pb-8">
-            {/* Drawer Handle */}
-            <View className="items-center mb-6">
-              <View className="w-12 h-1 bg-gray-300 rounded-full" />
-            </View>
-
-            {/* Icon */}
-            <View className="items-center mb-4">
-              {modalType === "accept" ? (
-                <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center">
-                  <Text className="text-green-700 text-2xl font-bold">✓</Text>
-                </View>
-              ) : modalType === "decline" ? (
-                <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
-                  <Text className="text-red-600 text-2xl font-bold">✗</Text>
-                </View>
-              ) : (
-                <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center">
-                  <Text className="text-blue-600 text-2xl font-bold">✓</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Title */}
-            <Text className="text-xl font-NunitoBold text-left text-gray-800 mb-3">
-              {modalType === "accept" ? "Accept Order" : modalType === "decline" ? "Decline Order" : "Mark as Completed"}
-            </Text>
-
-            {/* Message */}
-            <Text className="text-gray-600 text-left mb-8 font-NunitoRegular leading-6">
-              {modalType === "complete"
-                ? "Are you sure you want to mark this Service Order as Completed? This action cannot be undone."
-                : `Are you sure you want to ${modalType} this Client's Service Order?`
-              }
-            </Text>
-
-            {/* Buttons */}
-            <View className="space-y-3">
-              <CustomButton
-                onPress={confirmAction}
-                title={
-                  modalType === "complete"
-                    ? "Mark as Completed"
-                    : modalType === "accept"
-                      ? "Accept Order"
-                      : "Decline Order"
-                }
-                bgVariant={modalType === "decline" ? "danger" : "primary"}
-                textVariant="default"
-                className=""
-                loading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-                loadingText={
-                  modalType === "accept"
-                    ? "Accepting"
-                    : modalType === "decline"
-                      ? "Declining"
-                      : "Completing"
-                }
-              />
-
-              <CustomButton
-                onPress={cancelAction}
-                title="Cancel"
-                bgVariant="outline"
-                textVariant="outline"
-                className="mt-3"
-                disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Action Confirmation Modal */}
+      <MechanicActionConfirmationModal
+        visible={actionModalVisible}
+        actionType={actionType}
+        onConfirm={handleConfirmAction}
+        onCancel={handleCancelActionModal}
+        isLoading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+      />
     </SafeAreaView>
   );
 };

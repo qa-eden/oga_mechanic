@@ -3,7 +3,6 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
@@ -13,6 +12,7 @@ import OTPInput from "@/components/OTPInput";
 import { useRouter } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
+import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 
 const EnterCode = () => {
   const router = useRouter();
@@ -44,7 +44,7 @@ const EnterCode = () => {
   };
 
   return (
-    <ScrollView>
+    <KeyboardAwareScrollView keyboardVerticalOffset={90}>
       <View className="pt-[1.5rem]">
         <View className="flex flex-row justify-between w-full py-4">
           <View className="w-fit py-4 ps-2">
@@ -103,7 +103,7 @@ const EnterCode = () => {
           )}
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 };
 

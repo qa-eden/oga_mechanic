@@ -20,6 +20,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { mechanicRoutes } from "@/constants/routes";
@@ -103,6 +104,7 @@ const MechanicProfile = () => {
   };
   return (
     <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+      <StatusBar style="dark" />
       <ScrollView
         className="flex-1 px-5 pt-2"
         showsVerticalScrollIndicator={false}

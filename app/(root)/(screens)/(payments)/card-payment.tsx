@@ -1,84 +1,44 @@
 "use client";
 
+/**
+ * @deprecated This screen is DEPRECATED and should NOT be used.
+ *
+ * SECURITY WARNING: This screen collects card details directly which is a
+ * PCI DSS compliance violation. Card details should NEVER be collected
+ * directly by the app.
+ *
+ * Use the secure payment flow instead:
+ * 1. Call checkout API with payment_method: 'online'
+ * 2. Navigate to payment.tsx with the payment_url from the response
+ * 3. The WebView will handle the payment securely through the payment gateway
+ *
+ * This screen is kept only for reference and will redirect users to the cart.
+ */
+
 import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
-  ScrollView,
 } from "react-native";
-import { useState } from "react";
+import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
-import { icons } from "@/constants";
-import CustomButton from "@/components/CustomButton";
-import Checkbox from "@/components/Checkbox";
+import { router } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
+import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
 
 const CardPayment = () => {
-  const params = useLocalSearchParams();
-  const totalAmount = Number(params.totalAmount) || 252000;
-
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-  });
-  const [saveCardInfo, setSaveCardInfo] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const formatCardNumber = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, "");
-    // Add spaces every 4 digits
-    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, "$1 ");
-    return formatted.substring(0, 19); // Limit to 16 digits + 3 spaces
-  };
-
-  const formatExpiryDate = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, "");
-    // Add slash after 2 digits
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + "/" + cleaned.substring(2, 4);
-    }
-    return cleaned;
-  };
-
-  const handleCardNumberChange = (text: string) => {
-    const formatted = formatCardNumber(text);
-    setCardDetails({ ...cardDetails, cardNumber: formatted });
-  };
-
-  const handleExpiryDateChange = (text: string) => {
-    const formatted = formatExpiryDate(text);
-    setCardDetails({ ...cardDetails, expiryDate: formatted });
-  };
-
-  const handleCvvChange = (text: string) => {
-    // Only allow digits and limit to 4 characters
-    const cleaned = text.replace(/\D/g, "").substring(0, 4);
-    setCardDetails({ ...cardDetails, cvv: cleaned });
-  };
-
-  const handlePayNow = () => {
-    setIsLoading(true);
-
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsLoading(false);
-      // Navigate to order confirmation
-      router.push(routes?.paymentOTP)
-    }, 2000);
-  };
-
-  const isFormValid = () => {
-    return (
-      cardDetails.cardNumber.replace(/\s/g, "").length === 16 &&
-      cardDetails.expiryDate.length === 5 &&
-      cardDetails.cvv.length >= 3
+  // Redirect to cart on mount - this screen should not be used
+  useEffect(() => {
+    console.warn(
+      '[DEPRECATED] CardPayment screen is deprecated. ' +
+      'Direct card collection is a PCI compliance violation. ' +
+      'Use the secure payment flow via payment.tsx instead.'
     );
+  }, []);
+
+  const handleGoToCart = () => {
+    router.replace(routes?.cart);
   };
 
   return (
@@ -90,96 +50,39 @@ const CardPayment = () => {
         <View className="w-10" />
       </View>
 
-      <ScrollView
-        className="flex-1 px-5 py-6"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Card Payment Section */}
-        <View className="mb-8">
-          <Text className="text-2xl font-NunitoBold text-gray-900 mb-2">
-            Card payment
+      <View className="flex-1 px-5 py-6 items-center justify-center">
+        {/* Deprecation Notice */}
+        <View className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+          <Text className="text-2xl font-NunitoBold text-yellow-800 mb-4 text-center">
+            ⚠️ Payment Method Unavailable
           </Text>
-          <Text className="text-base text-gray-500">
-            Make your payment using your bank card
+          <Text className="text-base text-yellow-700 text-center mb-4">
+            Direct card payment is no longer available for security reasons.
+          </Text>
+          <Text className="text-sm text-yellow-600 text-center">
+            Please use our secure online payment option which is processed through
+            our trusted payment gateway partner.
           </Text>
         </View>
 
-        {/* Card Number Field */}
-        <View className="mb-6">
-          <Text className="text-lg font-NunitoBold text-gray-900 mb-3">
-            Smart card number
+        <View className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
+          <Text className="text-base font-NunitoBold text-blue-800 mb-2 text-center">
+            🔒 Secure Payment
           </Text>
-          <TextInput
-            value={cardDetails.cardNumber}
-            onChangeText={handleCardNumberChange}
-            placeholder="0000 0000 0000 0000"
-            placeholderTextColor="#C7C7CC"
-            className="w-full p-4 bg-gray-100 rounded-xl text-lg font-NunitoMedium text-gray-900"
-            keyboardType="numeric"
-            maxLength={19}
-          />
+          <Text className="text-sm text-blue-700 text-center">
+            Your card details are securely handled by our payment provider.
+            We never store your card information.
+          </Text>
         </View>
+      </View>
 
-        {/* Expiry Date and CVV Row */}
-        <View className="flex-row mb-6">
-          {/* Expiry Date */}
-          <View className="flex-1 mr-3">
-            <Text className="text-lg font-NunitoBold text-gray-900 mb-3">
-              Smart card number
-            </Text>
-            <TextInput
-              value={cardDetails.expiryDate}
-              onChangeText={handleExpiryDateChange}
-              placeholder="MM/YY"
-              placeholderTextColor="#C7C7CC"
-              className="w-full p-4 bg-gray-100 rounded-xl text-lg font-NunitoMedium text-gray-900"
-              keyboardType="numeric"
-              maxLength={5}
-            />
-          </View>
-
-          {/* CVV */}
-          <View className="flex-1 ml-3">
-            <Text className="text-lg font-NunitoBold text-gray-900 mb-3">
-              CVV
-            </Text>
-            <TextInput
-              value={cardDetails.cvv}
-              onChangeText={handleCvvChange}
-              placeholder="123"
-              placeholderTextColor="#C7C7CC"
-              className="w-full p-4 bg-gray-100 rounded-xl text-lg font-NunitoMedium text-gray-900"
-              keyboardType="numeric"
-              maxLength={4}
-              secureTextEntry
-            />
-          </View>
-        </View>
-
-        {/* Save Card Information Checkbox */}
-        <View className="mb-8">
-          <Checkbox
-            label="Save card information"
-            isChecked={saveCardInfo}
-            onPress={setSaveCardInfo}
-            fillColor="#D30309"
-            unfillColor="#FFFFFF"
-            textColor="#374151"
-            labelStyle="text-lg font-NunitoMedium"
-            containerStyle="flex-row items-center"
-          />
-        </View>
-      </ScrollView>
-
-      {/* Bottom Pay Button */}
+      {/* Bottom Button */}
       <View className="px-5 pt-6 pb-[4rem] border-t border-gray-100">
         <CustomButton
-          title={isLoading ? "Processing..." : "Pay now"}
-          onPress={handlePayNow}
+          title="Go to Cart"
+          onPress={handleGoToCart}
           className="py-4"
           bgVariant="primary"
-          disabled={!isFormValid() || isLoading}
-          loading={isLoading}
         />
       </View>
     </SafeAreaView>

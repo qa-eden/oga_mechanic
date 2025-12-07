@@ -6,9 +6,6 @@ import {
   View,
   Text,
   Image,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
   Platform,
   TouchableOpacity,
   Animated,
@@ -124,11 +121,7 @@ const InputFieldPassword = ({
   });
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="mb-4 w-full">
+    <View className="mb-4 w-full">
           {/* Label */}
           <Text
             className={`text-[1.1rem] font-JakartaSemiBold text-text-400 mb-2 ${labelStyle}`}
@@ -194,15 +187,13 @@ const InputFieldPassword = ({
             </View>
           )}
 
-          {/* Helper Text */}
-          {!hasError && helperText && (
-            <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
-              {helperText}
-            </Text>
-          )}
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+      {/* Helper Text */}
+      {!hasError && helperText && (
+        <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
+          {helperText}
+        </Text>
+      )}
+    </View>
   );
 };
 
