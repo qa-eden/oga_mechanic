@@ -605,6 +605,12 @@ export const productsAPI = {
     }
   },
 
+  // Get user's favorite products
+  getFavoriteProducts: async (): Promise<ProductListAPIResponse> => {
+    const response = await api.get<ProductListAPIResponse>(`${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}`);
+    return response.data;
+  },
+
   // Checkout with payment method
   checkout: async (paymentMethod: string, mobileCallbackUrl?: string): Promise<{ message: string; status: boolean; data?: any }> => {
 

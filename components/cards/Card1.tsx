@@ -2,13 +2,13 @@
 
 import { View, Text, TouchableOpacity, Platform, Animated, Image, ActivityIndicator } from "react-native";
 import type { SvgProps } from "react-native-svg";
-import { type FC, useRef, memo } from "react";
+import { type FC, useRef, memo, useState, useEffect } from "react";
 import Rating from "../Rating";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 // import { icons } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { HeartIcon } from "react-native-heroicons/outline";
+import { HeartIcon, ShoppingCartIcon, CheckIcon, CameraIcon } from "react-native-heroicons/outline";
 import { useToggleFavorite } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
 
@@ -23,10 +23,13 @@ interface Props {
   showLove?: boolean;
   onPress?: () => void;
   onLovePress?: () => void;
+  onAddToCart?: () => Promise<void> | void;
+  onRemoveFromCart?: () => Promise<void> | void;
   isLoading?: boolean;
   containerStyle?: string;
   productId?: number | string;
   isFavorite?: boolean;
+  isInCart?: boolean;
 }
 
 const Card1 = memo(({
@@ -40,13 +43,24 @@ const Card1 = memo(({
   love = false,
   onPress,
   onLovePress,
+  onAddToCart,
+  onRemoveFromCart,
   isLoading = false,
   containerStyle,
   productId,
   isFavorite = false,
+  isInCart = false,
 }: Props) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const heartAnim = useRef(new Animated.Value(1)).current;
+  const cartScaleAnim = useRef(new Animated.Value(1)).current;
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAdded, setIsAdded] = useState(isInCart);
+
+  // Sync internal state with prop
+  useEffect(() => {
+    setIsAdded(isInCart);
+  }, [isInCart]);
 
   // Favorite API hook
   const toggleFavoriteMutation = useToggleFavorite();
@@ -126,7 +140,7 @@ const Card1 = memo(({
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
-        className={`w-full bg-white rounded-2xl overflow-hidden border border-gray-300 mt-4 ${containerStyle}`}
+        className={`w-full bg-white rounded-2xl overflow-hidden border border-gray-300 ${containerStyle}`}
         onPress={handleCardPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -148,19 +162,25 @@ const Card1 = memo(({
       >
         {/* Image Container */}
         <View className="relative">
-          <View className="w-full h-[140px] bg-black rounded-t-2xl justify-center items-center overflow-hidden">
+          <View className="w-full h-[160px] bg-gray-100 rounded-t-2xl justify-center items-center overflow-hidden">
             {isLoading ? (
-              <View className="w-full h-full bg-gray-300 animate-pulse" />
-            ) : (
+              <View className="w-full h-full bg-gray-300 animate-pulse items-center justify-center">
+                <CameraIcon size={48} color="#9CA3AF" />
+              </View>
+            ) : Images ? (
               typeof Images === "function" ? (
                 <Images className="w-full h-full object-cover" />
               ) : (
                 <Image
                   source={typeof Images === "string" ? { uri: Images } : Images}
-                  // style={{ width: 100, height: 100, resizeMode: "contain" }}
                   className="w-full h-full object-cover"
                 />
               )
+            ) : (
+              <View className="w-full h-full items-center justify-center">
+                <CameraIcon size={48} color="#9CA3AF" />
+                <Text className="text-gray-400 text-xs mt-2 font-NunitoMedium">No Image</Text>
+              </View>
             )}
           </View>
 
@@ -250,12 +270,55 @@ const Card1 = memo(({
           )}
 
           {/* Price */}
+          {/* Price and Cart Action */}
           {price && price > 0 && (
-            <View className="pt-1">
+            <View className="flex-row items-center justify-between pt-1">
               <NairaCurrency
                 value={price}
-                className="text-lg font-NunitoBold text-gray-900"
+                className="text-lg font-NunitoExtraBold text-primary-600"
               />
+              <TouchableOpacity 
+                onPress={async () => {
+                   // Start animation
+                   Animated.sequence([
+                    Animated.timing(cartScaleAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
+                    Animated.spring(cartScaleAnim, { toValue: 1, friction: 4, useNativeDriver: true })
+                  ]).start();
+
+                  if (isAdded && onRemoveFromCart) {
+                    setIsAddingToCart(true);
+                    await onRemoveFromCart();
+                    setIsAddingToCart(false);
+                    setIsAdded(false);
+                    showToast.success("Removed from cart");
+                  } else if (!isAdded && onAddToCart) {
+                    setIsAddingToCart(true);
+                    await onAddToCart();
+                    setIsAddingToCart(false);
+                    setIsAdded(true);
+                    
+                    // Animate success pop
+                    Animated.sequence([
+                      Animated.timing(cartScaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
+                      Animated.spring(cartScaleAnim, { toValue: 1, friction: 4, useNativeDriver: true })
+                    ]).start();
+                  }
+                }}
+                disabled={isAddingToCart}
+                className={`${isAdded ? 'bg-primary-500/10' : 'bg-gray-100'} p-2 rounded-full w-10 h-10 items-center justify-center transition-colors`}
+              >
+                <Animated.View style={{ transform: [{ scale: cartScaleAnim }] }}>
+                  {isAddingToCart ? (
+                    <ActivityIndicator size="small" color={isAdded ? "#D30309" : "#111827"} />
+                  ) : (
+                    <ShoppingCartIcon 
+                      size={20} 
+                      color={isAdded ? "#D30309" : "#111827"} 
+                      fill={isAdded ? "#D30309" : "none"}
+                    />
+                  )}
+                </Animated.View>
+              </TouchableOpacity>
             </View>
           )}
 

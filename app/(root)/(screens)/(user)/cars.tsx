@@ -7,19 +7,51 @@ import {
   FlatList,
   TextInput,
   Modal,
-  Animated,
   RefreshControl,
+  Image
 } from "react-native";
 import { useState, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { icons } from "@/constants";
-import { MagnifyingGlassIcon, PlusIcon } from "react-native-heroicons/outline";
+import { MagnifyingGlassIcon, PlusIcon, ArrowLeftIcon, FunnelIcon } from "react-native-heroicons/outline";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import CarCard from "@/components/cards/CarCard";
 import { useQuery } from "@tanstack/react-query";
 import { userAPI } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { StatusBar } from "expo-status-bar";
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring, withTiming } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+
+const CarCard = ({ item, onPress }: { item: any, onPress: (car: any) => void }) => (
+  <TouchableOpacity
+    activeOpacity={0.9}
+    onPress={() => onPress(item)}
+    className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 mb-4 flex-row items-center"
+  >
+    <View className="w-16 h-16 bg-primary-50 rounded-2xl items-center justify-center mr-4">
+      {item.image ? (
+        <Image source={{ uri: item.image }} className="w-full h-full rounded-2xl" resizeMode="cover" />
+      ) : (
+        <icons.car width={32} height={32} color="#D30309" />
+      )}
+    </View>
+    <View className="flex-1">
+      <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-1">
+        {item.name}
+      </Text>
+      <View className="flex-row items-center">
+         <View className="bg-gray-100 px-2 py-0.5 rounded mr-2">
+            <Text className="text-xs font-NunitoBold text-gray-600">{item.year || 'N/A'}</Text>
+         </View>
+         <Text className="text-sm text-gray-400 font-NunitoMedium">
+           {item.license_plate || 'No Plate'}
+         </Text>
+      </View>
+    </View>
+    <View className={`w-3 h-3 rounded-full ${item.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`} />
+  </TouchableOpacity>
+);
 
 const Cars = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,7 +68,7 @@ const Cars = () => {
   } = useQuery({
     queryKey: ["userCars"],
     queryFn: userAPI.getCars,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
     retry: 2,
   });
 
@@ -52,36 +84,21 @@ const Cars = () => {
     : ((carsData as any)?.data || []);
 
   // Animation values for modal
-  const slideAnim = useRef(new Animated.Value(-300)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideY = useSharedValue(300);
+  const opacity = useSharedValue(0);
+
+  const animatedModalStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: slideY.value }],
+  }));
 
   useEffect(() => {
     if (showFilterModal) {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      slideY.value = withSpring(0, { damping: 20, stiffness: 90 });
+      opacity.value = withTiming(1, { duration: 250 });
     } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      slideY.value = withTiming(300, { duration: 200 });
+      opacity.value = withTiming(0, { duration: 150 });
     }
   }, [showFilterModal]);
 
@@ -133,11 +150,22 @@ const Cars = () => {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
+        <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3"
+          >
+            <ArrowLeftIcon size={20} color="#1F2937" />
+          </TouchableOpacity>
+          <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+            My Cars
+          </Text>
+        </View>
         <LoadingSpinner
           message="Loading your cars..."
           subMessage="Please wait while we fetch your vehicles"
           size="medium"
-          logoSize={32}
         />
       </SafeAreaView>
     );
@@ -147,13 +175,22 @@ const Cars = () => {
   if (error) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+        <StatusBar style="dark" />
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 py-4 bg-white">
-          <View>
-            <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-              My Cars
-            </Text>
-            <Text className="text-base text-gray-500">0 cars</Text>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+            >
+              <ArrowLeftIcon size={20} color="#1F2937" />
+            </TouchableOpacity>
+            <View>
+              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                My Cars
+              </Text>
+              <Text className="text-base text-gray-500">0 cars</Text>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -212,13 +249,22 @@ const Cars = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+      <StatusBar style="dark" />
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white">
-        <View>
-          <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-            My Cars
-          </Text>
-          <Text className="text-base text-gray-500">{cars.length} cars</Text>
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+          >
+            <ArrowLeftIcon size={20} color="#1F2937" />
+          </TouchableOpacity>
+          <View>
+            <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+              My Cars
+            </Text>
+            <Text className="text-base text-gray-500">{cars.length} cars</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -318,11 +364,8 @@ const Cars = () => {
         >
           <View className="flex-1 justify-start items-end pt-32 pr-5">
             <Animated.View
-              style={{
-                transform: [{ translateY: slideAnim }],
-                opacity: fadeAnim,
-              }}
-              className="bg-white rounded-2xl p-1 w-64 shadow-2xl"
+              style={animatedModalStyle}
+              className="bg-white rounded-3xl p-2 w-64 shadow-2xl"
             >
               {/* Header */}
               <View className="px-4 py-3 border-b border-gray-100">

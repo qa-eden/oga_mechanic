@@ -110,7 +110,7 @@ const Welcome = () => {
       setIsSigningUp(true);
       // Mark that user has seen welcome screen
       await AsyncStorage.setItem('has_seen_welcome', 'true');
-      router.replace(routes?.signUp as any);
+      router.replace(routes?.register as any);
     } catch (error) {
       setIsSigningUp(false);
     }

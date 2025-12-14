@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, Animated } from "react-native";
 import { ShoppingCartIcon } from "react-native-heroicons/outline";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { useCart } from "@/hooks/useCart";
+import { useCart } from "@/contexts/CartContext";
 
 interface CartIconBtnProps {
   count?: number;
@@ -11,18 +11,15 @@ interface CartIconBtnProps {
 }
 
 const CartIconBtn = ({ count, showAnimation = true }: CartIconBtnProps) => {
-  const { data: cartData } = useCart();
+  const { state: cartState, cartAnimation } = useCart();
   
-  // Calculate total items from API data
-  const itemCount = count ?? (() => {
-    if (!cartData?.data?.items) return 0;
-    return cartData.data.items.reduce((total, item) => total + (item.quantity || 0), 0);
-  })();
+  // Use passed count or get from context
+  const itemCount = count ?? cartState.totalItems;
 
   return (
     <Animated.View
       style={{
-        transform: [{ scale: 1 }], // Removed cartAnimation since it's not available from API hook
+        transform: [{ scale: showAnimation ? cartAnimation : 1 }],
       }}
     >
       <TouchableOpacity 

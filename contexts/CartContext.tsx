@@ -1,9 +1,12 @@
-import React, { createContext, useContext, useReducer, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToast } from '../utils/toastUtils';
 import { cartAPI } from '../lib/api/cart';
 import { getErrorMessage, getSuccessMessage } from '../utils/errorMessages';
+import { useQueryClient } from '@tanstack/react-query';
+import { cartKeys, useCart as useCartQuery } from '../hooks/useCart';
+import { productKeys } from '../hooks/useProducts';
 
 // Types
 export interface CartItem {
@@ -137,6 +140,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const cartAnimation = useRef(new Animated.Value(1)).current;
   const bounceAnimation = useRef(new Animated.Value(1)).current;
+  const queryClient = useQueryClient();
+
+  // Subscribe to React Query cart data - this syncs the context whenever cart query updates
+  const { data: cartQueryData } = useCartQuery();
 
   // Cart animation function
   const triggerCartAnimation = () => {
@@ -191,6 +198,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Update local state
         dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
         triggerCartAnimation();
+        
+        // Invalidate React Query cache to sync with useCart hook
+        queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
+        
+        await syncWithServer(); // Get fresh cart data as requested
         showToast.success(getSuccessMessage('cart_add'));
       } else {
         showToast.error(getErrorMessage({ response }, 'cart'));
@@ -210,6 +222,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'REMOVE_ITEM', payload: id });
+        
+        // Invalidate React Query cache for both cart and products
+        queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
+        queryClient.invalidateQueries({ queryKey: productKeys.all });
+        
+        // Sync with server to get fresh cart data
+        await syncWithServer();
+        
         showToast.success(getSuccessMessage('cart_remove'));
       } else {
         showToast.error(getErrorMessage({ response }, 'cart'));
@@ -230,6 +250,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+        
+        // Invalidate React Query cache for both cart and products
+        queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
+        queryClient.invalidateQueries({ queryKey: productKeys.all });
+        
+        // Sync with server to get fresh cart data
+        await syncWithServer();
+        
         showToast.success(getSuccessMessage('cart_update'));
       } else {
         showToast.error(getErrorMessage({ response }, 'cart'));
@@ -247,6 +275,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         dispatch({ type: 'CLEAR_CART' });
+        
+        // Invalidate React Query cache for both cart and products
+        queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
+        queryClient.invalidateQueries({ queryKey: productKeys.all });
+        
+        // Sync with server to get fresh cart data
+        await syncWithServer();
+        
         showToast.success(getSuccessMessage('cart_clear'));
       } else {
         showToast.error(getErrorMessage({ response }, 'cart'));
@@ -283,12 +319,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Convert server cart items to local format
         const localItems: CartItem[] = cartData.map((serverItem: any) => ({
-          id: serverItem.product_id || serverItem.id,
+          id: serverItem.product?.id || serverItem.product_id || serverItem.id,
           name: serverItem.product?.name || serverItem.name || 'Unknown Product',
           price: serverItem.product?.price ? parseFloat(serverItem.product.price) : 
                  serverItem.price ? parseFloat(serverItem.price) : 0,
           quantity: serverItem.quantity || 1,
-          stock: serverItem.stock || 10, // Default stock
+          stock: serverItem.product?.stock || serverItem.stock || 10, // Get stock from product object
           image: serverItem.product?.images?.[0]?.image || 
                  serverItem.images?.[0]?.image || 
                  serverItem.image || 'sparePart',
@@ -331,9 +367,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('🛒 Skipping cart sync - user not authenticated');
       }
     };
-    
+
     checkAndSync();
   }, []);
+
+  // Sync context state with React Query cart data whenever it changes
+  // This ensures CartIconBtn and other components using CartContext stay in sync
+  // when cart is modified from any page (cart page, product detail, etc.)
+  useEffect(() => {
+    if (cartQueryData?.data) {
+      let cartData = cartQueryData.data;
+
+      // Handle nested data structure
+      if (!Array.isArray(cartData)) {
+        if (cartData && Array.isArray((cartData as any).items)) {
+          cartData = (cartData as any).items;
+        } else {
+          return; // No valid cart items
+        }
+      }
+
+      // Convert to local format if it's an array
+      if (Array.isArray(cartData)) {
+        const localItems: CartItem[] = cartData.map((serverItem: any) => ({
+          id: serverItem.product?.id || serverItem.product_id || serverItem.id,
+          name: serverItem.product?.name || serverItem.name || 'Unknown Product',
+          price: serverItem.product?.price ? parseFloat(serverItem.product.price) :
+                 serverItem.price ? parseFloat(serverItem.price) : 0,
+          quantity: serverItem.quantity || 1,
+          stock: serverItem.product?.stock || serverItem.stock || 10,
+          image: serverItem.product?.images?.[0]?.image ||
+                 serverItem.images?.[0]?.image ||
+                 serverItem.image || 'sparePart',
+        }));
+
+        dispatch({ type: 'SET_CART', payload: localItems });
+      }
+    }
+  }, [cartQueryData]);
 
   const value: CartContextType = {
     state,

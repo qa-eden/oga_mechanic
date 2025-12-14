@@ -88,7 +88,12 @@ export const cartAPI = {
 
   // Remove item from cart
   removeFromCart: async (productId: string): Promise<AddToCartResponse> => {
-    const response = await api.delete<AddToCartResponse>(`${SERVICE_ENDPOINTS.REMOVE_FROM_CART}/${productId}`);
+    // Ensure endpoint has trailing slash if needed for Django/standard compatibility, based on user's URL
+    const endpoint = SERVICE_ENDPOINTS.REMOVE_FROM_CART.endsWith('/') 
+      ? SERVICE_ENDPOINTS.REMOVE_FROM_CART 
+      : `${SERVICE_ENDPOINTS.REMOVE_FROM_CART}/`;
+      
+    const response = await api.delete<AddToCartResponse>(`${endpoint}?product_id=${productId}`);
     return response.data;
   },
 

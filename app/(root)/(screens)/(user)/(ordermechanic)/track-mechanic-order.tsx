@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Modal, TouchableOpacity, Linking, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, RefreshControl, Modal, TouchableOpacity, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import CustomButton from '@/components/CustomButton';
@@ -37,15 +38,7 @@ interface OrderStatus {
   timestamp?: string | null;
 }
 
-// Helper functions
-const copyToClipboard = async (text: string) => {
-  try {
-    // Use Alert as fallback since expo-clipboard might not be installed
-    Alert.alert('Address Copied', text);
-  } catch (error) {
-    console.error('Failed to copy:', error);
-  }
-};
+// Helper functions - moved inside component to access state
 
 const openInMaps = (address: string) => {
   const encodedAddress = encodeURIComponent(address);
@@ -78,6 +71,10 @@ const TrackMechanicOrder = () => {
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedCancelReason, setSelectedCancelReason] = useState<string>('');
+  
+  // Copy to clipboard state
+  const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Review mutation
   const createReviewMutation = useCreateMechanicReview();
@@ -113,6 +110,38 @@ const TrackMechanicOrder = () => {
     const model = make?.models?.find((m) => m.id.toString() === modelId.toString());
     return model?.name || `Model ID: ${modelId}`;
   };
+
+  // Copy to clipboard function
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (!text || text.trim() === '') {
+        return;
+      }
+      await Clipboard.setStringAsync(text);
+      setIsCopied(true);
+      
+      // Clear any existing timeout
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      
+      // Reset after 3 seconds
+      copyTimeoutRef.current = setTimeout(() => {
+        setIsCopied(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Define status flow matching API statuses
   const statusFlow: OrderStatus[] = [
@@ -627,9 +656,13 @@ const TrackMechanicOrder = () => {
             <View className="flex-row">
               <TouchableOpacity
                 onPress={() => copyToClipboard(order.service_address || '')}
-                className="w-9 h-9 rounded-lg bg-gray-100 items-center justify-center mr-2"
+                className={`${isCopied ? 'px-3' : 'w-9'} h-9 rounded-lg ${isCopied ? 'bg-green-100' : 'bg-gray-100'} items-center justify-center mr-2`}
               >
-                <DocumentDuplicateIcon size={18} color="#374151" />
+                {isCopied ? (
+                  <Text className="text-xs font-NunitoBold text-green-700">Copied</Text>
+                ) : (
+                  <DocumentDuplicateIcon size={18} color="#374151" />
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => openInMaps(order.service_address || '')}
@@ -777,4 +810,3 @@ const TrackMechanicOrder = () => {
 };
 
 export default TrackMechanicOrder;
-

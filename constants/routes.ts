@@ -2,10 +2,14 @@ export const routes = {
   // Auth routes
   welcome: "/(auth)/welcome",
   signUp: "/(auth)/(register)/sign_up",
+  register: "/(auth)/(register)/register-step1",
+  registerStep2: "/(auth)/(register)/register-step2",
   signIn: "/(auth)/(login)/sign_in",
   forgotPassword: "/(auth)/(login)/forgetPassword",
   resetPassword: "/(auth)/(login)/resetPassword",
   enterCode: "/(auth)/(login)/enterCode",
+  verifyEmail: "/(auth)/(register)/verify-email",
+
 
   // Registration user steps
   userStep1: "/(auth)/(register)/user/step1",
@@ -23,8 +27,8 @@ export const routes = {
   driverHome: "/(root)/(tabs)/(driver)/home",
   mechanicHome: "/(root)/(tabs)/(mechanic)/home",
   riderHome: "/(root)/(tabs)/(rider)/home",
-  cars: "/(root)/(tabs)/(user)/cars",
-  services: "/(root)/(tabs)/(user)/services",
+  cars: "/(root)/(screens)/(user)/cars",
+  services: "/(root)/(tabs)/(user)/home",
   profile: "/(root)/(tabs)/(user)/profile",
   shop: "/(root)/(tabs)/(user)/shop",
 

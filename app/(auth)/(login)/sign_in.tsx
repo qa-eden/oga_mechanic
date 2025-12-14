@@ -294,7 +294,7 @@ const SignIn = () => {
           />
 
           <AuthNavigateLink
-            onPress={() => router?.push(routes?.signUp)}
+            onPress={() => router?.push(routes?.register)}
             text="Didn't have an account?"
             textLink="Sign Up"
             containerClassName="mb-4"

@@ -1,5 +1,3 @@
-import ProfileTabs from "@/components/templates/ProfileTabs";
-import ProfileHeader from "@/components/ProfileHeader";
 import {
   userInfo,
   icons,
@@ -13,7 +11,6 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
-  // Modal,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -22,7 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { UserIcon } from "react-native-heroicons/solid";
+import { ChevronRightIcon, ArrowRightOnRectangleIcon, PencilSquareIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 // import { useUserStore } from "@/stores/userStore";
 import LogoutModal from "@/components/modals/LogoutModal";
@@ -34,6 +31,9 @@ import { useLogout } from "@/hooks/useLogout";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFavoriteProducts } from "@/hooks/useProducts";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -47,27 +47,26 @@ const Profile = () => {
   const {
     data: profileData,
     isLoading,
-    error,
     refetch
   } = usePrimaryUserProfile();
 
-  const { visible, alertConfig, hideAlert, showInfo } = useCustomAlert();
+  // Fetch favorite products
+  // TODO: Re-enable when endpoint is ready
+  // const {
+  //   data: favoritesData,
+  //   refetch: refetchFavorites
+  // } = useFavoriteProducts();
+
+  const { visible, alertConfig, hideAlert } = useCustomAlert();
   const logoutMutation = useLogout();
 
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {
       await refetch();
+      // await Promise.all([refetch(), refetchFavorites()]);
     }
   });
-
-
-  const toggleSwitch = (
-    setState: React.Dispatch<React.SetStateAction<boolean>>,
-    value: boolean
-  ) => {
-    setState(value);
-  };
 
 
   const handleLogout = () => {
@@ -111,32 +110,50 @@ const Profile = () => {
   };
 
 
-  const handleSwitchUser = (userType: string) => {
+  const handleSwitchUser = (_userType: string) => {
     // Handle user switching logic here
     // You can add navigation logic or state management here
   };
 
-  const ProfilePref = {
-    name: "PREFERENCES",
-    options: [
-      {
-        id: 1,
-        name: "Enable Fingerprint/Face ID",
-        image: icons.faceId,
-        route: "editProfile",
-        set: setIsEnabledFaceId,
-        state: isEnabledFaceId,
-      },
-      {
-        id: 2,
-        name: "Enable password login",
-        image: icons.enablePass,
-        route: "notifications",
-        set: setIsEnabledEnablePass,
-        state: isEnabledEnablePass,
-      },
-    ],
-  };
+  const MenuItem = ({ 
+    title, 
+    icon: Icon, 
+    onPress, 
+    showChevron = true,
+    rightElement,
+    isDestructive = false
+  }: { 
+    title: string; 
+    icon?: any; 
+    onPress?: () => void;
+    showChevron?: boolean;
+    rightElement?: React.ReactNode;
+    isDestructive?: boolean;
+  }) => (
+    <TouchableOpacity 
+      onPress={onPress}
+      activeOpacity={0.7}
+      className="flex-row items-center justify-between py-4 border-b border-gray-50 last:border-0"
+    >
+      <View className="flex-row items-center gap-3">
+        {Icon && (
+          <View className={`w-10 h-10 rounded-full items-center justify-center ${isDestructive ? 'bg-red-50' : 'bg-gray-50'}`}>
+            {typeof Icon === 'function' ? Icon({ size: 20, color: isDestructive ? '#EF4444' : '#4B5563' }) : <Icon size={20} color={isDestructive ? '#EF4444' : '#4B5563'} />}
+          </View>
+        )}
+        <Text className={`text-base font-NunitoBold ${isDestructive ? 'text-red-500' : 'text-gray-900'}`}>
+          {title}
+        </Text>
+      </View>
+      
+      {rightElement ? (
+        rightElement
+      ) : showChevron ? (
+        <ChevronRightIcon size={20} color="#9CA3AF" />
+      ) : null}
+    </TouchableOpacity>
+  );
+
   // Show loading state
   if (isLoading) {
     return (
@@ -159,186 +176,248 @@ const Profile = () => {
   const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'primary_user';
 
   return (
-    <SafeAreaView className="bg-white flex-1" edges={["top"]}>
-      <StatusBar style="auto" />
+    <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
+      <StatusBar style="dark" />
       <ScrollView
-        className="flex-1 px-5 pt-2"
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
-        refreshControl={<RefreshControl {...refreshControl} />}
+        refreshControl={<RefreshControl {...refreshControl} tintColor="#fff" />}
+        bounces={false}
       >
-        <View className="flex-col justify-center items-center">
-          <ProfileHeader title="Profile" />
+        {/* Header Section */}
+        <Animated.View 
+          entering={FadeInDown.duration(600)}
+          className="rounded-b-[2.5rem] overflow-hidden shadow-lg mb-6"
+        >
+          <View className="bg-white px-5 pt-6 pb-6">
+            {/* Top Bar */}
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                My Account
+              </Text>
+            </View>
 
-          <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
-            <UserIcon size={32} color="#666" />
-          </View>
+            {/* Profile Card */}
+            <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <View className="flex-row items-center">
+                {/* Avatar */}
+                <View className="relative mr-4">
+                  <LinearGradient
+                    colors={['#D30309', '#B91C1C']}
+                    className="w-16 h-16 rounded-2xl items-center justify-center"
+                  >
+                    <Text className="text-2xl font-NunitoExtraBold text-white">
+                      {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
+                    </Text>
+                  </LinearGradient>
+                  {isVerified && (
+                    <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
+                      <Text className="text-white text-[10px]">✓</Text>
+                    </View>
+                  )}
+                </View>
 
-          <View className="flex-row items-center gap-2 pt-3">
-            <Text className="font-NunitoBold text-primary-800 text-[1.5rem]">
-              {displayName || 'User'}
-            </Text>
-            {isVerified && (
-              <View className="bg-green-100 px-2 py-1 rounded-full">
-                <Text className="text-green-800 text-xs font-NunitoMedium">
-                  ✓ Verified
-                </Text>
+                {/* User Info */}
+                <View className="flex-1">
+                  <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">
+                    {displayName || 'User'}
+                  </Text>
+                  {displayEmail && (
+                    <Text className="text-gray-500 text-sm font-NunitoMedium">
+                      {displayEmail}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Role Badge */}
+                <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
+                  <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
+                    {activeRole.replace('_', ' ')}
+                  </Text>
+                </View>
               </View>
-            )}
-          </View>
 
-          {/* Email display */}
-          {displayEmail && (
-            <Text className="font-NunitoMedium text-gray-600 text-sm pt-1">
-              {displayEmail}
-            </Text>
+              {/* Stats Row */}
+              <View className="flex-row mt-4 pt-4 border-t border-gray-200">
+                <View className="flex-1 items-center">
+                  <Text className="text-gray-900 text-lg font-NunitoBold">0</Text>
+                  <Text className="text-gray-400 text-xs font-NunitoMedium">Orders</Text>
+                </View>
+                <View className="w-px bg-gray-200" />
+                <View className="flex-1 items-center">
+                  <Text className="text-gray-900 text-lg font-NunitoBold">
+                    {/* {favoritesData?.data?.count || 0} */}
+                    0
+                  </Text>
+                  <Text className="text-gray-400 text-xs font-NunitoMedium">Favorites</Text>
+                </View>
+                <View className="w-px bg-gray-200" />
+                <View className="flex-1 items-center">
+                  <View className="flex-row items-center">
+                    <icons.redPhone width={14} height={14} color="#D30309" />
+                  </View>
+                  <Text className="text-gray-400 text-xs font-NunitoMedium mt-0.5">{displayPhone}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        <View className="px-5 space-y-5 mt-2">
+          {/* My Garage Section */}
+          {(userData?.car_make || userData?.car_model) && (
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()}>
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-sm font-NunitoBold text-gray-500 uppercase ml-1">
+                  My Garage
+                </Text>
+                <TouchableOpacity onPress={() => router.push(routes.cars as any)}>
+                  <Text className="text-primary-500 text-xs font-NunitoBold">View All</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <View className="p-4 flex-row items-center">
+                  <View className="w-12 h-12 bg-primary-50 rounded-xl items-center justify-center mr-3">
+                    <icons.car width={24} height={24} color="#D30309" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-NunitoBold text-gray-900">
+                      {userData.car_make} {userData.car_model}
+                    </Text>
+                    <View className="flex-row items-center gap-2 mt-1">
+                      {userData.car_year && (
+                        <View className="bg-gray-100 px-2 py-0.5 rounded">
+                          <Text className="text-gray-600 text-xs font-NunitoBold">{userData.car_year}</Text>
+                        </View>
+                      )}
+                      {userData.license_plate && (
+                        <Text className="text-gray-400 text-xs font-NunitoMedium">• {userData.license_plate}</Text>
+                      )}
+                    </View>
+                  </View>
+                  <ChevronRightIcon size={20} color="#9CA3AF" />
+                </View>
+              </View>
+            </Animated.View>
           )}
 
-          {/* Role display */}
-          <View className="bg-blue-50 px-3 py-1 rounded-full mt-2">
-            <Text className="text-blue-800 text-xs font-NunitoMedium capitalize">
-              {activeRole.replace('_', ' ')} Account
+          {/* Account Settings */}
+          <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
+              Account Settings
             </Text>
-          </View>
+            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
+              {ProfileSettings.options.map((item) => (
+                <MenuItem
+                  key={item.id}
+                  title={item.name}
+                  icon={item.image}
+                  onPress={() => {
+                    if (item.name === "Switch User") {
+                      setShowSwitchUserModal(true);
+                    } else if (item.route && item.name === "My Cars") {
+                      router.push(item.route as any);
+                    }
+                  }}
+                />
+              ))}
+            </View>
+          </Animated.View>
 
-          {/* Member since */}
-          {userData?.date_joined && (
-            <Text className="text-gray-500 text-xs mt-2 font-NunitoMedium">
-              Member since {new Date(userData.date_joined).toLocaleDateString()}
+          {/* Preferences */}
+          <Animated.View entering={FadeInDown.delay(300).duration(600).springify()}>
+            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
+              Preferences
             </Text>
-          )}
-
-          <View className="flex-row items-center justify-center gap-2 pt-2">
-            <icons.redPhone width={20} height={20} />
-            <Text className="text-[14px] font-NunitoBold text-gray-600">
-              {displayPhone}
-            </Text>
-          </View>
-        </View>
-
-        {/* Car Information Section */}
-        {userData && (userData.car_make || userData.car_model || userData.car_year || userData.license_plate) && (
-          <View className="shadow-md shadow-gray-300 bg-white mt-6 rounded-[1rem] px-4 py-4 mb-4">
-            <Text className="uppercase text-[#999999] pb-3 font-NunitoBold">
-              Vehicle Information
-            </Text>
-
-            {userData.car_make && userData.car_model && (
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-gray-700 font-NunitoMedium">Vehicle</Text>
-                <Text className="text-gray-900 font-NunitoBold">
-                  {userData.car_make} {userData.car_model}
-                </Text>
-              </View>
-            )}
-
-            {userData.car_year && (
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-gray-700 font-NunitoMedium">Year</Text>
-                <Text className="text-gray-900 font-NunitoBold">{userData.car_year}</Text>
-              </View>
-            )}
-
-            {userData.license_plate && (
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-gray-700 font-NunitoMedium">License Plate</Text>
-                <Text className="text-gray-900 font-NunitoBold">{userData.license_plate}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <View className="shadow-md shadow-gray-300 bg-white mt-9 rounded-[1rem] px-4 py-2 mb-6">
-          <View className="pt-4">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfileSettings?.name}
-            </Text>
-            {ProfileSettings.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
-                onPress={() => {
-                  if (item.name === "Switch User") {
-                    setShowSwitchUserModal(true);
-                  }
-                  // Add other navigation logic here for other items
-                }}
-              />
-            ))}
-          </View>
-
-          <View className="pt-4 pb-2">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfilePref?.name}
-            </Text>
-            {ProfilePref.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                activeOpacity={0.8}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
-                iconRight={
+            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
+              <MenuItem
+                title="Enable Fingerprint/Face ID"
+                icon={icons.faceId}
+                showChevron={false}
+                rightElement={
                   <Switch
-                    trackColor={{ false: "#ccc", true: "#50BE4E" }}
-                    thumbColor={item.state ? "white" : "#f4f3f4"}
-                    // ios_backgroundColor="#3e3e3e"
-                    onValueChange={(value) => toggleSwitch(item.set, value)}
-                    value={item.state}
+                    trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                    thumbColor={isEnabledFaceId ? "white" : "#F3F4F6"}
+                    onValueChange={setIsEnabledFaceId}
+                    value={isEnabledFaceId}
                   />
                 }
               />
-            ))}
-          </View>
-
-          <View className="pt-4 pb-2">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfileSopprt?.name}
-            </Text>
-            {ProfileSopprt.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
+              <MenuItem
+                title="Enable password login"
+                icon={icons.enablePass}
+                showChevron={false}
+                rightElement={
+                  <Switch
+                    trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                    thumbColor={isEnabledEnablePass ? "white" : "#F3F4F6"}
+                    onValueChange={setIsEnabledEnablePass}
+                    value={isEnabledEnablePass}
+                  />
+                }
               />
-            ))}
-          </View>
-        </View>
+            </View>
+          </Animated.View>
 
-        <View className="py-3">
-          <TouchableOpacity
-            onPress={handleLogout}
-            disabled={logoutMutation.isPending}
-            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${logoutMutation.isPending ? 'opacity-50' : ''
-              }`}
-          >
-            {logoutMutation.isPending ? (
-              <ActivityIndicator size="small" color="#D30309" />
-            ) : null}
-            <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
-              {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+          {/* Support */}
+          <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
+            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
+              Support
             </Text>
-          </TouchableOpacity>
+            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
+              {ProfileSopprt.options.map((item) => (
+                <MenuItem
+                  key={item.id}
+                  title={item.name}
+                  icon={item.image}
+                  onPress={() => {}}
+                />
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Logout */}
+          <Animated.View entering={FadeInDown.delay(500).duration(600).springify()} className="pt-2">
+            <TouchableOpacity
+              onPress={handleLogout}
+              disabled={logoutMutation.isPending}
+              className={`flex-row items-center justify-center gap-2 bg-white border border-red-100 rounded-3xl py-4 shadow-sm ${logoutMutation.isPending ? 'opacity-50' : ''}`}
+            >
+              {logoutMutation.isPending ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <ArrowRightOnRectangleIcon size={20} color="#EF4444" />
+              )}
+              <Text className="text-red-500 text-lg font-NunitoBold">
+                {logoutMutation.isPending ? 'Logging out...' : 'Log Out'}
+              </Text>
+            </TouchableOpacity>
+            
+            <View className="items-center mt-6 mb-4">
+               <Text className="text-gray-400 text-xs font-NunitoMedium">
+                 Version 1.0.0 • Build 142
+               </Text>
+            </View>
+          </Animated.View>
         </View>
       </ScrollView>
 
-      {/* Logout Modal */}
+      {/* Modals & Alerts */}
       <LogoutModal
         visible={showLogoutModal}
         onConfirm={confirmLogout}
         onCancel={cancelLogout}
       />
 
-      {/* Switch User Modal */}
       <SwitchUserModal
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}
         onSwitchUser={handleSwitchUser}
       />
 
-      {/* Custom Alert */}
       {alertConfig && (
         <CustomAlert
           visible={visible}

@@ -73,6 +73,48 @@ export interface RegisterStep4Data {
   password_confirm: string;
 }
 
+// Direct registration (simplified flow)
+export interface DirectRegisterRequest {
+  email: string;
+  password: string;
+  confirm_password: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  role: string;
+}
+
+export interface DirectRegisterResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    user_id?: string;
+    email?: string;
+    access?: string;
+    refresh?: string;
+    user?: {
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone_number: string;
+      role: string;
+      is_verified: boolean;
+    };
+    verification_required?: boolean;
+    verification_info?: {
+      message: string;
+      verify_endpoint: string;
+      resend_endpoint: string;
+    };
+  };
+  requestTime?: string;
+  requestType?: string;
+  referenceId?: string;
+}
+
+
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -227,6 +269,24 @@ export const userAPI = {
 
 
 
+    return response.data;
+  },
+
+  // Direct registration (simplified flow)
+  directRegister: async (userData: DirectRegisterRequest): Promise<DirectRegisterResponse> => {
+    const response = await api.post('/users/register/', userData);
+    return response.data;
+  },
+
+  // Resend verification code
+  resendVerificationCode: async (email: string): Promise<{ status: boolean; message: string }> => {
+    const response = await api.post('/users/resend-verification-code/', { email });
+    return response.data;
+  },
+
+  // Verify email code
+  verifyEmailCode: async (email: string, code: string): Promise<{ status: boolean; message: string; data?: any }> => {
+    const response = await api.post('/users/verify-email-code/', { email, code });
     return response.data;
   },
 

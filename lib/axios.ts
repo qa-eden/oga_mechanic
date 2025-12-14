@@ -54,6 +54,22 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle 429 Too Many Requests (Throttling)
+    if (error.response?.status === 429) {
+      console.warn('⚠️ API throttling detected:', error.response?.data);
+      
+      // Extract wait time from error message if available
+      const detail = error.response?.data?.detail;
+      const waitTimeMatch = detail?.match(/(\d+)\s*seconds?/i);
+      const waitTime = waitTimeMatch ? parseInt(waitTimeMatch[1]) : 60;
+      
+      // Add user-friendly error message
+      error.userMessage = `Too many requests. Please wait ${waitTime} seconds before trying again.`;
+      
+      // Don't retry throttled requests automatically
+      return Promise.reject(error);
+    }
+
     // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

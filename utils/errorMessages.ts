@@ -1,7 +1,20 @@
 // Secure error messages without information disclosure
-export const getErrorMessage = (error: any, context: string = 'general'): string => {
-  // Network/Connection errors
-  if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+export const getErrorMessage = (error: any, context?: string): string => {
+  // Handle throttling errors first
+  if (error?.response?.status === 429 || error?.response?.data?.detail?.includes('throttled')) {
+    const detail = error?.response?.data?.detail;
+    const waitTimeMatch = detail?.match(/(\d+)\s*seconds?/i);
+    const waitTime = waitTimeMatch ? parseInt(waitTimeMatch[1]) : 60;
+    return `Too many requests. Please wait ${waitTime} seconds before trying again.`;
+  }
+
+  // Handle user-friendly message from axios interceptor
+  if (error?.userMessage) {
+    return error.userMessage;
+  }
+
+  // Network errors
+  if (error?.message === 'Network Error' || !error?.response) {
     return 'Unable to connect. Please check your internet connection.';
   }
   

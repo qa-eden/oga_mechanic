@@ -17,8 +17,6 @@ import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 // Import your actual tab screen components
 import HomeScreen from "./home";
-import CarsScreen from "./cars";
-import ServicesScreen from "./services";
 import ProfileScreen from "./profile";
 import ShopScreen from "./shop"; // Shop screen component
 
@@ -46,23 +44,19 @@ export default function Layout() {
       }
     > = {
       home: {
-        icon: <icons.home />,
-        activeIcon: <icons.activeHome />,
+        icon: <icons.home width={28} height={28} />,
+        activeIcon: <icons.activeHome width={32} height={32} />,
         label: "Home",
       },
-      cars: {
-        icon: <icons.car />,
-        activeIcon: <icons.activeCar />,
-        label: "My Cars",
-      },
-      services: {
-        icon: <icons.services />,
-        activeIcon: <icons.activeServices />,
-        label: "Services",
-      },
+      // cars: {
+      //   icon: <icons.car />,
+      //   activeIcon: <icons.activeCar />,
+      //   label: "My Cars",
+      // },
+
       profile: {
-        icon: <icons.profile />,
-        activeIcon: <icons.activeProfile />,
+        icon: <icons.profile  width={28} height={28}/>,
+        activeIcon: <icons.activeProfile width={32} height={32} />,
         label: "Profile",
       },
     };
@@ -76,12 +70,12 @@ export default function Layout() {
             string,
             | typeof routes.home
             | typeof routes.cars
-            | typeof routes.services
+
             | typeof routes.profile
           > = {
             home: routes.home,
-            cars: routes.cars,
-            services: routes.services,
+            // cars: routes.cars,
+
             profile: routes.profile,
           };
           router.push(routeMap[routeName] || routes.home);
@@ -152,16 +146,12 @@ export default function Layout() {
           position="LEFT"
           component={HomeScreen}
         />
-        <CurvedBottomBarExpo.Screen
+        {/* <CurvedBottomBarExpo.Screen
           name="cars"
           position="LEFT"
           component={CarsScreen}
-        />
-        <CurvedBottomBarExpo.Screen
-          name="services"
-          position="RIGHT"
-          component={ServicesScreen}
-        />
+        /> */}
+
         <CurvedBottomBarExpo.Screen
           name="profile"
           position="RIGHT"

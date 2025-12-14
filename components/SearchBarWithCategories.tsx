@@ -461,16 +461,9 @@ const SearchBarWithCategories = ({
 
   return (
     <View>
-      <View className={`${CONTAINER_PADDING} mb-6`}>
+      <View className={`${CONTAINER_PADDING} mb-3`}>
         <View
-          className="flex-row items-center bg-white rounded-2xl px-3 py-2 border border-primary-200"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
+          className="flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-200"
         >
           <View className="mr-4">
             {isSearching ? (
@@ -547,24 +540,21 @@ const SearchBarWithCategories = ({
             </TouchableOpacity>
           )}
 
-          <View className="border-l border-primary-100 flex-row">
+          <View className="border-l border-gray-300 ml-2 pl-3">
             <TouchableOpacity
               onPress={handleFilterPress}
               onLayout={(event) => {
                 const { x, y, width, height } = event.nativeEvent.layout;
                 setFilterButtonLayout({ x, y, width, height });
               }}
-              className="ml-2 px-4 py-2 rounded-xl bg-red-50 flex-row items-center"
+              className="p-1"
               activeOpacity={0.7}
             >
-              <View className="w-4 h-4 mr-2">
-                <View className="w-full h-0.5 bg-primary-500 mb-1" />
-                <View className="w-3 h-0.5 bg-primary-500 mb-1" />
-                <View className="w-full h-0.5 bg-primary-500" />
+               <View className="w-5 h-5 flex-col justify-between py-1">
+                <View className="w-full h-0.5 bg-gray-500 rounded-full" />
+                <View className="w-3 h-0.5 bg-gray-500 rounded-full self-end" />
+                <View className="w-full h-0.5 bg-gray-500 rounded-full" />
               </View>
-              <Text className="text-primary-500 font-NunitoBold text-lg">
-                Filter
-              </Text>
             </TouchableOpacity>
             
           </View>
@@ -666,9 +656,9 @@ const SearchBarWithCategories = ({
         )}
       </View>
 
-      <View className="mb-6">
+      <View className="mb-3">
         <Text
-          className={`text-xl font-NunitoExtraBold text-gray-900 ${CONTAINER_PADDING} mb-2`}
+          className={`text-xl font-NunitoExtraBold text-gray-900 ${CONTAINER_PADDING} mb-1`}
         >
           Categories
         </Text>

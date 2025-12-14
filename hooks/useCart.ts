@@ -25,8 +25,12 @@ export const useCart = () => {
   return useQuery<CartResponse, Error>({
     queryKey: cartKeys.cart(),
     queryFn: () => productsAPI.getCart(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always refetch when invalidated - cart data should be fresh
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    retry: 2, // Retry failed requests
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
   });
 };
 

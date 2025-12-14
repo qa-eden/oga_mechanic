@@ -1,25 +1,28 @@
 "use client"
 
-import { View, FlatList, Text, ActivityIndicator, RefreshControl, ScrollView } from "react-native"
+import { View, FlatList, Text, RefreshControl, ScrollView, TouchableOpacity } from "react-native"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Card1 from "@/components/cards/Card1"
-import BackArrowBtn from "@/components/BackArrowBtn"
 import { LAYOUT } from "@/constants/units"
 import SearchBarWithCategories from "@/components/SearchBarWithCategories"
-import ProfileHeader from "@/components/ProfileHeader"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { routes } from "@/constants/routes"
 import CartIconBtn from "@/components/CartIconBtn"
-import { useProducts, useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
-import { ProductListResponse } from "@/lib/api/products"
+import { useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
+import { ProductListResponse, ProductListAPIResponse } from "@/lib/api/products"
 import { getErrorMessage } from "@/utils/errorMessages"
 import usePullToRefresh from "@/hooks/usePullToRefresh"
+import { useCart } from "@/contexts/CartContext"
 import LoadingSpinner from "@/components/LoadingSpinner"
+import { ShoppingBagIcon, XMarkIcon } from "react-native-heroicons/outline"
+import { StatusBar } from "expo-status-bar"
+import Animated, { FadeInDown } from "react-native-reanimated"
 
 const Shop = () => {
-  const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
+  const { SCROLL_PADDING_BOTTOM, CARD_PADDING } = LAYOUT;
   const router = useRouter();
+  const { addToCart, removeFromCart } = useCart();
   const params = useLocalSearchParams<{ category?: string; categoryId?: string }>();
 
   const [selectedCategory, setSelectedCategory] = useState(params.category || "All")
@@ -153,7 +156,8 @@ const Shop = () => {
   // Flatten paginated products data
   const products = useMemo(() => {
     if (!productsData?.pages) return [];
-    return productsData.pages.flatMap(page => page.data.results);
+    // Each page is a ProductListAPIResponse with structure: { data: { results: [...] } }
+    return productsData.pages.flatMap((page: ProductListAPIResponse) => page.data.results);
   }, [productsData]);
 
   // Determine which products to display
@@ -243,28 +247,37 @@ const Shop = () => {
   }, []);
 
   const renderProductCard = ({ item, index }: { item: any; index: number }) => (
-    <View className="w-1/2 px-2 mb-4">
+    <Animated.View
+      entering={FadeInDown.delay(index * 50).duration(400).springify()}
+      style={{ width: (LAYOUT.SCREEN_WIDTH - 24 - 12) / 2 }}
+    >
       <Card1
         Images={item.images?.[0]?.image || "sparePart"}
         rating={item.rating || 0}
         name={item.name}
-        reviewCount={0} // API doesn't provide review count yet
+        reviewCount={0}
         price={parseFloat(item.price)}
         isFavorite={item.is_in_favorite_list}
+        isInCart={item.is_in_cart}
         productId={item.id}
         showLove={true}
-        love={false} // Default to false, can be enhanced later
+        love={false}
         onPress={() => {
           router.push({
             pathname: routes.ProductDetail,
             params: { productId: item.id },
           });
         }}
-        onLovePress={() => {
-          // Handle love press
-        }}
+        onAddToCart={() => addToCart({
+            id: item.id,
+            name: item.name,
+            price: parseFloat(item.price),
+            stock: item.stock || 10,
+            image: item.images?.[0]?.image || "sparePart",
+        })}
+        onRemoveFromCart={() => removeFromCart(item.id)}
       />
-    </View>
+    </Animated.View>
   )
 
   // Loading state
@@ -281,22 +294,31 @@ const Shop = () => {
   // Error state (only show if there's an actual error, not empty results)
   if (productsError || (searchTriggered && searchError)) {
     return (
-      <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+      <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
+        <StatusBar style="dark" />
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl {...refreshControl} />}
         >
-          <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
-            <BackArrowBtn />
-            <ProfileHeader title="Shop" />
-            <CartIconBtn />
+          {/* Header */}
+          <View className="bg-white px-5 pt-4 pb-3 border-b border-gray-100">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <ShoppingBagIcon size={28} color="#D30309" />
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900">Shop</Text>
+              </View>
+              <CartIconBtn />
+            </View>
           </View>
           <View className="flex-1 items-center justify-center px-4 py-20">
-            <Text className="text-red-600 text-center text-lg font-medium">
+            <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
+              <XMarkIcon size={32} color="#EF4444" />
+            </View>
+            <Text className="text-red-600 text-center text-lg font-NunitoBold">
               {getErrorMessage(searchTriggered ? searchError : productsError, 'products')}
             </Text>
-            <Text className="text-gray-500 text-center mt-2 text-sm">
+            <Text className="text-gray-500 text-center mt-2 text-sm font-NunitoMedium">
               Pull down to refresh or try again
             </Text>
           </View>
@@ -306,13 +328,40 @@ const Shop = () => {
   }
 
   return (
-    <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+    <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
+      <StatusBar style="dark" />
       <View className="flex-1">
         {/* Header */}
-        <View className={`flex-row items-center justify-between ${CONTAINER_PADDING} py-4`}>
-          <BackArrowBtn />
-          <ProfileHeader title="Shop" />
-          <CartIconBtn />
+        <View className="px-3 pt-2 pb-4">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-3xl font-NunitoExtraBold text-gray-900">Shop</Text>
+            </View>
+            <View className="flex-row items-center gap-3">
+              {filtersApplied && (
+                <TouchableOpacity
+                  onPress={handleResetSearch}
+                  className="bg-red-50 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                >
+                  <XMarkIcon size={14} color="#DC2626" />
+                  <Text className="text-red-600 text-xs font-NunitoBold">Clear Filters</Text>
+                </TouchableOpacity>
+              )}
+              <CartIconBtn />
+            </View>
+          </View>
+
+          {/* Results Info */}
+          <View className="flex-row items-center justify-between">
+            <Text className="text-gray-500 text-sm font-NunitoMedium">
+              Showing {displayProducts.length} {displayProducts.length === 1 ? 'item' : 'items'}
+            </Text>
+            {selectedCategory !== "All" && (
+              <View className="bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
+                <Text className="text-primary-600 text-xs font-NunitoBold">{selectedCategory}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <SearchBarWithCategories
@@ -339,8 +388,13 @@ const Shop = () => {
             numColumns={2}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingHorizontal: CARD_PADDING,
+              paddingHorizontal: 12, // Reduced padding (px-3)
+              paddingTop: 8,
               paddingBottom: SCROLL_PADDING_BOTTOM,
+              gap: 12, // Reduced vertical gap
+            }}
+            columnWrapperStyle={{
+              gap: 12, // Consistent horizontal gap
             }}
             initialNumToRender={8}
             maxToRenderPerBatch={8}
@@ -357,21 +411,24 @@ const Shop = () => {
             ListFooterComponent={() => {
               if (isFetchingNextPage) {
                 return (
-                  <View className="py-4 items-center">
-                    <Text className="text-gray-500">Loading 20 more products...</Text>
-                  </View>
+                  <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    className="py-6 items-center"
+                  >
+                    <View className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">
+                      <Text className="text-gray-500 text-sm font-NunitoMedium">Loading more...</Text>
+                    </View>
+                  </Animated.View>
                 );
               }
 
-              // Show "Load more data" button when there are no more pages
+              // Show end of list message
               if (!searchTriggered && !hasNextPage && products.length > 0) {
                 return (
-                  <View className="py-4 items-center">
-                    <Text className="text-gray-500 text-center">
-                      No more products to load
-                    </Text>
-                    <Text className="text-gray-400 text-sm mt-1">
-                      You've reached the end of the list
+                  <View className="py-8 items-center">
+                    <View className="w-12 h-1 bg-gray-200 rounded-full mb-3" />
+                    <Text className="text-gray-400 text-sm font-NunitoMedium">
+                      End of results
                     </Text>
                   </View>
                 );
@@ -381,37 +438,37 @@ const Shop = () => {
             }}
           />
         ) : (
-          <View className="flex-1 items-center justify-center px-4 py-20">
-            <Text className="text-gray-600 text-center text-lg">
-              {searchTriggered
-                ? (searchQuery.trim()
-                  ? "No products found for your search"
-                  : "No products found with these filters")
-                : filtersApplied
-                  ? "No products found with applied filters"
-                  : "No products available"}
-            </Text>
-            {searchTriggered && searchQuery.trim() && (
-              <Text className="text-gray-500 text-center mt-2">
-                Try different keywords or check spelling
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ flexGrow: 1 }}
+            refreshControl={<RefreshControl {...refreshControl} />}
+          >
+            <View className="flex-1 items-center justify-center px-6 py-20 opacity-80">
+              <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
+                <ShoppingBagIcon size={48} color="#9CA3AF" />
+              </View>
+              <Text className="text-gray-900 text-center text-xl font-NunitoBold mb-2">
+                {searchTriggered
+                  ? "No Results Found"
+                  : filtersApplied
+                    ? "No Matching Products"
+                    : "Store Empty"}
               </Text>
-            )}
-            {searchTriggered && !searchQuery.trim() && (
-              <Text className="text-gray-500 text-center mt-2">
-                Try adjusting your price range or other filters
+              <Text className="text-gray-500 text-center font-NunitoMedium mb-8 leading-6 max-w-[250px]">
+                {searchTriggered && searchQuery.trim()
+                  ? `We couldn't find anything matching "${searchQuery}"`
+                  : "We couldn't find any products matching your current filters."}
               </Text>
-            )}
-            {!searchTriggered && filtersApplied && (
-              <Text className="text-gray-500 text-center mt-2">
-                Try adjusting your category or price filters
-              </Text>
-            )}
-            {!searchTriggered && !filtersApplied && (
-              <Text className="text-gray-500 text-center mt-2">
-                No products are currently available
-              </Text>
-            )}
-          </View>
+              {(searchTriggered || filtersApplied) && (
+                <TouchableOpacity
+                  onPress={handleResetSearch}
+                  className="bg-primary-500 px-8 py-3.5 rounded-2xl shadow-sm shadow-primary-200"
+                >
+                  <Text className="text-white font-NunitoBold text-base">Clear Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </ScrollView>
         )}
       </View>
     </SafeAreaView>

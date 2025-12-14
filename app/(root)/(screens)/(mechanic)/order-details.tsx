@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -42,6 +43,10 @@ const MechanicOrderDetails = () => {
   const [actionType, setActionType] = useState<MechanicActionType | null>(null);
   const [jobCompletedModalVisible, setJobCompletedModalVisible] = useState(false);
   const { showSuccess, showError, showWarning, visible, alertConfig, hideAlert } = useCustomAlert();
+  
+  // Copy to clipboard state
+  const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch repair request detail from API
   const { 
@@ -133,15 +138,34 @@ const MechanicOrderDetails = () => {
   // Copy address to clipboard
   const copyToClipboard = async (text: string) => {
     try {
-      // Using React Native's deprecated Clipboard API as fallback
-      // In production, use expo-clipboard
-      await Linking.openURL(`clipboard:${text}`);
-      showSuccess('Copied!', 'Address copied to clipboard');
-    } catch {
-      // Fallback: show the address in an alert for manual copying
-      Alert.alert('Address', text, [{ text: 'OK' }]);
+      if (!text || text.trim() === '') {
+        return;
+      }
+      await Clipboard.setStringAsync(text);
+      setIsCopied(true);
+      
+      // Clear any existing timeout
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      
+      // Reset after 3 seconds
+      copyTimeoutRef.current = setTimeout(() => {
+        setIsCopied(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Open address in maps
   const openInMaps = (address: string) => {
@@ -600,12 +624,20 @@ const MechanicOrderDetails = () => {
 
                 <TouchableOpacity
                   onPress={() => copyToClipboard(request.service_address)}
-                  className="flex-row items-center justify-center bg-gray-100 px-4 py-3 rounded-xl"
+                  className={`flex-row items-center justify-center ${isCopied ? 'bg-green-100' : 'bg-gray-100'} px-4 py-3 rounded-xl`}
                 >
-                  <ClipboardDocumentIcon size={18} color="#6B7280" />
-                  <Text className="text-sm font-NunitoSemiBold text-gray-700 ml-2">
-                    Copy
-                  </Text>
+                  {isCopied ? (
+                    <Text className="text-sm font-NunitoSemiBold text-green-700">
+                      Copied
+                    </Text>
+                  ) : (
+                    <>
+                      <ClipboardDocumentIcon size={18} color="#6B7280" />
+                      <Text className="text-sm font-NunitoSemiBold text-gray-700 ml-2">
+                        Copy
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             )}

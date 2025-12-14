@@ -10,13 +10,15 @@ interface CategoryTabProps {
 const CategoryTab: React.FC<CategoryTabProps> = React.memo(({ item, selectedCategory, onSelect }) => (
   <TouchableOpacity
     onPress={() => onSelect(item.name, item.id)}
-    className={`w-[100px] flex-row justify-center py-3 rounded-[.5rem] ${
-      selectedCategory === item.name ? "bg-primary-500" : "bg-gray-100"
+    className={`px-5 py-2.5 rounded-full mr-2 border ${
+      selectedCategory === item.name 
+        ? "bg-primary-500 border-primary-500" 
+        : "bg-white border-gray-200"
     }`}
     activeOpacity={0.7}
   >
     <Text
-      className={`font-NunitoBold text-[1.1rem] ${
+      className={`font-NunitoBold text-sm ${
         selectedCategory === item.name ? "text-white" : "text-gray-600"
       }`}
     >

@@ -38,7 +38,7 @@ function AppContent() {
     <CartProvider>
       <LocationProvider>
         <View className="flex-1">
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Toast />
           <Stack>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
