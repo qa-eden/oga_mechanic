@@ -143,6 +143,9 @@ export const SERVICE_ENDPOINTS = {
   CLEAR_CART: '/products/cart/clear/',
   // Favorites endpoints
   FAVORITE_PRODUCT: '/products/favorite-product/',
+  FAVORITE_PRODUCTS: '/products/favorite-products/',
+  FOLLOW_MERCHANT: '/products/follow-merchant/',
+  FOLLOWED_MERCHANTS: '/products/followed-merchants/',
   // Checkout endpoints
   CHECKOUT: '/products/checkout/',
   // Payment verification endpoints
@@ -151,6 +154,8 @@ export const SERVICE_ENDPOINTS = {
   // Orders endpoints
   ORDERS: '/products/orders/',
   ORDER_STATUS: (orderId: string) => `/products/orders/${orderId}/status/`,
+  ORDER_VERIFY_PAYMENT: '/products/orders/verify-payment/',
+  PRODUCT_REVIEWS: (id: string) => `/products/products/${id}/reviews/`,
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_FAQ: '/support/faq',
   SUPPORT_TICKETS: '/support/tickets',

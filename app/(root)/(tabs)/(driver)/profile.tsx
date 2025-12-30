@@ -154,7 +154,7 @@ const DiverProfile = () => {
                 onPress={() => {
                   if (item.name === "My Profile") {
                     router.push(mechanicRoutes.EditProfile);
-                  } else if (item.name === "Switch User") {
+                  } else if (item.name === "Switch Role") {
                     setShowSwitchUserModal(true);
                   }
                   // Add other navigation logic here for other items
@@ -225,7 +225,7 @@ const DiverProfile = () => {
         onCancel={cancelLogout}
       />
 
-      {/* Switch User Modal */}
+      {/* Switch Role Modal */}
       <SwitchUserModal
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}

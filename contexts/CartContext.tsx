@@ -302,7 +302,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.status) {
         // Handle different response structures
-        let cartData = response.data;
+        let cartData: any = response.data;
         
         // If response.data is not an array, check if it's wrapped in another data property
         if (!Array.isArray(cartData)) {

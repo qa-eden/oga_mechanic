@@ -201,3 +201,53 @@ export const useMarkAllNotificationsAsRead = () => {
     },
   });
 };
+
+// Hook to follow a merchant
+export const useFollowMerchant = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.followMerchant,
+    onSuccess: (_, merchantId) => {
+      // Invalidate and refetch specific merchant profile
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.merchantByUuid(merchantId) });
+      // Also invalidate general merchant queries if necessary
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.merchant() });
+      // Invalidate followed merchants list
+      queryClient.invalidateQueries({ queryKey: ['followedMerchants'] });
+    },
+    onError: (error) => {
+      console.error('❌ Error following merchant:', error);
+    },
+  });
+};
+
+// Hook to unfollow a merchant
+export const useUnfollowMerchant = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.unfollowMerchant,
+    onSuccess: (_, merchantId) => {
+      // Invalidate and refetch specific merchant profile
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.merchantByUuid(merchantId) });
+      // Also invalidate general merchant queries if necessary
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.merchant() });
+      // Invalidate followed merchants list
+      queryClient.invalidateQueries({ queryKey: ['followedMerchants'] });
+    },
+    onError: (error) => {
+      console.error('❌ Error unfollowing merchant:', error);
+    },
+  });
+};
+
+// Hook to get followed merchants
+export const useFollowedMerchants = () => {
+  return useQuery({
+    queryKey: ['followedMerchants'],
+    queryFn: userAPI.getFollowedMerchants,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+};

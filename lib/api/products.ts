@@ -168,6 +168,22 @@ export interface CategoryResponse {
   updated_at: string;
 }
 
+export interface FavoriteProduct {
+  id: number;
+  product: ProductDetailResponse;
+  created_at: string;
+  is_in_favorite_list: boolean;
+}
+
+export interface FavoriteProductAPIResponse {
+  data: FavoriteProduct[];
+  message: string;
+  referenceId: string;
+  requestTime: string;
+  requestType: string;
+  status: boolean;
+}
+
 // Cart Types
 export interface CartItem {
   id: string;
@@ -606,8 +622,8 @@ export const productsAPI = {
   },
 
   // Get user's favorite products
-  getFavoriteProducts: async (): Promise<ProductListAPIResponse> => {
-    const response = await api.get<ProductListAPIResponse>(`${SERVICE_ENDPOINTS.FAVORITE_PRODUCT}`);
+  getFavoriteProducts: async (): Promise<FavoriteProductAPIResponse> => {
+    const response = await api.get<FavoriteProductAPIResponse>(`${SERVICE_ENDPOINTS.FAVORITE_PRODUCTS}`);
     return response.data;
   },
 
@@ -687,6 +703,36 @@ export const productsAPI = {
     const response = await api.get<PaymentStatusResponse>(
       SERVICE_ENDPOINTS.PAYMENT_STATUS(orderId)
     );
+    return response.data;
+  },
+
+  // Get user orders
+  getUserOrders: async (status?: string): Promise<any> => {
+    const params = new URLSearchParams();
+    if (status && status !== 'All') {
+      params.append('status', status.toLowerCase());
+    }
+    
+    // Using the endpoint provided in the request: products/orders/
+    const response = await api.get(`${SERVICE_ENDPOINTS.ORDERS}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Verify payment for an order using ID as reference
+  verifyOrderPayment: async (orderId: string): Promise<any> => {
+    const payload = {
+      requestType: "inbound", // Assuming a default or required value
+      data: {
+        reference: orderId
+      }
+    };
+    const response = await api.post(SERVICE_ENDPOINTS.ORDER_VERIFY_PAYMENT, payload);
+    return response.data;
+  },
+
+  // Create product review
+  createProductReview: async (productId: string, payload: { data: { rating: number; comment: string }; requestType: string }): Promise<any> => {
+    const response = await api.post(SERVICE_ENDPOINTS.PRODUCT_REVIEWS(productId), payload);
     return response.data;
   },
 };

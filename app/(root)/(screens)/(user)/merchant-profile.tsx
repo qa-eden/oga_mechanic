@@ -8,7 +8,8 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import { routes } from '@/constants/routes'
 import { useQuery } from '@tanstack/react-query'
 import { productsAPI } from '@/lib/api/products'
-import { useMerchantProfileByUuid } from '@/hooks/useUserProfile'
+import { useMerchantProfileByUuid, useFollowMerchant, useUnfollowMerchant } from '@/hooks/useUserProfile'
+import { showToast } from '@/utils/toastUtils'
 import Card1 from '@/components/cards/Card1'
 import BackArrowBtn from '@/components/BackArrowBtn'
 import Animated, { FadeInDown } from 'react-native-reanimated'
@@ -28,6 +29,9 @@ const MerchantProfile = () => {
     error: profileError,
     refetch: refetchProfile
   } = useMerchantProfileByUuid(merchantId || '', !!merchantId)
+
+  const followMutation = useFollowMerchant();
+  const unfollowMutation = useUnfollowMerchant();
 
   // Fetch merchant products
   const {
@@ -66,6 +70,24 @@ const MerchantProfile = () => {
     } catch (error) {
     }
   }, [refetchProfile, refetchProducts])
+
+  const handleFollowToggle = async () => {
+    if (!merchantData?.user?.id) return;
+
+    try {
+      if (merchantData.is_following) {
+        await unfollowMutation.mutateAsync(merchantData.user.id);
+        showToast.success("Unfollowed merchant");
+      } else {
+        await followMutation.mutateAsync(merchantData.user.id);
+        showToast.success("Following merchant");
+      }
+    } catch (error) {
+      showToast.error("Failed to update follow status");
+    }
+  };
+
+  const isPending = followMutation.isPending || unfollowMutation.isPending;
 
   // Show loading state
   if (isLoading) {
@@ -199,9 +221,28 @@ const MerchantProfile = () => {
                      </Text>
                      <Text className="text-xs text-gray-500 ml-1">• 0 reviews</Text>
                    </View>
-                   <Text className="text-gray-500 text-xs font-NunitoMedium">
-                     Member since {userData?.date_joined ? new Date(userData.date_joined).getFullYear() : '2024'}
-                   </Text>
+                   
+                   <View className="flex-row items-center justify-between mt-1">
+                     <Text className="text-gray-500 text-xs font-NunitoMedium">
+                       Member since {userData?.date_joined ? new Date(userData.date_joined).getFullYear() : '2024'}
+                     </Text>
+                     
+                     <TouchableOpacity
+                        onPress={handleFollowToggle}
+                        disabled={isPending}
+                        className={`px-4 py-1.5 rounded-full border ${
+                          merchantData?.is_following 
+                            ? 'bg-white border-gray-300' 
+                            : 'bg-primary-500 border-primary-500'
+                        }`}
+                     >
+                        <Text className={`text-xs font-NunitoBold ${
+                          merchantData?.is_following ? 'text-gray-700' : 'text-white'
+                        }`}>
+                          {isPending ? '...' : merchantData?.is_following ? 'Unfollow' : 'Follow'}
+                        </Text>
+                     </TouchableOpacity>
+                   </View>
                  </View>
                </View>
 
@@ -218,6 +259,17 @@ const MerchantProfile = () => {
                    </Text>
                    <Text className="text-xs text-gray-400 font-NunitoMedium">Sales</Text>
                  </View>
+                 {merchantData?.followers_count !== undefined && (
+                   <>
+                     <View className="w-px bg-gray-200" />
+                     <View className="flex-1 items-center">
+                       <Text className="text-lg font-NunitoBold text-gray-900">
+                         {merchantData.followers_count}
+                       </Text>
+                       <Text className="text-xs text-gray-400 font-NunitoMedium">Followers</Text>
+                     </View>
+                   </>
+                 )}
                </View>
              </View>
           </View>

@@ -2,7 +2,8 @@ export const routes = {
   // Auth routes
   welcome: "/(auth)/welcome",
   signUp: "/(auth)/(register)/sign_up",
-  register: "/(auth)/(register)/register-step1",
+  register: "/(auth)/(register)/register",
+  registerStep1: "/(auth)/(register)/register-step1",
   registerStep2: "/(auth)/(register)/register-step2",
   signIn: "/(auth)/(login)/sign_in",
   forgotPassword: "/(auth)/(login)/forgetPassword",
@@ -31,11 +32,16 @@ export const routes = {
   services: "/(root)/(tabs)/(user)/home",
   profile: "/(root)/(tabs)/(user)/profile",
   shop: "/(root)/(tabs)/(user)/shop",
+  myOrders: "/(root)/(screens)/(user)/my-orders",
 
 
   //screens
+  changePassword: "/(root)/(screens)/(general)/change-password",
+  editProfile: "/(root)/(screens)/(user)/edit-profile",
+  favoriteProducts: "/(root)/(screens)/(user)/favorite-products",
   ProductDetail: "/(root)/(screens)/(user)/product-detail",
   cart: "/(root)/(screens)/(user)/cart",
+  orderDetail: "/(root)/(screens)/(user)/order-details",
   paymentResult: "/(root)/(screens)/(user)/payment-result",
   orderConfirmation: "/(root)/(screens)/(user)/order-confirmation",
   chatSeller: "/(root)/(screens)/(user)/chat-seller",
@@ -51,6 +57,7 @@ export const routes = {
   merchantProfile: "/(root)/(screens)/(user)/merchant-profile",
   notifications: "/(root)/(screens)/(notifications)/notification",
   notificationDetail: "/(root)/(screens)/(notifications)/notification-detail",
+  followedMerchants: "/(root)/(screens)/(user)/followed-merchants",
 
 
   //calls

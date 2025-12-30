@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
+import { showToast } from "@/utils/toastUtils";
 import { MaterialIcons } from '@expo/vector-icons';
 import { ShoppingBagIcon, WrenchScrewdriverIcon, UsersIcon } from "react-native-heroicons/solid";
 import CustomButton from "../CustomButton";
@@ -207,36 +208,48 @@ const SwitchUserModal = ({
     if (selectedUser) {
       // Find the selected option to check if user has access
       const selectedOption = userOptions.find(option => option.id === selectedUser);
-      const hasAccess = selectedOption?.hasAccess || false;
+      // const hasAccess = selectedOption?.hasAccess || false; // No longer blocking based on access
       const roleName = selectedOption?.roleName || selectedUser; // Use original role name for navigation
       const roleId = selectedOption?.roleId;
 
-      if (hasAccess && roleId) {
+      if (roleId) {
         try {
           setIsSwitching(true);
           
-          await userAPI.switchRole(roleId);
+          // If user doesn't have access, we add the role during the switch
+          if (!selectedOption?.hasAccess) {
+             // Step 1: Add the role (passing null for activeRoleId)
+             await userAPI.switchRole(null, [roleId]);
+             
+             // Step 2: Switch to the successfully added role (passing roleId for activeRoleId)
+             await userAPI.switchRole(roleId);
+          } else {
+             // Pass roleId for activeRoleId
+             await userAPI.switchRole(roleId);
+          }
+          
+          const addRoles = !selectedOption?.hasAccess ? [roleId] : undefined;
           
           // Store the new active role for fallback purposes
           await AsyncStorage.setItem('current_active_role', roleName);
           
-          // Invalidate user roles query to trigger refetch
+          // Invalidate React Query cache
           queryClient.invalidateQueries({ queryKey: ['userProfile', 'roles'] });
-          
-          // Invalidate all roles query to trigger refetch
           queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
-          
-          // Invalidate and refetch notifications query after role switch
           queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
-          // Explicitly refetch notifications to ensure they're called immediately
+          
+          // Explicitly refetch notifications
           queryClient.refetchQueries({ queryKey: userProfileKeys.notifications() });
           
           // Wait a moment for queries to refetch
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          
-          // User has this role, log them in directly
+          // Log them in directly
           onSwitchUser(roleName);
+
+          if (addRoles) {
+             showToast.success(`Switched to ${selectedOption?.name || roleName}`);
+          }
           
           // Navigate to role-specific home page
           let targetRoute: string = routes?.userHome;
@@ -247,7 +260,7 @@ const SwitchUserModal = ({
             case 'rider': targetRoute = routes?.riderHome; break;
             case 'merchant': 
             case 'seller': 
-              targetRoute = '/(root)/(tabs)/(sellers)/home'; 
+              targetRoute = sellerRoutes.home; 
               break;
             default: targetRoute = routes?.userHome;
           }
@@ -257,47 +270,15 @@ const SwitchUserModal = ({
           setTimeout(() => {
             onClose();
           }, 100);
-        } catch (error) {
-          showError(
-            "Switch Failed",
-            "Failed to switch role. Please try again."
-          );
+        } catch (error: any) {
+             console.error("Switch Role Error", error);
+             const errorMessage = error.response?.data?.message || "Failed to switch role. Please try again.";
+             showError("Switch Failed", errorMessage);
         } finally {
           setIsSwitching(false);
         }
-      } else if (hasAccess && !roleId) {
-        onSwitchUser(roleName);
-        
-        // Navigate to role-specific home page
-        let targetRoute: string = routes?.userHome;
-        switch (roleName) {
-          case 'primary_user': targetRoute = routes?.userHome; break;
-          case 'driver': targetRoute = routes?.driverHome; break;
-          case 'mechanic': targetRoute = routes?.mechanicHome; break;
-          case 'rider': targetRoute = routes?.riderHome; break;
-          case 'merchant': 
-          case 'seller': 
-            targetRoute = '/(root)/(tabs)/(sellers)/home'; 
-            break;
-          default: targetRoute = routes?.userHome;
-        }
-        router.replace(targetRoute as any);
-        
-        setTimeout(() => {
-          onClose();
-        }, 100);
       } else {
-        // User doesn't have this role, show alert with signup option
-        const displayName = selectedOption?.name || selectedUser;
-        showError(
-          "Role Not Available",
-          `You haven't signed up for the ${displayName ?? 'User'} role yet. The app will redirect you to sign up for this role.`
-        );
-        
-        // After showing the alert, navigate to signup after a delay
-        // setTimeout(() => {
-         
-        // }, 2000); // 2 second delay to let user read the message
+         showError("Error", "Invalid role configuration");
       }
     }
   };
@@ -398,7 +379,7 @@ const SwitchUserModal = ({
                 <UsersIcon size={32} color="#EF4444" />
               </View>
               <Text className="text-2xl font-NunitoBold text-gray-900 text-center mb-2">
-                Switch User
+                Switch Role
               </Text>
               <Text className="text-gray-600 text-center font-NunitoMedium">
                 Seamlessly switch between accounts without logging out

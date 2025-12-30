@@ -98,6 +98,22 @@ export const getErrorMessage = (error: any, context?: string): string => {
   }
 };
 
+// Success messages based on context
+export const getSuccessMessage = (context: string): string => {
+  switch (context) {
+    case 'cart_add':
+      return 'Item added to cart successfully';
+    case 'cart_remove':
+      return 'Item removed from cart';
+    case 'cart_update':
+      return 'Cart updated successfully';
+    case 'cart_clear':
+      return 'Cart cleared successfully';
+    default:
+      return 'Operation successful';
+  }
+};
+
 // Secure error logging without sensitive information
 export const logErrorSecurely = (error: any, context: string = 'general'): void => {
   try {

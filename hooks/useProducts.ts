@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
-import { productsAPI, HomeProductsResponse, ProductDetailResponse, ProductListResponse, CategoryResponse, ProductListAPIResponse } from '../lib/api/products';
+import { productsAPI, HomeProductsResponse, ProductDetailResponse, ProductListResponse, CategoryResponse, ProductListAPIResponse, FavoriteProductAPIResponse } from '../lib/api/products';
 
 // Query keys
 export const productKeys = {
@@ -71,9 +71,10 @@ export const useProductsInfinite = (
       return undefined;
     },
     initialPageParam: 0,
-    enabled: enabled, // Only run when enabled
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: enabled,
+    staleTime: 0, // Always refetch on mount for fresh data
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnMount: true, // Silently refetch when component mounts
   });
 };
 
@@ -138,7 +139,7 @@ export const useCheckout = () => {
 
 // Get user's favorite products
 export const useFavoriteProducts = () => {
-  return useQuery<ProductListAPIResponse, Error>({
+  return useQuery<FavoriteProductAPIResponse, Error>({
     queryKey: productKeys.favorites(),
     queryFn: () => productsAPI.getFavoriteProducts(),
     staleTime: 2 * 60 * 1000, // 2 minutes

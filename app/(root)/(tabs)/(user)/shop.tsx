@@ -20,7 +20,7 @@ import { StatusBar } from "expo-status-bar"
 import Animated, { FadeInDown } from "react-native-reanimated"
 
 const Shop = () => {
-  const { SCROLL_PADDING_BOTTOM, CARD_PADDING } = LAYOUT;
+  const { SCROLL_PADDING_BOTTOM } = LAYOUT;
   const router = useRouter();
   const { addToCart, removeFromCart } = useCart();
   const params = useLocalSearchParams<{ category?: string; categoryId?: string }>();
@@ -280,8 +280,11 @@ const Shop = () => {
     </Animated.View>
   )
 
-  // Loading state
-  if (productsLoading || categoriesLoading) {
+  // Check if this is the initial load (no cached data yet)
+  const isInitialLoad = (productsLoading && !productsData) || (categoriesLoading && !categories);
+
+  // Loading state - only show full screen loader on initial load (no cached data)
+  if (isInitialLoad) {
     return (
       <LoadingSpinner
         message="Loading Products..."

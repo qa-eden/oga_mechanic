@@ -266,7 +266,7 @@ const RiderProfile = () => {
         onCancel={cancelLogout}
       />
 
-      {/* Switch User Modal */}
+      {/* Switch Role Modal */}
       <SwitchUserModal
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}

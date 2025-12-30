@@ -23,7 +23,7 @@ import { ChevronRightIcon, ArrowRightOnRectangleIcon, PencilSquareIcon } from "r
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 // import { useUserStore } from "@/stores/userStore";
 import LogoutModal from "@/components/modals/LogoutModal";
-import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useFollowedMerchants } from "@/hooks/useUserProfile";
 import CustomAlert from "@/components/CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,11 +51,18 @@ const Profile = () => {
   } = usePrimaryUserProfile();
 
   // Fetch favorite products
-  // TODO: Re-enable when endpoint is ready
-  // const {
-  //   data: favoritesData,
-  //   refetch: refetchFavorites
-  // } = useFavoriteProducts();
+  const {
+    data: favoritesData,
+    refetch: refetchFavorites
+  } = useFavoriteProducts();
+
+  // Fetch followed merchants
+  const { 
+    data: followedMerchantsData,
+    refetch: refetchFollowedMerchants
+  } = useFollowedMerchants();
+  
+  const followedMerchantsCount = Array.isArray(followedMerchantsData?.data) ? followedMerchantsData.data.length : 0;
 
   const { visible, alertConfig, hideAlert } = useCustomAlert();
   const logoutMutation = useLogout();
@@ -64,7 +71,7 @@ const Profile = () => {
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {
       await refetch();
-      // await Promise.all([refetch(), refetchFavorites()]);
+      await Promise.all([refetch(), refetchFavorites(), refetchFollowedMerchants()]);
     }
   });
 
@@ -242,25 +249,45 @@ const Profile = () => {
 
               {/* Stats Row */}
               <View className="flex-row mt-4 pt-4 border-t border-gray-200">
-                <View className="flex-1 items-center">
-                  <Text className="text-gray-900 text-lg font-NunitoBold">0</Text>
-                  <Text className="text-gray-400 text-xs font-NunitoMedium">Orders</Text>
-                </View>
-                <View className="w-px bg-gray-200" />
-                <View className="flex-1 items-center">
-                  <Text className="text-gray-900 text-lg font-NunitoBold">
-                    {/* {favoritesData?.data?.count || 0} */}
-                    0
-                  </Text>
-                  <Text className="text-gray-400 text-xs font-NunitoMedium">Favorites</Text>
-                </View>
-                <View className="w-px bg-gray-200" />
-                <View className="flex-1 items-center">
+              <TouchableOpacity 
+                activeOpacity={0.7}
+                onPress={() => router.push(routes.myOrders as any)}
+                className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+              >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">0</Text>
                   <View className="flex-row items-center">
-                    <icons.redPhone width={14} height={14} color="#D30309" />
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
+                    <ChevronRightIcon size={12} color="#9CA3AF" />
                   </View>
-                  <Text className="text-gray-400 text-xs font-NunitoMedium mt-0.5">{displayPhone}</Text>
-                </View>
+              </TouchableOpacity>
+              
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={() => router.push(routes.favoriteProducts as any)}
+                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                    {Array.isArray(favoritesData?.data) ? favoritesData.data.length : 0}
+                  </Text>
+                   <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Favorites</Text>
+                     <ChevronRightIcon size={12} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={() => router.push(routes.followedMerchants as any)}
+                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                    {followedMerchantsCount}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Following</Text>
+                     <ChevronRightIcon size={12} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -316,10 +343,10 @@ const Profile = () => {
                   title={item.name}
                   icon={item.image}
                   onPress={() => {
-                    if (item.name === "Switch User") {
+                    if (item.name === "Switch Role") {
                       setShowSwitchUserModal(true);
-                    } else if (item.route && item.name === "My Cars") {
-                      router.push(item.route as any);
+                    } else if (item.route) {
+                        router.push(item.route as any);
                     }
                   }}
                 />
@@ -329,7 +356,7 @@ const Profile = () => {
 
           {/* Preferences */}
           <Animated.View entering={FadeInDown.delay(300).duration(600).springify()}>
-            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
+            <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">
               Preferences
             </Text>
             <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
@@ -364,7 +391,7 @@ const Profile = () => {
 
           {/* Support */}
           <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
-            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
+            <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">
               Support
             </Text>
             <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">

@@ -76,7 +76,7 @@ const RegisterStep2 = () => {
       const registerData: DirectRegisterRequest = {
         email: step1Data.email,
         password: values.password,
-        confirm_password: values.confirmPassword,
+        // confirm_password: values.confirmPassword,
         first_name: step1Data.first_name,
         last_name: step1Data.last_name,
         phone_number: step1Data.phone_number,

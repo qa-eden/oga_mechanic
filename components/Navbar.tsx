@@ -173,7 +173,15 @@ const Navbar = () => {
             )} */}
           </View>
           <Text className="text-[12px] text-text-100 pt-[.1rem]">
-            Everything your car needs is here.
+            {activeRole === 'mechanic' 
+              ? 'Manage your jobs and earnings.' 
+              : activeRole === 'driver' 
+              ? 'Drive safely and earn more.' 
+              : activeRole === 'seller' || activeRole === 'merchant'
+              ? 'Grow your auto business.' 
+              : activeRole === 'rider'
+              ? 'Your reliable ride is just a tap away.'
+              : 'Everything your car needs is here.'}
           </Text>
         </View>
       </View>

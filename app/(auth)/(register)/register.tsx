@@ -31,9 +31,6 @@ const registerSchema = Yup.object().shape({
   password: Yup.string()
     .min(6, "Password must be at least 6 characters")
     .required("Password is required"),
-  confirm_password: Yup.string()
-    .oneOf([Yup.ref("password")], "Passwords must match")
-    .required("Please confirm your password"),
 });
 
 const Register = () => {
@@ -48,7 +45,6 @@ const Register = () => {
       const registerData: DirectRegisterRequest = {
         email: values.email,
         password: values.password,
-        confirm_password: values.confirm_password,
         first_name: values.first_name,
         last_name: values.last_name,
         phone_number: values.phone_number,
@@ -115,7 +111,6 @@ const Register = () => {
           email: "",
           phone_number: "",
           password: "",
-          confirm_password: "",
         }}
         validationSchema={registerSchema}
         onSubmit={handleRegister}
@@ -123,29 +118,27 @@ const Register = () => {
         {() => (
           <View className="px-5">
             {/* Name Fields */}
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <FormikInput
-                  name="first_name"
-                  label="First Name"
-                  placeholder="John"
-                  containerStyle=""
-                  required={true}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                />
-              </View>
-              <View className="flex-1">
-                <FormikInput
-                  name="last_name"
-                  label="Last Name"
-                  placeholder="Doe"
-                  containerStyle=""
-                  required={true}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                />
-              </View>
+            <View className="flex-1">
+              <FormikInput
+                name="first_name"
+                label="First Name"
+                placeholder="John"
+                containerStyle=""
+                required={true}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+            <View className="flex-1">
+              <FormikInput
+                name="last_name"
+                label="Last Name"
+                placeholder="Doe"
+                containerStyle=""
+                required={true}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
             </View>
 
             {/* Email Input */}
@@ -164,7 +157,7 @@ const Register = () => {
             <FormikInput
               name="phone_number"
               label="Phone Number"
-              placeholder="08012345678"
+              placeholder="08000000000"
               containerStyle=""
               type="phone"
               required={true}
@@ -176,18 +169,6 @@ const Register = () => {
               name="password"
               label="Password"
               placeholder="Enter your password"
-              type="password"
-              containerStyle=""
-              required={true}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            {/* Confirm Password Input */}
-            <FormikInput
-              name="confirm_password"
-              label="Confirm Password"
-              placeholder="Re-enter your password"
               type="password"
               containerStyle=""
               required={true}

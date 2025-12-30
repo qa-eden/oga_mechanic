@@ -21,6 +21,9 @@ interface ProductCardProps {
   productId?: number | string;
   showAddToCart?: boolean;
   isFavorite?: boolean;
+  onAddToCart?: () => Promise<void> | void;
+  onRemoveFromCart?: () => Promise<void> | void;
+  isInCart?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -40,6 +43,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   productId,
   showAddToCart = true,
   isFavorite = false,
+  onAddToCart,
+  onRemoveFromCart,
+  isInCart = false,
 }) => {
   const cartItem: Omit<CartItem, 'quantity'> = {
     id: productId?.toString() || '1',
@@ -68,6 +74,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         containerStyle={containerStyle}
         productId={productId}
         isFavorite={isFavorite}
+        onAddToCart={onAddToCart}
+        onRemoveFromCart={onRemoveFromCart}
+        isInCart={isInCart}
       />
       
       {showAddToCart && price && price > 0 && (

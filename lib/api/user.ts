@@ -1,5 +1,5 @@
 import api from '../axios';
-import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS } from '../endpoints';
+import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS, SERVICE_ENDPOINTS } from '../endpoints';
 
 // Types
 export interface LoginCredentials {
@@ -77,7 +77,6 @@ export interface RegisterStep4Data {
 export interface DirectRegisterRequest {
   email: string;
   password: string;
-  confirm_password: string;
   first_name: string;
   last_name: string;
   phone_number: string;
@@ -133,6 +132,9 @@ export interface UserProfile {
   date_joined?: string;
   last_login?: string | null;
   phone_number?: string;
+  dob?: string | null;
+  gender?: string | null;
+  selfie?: string | null;
 }
 
 export interface PrimaryUserProfileData {
@@ -150,6 +152,9 @@ export interface PrimaryUserProfileData {
   date_joined: string;
   location?: string;
   profile_image?: string;
+  dob?: string | null;
+  gender?: string | null;
+  selfie?: string | null;
 }
 
 export interface PrimaryUserProfileResponse {
@@ -219,6 +224,8 @@ export interface MerchantProfile {
   is_approved: boolean;
   created_at: string;
   updated_at: string;
+  is_following?: boolean;
+  followers_count?: number;
 }
 
 // Merchant Profile API Response
@@ -241,8 +248,30 @@ export interface RegisterResponse {
   message: string;
 }
 
+// Change Password Payload
+export interface ChangePasswordData {
+  requestType: string;
+  data: {
+    old_password: string;
+    new_password: string;
+    new_password_confirm: string;
+  };
+}
+
+export interface ChangePasswordResponse {
+  status: boolean;
+  message: string;
+  data?: any;
+}
+
 // API Functions
 export const userAPI = {
+  // Change Password
+  changePassword: async (passwordData: ChangePasswordData): Promise<ChangePasswordResponse> => {
+    const response = await api.post('/users/password/change/', passwordData);
+    return response.data;
+  },
+
   // User login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
 
@@ -382,6 +411,30 @@ export const userAPI = {
     }
   },
 
+  // Follow merchant
+  followMerchant: async (merchantId: string): Promise<any> => {
+    const payload = {
+      requestType: "inbound",
+      data: {
+        merchant_id: merchantId
+      }
+    };
+    const response = await api.post(SERVICE_ENDPOINTS.FOLLOW_MERCHANT, payload);
+    return response.data;
+  },
+
+  // Unfollow merchant
+  unfollowMerchant: async (merchantId: string): Promise<any> => {
+    const response = await api.delete(`${SERVICE_ENDPOINTS.FOLLOW_MERCHANT}?merchant_id=${merchantId}`);
+    return response.data;
+  },
+
+  // Get followed merchants
+  getFollowedMerchants: async (): Promise<any> => {
+    const response = await api.get(SERVICE_ENDPOINTS.FOLLOWED_MERCHANTS);
+    return response.data;
+  },
+
   // Get user roles
   getUserRoles: async (): Promise<UserRolesResponse> => {
 
@@ -396,14 +449,21 @@ export const userAPI = {
     }
   },
 
-  // Switch active role
-  switchRole: async (activeRoleId: number): Promise<any> => {
-
+  // Switch active role or add new role
+  switchRole: async (activeRoleId: number | null, addRoles?: number[]): Promise<any> => {
     
     try {
-      const response = await api.put(USER_ENDPOINTS.ROLES, {
-        active_role_id: activeRoleId
-      });
+      const payload: any = {};
+
+      if (activeRoleId) {
+        payload.active_role_id = activeRoleId;
+      }
+
+      if (addRoles && addRoles.length > 0) {
+        payload.add_roles = addRoles;
+      }
+
+      const response = await api.put(USER_ENDPOINTS.ROLES, payload);
 
       return response.data;
     } catch (error: any) {
