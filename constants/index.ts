@@ -339,11 +339,15 @@ export const OrderRideOptions = [
     id: 1,
     name: "Ride",
     image: orderRide,
+    time: "5 min",
+    price: "$15.00",
   },
   {
     id: 2,
     name: "Courier",
     image: courage,
+    time: "10 min",
+    price: "$10.00",
   },
   // {
   //   id: 3,

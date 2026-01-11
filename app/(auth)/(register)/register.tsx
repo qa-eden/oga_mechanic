@@ -45,6 +45,7 @@ const Register = () => {
       const registerData: DirectRegisterRequest = {
         email: values.email,
         password: values.password,
+        confirm_password: values.password,
         first_name: values.first_name,
         last_name: values.last_name,
         phone_number: values.phone_number,
@@ -58,7 +59,12 @@ const Register = () => {
         // Navigate directly to OTP verification page
         router.replace({
           pathname: routes?.verifyEmail as any,
-          params: { email: values.email }
+          params: { 
+            email: values.email,
+            access: response.data?.access,
+            refresh: response.data?.refresh,
+            user: JSON.stringify(response.data?.user)
+          }
         });
       } else {
         showError("Registration Failed", response.message || "Please try again.");

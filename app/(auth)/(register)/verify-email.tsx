@@ -15,11 +15,17 @@ import { StatusBar } from "expo-status-bar";
 import { userAPI } from "@/lib/api/user";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import CustomAlert from "@/components/CustomAlert";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUserStore } from "@/stores/userStore";
 
 const VerifyEmail = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const email = params.email as string;
+  const access = params.access as string;
+  const refresh = params.refresh as string;
+  const userDataString = params.user as string;
+  const { setTokens, setUser } = useUserStore();
 
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(900); // 15 minutes = 900 seconds
@@ -58,6 +64,33 @@ const VerifyEmail = () => {
       if (response.status) {
         showSuccess("Email Verified!", response.message || "Your email has been verified successfully");
         
+        if (access && refresh && userDataString) {
+          try {
+            let parsedUser = JSON.parse(userDataString);
+            
+            // Normalize user data to match login response structure
+            parsedUser = {
+               ...parsedUser,
+               active_role: parsedUser.active_role || parsedUser.role,
+               is_verified: true, // User successfully verified
+               // Ensure consistent fields with login response
+               car_make: parsedUser.car_make || null,
+               car_model: parsedUser.car_model || null,
+               car_year: parsedUser.car_year || null,
+               license_plate: parsedUser.license_plate || null,
+            };
+
+            await AsyncStorage.setItem('auth_token', access);
+            await AsyncStorage.setItem('refresh_token', refresh);
+            await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
+            
+            setTokens(access, refresh);
+            setUser(parsedUser);
+          } catch (e) {
+            console.error("Error processing auto-login data", e);
+          }
+        }
+
         // Navigate to account created success page
         setTimeout(() => {
           router.replace(routes?.accountCreated as any);

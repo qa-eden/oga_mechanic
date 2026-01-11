@@ -8,7 +8,7 @@ import { images } from "@/constants";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
-import { ChevronRightIcon } from "react-native-heroicons/outline";
+import { ChevronRightIcon, XMarkIcon, PlusIcon } from "react-native-heroicons/outline";
 import * as Location from "expo-location";
 import MapSection from "@/components/templates/MapSection";
 import SelectionModal, { SelectionOption } from "@/components/modals/SelectionModal";
@@ -40,6 +40,9 @@ interface Driver {
 
 const ChooseRide = () => {
   const params = useLocalSearchParams();
+  const fromLocation = params.from ? JSON.parse(params.from as string) : null;
+  const toLocation = params.to ? JSON.parse(params.to as string) : null;
+
   const [selectedPayment, setSelectedPayment] = useState("Cash");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
@@ -215,13 +218,27 @@ const ChooseRide = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-5 py-4 bg-white">
-        <BackArrowBtn />
-        <Text className="text-xl font-NunitoBold text-gray-900">
-          Order a rides
-        </Text>
-        <View className="w-8" />
+      {/* Header - Floating Pill Design */}
+      <View className="absolute top-14 left-5 right-5 z-20 flex-row justify-center pointer-events-box-none">
+        <View className="flex-row items-center bg-white rounded-full shadow-lg shadow-black/10 py-3 px-4 border border-gray-100 w-full justify-between">
+           {/* Close / Back Button */}
+           <TouchableOpacity onPress={() => router.back()} className="p-1">
+              <XMarkIcon size={24} color="#1F2937" strokeWidth={2} />
+           </TouchableOpacity>
+
+           {/* Route Text */}
+           <View className="flex-1 flex-row items-center justify-center mx-2">
+              <Text className="font-NunitoBold text-primary-700 text-base" numberOfLines={1} style={{ maxWidth: '40%' }}>
+                  {fromLocation?.name || "Pickup"}
+              </Text>
+              <Text className="mx-2 text-gray-400">→</Text>
+              <Text className="font-NunitoBold text-gray-900 text-base" numberOfLines={1} style={{ maxWidth: '40%' }}>
+                  {toLocation?.name || "Destination"}
+              </Text>
+           </View>
+
+
+        </View>
       </View>
 
       {/* Map View */}
@@ -248,7 +265,7 @@ const ChooseRide = () => {
         </TouchableOpacity>
 
         {/* Choose a ride header */}
-        <Text className="text-xl font-NunitoBold text-red-600 mb-4">
+        <Text className="text-xl font-NunitoBold text-primary-600 mb-4">
           Choose a ride
         </Text>
 
@@ -262,7 +279,7 @@ const ChooseRide = () => {
               key={ride.id}
               onPress={() => handleRideSelect(ride.id)}
               className={`flex-row items-center bg-white border-2 rounded-xl p-4 mb-3 ${
-                ride.selected ? "border-red-500 bg-red-50" : "border-gray-200"
+                ride.selected ? "border-primary-500 bg-primary-50" : "border-gray-200"
               }`}
               activeOpacity={0.8}
             >

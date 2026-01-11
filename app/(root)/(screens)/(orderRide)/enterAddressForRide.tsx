@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  ScrollView,
   Modal,
+  Image,
+  Dimensions,
 } from "react-native";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserAuthHeader from "@/components/UserAuthHeader";
 import { OrderRideOptions } from "@/constants";
@@ -20,15 +21,31 @@ import { router } from "expo-router";
 import { CalendarIcon, ClockIcon } from "react-native-heroicons/solid";
 import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { routes } from "@/constants/routes";
-import LocationPicker from "@/components/LocationPicker";
 import { useLocation } from "@/contexts/LocationContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import MapView, { Marker, PROVIDER_DEFAULT } from "@/components/MapComponent";
+import { icons } from "@/constants";
+import * as Location from "expo-location";
+import { FontAwesome } from "@expo/vector-icons";
+import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
+import BookRideView from "@/components/orderRide/BookRideView";
+import RidesView from "@/components/orderRide/RidesView";
+
+const { width, height } = Dimensions.get("window");
 
 interface ScheduledRide {
   date: Date | null;
   time: string;
   isScheduled: boolean;
 }
+
+// Mock data for nearby drivers
+const NEARBY_DRIVERS = [
+  { id: 1, latitude: 0.002, longitude: 0.002, rotation: 45 },
+  { id: 2, latitude: -0.002, longitude: -0.003, rotation: 120 },
+  { id: 3, latitude: 0.003, longitude: -0.001, rotation: 200 },
+  { id: 4, latitude: -0.001, longitude: 0.003, rotation: 300 },
+];
 
 const EnterAddressForRide = () => {
   const [currentOption, setCurrentOption] = useState(OrderRideOptions[0]);
@@ -37,12 +54,71 @@ const EnterAddressForRide = () => {
     time: "",
     isScheduled: false,
   });
-  const [fare, setFare] = useState("");
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
   const {
     state: { fromLocation, toLocation },
+    isScheduling,
+    setIsScheduling
   } = useLocation();
+
+  const mapRef = useRef<MapView>(null);
+
+  const [region, setRegion] = useState({
+    latitude: fromLocation?.latitude || 37.78825,
+    longitude: fromLocation?.longitude || -122.4324,
+    latitudeDelta: 0.015,
+    longitudeDelta: 0.0121,
+  });
+
+  // State to track if we are in the process of scheduling a ride (going to location selection and back)
+  // Replaced by Context state due to persistence issues
+  // const [isSchedulingFlow, setIsSchedulingFlow] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!fromLocation?.latitude) {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        const newRegion = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.015,
+          longitudeDelta: 0.0121,
+        };
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 1000);
+      }
+    })();
+  }, [fromLocation]);
+
+  useEffect(() => {
+    if (fromLocation?.latitude && fromLocation?.longitude) {
+      const newRegion = {
+        latitude: fromLocation.latitude,
+        longitude: fromLocation.longitude,
+        latitudeDelta: 0.015,
+        longitudeDelta: 0.0121,
+      };
+      setRegion(newRegion);
+      mapRef.current?.animateToRegion(newRegion, 1000);
+    }
+  }, [fromLocation]);
+
+  // Trigger Date Picker if we returned from location selection in scheduling flow
+  useEffect(() => {
+    if (isScheduling && fromLocation.name && toLocation.name) {
+      setShowDatePicker(true);
+      setScheduledRide(prev => ({ ...prev, isScheduled: true }));
+      setIsScheduling(false); // Reset flow
+    }
+  }, [fromLocation, toLocation, isScheduling]);
 
   const handleLocationInputPress = (type: "from" | "to") => {
     router.push({
@@ -52,10 +128,13 @@ const EnterAddressForRide = () => {
   };
 
   const handleScheduleRide = () => {
-    setScheduledRide((prev) => ({
-      ...prev,
-      isScheduled: !prev.isScheduled,
-    }));
+    // Start scheduling flow
+    setIsScheduling(true);
+    // Navigate to location selection, indicating we are scheduling
+    router.push({
+      pathname: routes?.locationSelection,
+      params: { isScheduled: "true" }
+    });
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -64,10 +143,24 @@ const EnterAddressForRide = () => {
         ...prev,
         date: selectedDate,
       }));
+      // After date, show time picker on Android immediately? Or wait? 
+      // User experience: usually pick date then time.
+      if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+        setTimeout(() => setShowTimePicker(true), 100); // Small delay
+      } else {
+        // iOS DateTimePicker might handle both or we show time picker next
+        // For now let's just close date picker. User can click time if separate.
+      }
     }
-    // Close modal immediately after selection
     if (Platform.OS === "android" || event.type === "set") {
       setShowDatePicker(false);
+      // For iOS we might want to keep it open or have a "Done" button
+    }
+
+    // Auto-show time picker after date selection for smoother flow
+    if (event.type === "set" || Platform.OS === "ios") {
+      setTimeout(() => setShowTimePicker(true), 500);
     }
   };
 
@@ -82,235 +175,147 @@ const EnterAddressForRide = () => {
         ...prev,
         time: timeString,
       }));
+
+      // Auto-navigate after successful time selection
+      // We assume date is already set from previous step
+      router.push({
+        pathname: routes?.chooseRide,
+        params: {
+          from: JSON.stringify(fromLocation),
+          to: JSON.stringify(toLocation),
+          rideType: OrderRideOptions[0].name, // Default
+          fare: "",
+          isScheduled: "true",
+          scheduledDate: scheduledRide.date?.toISOString() || new Date().toISOString(),
+          scheduledTime: timeString,
+        },
+      });
     }
-    // Close modal immediately after selection
     if (Platform.OS === "android" || event.type === "set") {
       setShowTimePicker(false);
     }
   };
 
-  const handleBookRide = () => {
-    // Validate required fields
-    if (!fromLocation.name || !toLocation.name) {
-      Alert.alert(
-        "Missing Information",
-        "Please select both pickup and destination locations.",
-        [{ text: "OK" }]
-      );
-      return;
-    }
 
-    if (!fare.trim()) {
-      Alert.alert("Missing Fare", "Please enter your fare offer.", [
-        { text: "OK" },
-      ]);
-      return;
-    }
 
-    if (
-      scheduledRide.isScheduled &&
-      (!scheduledRide.date || !scheduledRide.time)
-    ) {
-      Alert.alert(
-        "Missing Schedule",
-        "Please select date and time for your scheduled ride.",
-        [{ text: "OK" }]
-      );
-      return;
-    }
+  // Render "Home" state (Before destination selection)
+  const [activeTab, setActiveTab] = useState<"book" | "rides">("book");
 
-    // Navigate to choose ride screen instead of showing alert
-    router.push({
-      pathname: routes?.chooseRide,
-      params: {
-        from: JSON.stringify(fromLocation),
-        to: JSON.stringify(toLocation),
-        rideType: currentOption.name,
-        fare: fare,
-        isScheduled: scheduledRide.isScheduled.toString(),
-        scheduledDate: scheduledRide.date?.toISOString() || "",
-        scheduledTime: scheduledRide.time,
-      },
-    });
-  };
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: withTiming(activeTab === "book" ? height * 0.55 : height * 0.8, {
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+      }),
+    };
+  }, [activeTab]);
 
-  return (
-    <>
-      <SafeAreaView className="flex-1" edges={["top"]}>
-        <ScrollView
-          className="flex-1 px-5 pt-2"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="">
-            <UserAuthHeader header="Order a ride" />
+  const renderHomeState = () => (
+    <Animated.View
+      entering={FadeInUp.delay(200).springify()}
+      className="absolute bottom-0 w-full bg-white rounded-t-[30px] shadow-2xl shadow-black/20 pb-8"
+      style={animatedStyle}
+    >
+      {/* Handle Bar */}
+      <View className="items-center pt-3 pb-2">
+        <View className="w-12 h-1 bg-gray-200 rounded-full" />
+      </View>
 
-            <View className="flex-row justify-between items-center my-4 border border-primary-200 px-4 py-1 rounded-[.6rem]">
+      {/* Main Tab Switcher (Segmented Control Style) */}
+      <View className="px-5 mb-6 mt-2">
+        <View className="flex-row bg-gray-100 p-1 rounded-xl">
+          {[
+            { id: 'book', label: 'Book' },
+            { id: 'rides', label: 'Rides' }
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
               <TouchableOpacity
-                onPress={() => handleLocationInputPress("to")}
-                className="flex-row items-center gap-5 py-3 border-r pr-[2rem] border-primary-200"
-              >
-                <MagnifyingGlassIcon />
-                <Text>Where are you going today ?</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleScheduleRide}
-                className={`flex-row items-center rounded-[.6rem] p-2 ${
-                  scheduledRide.isScheduled ? "bg-primary-100" : "bg-gray-100"
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id as "book" | "rides")}
+                 className={`flex-1 py-3 items-center rounded-xl transition-all ${
+                  isActive ? "bg-white shadow-sm" : ""
                 }`}
-                activeOpacity={0.7}
               >
-                <CalendarIcon
-                  size={16}
-                  color={scheduledRide.isScheduled ? "#A80207" : "#6B7280"}
-                />
                 <Text
-                  className={`pl-1 ${
-                    scheduledRide.isScheduled
-                      ? "text-primary-500"
-                      : "text-gray-500"
+                  className={`font-NunitoBold text-md ${
+                    isActive ? "text-primary-600" : "text-gray-500"
                   }`}
                 >
-                  Later
+                  {tab.label}
                 </Text>
               </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Content Area */}
+      <View className="flex-1">
+        {activeTab === "book" ? (
+          <BookRideView
+            handleScheduleRide={handleScheduleRide}
+            handleLocationInputPress={handleLocationInputPress}
+          />
+        ) : (
+          <RidesView
+            handleScheduleRide={handleScheduleRide}
+          />
+        )}
+      </View>
+    </Animated.View>
+  );
+
+  return (
+    <View className="flex-1 bg-white">
+      {/* Full Screen Map */}
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_DEFAULT}
+        style={{
+          width: width,
+          height: height,
+          position: "absolute",
+        }}
+        initialRegion={region}
+        showsUserLocation={true}
+        userInterfaceStyle="light"
+      >
+        {/* Mock Nearby Drivers */}
+        {NEARBY_DRIVERS.map((driver) => (
+          <Marker
+            key={driver.id}
+            coordinate={{
+              latitude: region.latitude + driver.latitude,
+              longitude: region.longitude + driver.longitude,
+            }}
+            rotation={driver.rotation}
+          >
+            <View className="bg-white p-2 rounded-full shadow-md shadow-black/20">
+              <FontAwesome name="car" size={18} color="#2563EB" />
             </View>
+          </Marker>
+        ))}
+      </MapView>
 
-            {/* Schedule Ride Section */}
-            {scheduledRide.isScheduled && (
-              <View className="mx-1 mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <Text className="text-lg font-NunitoBold text-gray-900 mb-3">
-                  Schedule Your Ride
-                </Text>
-                <View className="flex-row items-center mb-3">
-                  <ClockIcon size={20} color="#6B7280" />
-                  <Text className="ml-2 text-gray-700 font-NunitoMedium">
-                    Pickup Date & Time
-                  </Text>
-                </View>
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker(true)}
-                    className="flex-1 bg-white border border-gray-300 rounded-[1rem] p-3"
-                  >
-                    <Text className="text-sm text-gray-500 font-NunitoMedium">
-                      Date
-                    </Text>
-                    <Text className="text-base font-NunitoBold text-gray-900">
-                      {scheduledRide.date
-                        ? scheduledRide.date.toLocaleDateString()
-                        : "Select Date"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setShowTimePicker(true)}
-                    className="flex-1 bg-white border border-gray-300 rounded-[1rem] p-3"
-                  >
-                    <Text className="text-sm text-gray-500 font-NunitoMedium">
-                      Time
-                    </Text>
-                    <Text className="text-base font-NunitoBold text-gray-900">
-                      {scheduledRide.time || "Select Time"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+      <SafeAreaView className="flex-1" edges={["top"]}>
+        {/* Floating Menu Button (Always Visible) */}
+        <View className="px-5 pt-2 absolute top-12 left-0 z-20">
+          <TouchableOpacity onPress={() => router.back()} className="bg-white p-3 rounded-full shadow-md w-12 h-12 items-center justify-center">
+            <FontAwesome name="arrow-left" size={20} color="#1F2937" />
+          </TouchableOpacity>
+        </View>
 
-            {/* Ride Type Selection */}
-            <View className="">
-              <FlatList
-                scrollEnabled={false} // Disables horizontal scroll
-                data={OrderRideOptions}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => setCurrentOption(item)}
-                    className={`flex-1 rounded-xl items-center shadow-sm justify-center ${
-                      currentOption.id === item.id
-                        ? "bg-primary-100 shadow-primary-500"
-                        : "shadow-gray-100 bg-white shadow-sm"
-                    }`}
-                    style={{
-                      elevation: 3, // for Android shadow
-                      height: 100, // fixed height for consistent layout
-                    }}
-                  >
-                    <View className="bg-primary-50 rounded-full ">
-                      <item.image width={60} height={60} color="#2563EB" />
-                    </View>
-
-                    <Text
-                      className={` font-semibold text-center pt-2 ${
-                        currentOption.id === item.id
-                          ? "text-primary-500"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                numColumns={3}
-                columnWrapperStyle={{
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-                contentContainerStyle={{
-                  paddingHorizontal: 2,
-                  paddingVertical: 7,
-                }}
-                showsVerticalScrollIndicator={false}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={7}
-                removeClippedSubviews={true}
-              />
-            </View>
-
-            <View className="my-4">
-              <LocationPicker
-                type="from"
-                onLocationPress={handleLocationInputPress}
-                showCurrentLocation={true}
-              />
-              <LocationPicker
-                type="to"
-                onLocationPress={handleLocationInputPress}
-                showCurrentLocation={false}
-              />
-            </View>
-
-            <View className="mt-2">
-              <InputField
-                label="Offer your fare"
-                placeholder="Enter amount"
-                keyboardType="numeric"
-                value={fare}
-                onChangeText={setFare}
-              />
-            </View>
-
-            <View className="mt-8 mb-8">
-              <CustomButton
-                title={
-                  scheduledRide.isScheduled ? "Schedule Ride" : "Choose a ride"
-                }
-                onPress={handleBookRide}
-              />
-            </View>
-          </View>
-        </ScrollView>
+        {renderHomeState()}
       </SafeAreaView>
-
-      {/* Date Picker Modal */}
       <Modal
         visible={showDatePicker}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowDatePicker(false)}
       >
-        <View className="flex-1 bg-gray-600 bg-opacity-20 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+        <View className="flex-1 bg-black/30 justify-end">
+          <View className="bg-white rounded-t-3xl p-6 pb-10">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-NunitoBold text-gray-900">
                 Select Date
@@ -326,27 +331,21 @@ const EnterAddressForRide = () => {
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={handleDateChange}
                 minimumDate={new Date()}
-                style={{
-                  width: Platform.OS === "ios" ? 300 : "100%",
-                  height: Platform.OS === "ios" ? 200 : 50,
-                }}
-                textColor="#000000"
-                themeVariant="light"
+                style={{ width: "100%" }}
               />
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Time Picker Modal */}
       <Modal
         visible={showTimePicker}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowTimePicker(false)}
       >
-        <View className="flex-1 bg-gray-600 bg-opacity-20 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+        <View className="flex-1 bg-black/30 justify-end">
+          <View className="bg-white rounded-t-3xl p-6 pb-10">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-NunitoBold text-gray-900">
                 Select Time
@@ -361,18 +360,13 @@ const EnterAddressForRide = () => {
                 mode="time"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={handleTimeChange}
-                style={{
-                  width: Platform.OS === "ios" ? 300 : "100%",
-                  height: Platform.OS === "ios" ? 200 : 50,
-                }}
-                textColor="#000000"
-                themeVariant="light"
+                style={{ width: "100%" }}
               />
             </View>
           </View>
         </View>
       </Modal>
-    </>
+    </View>
   );
 };
 

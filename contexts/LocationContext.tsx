@@ -12,18 +12,22 @@ export interface LocationData {
 interface LocationState {
   fromLocation: LocationData;
   toLocation: LocationData;
+  isScheduling: boolean;
 }
 
 type LocationAction =
   | { type: 'SET_FROM_LOCATION'; payload: LocationData }
   | { type: 'SET_TO_LOCATION'; payload: LocationData }
-  | { type: 'CLEAR_LOCATIONS' };
+  | { type: 'CLEAR_LOCATIONS' }
+  | { type: 'SET_IS_SCHEDULING'; payload: boolean };
 
 interface LocationContextType {
   state: LocationState;
   setFromLocation: (location: LocationData) => void;
   setToLocation: (location: LocationData) => void;
   clearLocations: () => void;
+  isScheduling: boolean;
+  setIsScheduling: (isScheduling: boolean) => void;
 }
 
 // Initial state
@@ -41,7 +45,8 @@ const initialState: LocationState = {
     latitude: undefined,
     longitude: undefined,
     placeId: undefined,
-  }
+  },
+  isScheduling: false,
 };
 
 // Reducer
@@ -61,6 +66,12 @@ const locationReducer = (state: LocationState, action: LocationAction): Location
     
     case 'CLEAR_LOCATIONS':
       return initialState;
+
+    case 'SET_IS_SCHEDULING':
+      return {
+        ...state,
+        isScheduling: action.payload
+      };
     
     default:
       return state;
@@ -91,6 +102,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFromLocation,
     setToLocation,
     clearLocations,
+    isScheduling: state.isScheduling,
+    setIsScheduling: (isScheduling: boolean) => dispatch({ type: 'SET_IS_SCHEDULING', payload: isScheduling }),
   };
 
   return (
