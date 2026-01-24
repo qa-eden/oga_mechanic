@@ -497,25 +497,31 @@ const AddressInput: React.FC<AddressInputProps> = ({
         >
           {/* Label */}
           {label && (
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text className={`text-base font-NunitoSemiBold text-gray-700 ${labelClassName}`}>
+            <View className="mb-3 flex-row items-end justify-between">
+              <Text className={`text-base font-NunitoExtraBold text-gray-500 tracking-tight ${labelClassName}`}>
                 {label}
-                {required && <Text className="text-red-500 ml-1">*</Text>}
               </Text>
               {showCurrentLocationButton && (
                 <TouchableOpacity
                   onPress={handleLocationPress}
                   disabled={disabled || isFetchingCurrentLocation}
-                  className={`flex-row items-center px-3 py-1 rounded-full ${
-                    isFetchingCurrentLocation ? 'bg-gray-100' : 'bg-blue-50'
+                  className={`flex-row items-center px-4 py-2 rounded-xl ${
+                    isFetchingCurrentLocation ? 'bg-gray-100' : 'bg-primary-50'
                   }`}
                   activeOpacity={0.7}
+                  style={{
+                    shadowColor: '#D30309',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: isFetchingCurrentLocation ? 0 : 0.08,
+                    shadowRadius: 8,
+                    elevation: isFetchingCurrentLocation ? 0 : 2,
+                  }}
                 >
-                  <MapPinIcon size={14} color={isFetchingCurrentLocation ? "#9CA3AF" : "#3B82F6"} />
-                  <Text className={`text-sm font-NunitoMedium ml-1 ${
-                    isFetchingCurrentLocation ? 'text-gray-400' : 'text-blue-600'
+                  <MapPinIcon size={14} color={isFetchingCurrentLocation ? "#9CA3AF" : "#D30309"} />
+                  <Text className={`text-sm font-NunitoBold ml-1.5 ${
+                    isFetchingCurrentLocation ? 'text-gray-400' : 'text-primary-600'
                   }`}>
-                    {isFetchingCurrentLocation ? 'Getting Current Location...' : 'Pick Current Location'}
+                    {isFetchingCurrentLocation ? 'Searching...' : 'Use current location'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -524,24 +530,24 @@ const AddressInput: React.FC<AddressInputProps> = ({
 
           {/* Input Container */}
           <Animated.View
-            className={`flex flex-row ${multiline ? 'items-start' : 'items-center'} bg-gray-50 rounded-xl px-4 py-1 ${containerStyle}`}
+            className={`flex flex-row ${multiline ? 'items-start' : 'items-center'} bg-white rounded-[12px] px-4 ${containerStyle}`}
             style={{
-              borderWidth: 1.5,
+              borderWidth: 2,
               borderColor: borderColor,
-              minHeight: multiline ? 80 : undefined,
+              minHeight: multiline ? 70 : undefined,
               ...Platform.select({
                 ios: {
                   shadowColor: hasError
                     ? "#EF4444"
                     : isFocused
-                    ? "#F59E42"
-                    : "transparent",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
+                    ? "#D30309"
+                    : "#000",
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: isFocused || hasError ? 0.12 : 0.05,
+                  shadowRadius: 16,
                 },
                 android: {
-                  elevation: isFocused ? 2 : 0,
+                  elevation: isFocused ? 4 : 2,
                 },
               }),
             }}
@@ -558,7 +564,7 @@ const AddressInput: React.FC<AddressInputProps> = ({
               editable={!disabled}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
-              className={`flex-1 py-3 text-[1.2rem] font-NunitoMedium text-gray-900 ${inputClassName}`}
+              className={`flex-1 py-4 text-lg font-NunitoBold text-gray-900 ${inputClassName}`}
               style={{
                 textAlignVertical: multiline ? 'top' : 'center',
                 maxWidth: '100%',
@@ -566,72 +572,72 @@ const AddressInput: React.FC<AddressInputProps> = ({
               textBreakStrategy="simple"
             />
 
-            {/* Location Button */}
-            <TouchableOpacity
-              onPress={handleLocationPress}
-              disabled={disabled || isFetchingCurrentLocation}
-              className={`ml-3 p-1 ${multiline ? 'pt-3' : ''}`}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+            {/* Location Button Marker */}
+            <View className={`ml-3 ${multiline ? 'pt-5' : ''}`}>
               {isFetchingCurrentLocation ? (
-                <ActivityIndicator size="small" color="#6B7280" />
+                <ActivityIndicator size="small" color="#D30309" />
               ) : (
-              <MapPinIcon size={20} color={disabled ? "#9CA3AF" : "#6B7280"} />
+                <View className={`p-2 rounded-xl ${isFocused ? 'bg-primary-50' : 'bg-gray-50'}`}>
+                  <MapPinIcon size={20} color={isFocused ? "#D30309" : "#9CA3AF"} />
+                </View>
               )}
-            </TouchableOpacity>
+            </View>
           </Animated.View>
 
-          {/* Suggestions */}
           {showSuggestions && (
             <View 
-              className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg"
-              style={{ maxHeight: 256 }}
+              className="mt-3 bg-white rounded-[32px] overflow-hidden"
+              style={{
+                maxHeight: 280,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.1,
+                shadowRadius: 24,
+                elevation: 8,
+                borderWidth: 1,
+                borderColor: '#F3F4F6',
+              }}
             >
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="always"
                 nestedScrollEnabled={true}
-                style={{ maxHeight: 256 }}
               >
                 {isLoadingSuggestions && (
-                  <View className="flex-row items-center gap-3 px-4 py-3 border-b border-gray-100">
-                    <ActivityIndicator size="small" color="#2563EB" />
-                    <Text className="text-sm font-NunitoMedium text-gray-500">
-                      Searching Mapbox...
+                  <View className="flex-row items-center gap-3 px-6 py-5 bg-gray-50/50">
+                    <ActivityIndicator size="small" color="#D30309" />
+                    <Text className="text-sm font-NunitoBold text-gray-400">
+                      Searching...
                     </Text>
                   </View>
                 )}
 
                 {fetchError && (
-                  <View className="px-4 py-3 border-b border-red-100 bg-red-50">
-                    <Text className="text-sm font-NunitoMedium text-red-600">
+                  <View className="px-6 py-4 bg-red-50">
+                    <Text className="text-sm font-NunitoBold text-red-500">
                       {fetchError}
                     </Text>
                   </View>
                 )}
 
-                {!isLoadingSuggestions && !fetchError && suggestions.length === 0 && (
-                  <View className="px-4 py-3">
-                    <Text className="text-sm font-NunitoMedium text-gray-500">
-                      No suggestions yet. Keep typing to search Mapbox.
-                    </Text>
-                  </View>
-                )}
-
-                {suggestions.map((suggestion) => (
+                {suggestions.map((suggestion, index) => (
                   <TouchableOpacity
                     key={suggestion.id}
                     onPress={() => handleSuggestionSelect(suggestion)}
                     activeOpacity={0.7}
-                    className="px-4 py-3 border-b border-gray-100 flex-row items-center"
+                    className={clsx(
+                      "px-6 py-4 flex-row items-center",
+                      index !== suggestions.length - 1 && "border-b border-gray-50"
+                    )}
                   >
-                    <MapPinIcon size={18} color="#D30309" />
-                    <View className="ml-3 flex-1">
-                      <Text className="text-base font-NunitoBold text-gray-900">
+                    <View className="w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center">
+                      <MapPinIcon size={20} color="#D30309" />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-base font-NunitoBold text-gray-900 leading-tight">
                         {suggestion.name}
                       </Text>
-                      <Text className="text-sm font-NunitoMedium text-gray-500">
+                      <Text className="text-xs font-NunitoMedium text-gray-400 mt-0.5" numberOfLines={1}>
                         {suggestion.address}
                       </Text>
                     </View>

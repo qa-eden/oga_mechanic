@@ -231,6 +231,7 @@ const TrackMechanicOrder = () => {
         preferred_time_slot: 'Loading...',
         status: 'pending',
         notes: '',
+        schedule: false,
       };
     }
 
@@ -262,6 +263,7 @@ const TrackMechanicOrder = () => {
       preferred_date: request.preferred_date || request.requested_at || new Date().toISOString(),
       preferred_time_slot: request.preferred_time_slot || request.time_slot || '',
       status: request.status || 'pending',
+      schedule: !!request.schedule,
       notes: request.notes || '',
       // Status timestamps
       requested_at: request.requested_at || null,
@@ -626,25 +628,27 @@ const TrackMechanicOrder = () => {
         </View>
 
         {/* Schedule Card */}
-        <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4">
-          <View className="flex-row items-center mb-3">
-            <CalendarIcon size={18} color="#6B7280" />
-            <Text className="text-sm font-NunitoBold text-gray-500 ml-2 uppercase">Schedule</Text>
-          </View>
-          <Text className="text-lg font-NunitoBold text-gray-900">
-            {new Date(order.preferred_date).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </Text>
-          {order.preferred_time_slot && (
-            <Text className="text-sm font-NunitoMedium text-gray-600 mt-1">
-              {order.preferred_time_slot.charAt(0).toUpperCase() + order.preferred_time_slot.slice(1)}
+        {order.schedule && (
+          <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4">
+            <View className="flex-row items-center mb-3">
+              <CalendarIcon size={18} color="#6B7280" />
+              <Text className="text-sm font-NunitoBold text-gray-500 ml-2 uppercase">Schedule</Text>
+            </View>
+            <Text className="text-lg font-NunitoBold text-gray-900">
+              {new Date(order.preferred_date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}
             </Text>
-          )}
-        </View>
+            {order.preferred_time_slot && (
+              <Text className="text-sm font-NunitoMedium text-gray-600 mt-1">
+                {order.preferred_time_slot.charAt(0).toUpperCase() + order.preferred_time_slot.slice(1)}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Service Location Card */}
         <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4">

@@ -157,11 +157,11 @@ const SwitchUserModal = ({
     const userRoles = rolesData.data.roles || [];
     const userRoleNames = userRoles.map(role => role.name);
 
-    // Filter out developer role and active role
+    // Filter out developer and admin roles, and the active role
     const filteredRoles = allRoles.filter(role => {
-      const isNotDeveloper = role.name !== 'developer';
-      const isNotActive = role.name !== activeRole?.name; // Compare with activeRole.name since activeRole is an object
-      return isNotDeveloper && isNotActive;
+      const isNotExcluded = role.name !== 'developer' && role.name !== 'admin';
+      const isNotActive = role.name !== activeRole?.name;
+      return isNotExcluded && isNotActive;
     });
 
     const mappedRoles = filteredRoles.map((role) => {

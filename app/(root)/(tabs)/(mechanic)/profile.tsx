@@ -173,12 +173,11 @@ const MechanicProfile = () => {
                 text={item.name}
                 iconLeft={(props) => item?.image && item.image(props)}
                 onPress={() => {
-                  if (item.name === "My Profile") {
-                    router.push(mechanicRoutes.EditProfile);
-                  } else if (item.name === "Switch Role") {
+                  if (item.name === "Switch Role") {
                     setShowSwitchUserModal(true);
+                  } else if (item.route) {
+                    router.push(item.route as any);
                   }
-                  // Add other navigation logic here for other items
                 }}
               />
             ))}

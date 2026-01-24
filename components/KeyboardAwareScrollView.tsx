@@ -39,7 +39,7 @@ interface KeyboardAwareScrollViewProps extends ScrollViewProps {
  */
 const KeyboardAwareScrollView: React.FC<KeyboardAwareScrollViewProps> = ({
   children,
-  keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 0,
+  keyboardVerticalOffset = Platform.OS === 'ios' ? 0 : 0,
   containerStyle,
   dismissOnTap = true,
   extraBottomPadding = Platform.OS === 'ios' ? 120 : 80,
@@ -49,7 +49,7 @@ const KeyboardAwareScrollView: React.FC<KeyboardAwareScrollViewProps> = ({
 }) => {
   const content = (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[{ flex: 1 }, containerStyle]}
       keyboardVerticalOffset={keyboardVerticalOffset}
     >
@@ -59,7 +59,7 @@ const KeyboardAwareScrollView: React.FC<KeyboardAwareScrollViewProps> = ({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         bounces={true}
-        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        automaticallyAdjustKeyboardInsets={false}
         contentContainerStyle={[
           {
             paddingBottom: extraBottomPadding,

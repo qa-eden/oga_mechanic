@@ -19,11 +19,10 @@ export interface RepairRequestData {
   vehicle_year: number;
   problem_description: string;
   service_address: string;
-  service_latitude?: string;
-  service_longitude?: string;
+  service_latitude?: number;
+  service_longitude?: number;
   preferred_date?: string;
   preferred_time_slot?: string;
-  notes?: string;
 }
 
 export interface RepairRequestPayload {

@@ -24,6 +24,7 @@ interface MechanicOrder {
   preferredTimeSlot: string;
   status: 'pending' | 'accepted' | 'declined' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: string;
+  schedule?: boolean;
   notes?: string;
 }
 
@@ -165,29 +166,31 @@ const MechanicOrderCard: React.FC<MechanicOrderCardProps> = ({ order, onPress })
             </View>
 
             {/* Schedule Info */}
-            <View className="flex-row items-center py-4">
-              <View className="w-8 h-8 rounded-md bg-white items-center justify-center mr-2.5">
-                <CalendarIcon size={16} color="#6B7280" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[10px] font-NunitoMedium text-gray-500 mb-0.5">
-                  Schedule
-                </Text>
-                <Text className="text-[13px] font-NunitoBold text-gray-900" numberOfLines={1}>
-                  {new Date(order.preferredDate).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                  <Text className="text-[12px] font-NunitoMedium text-gray-600">
-                    {' • '}{order.preferredTimeSlot.charAt(0).toUpperCase() + order.preferredTimeSlot.slice(1)}
+            {order.schedule && (
+              <View className="flex-row items-center py-4">
+                <View className="w-8 h-8 rounded-md bg-white items-center justify-center mr-2.5">
+                  <CalendarIcon size={16} color="#6B7280" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[10px] font-NunitoMedium text-gray-500 mb-0.5">
+                    Schedule
                   </Text>
-                </Text>
+                  <Text className="text-[13px] font-NunitoBold text-gray-900" numberOfLines={1}>
+                    {new Date(order.preferredDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                    <Text className="text-[12px] font-NunitoMedium text-gray-600">
+                      {' • '}{order.preferredTimeSlot.charAt(0).toUpperCase() + order.preferredTimeSlot.slice(1)}
+                    </Text>
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Location Info */}
-            <View className="flex-row items-start">
+            <View className="flex-row items-start mt-2">
               <View className="w-8 h-8 rounded-md bg-white items-center justify-center mr-2.5 mt-0.5">
                 <MapPinIcon size={16} color="#6B7280" />
               </View>

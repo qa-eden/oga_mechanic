@@ -6,6 +6,7 @@ import {
   icons,
   ProfileSettings,
   ProfileSopprt,
+  RiderProfileSettings,
 } from "@/constants";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import React, { useState } from "react";
@@ -75,42 +76,7 @@ const RiderProfile = () => {
     // You can add navigation logic or state management here
   };
 
-  // Rider Profile Settings
-  const RiderProfileSettings = {
-    name: "Profile settings",
-    options: [
-      {
-        id: 1,
-        name: "My Profile",
-        image: icons.UserCircle,
-        route: "editProfile",
-      },
-      {
-        id: 2,
-        name: "Vehicle Information",
-        image: icons.car,
-        route: "vehicleInfo",
-      },
-      {
-        id: 3,
-        name: "Add Bank Details",
-        image: icons.bankIcon,
-        route: "bankDetails",
-      },
-      {
-        id: 4,
-        name: "Change Password",
-        image: icons.tick1,
-        route: "changePassword",
-      },
-      {
-        id: 5,
-        name: "Switch Account",
-        image: icons.user,
-        route: "switchAccount",
-      },
-    ],
-  };
+
 
   const ProfilePref = {
     name: "PREFERENCES",
@@ -189,16 +155,10 @@ const RiderProfile = () => {
                 text={item.name}
                 iconLeft={(props) => item?.image && item.image(props)}
                 onPress={() => {
-                  if (item.name === "My Profile") {
-                    // router.push(riderRoutes.EditProfile);
-                  } else if (item.name === "Vehicle Information") {
-                    // Handle vehicle information
-                  } else if (item.name === "Add Bank Details") {
-                    // Handle bank details
-                  } else if (item.name === "Change Password") {
-                    // Handle password change
-                  } else if (item.name === "Switch Account") {
+                  if (item.name === "Switch Role") {
                     setShowSwitchUserModal(true);
+                  } else if (item.route) {
+                    router.push(item.route as any);
                   }
                 }}
               />

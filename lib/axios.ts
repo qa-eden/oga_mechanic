@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, AUTH_ENDPOINTS } from './endpoints';
 import { ENV_CONFIG } from '../config/env';
+import { authEvents } from './authEvents';
 
 // Create axios instance with enhanced security
 const api = axios.create({
@@ -86,10 +87,14 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           
           return api(originalRequest);
+        } else {
+          // No refresh token available, trigger logout
+          authEvents.onUnauthorized.emit();
         }
       } catch (refreshError) {
+        // Token refresh failed, clear storage and trigger logout
         await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user_data']);
-        // Add navigation to login screen if needed
+        authEvents.onUnauthorized.emit();
       }
     }
     return Promise.reject(error);

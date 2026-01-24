@@ -1,118 +1,40 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
-import SelectField from '@/components/forms/SelectField';
-import TextArea from '@/components/forms/TextArea';
 import BackArrowBtn from '@/components/BackArrowBtn';
-import AddressInput from '@/components/forms/AddressInput';
-import DateInput from '@/components/forms/DateInput';
 import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { serviceTypeOptions } from '@/constants/data';
-import { CheckCircleIcon } from 'react-native-heroicons/solid';
-import { FolderIcon, PlusCircleIcon } from 'react-native-heroicons/outline';
 import { getErrorMessage } from '@/utils/errorMessages';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { routes } from '@/constants/routes';
+import { LAYOUT } from '@/constants/units';
+import { CarSelectionStep } from './_components/CarSelectionStep';
+import { StepIndicator } from './_components/StepIndicator';
+import { OrderFormFields } from './_components/OrderFormFields';
+import { SuccessModal } from './_components/SuccessModal';
+import { useFindMechanicForm } from './_hooks/useFindMechanicForm';
+import { useCarList } from './_hooks/useCarList';
+import { useVehicleOptions } from './_hooks/useVehicleOptions';
+
+const getCurrentTimeSlot = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 16) return 'afternoon';
+  return 'evening';
+};
 
 const FindMechanic = () => {
-  const [carSelection, setCarSelection] = useState<'Yes' | 'No' | null>(null);
-  const [selectedCar, setSelectedCar] = useState('');
-  const [serviceType, setServiceType] = useState('');
-  const [vehicleMake, setVehicleMake] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleYear, setVehicleYear] = useState('');
-  const [problemDescription, setProblemDescription] = useState('');
-  const [serviceAddress, setServiceAddress] = useState('');
-  const [serviceLatitude, setServiceLatitude] = useState<number | undefined>(undefined);
-  const [serviceLongitude, setServiceLongitude] = useState<number | undefined>(undefined);
-  const [preferredDate, setPreferredDate] = useState<Date | null>(null);
-  const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
-  const [notes, setNotes] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
-
-  const { mutate: createRepairRequest, isPending, error } = useCreateRepairRequest();
-
-  // Fetch vehicle makes from API
+  // Hooks
+  const { carList, hasCarList, carOptions, selectedCarData } = useCarList();
+  const formState = useFindMechanicForm(hasCarList);
   const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
-
-  // Dummy car list data - replace with API call when endpoint is available
-  // TODO: Replace with actual API call: const { data: carListData } = useQuery({ queryKey: ['userCars'], queryFn: userAPI.getCars });
-  // Note: When API is ready, car list should include make_id and model_id
-  const carList = [
-    {
-      id: '1',
-      make: 'Toyota',
-      model: 'Camry',
-      year: 2020,
-      displayName: 'Toyota Camry 2020',
-      plateNumber: 'ABC-123',
-      make_id: '1', // Would come from API
-      model_id: '1', // Would come from API
-    },
-  ];
-
-  // Check if car list has data
-  const hasCarList = carList && carList.length > 0;
-
-  // Initialize step: if no car list, start at step 2 (order fields), otherwise start at step 1
-  const [currentStep, setCurrentStep] = useState<1 | 2>(hasCarList ? 1 : 2);
-  
-  // Generate car options from car list
-  const carOptions = carList.map((car) => ({
-    label: car.displayName,
-    value: car.id,
-  }));
-
-  // Get selected car details
-  const selectedCarData = useMemo(() => {
-    if (!selectedCar || !hasCarList) return null;
-    return carList.find((car) => car.id === selectedCar);
-  }, [selectedCar, hasCarList, carList]);
-
-  // Convert vehicle makes to select options
-  const vehicleMakeOptions = useMemo(() => {
-    if (!vehicleMakes || vehicleMakes.length === 0) return [];
-
-    return vehicleMakes
-      .filter((make) => make.is_active)
-      .map((make) => ({
-        label: make.name,
-        value: make.id.toString(),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [vehicleMakes]);
-
-  // Get models for selected make
-  const getModelsForSelectedMake = useCallback((makeId: string) => {
-    if (!makeId || !vehicleMakes) return [];
-    const selectedMake = vehicleMakes.find((make) => make.id.toString() === makeId);
-    return selectedMake?.models || [];
-  }, [vehicleMakes]);
-
-  // Map models for selected make to options
-  const vehicleModelOptions = useMemo(() => {
-    if (!vehicleMake) return [];
-    const models = getModelsForSelectedMake(vehicleMake);
-    return models
-      .filter((model) => model.is_active)
-      .map((model) => ({
-        label: model.name,
-        value: model.id.toString(),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [vehicleMake, getModelsForSelectedMake]);
-
-  const vehicleYearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 50 }, (_, i) => {
-      const year = currentYear - i;
-    return { label: year.toString(), value: year.toString() };
-  });
-  }, []);
+  const { vehicleMakeOptions, vehicleModelOptions, vehicleYearOptions } = useVehicleOptions(
+    formState.vehicleMake
+  );
+  const { mutate: createRepairRequest, isPending, error } = useCreateRepairRequest();
 
   const timeSlotOptions = useMemo(
     () => [
@@ -123,33 +45,59 @@ const FindMechanic = () => {
     []
   );
 
+  // Handle car selection from dropdown
+  const handleCarSelect = useCallback(
+    (carId: string) => {
+      const car = selectedCarData(carId);
+      if (car) {
+        // Try to find IDs by matching names if not available
+        let makeId = car.make_id;
+        let modelId = car.model_id;
+
+        if (!makeId && vehicleMakes) {
+          const matchedMake = vehicleMakes.find((m) => m.name.toLowerCase() === car.make.toLowerCase());
+          makeId = matchedMake?.id.toString();
+        }
+
+        if (!modelId && makeId && vehicleMakes) {
+          const matchedMake = vehicleMakes.find((m) => m.id.toString() === makeId);
+          const matchedModel = matchedMake?.models.find((m) => m.name.toLowerCase() === car.model.toLowerCase());
+          modelId = matchedModel?.id.toString();
+        }
+
+        formState.setVehicleMake(makeId || car.make || '');
+        formState.setVehicleModel(modelId || car.model || '');
+        formState.setVehicleYear(car.year.toString());
+      }
+    },
+    [selectedCarData, vehicleMakes, formState]
+  );
+
   const handleProceed = () => {
     // Determine if we're using car list selection or manual entry
-    const isUsingCarList = hasCarList && carSelection === 'Yes';
+    const isUsingCarList = hasCarList && formState.carSelection === 'Yes';
 
     if (isUsingCarList) {
       // Validate for existing car selection - all required fields
       if (
-        !selectedCar ||
-        !serviceType ||
-        !problemDescription.trim() ||
-        !serviceAddress.trim() ||
-        !preferredDate ||
-        !preferredTimeSlot
+        !formState.selectedCar ||
+        !formState.serviceType ||
+        !formState.problemDescription.trim() ||
+        !formState.serviceAddress.trim() ||
+        (formState.isScheduled && (!formState.preferredDate || !formState.preferredTimeSlot))
       ) {
         return;
       }
     } else {
       // Validate for new car details - all required fields from order-mechanic
       if (
-        !serviceType ||
-        !vehicleMake ||
-        !vehicleModel ||
-        !vehicleYear ||
-        !problemDescription.trim() ||
-        !serviceAddress.trim() ||
-        !preferredDate ||
-        !preferredTimeSlot
+        !formState.serviceType ||
+        !formState.vehicleMake ||
+        !formState.vehicleModel ||
+        !formState.vehicleYear ||
+        !formState.problemDescription.trim() ||
+        !formState.serviceAddress.trim() ||
+        (formState.isScheduled && (!formState.preferredDate || !formState.preferredTimeSlot))
       ) {
         console.log('Please fill in all required fields before proceeding.');
         return;
@@ -157,30 +105,32 @@ const FindMechanic = () => {
     }
 
     // Prepare vehicle details - extract from selected car if using car list
-    let finalVehicleMake = vehicleMake;
-    let finalVehicleModel = vehicleModel;
-    let finalVehicleYear = vehicleYear;
+    let finalVehicleMake = formState.vehicleMake;
+    let finalVehicleModel = formState.vehicleModel;
+    let finalVehicleYear = formState.vehicleYear;
 
-    if (isUsingCarList && selectedCarData) {
-      // Use make/model/year from selected car
-      // Try to find IDs by matching names if not available
-      let makeId = (selectedCarData as any).make_id;
-      let modelId = (selectedCarData as any).model_id;
+    if (isUsingCarList) {
+      const car = selectedCarData(formState.selectedCar);
+      if (car) {
+        // Use make/model/year from selected car
+        let makeId = car.make_id;
+        let modelId = car.model_id;
 
-      if (!makeId && vehicleMakes) {
-        const matchedMake = vehicleMakes.find((m) => m.name.toLowerCase() === selectedCarData.make.toLowerCase());
-        makeId = matchedMake?.id.toString();
+        if (!makeId && vehicleMakes) {
+          const matchedMake = vehicleMakes.find((m) => m.name.toLowerCase() === car.make.toLowerCase());
+          makeId = matchedMake?.id.toString();
+        }
+
+        if (!modelId && makeId && vehicleMakes) {
+          const matchedMake = vehicleMakes.find((m) => m.id.toString() === makeId);
+          const matchedModel = matchedMake?.models.find((m) => m.name.toLowerCase() === car.model.toLowerCase());
+          modelId = matchedModel?.id.toString();
+        }
+
+        finalVehicleMake = makeId || car.make;
+        finalVehicleModel = modelId || car.model;
+        finalVehicleYear = car.year.toString();
       }
-
-      if (!modelId && makeId && vehicleMakes) {
-        const matchedMake = vehicleMakes.find((m) => m.id.toString() === makeId);
-        const matchedModel = matchedMake?.models.find((m) => m.name.toLowerCase() === selectedCarData.model.toLowerCase());
-        modelId = matchedModel?.id.toString();
-      }
-
-      finalVehicleMake = makeId || selectedCarData.make;
-      finalVehicleModel = modelId || selectedCarData.model;
-      finalVehicleYear = selectedCarData.year.toString();
     }
 
     // Validate vehicle year
@@ -190,37 +140,45 @@ const FindMechanic = () => {
       return;
     }
 
+    // Determine final date and time slot
+    let finalDate = formState.preferredDate;
+    let finalTimeSlot = formState.preferredTimeSlot;
+
+    if (!formState.isScheduled) {
+      finalDate = new Date();
+      finalTimeSlot = getCurrentTimeSlot();
+    }
+
     // Prepare payload matching order-mechanic.tsx structure (without mechanic_id)
-    // Note: mechanic_id is omitted as this is for finding mechanics, not ordering from a specific one
     const payload = {
       data: {
-        service_type: serviceType,
+        service_type: formState.serviceType,
         vehicle_make: finalVehicleMake,
         vehicle_model: finalVehicleModel,
         vehicle_year: vehicleYearNumber,
-        problem_description: problemDescription.trim(),
-        service_address: serviceAddress.trim(),
-        service_latitude: serviceLatitude ? serviceLatitude.toFixed(5) : undefined,
-        service_longitude: serviceLongitude ? serviceLongitude.toFixed(5) : undefined,
-        preferred_date: preferredDate.toISOString().split('T')[0],
-        preferred_time_slot: preferredTimeSlot,
-        notes: notes.trim() || undefined,
-      } as any, // Type assertion to allow omitting mechanic_id
+        problem_description: formState.problemDescription.trim(),
+        service_address: formState.serviceAddress.trim(),
+        service_latitude: formState.serviceLatitude ? parseFloat(formState.serviceLatitude.toFixed(7)) : undefined,
+        service_longitude: formState.serviceLongitude ? parseFloat(formState.serviceLongitude.toFixed(7)) : undefined,
+        schedule: formState.isScheduled,
+        ...(formState.isScheduled && {
+          preferred_date: finalDate?.toISOString().split('T')[0],
+          preferred_time_slot: finalTimeSlot,
+        }),
+      } as any,
       requestType: 'inbound',
     };
 
-    // Call API to create repair request (same endpoint as order-mechanic, without mechanic_id)
+    // Call API to create repair request
     createRepairRequest(payload, {
       onSuccess: (response: any) => {
-        // Extract order ID from response
         const orderId = response?.data?.id || response?.id;
         
         if (orderId) {
-          // Show success modal with order ID
-          setSuccessOrderId(orderId.toString());
-          setShowSuccessModal(true);
+          formState.setSuccessOrderId(orderId.toString());
+          formState.setSuccessMessage(response?.message || null);
+          formState.setShowSuccessModal(true);
         } else {
-          // Fallback to alert if no order ID
           Alert.alert(
             'Request submitted',
             'Your repair request has been submitted. Available mechanics will be notified.',
@@ -241,31 +199,30 @@ const FindMechanic = () => {
   };
 
   const handleTrackOrder = () => {
-    setShowSuccessModal(false);
-    if (successOrderId) {
+    formState.setShowSuccessModal(false);
+    if (formState.successOrderId) {
       router.push({
         pathname: routes.trackMechanicOrder,
         params: {
-          orderId: successOrderId,
+          orderId: formState.successOrderId,
         },
       });
     }
   };
 
   const handleGoHome = () => {
-    setShowSuccessModal(false);
+    formState.setShowSuccessModal(false);
     router.replace(routes.home);
   };
-  
 
   return (
     <SafeAreaView className="bg-white flex-1">
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-        {hasCarList && currentStep === 2 ? (
-          <BackArrowBtn onPress={() => setCurrentStep(1)} />
+        {hasCarList && formState.currentStep === 2 ? (
+          <BackArrowBtn onPress={() => formState.setCurrentStep(1)} />
         ) : (
-      <BackArrowBtn />
+          <BackArrowBtn />
         )}
         
         <Text className="text-xl font-NunitoBold text-gray-900">
@@ -275,497 +232,85 @@ const FindMechanic = () => {
         <View className="w-10" />
       </View>
 
-      <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false}>
-        {/* Step Indicator - Only show when car list exists */}
-        {hasCarList && (
-          <View className="flex-row items-center justify-center mb-6">
-            <View className="flex-row items-center">
-              <View className={`w-8 h-8 rounded-full items-center justify-center ${currentStep >= 1 ? 'bg-primary-500' : 'bg-gray-300'
-                }`}>
-                {currentStep > 1 ? (
-                  <CheckCircleIcon size={20} color="#FFFFFF" />
-                ) : (
-                  <Text className={`text-sm font-NunitoBold ${currentStep >= 1 ? 'text-white' : 'text-gray-500'
-                    }`}>1</Text>
-                )}
-              </View>
-              <View className={`h-1 w-12 mx-2 ${currentStep >= 2 ? 'bg-primary-500' : 'bg-gray-300'
-                }`} />
-              <View className={`w-8 h-8 rounded-full items-center justify-center ${currentStep >= 2 ? 'bg-primary-500' : 'bg-gray-300'
-                }`}>
-                <Text className={`text-sm font-NunitoBold ${currentStep >= 2 ? 'text-white' : 'text-gray-500'
-                  }`}>2</Text>
-              </View>
-            </View>
-          </View>
-        )}
+      <ScrollView 
+        className="flex-1 px-5 pt-6" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: LAYOUT.SCROLL_PADDING_BOTTOM,
+        }}
+      >
+        {/* Step Indicator */}
+        <StepIndicator currentStep={formState.currentStep} hasCarList={hasCarList} />
 
         {/* Step 1: Car Selection */}
-        {currentStep === 1 && hasCarList && (
-          <View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              Select Your Car
-            </Text>
-            <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-              Are you selecting from your car list?
-            </Text>
-
-            <View className="flex-row gap-4 mb-6">
-              {/* Yes Option Card */}
-              <TouchableOpacity
-                onPress={() => {
-                  setCarSelection('Yes');
-                  setCurrentStep(2);
-                }}
-                className={`flex-1 p-5 rounded-3xl border-2 ${
-                  carSelection === 'Yes'
-                    ? 'bg-primary-500 border-primary-500 shadow-lg'
-                    : 'bg-white border-gray-200 shadow-sm'
-                }`}
-                activeOpacity={0.8}
-                style={{
-                  shadowColor: carSelection === 'Yes' ? '#D30309' : '#000',
-                  shadowOffset: { width: 0, height: carSelection === 'Yes' ? 4 : 2 },
-                  shadowOpacity: carSelection === 'Yes' ? 0.2 : 0.1,
-                  shadowRadius: carSelection === 'Yes' ? 8 : 4,
-                  elevation: carSelection === 'Yes' ? 5 : 2,
-                }}
-              >
-                <View className="items-center">
-                  <View className={`w-14 h-14 rounded-2xl items-center justify-center mb-3 ${
-                    carSelection === 'Yes' ? 'bg-white/20' : 'bg-gray-100'
-                  }`}>
-                    {carSelection === 'Yes' ? (
-                      <CheckCircleIcon size={28} color="#FFFFFF" />
-                    ) : (
-                      <FolderIcon size={28} color="#6B7280" />
-                    )}
-                  </View>
-                  <Text className={`text-base font-NunitoBold mb-1 ${
-                    carSelection === 'Yes' ? 'text-white' : 'text-gray-800'
-                  }`}>
-                    Yes
-                  </Text>
-                  <Text className={`text-xs font-NunitoMedium text-center px-2 ${
-                    carSelection === 'Yes' ? 'text-white/90' : 'text-gray-600'
-                  }`}>
-                    Use my saved cars
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* No Option Card */}
-              <TouchableOpacity
-                onPress={() => {
-                  setCarSelection('No');
-                  setSelectedCar('');
-                  setVehicleMake('');
-                  setVehicleModel('');
-                  setVehicleYear('');
-                  setCurrentStep(2);
-                }}
-                className={`flex-1 p-5 rounded-3xl border-2 ${
-                  carSelection === 'No'
-                    ? 'bg-primary-500 border-primary-500 shadow-lg'
-                    : 'bg-white border-gray-200 shadow-sm'
-                }`}
-                activeOpacity={0.8}
-                style={{
-                  shadowColor: carSelection === 'No' ? '#D30309' : '#000',
-                  shadowOffset: { width: 0, height: carSelection === 'No' ? 4 : 2 },
-                  shadowOpacity: carSelection === 'No' ? 0.2 : 0.1,
-                  shadowRadius: carSelection === 'No' ? 8 : 4,
-                  elevation: carSelection === 'No' ? 5 : 2,
-                }}
-              >
-                <View className="items-center">
-                  <View className={`w-14 h-14 rounded-2xl items-center justify-center mb-3 ${
-                    carSelection === 'No' ? 'bg-white/20' : 'bg-gray-100'
-                  }`}>
-                    {carSelection === 'No' ? (
-                      <CheckCircleIcon size={28} color="#FFFFFF" />
-                    ) : (
-                      <PlusCircleIcon size={28} color="#6B7280" />
-                    )}
-                  </View>
-                  <Text className={`text-base font-NunitoBold mb-1 ${
-                    carSelection === 'No' ? 'text-white' : 'text-gray-800'
-                  }`}>
-                    No
-                  </Text>
-                  <Text className={`text-xs font-NunitoMedium text-center px-2 ${
-                    carSelection === 'No' ? 'text-white/90' : 'text-gray-600'
-                  }`}>
-                    Enter manually
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {formState.currentStep === 1 && hasCarList && (
+          <CarSelectionStep
+            carSelection={formState.carSelection}
+            onSelectYes={() => {
+              formState.setCarSelection('Yes');
+              formState.setCurrentStep(2);
+            }}
+            onSelectNo={() => {
+              formState.setCarSelection('No');
+              formState.setSelectedCar('');
+              formState.setVehicleMake('');
+              formState.setVehicleModel('');
+              formState.setVehicleYear('');
+              formState.setCurrentStep(2);
+            }}
+          />
         )}
 
         {/* Step 2: Order Input Fields */}
-        {currentStep === 2 && (
+        {formState.currentStep === 2 && (
           <View>
             <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
               Service Details
             </Text>
             <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-          Fill in the details below to find a mechanic
-        </Text>
+              Fill in the details below to find a mechanic
+            </Text>
 
-            {/* Conditional Vehicle Selection - Show car list selection if car list exists */}
-            {hasCarList ? (
-              <>
+            <OrderFormFields
+              carSelection={formState.carSelection}
+              selectedCar={formState.selectedCar}
+              setSelectedCar={formState.setSelectedCar}
+              hasCarList={hasCarList}
+              carOptions={carOptions}
+              serviceType={formState.serviceType}
+              setServiceType={formState.setServiceType}
+              problemDescription={formState.problemDescription}
+              setProblemDescription={formState.setProblemDescription}
+              serviceAddress={formState.serviceAddress}
+              setServiceAddress={formState.setServiceAddress}
+              serviceLatitude={formState.serviceLatitude}
+              setServiceLatitude={formState.setServiceLatitude}
+              serviceLongitude={formState.serviceLongitude}
+              setServiceLongitude={formState.setServiceLongitude}
+              serviceTypeOptions={serviceTypeOptions}
+              vehicleMake={formState.vehicleMake}
+              setVehicleMake={formState.setVehicleMake}
+              vehicleModel={formState.vehicleModel}
+              setVehicleModel={formState.setVehicleModel}
+              vehicleYear={formState.vehicleYear}
+              setVehicleYear={formState.setVehicleYear}
+              vehicleMakeOptions={vehicleMakeOptions}
+              vehicleModelOptions={vehicleModelOptions}
+              vehicleYearOptions={vehicleYearOptions}
+              vehicleMakesLoading={vehicleMakesLoading}
+              isScheduled={formState.isScheduled}
+              setIsScheduled={formState.setIsScheduled}
+              preferredDate={formState.preferredDate}
+              setPreferredDate={formState.setPreferredDate}
+              preferredTimeSlot={formState.preferredTimeSlot}
+              setPreferredTimeSlot={formState.setPreferredTimeSlot}
+              timeSlotOptions={timeSlotOptions}
+              onCarSelect={handleCarSelect}
+            />
 
-        {carSelection === 'Yes' ? (
-                  <>
-                    <View className="mb-4">
-            <SelectField
-              name="selectedCar"
-              label="All cars"
-              placeholder="Select a car"
-              options={carOptions}
-              value={selectedCar}
-                        onValueChange={(carId) => {
-                          setSelectedCar(carId);
-                          // Auto-populate make, model, and year from selected car
-                          const car = carList.find((c) => c.id === carId);
-                          if (car) {
-                            // Use make_id/model_id if available, otherwise try to find from vehicleMakes
-                            const carWithIds = car as any;
-                            let makeId: string | undefined = carWithIds.make_id;
-                            let modelId: string | undefined = carWithIds.model_id;
-
-                            // If IDs not available, try to find them by matching names
-                            if (!makeId && vehicleMakes) {
-                              const matchedMake = vehicleMakes.find((m) => m.name.toLowerCase() === car.make.toLowerCase());
-                              makeId = matchedMake?.id.toString();
-                            }
-
-                            if (!modelId && makeId && vehicleMakes) {
-                              const matchedMake = vehicleMakes.find((m) => m.id.toString() === makeId);
-                              const matchedModel = matchedMake?.models.find((m) => m.name.toLowerCase() === car.model.toLowerCase());
-                              modelId = matchedModel?.id.toString();
-                            }
-
-                            setVehicleMake(makeId || car.make || '');
-                            setVehicleModel(modelId || car.model || '');
-                            setVehicleYear(car.year.toString());
-                          }
-                        }}
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="serviceType"
-                        label="Service Type"
-                        placeholder="Select the service you need"
-                        options={serviceTypeOptions}
-                        value={serviceType}
-                        onValueChange={setServiceType}
-                      />
-                    </View>
-
-                    <View className="">
-                      <TextArea
-                        label="Problem Description"
-                        placeholder="Tell the Mechanic what's Wrong with your Vehicle"
-                        value={problemDescription}
-                        onChangeText={setProblemDescription}
-                        rows={6}
-                      />
-                    </View>
-
-                    <View className="">
-                      <AddressInput
-                        label="Service Address"
-                        placeholder="Where should the mechanic meet you?"
-                        value={serviceAddress}
-                        onChangeText={(text) => setServiceAddress(text)}
-                        onLocationSelect={(location) => {
-                          setServiceAddress(location.address || location.name);
-                          setServiceLatitude(location.latitude);
-                          setServiceLongitude(location.longitude);
-                        }}
-                        required
-                        numberOfLines={2}
-                        multiline={true}
-                        showCurrentLocationButton
-                      />
-                    </View>
-
-                    <View className="">
-                      <DateInput
-                        label="Preferred Date"
-                        placeholder="Select date"
-                        value={preferredDate}
-                        onDateChange={setPreferredDate}
-                        required
-                        minimumDate={new Date()}
-                        showTodayButton
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="timeSlot"
-                        label="Preferred Time Slot"
-                        placeholder="Select a time slot"
-                        options={timeSlotOptions}
-                        value={preferredTimeSlot}
-                        onValueChange={setPreferredTimeSlot}
-                      />
-                    </View>
-
-                    <View className="">
-                      <TextArea
-                        label="Additional Notes (Optional)"
-                        placeholder="Share access instructions, parking info or other helpful notes"
-                        value={notes}
-                        onChangeText={setNotes}
-                        rows={4}
-                      />
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <View className="">
-                      <SelectField
-                        name="serviceType"
-                        label="Service Type"
-                        placeholder="Select the service you need"
-                        options={serviceTypeOptions}
-                        value={serviceType}
-                        onValueChange={setServiceType}
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="vehicleMake"
-                        label="Vehicle Make"
-                        placeholder={vehicleMakesLoading ? "Loading makes..." : "Select your vehicle make"}
-                        options={vehicleMakeOptions}
-                        value={vehicleMake}
-                        onValueChange={(value) => {
-                          setVehicleMake(value);
-                          setVehicleModel(''); // Reset model when make changes
-                        }}
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="vehicleModel"
-                        label="Vehicle Model"
-                        placeholder={vehicleMake ? (vehicleMakesLoading ? "Loading models..." : "Select your vehicle model") : "Select make first"}
-                        options={vehicleModelOptions}
-                        value={vehicleModel}
-                        onValueChange={setVehicleModel}
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="vehicleYear"
-                        label="Vehicle Year"
-                        placeholder="Select your vehicle year"
-                        options={vehicleYearOptions}
-                        value={vehicleYear}
-                        onValueChange={setVehicleYear}
-                      />
-                    </View>
-
-                    <View className="">
-                      <TextArea
-                        label="Problem Description"
-                        placeholder="Tell the Mechanic what's Wrong with your Vehicle"
-                        value={problemDescription}
-                        onChangeText={setProblemDescription}
-                        rows={6}
-                      />
-                    </View>
-
-                    <View className="">
-                      <AddressInput
-                        label="Service Address"
-                        placeholder="Where should the mechanic meet you?"
-                        value={serviceAddress}
-                        onChangeText={(text) => setServiceAddress(text)}
-                        onLocationSelect={(location) => {
-                          setServiceAddress(location.address || location.name);
-                          setServiceLatitude(location.latitude);
-                          setServiceLongitude(location.longitude);
-                        }}
-                        required
-                        numberOfLines={2}
-                        multiline={true}
-                        showCurrentLocationButton
-                      />
-                    </View>
-
-                    <View className="">
-                      <DateInput
-                        label="Preferred Date"
-                        placeholder="Select date"
-                        value={preferredDate}
-                        onDateChange={setPreferredDate}
-                        required
-                        minimumDate={new Date()}
-                        showTodayButton
-                      />
-                    </View>
-
-                    <View className="">
-                      <SelectField
-                        name="timeSlot"
-                        label="Preferred Time Slot"
-                        placeholder="Select a time slot"
-                        options={timeSlotOptions}
-                        value={preferredTimeSlot}
-                        onValueChange={setPreferredTimeSlot}
-                      />
-                    </View>
-
-                    <View className="">
-                      <TextArea
-                        label="Additional Notes (Optional)"
-                        placeholder="Share access instructions, parking info or other helpful notes"
-                        value={notes}
-                        onChangeText={setNotes}
-                        rows={4}
-                      />
-                    </View>
-                  </>
-                )}
-              </>
-            ) : (
-              /* Show manual car details when car list is empty */
-              <>
-                <View className="">
-                  <SelectField
-                    name="serviceType"
-                    label="Service Type"
-                    placeholder="Select the service you need"
-                    options={serviceTypeOptions}
-                    value={serviceType}
-                    onValueChange={setServiceType}
-                  />
-                </View>
-
-                <View className="">
-                  <SelectField
-                    name="vehicleMake"
-                    label="Vehicle Make"
-                    placeholder={vehicleMakesLoading ? "Loading makes..." : "Select your vehicle make"}
-                    options={vehicleMakeOptions}
-                    value={vehicleMake}
-                    onValueChange={(value) => {
-                      setVehicleMake(value);
-                      setVehicleModel(''); // Reset model when make changes
-                    }}
-                  />
-                </View>
-
-                <View className="">
-                  <SelectField
-                    name="vehicleModel"
-                    label="Vehicle Model"
-                    placeholder={vehicleMake ? (vehicleMakesLoading ? "Loading models..." : "Select your vehicle model") : "Select make first"}
-                    options={vehicleModelOptions}
-                    value={vehicleModel}
-                    onValueChange={setVehicleModel}
-                  />
-                </View>
-
-                <View className="">
-                  <SelectField
-                    name="vehicleYear"
-                    label="Vehicle Year"
-                    placeholder="Select your vehicle year"
-                    options={vehicleYearOptions}
-                    value={vehicleYear}
-                    onValueChange={setVehicleYear}
-                  />
-                </View>
-
-                <View className="">
-                  <TextArea
-                    label="Problem Description"
-                    placeholder="Tell the Mechanic what's Wrong with your Vehicle"
-                    value={problemDescription}
-                    onChangeText={setProblemDescription}
-                    rows={6}
-                  />
-                </View>
-
-                <View className="">
-                  <AddressInput
-                    label="Service Address"
-                    placeholder="Where should the mechanic meet you?"
-                    value={serviceAddress}
-                    onChangeText={(text) => setServiceAddress(text)}
-                    onLocationSelect={(location) => {
-                      setServiceAddress(location.address || location.name);
-                      setServiceLatitude(location.latitude);
-                      setServiceLongitude(location.longitude);
-                    }}
-                    required
-                    numberOfLines={2}
-                    multiline={true}
-                    showCurrentLocationButton
-                  />
-                </View>
-
-                <View className="">
-                  <DateInput
-                    label="Preferred Date"
-                    placeholder="Select date"
-                    value={preferredDate}
-                    onDateChange={setPreferredDate}
-                    required
-                    minimumDate={new Date()}
-                    showTodayButton
-                  />
-                </View>
-
-                <View className="">
-                  <SelectField
-                    name="timeSlot"
-                    label="Preferred Time Slot"
-                    placeholder="Select a time slot"
-                    options={timeSlotOptions}
-                    value={preferredTimeSlot}
-                    onValueChange={setPreferredTimeSlot}
-                  />
-                </View>
-
-                <View className="">
-                  <TextArea
-                    label="Additional Notes (Optional)"
-                    placeholder="Share access instructions, parking info or other helpful notes"
-                    value={notes}
-                    onChangeText={setNotes}
-                    rows={4}
-                  />
-                </View>
-              </>
-            )}
-
-            {/* Navigation Buttons */}
+            {/* Submit Button */}
             <View className="flex-row gap-3 mt-6">
-              {/* {currentStep === 2 && hasCarList && (
-                <TouchableOpacity
-                  onPress={() => setCurrentStep(1)}
-                  className="flex-1 py-4 rounded-xl border-2 border-gray-300 items-center"
-                  activeOpacity={0.7}
-                >
-                  <Text className="text-base font-NunitoBold text-gray-700">Back</Text>
-                </TouchableOpacity>
-              )} */}
-              <View className={currentStep === 2 && hasCarList ? 'flex-1' : 'flex-1'}>
+              <View className="flex-1">
                 <CustomButton
                   title={isPending ? "Submitting request..." : "Proceed"}
                   onPress={handleProceed}
@@ -779,184 +324,17 @@ const FindMechanic = () => {
           </View>
         )}
 
-        {/* Show proceed button directly if no car list */}
-        {!hasCarList && (
-          <>
-            <View className="">
-              <SelectField
-                name="serviceType"
-                label="Service Type"
-                placeholder="Select the service you need"
-                options={serviceTypeOptions}
-                value={serviceType}
-                onValueChange={setServiceType}
-              />
-            </View>
-
-            <View className="">
-              <SelectField
-                name="vehicleMake"
-                label="Vehicle Make"
-                placeholder={vehicleMakesLoading ? "Loading makes..." : "Select your vehicle make"}
-                options={vehicleMakeOptions}
-                value={vehicleMake}
-                onValueChange={(value) => {
-                  setVehicleMake(value);
-                  setVehicleModel(''); // Reset model when make changes
-                }}
-              />
-            </View>
-
-            <View className="">
-              <SelectField
-                name="vehicleModel"
-                label="Vehicle Model"
-                placeholder={vehicleMake ? (vehicleMakesLoading ? "Loading models..." : "Select your vehicle model") : "Select make first"}
-                options={vehicleModelOptions}
-                value={vehicleModel}
-                onValueChange={setVehicleModel}
-              />
-            </View>
-
-            <View className="">
-              <SelectField
-                name="vehicleYear"
-                label="Vehicle Year"
-                placeholder="Select your vehicle year"
-                options={vehicleYearOptions}
-                value={vehicleYear}
-                onValueChange={setVehicleYear}
-              />
-            </View>
-
-            <View className="">
-              <TextArea
-                label="Problem Description"
-                placeholder="Tell the Mechanic what's Wrong with your Vehicle"
-                value={problemDescription}
-                onChangeText={setProblemDescription}
-                rows={6}
-              />
-            </View>
-
-            <View className="">
-              <AddressInput
-                label="Service Address"
-                placeholder="Where should the mechanic meet you?"
-                value={serviceAddress}
-                onChangeText={(text) => setServiceAddress(text)}
-                onLocationSelect={(location) => {
-                  setServiceAddress(location.address || location.name);
-                  setServiceLatitude(location.latitude);
-                  setServiceLongitude(location.longitude);
-                }}
-                required
-                numberOfLines={2}
-                multiline={true}
-                showCurrentLocationButton
-              />
-            </View>
-
-            <View className="">
-              <DateInput
-                label="Preferred Date"
-                placeholder="Select date"
-                value={preferredDate}
-                onDateChange={setPreferredDate}
-                required
-                minimumDate={new Date()}
-                showTodayButton
-              />
-            </View>
-
-            <View className="">
-              <SelectField
-                name="timeSlot"
-                label="Preferred Time Slot"
-                placeholder="Select a time slot"
-                options={timeSlotOptions}
-                value={preferredTimeSlot}
-                onValueChange={setPreferredTimeSlot}
-              />
-            </View>
-
-            <View className="">
-              <TextArea
-                label="Additional Notes (Optional)"
-                placeholder="Share access instructions, parking info or other helpful notes"
-                value={notes}
-                onChangeText={setNotes}
-                rows={4}
-              />
-            </View>
-
-            <View className="mt-8">
-              <CustomButton
-                title={isPending ? "Submitting request..." : "Proceed"}
-                onPress={handleProceed}
-                bgVariant="primary"
-                className="py-4"
-                loading={isPending}
-                disabled={isPending}
-              />
-            </View>
-          </>
-        )}
-
-        {/* Error Display */}
-        {error && (
-          <View className=" p-3 bg-red-50 border border-red-200 rounded-lg">
-            <Text className="text-red-600 text-sm font-NunitoMedium text-center">
-              {getErrorMessage(error, 'general')}
-            </Text>
-          </View>
-        )}
+       
       </ScrollView>
 
       {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center px-5">
-          <View className="bg-white rounded-2xl w-full max-w-sm p-6 items-center shadow-2xl">
-            {/* Success Icon */}
-            <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
-              <CheckCircleIcon size={48} color="#10B981" />
-            </View>
-
-            {/* Success Message */}
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              Request Submitted!
-            </Text>
-            <Text className="text-base font-NunitoMedium text-gray-600 mb-1 text-center px-2">
-              Your repair request has been submitted successfully.
-            </Text>
-            <Text className="text-sm font-NunitoMedium text-gray-500 mb-6 text-center px-2">
-              We're searching for mechanics within 5km radius. You will be notified when mechanics respond.
-            </Text>
-
-            {/* Action Buttons */}
-            <View className="w-full space-y-3">
-              <CustomButton
-                title="Track Order"
-                onPress={handleTrackOrder}
-                bgVariant="primary"
-                className="py-3 mb-3"
-              />
-              <CustomButton
-                title="Go Home"
-                onPress={handleGoHome}
-                bgVariant="outline"
-                textVariant="outline"
-                className="py-3"
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <SuccessModal
+        visible={formState.showSuccessModal}
+        orderId={formState.successOrderId}
+        message={formState.successMessage}
+        onTrackOrder={handleTrackOrder}
+        onGoHome={handleGoHome}
+      />
     </SafeAreaView>
   );
 };

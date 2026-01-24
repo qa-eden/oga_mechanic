@@ -85,6 +85,7 @@ const MyMechanicOrders = () => {
           preferredTimeSlot: request.preferred_time_slot || request.time_slot || '',
           status: (request.status || 'pending') as MechanicOrder['status'],
           createdAt: request.requested_at || request.created_at || request.createdAt || '',
+          schedule: !!request.schedule,
           notes: request.notes || undefined,
         };
       });
@@ -246,4 +247,3 @@ const MyMechanicOrders = () => {
 };
 
 export default MyMechanicOrders;
-

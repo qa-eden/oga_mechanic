@@ -86,7 +86,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { driverRoutes, mechanicRoutes, routes, sellerRoutes } from "./routes";
+import { driverRoutes, mechanicRoutes, routes, sellerRoutes, riderRoutes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -370,7 +370,7 @@ export const ProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: "editProfile",
+      route: routes.editProfile,
     },
     {
       id: 10,
@@ -388,13 +388,13 @@ export const ProfileSettings = {
       id: 3,
       name: "Switch Role",
       image: switch1,
-      route: "editProfile",
+      route: "Switch Role",
     },
     {
       id: 4,
       name: "Subscription",
       image: sub,
-      route: "notifications",
+      route: routes.notifications,
     },
   ],
 };
@@ -406,7 +406,7 @@ export const MechanicProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: "editProfile",
+      route: mechanicRoutes.EditProfile,
     },
     {
       id: 2,
@@ -430,7 +430,118 @@ export const MechanicProfileSettings = {
       id: 5,
       name: "Switch Role",
       image: switch1,
-      route: "editProfile",
+      route: "Switch Role",
+    },
+  ],
+};
+
+export const DriverProfileSettings = {
+  name: "Profile settings",
+  options: [
+    {
+      id: 1,
+      name: "My Profile",
+      image: UserCircle,
+      route: driverRoutes.EditProfile,
+    },
+    {
+      id: 2,
+      name: "My Trips",
+      image: trip,
+      route: "notifications",
+    },
+    {
+      id: 3,
+      name: "Wallet",
+      image: savingWallet,
+      route: routes.notifications,
+    },
+    {
+      id: 4,
+      name: "Change Password",
+      image: padlock,
+      route: routes.changePassword,
+    },
+    {
+      id: 5,
+      name: "Switch Role",
+      image: switch1,
+      route: "Switch Role",
+    },
+  ],
+};
+
+
+
+
+export const SellerProfileSettings = {
+  name: "Profile settings",
+  options: [
+    {
+      id: 1,
+      name: "My Profile",
+      image: UserCircle,
+      route: sellerRoutes.EditProfile,
+    },
+    {
+      id: 2,
+      name: "Add Bank Details",
+      image: addBank,
+      route: "notifications",
+    },
+    {
+      id: 3,
+      name: "Savings wallet",
+      image: savingWallet,
+      route: "notifications",
+    },
+    {
+      id: 4,
+      name: "Change Password",
+      image: padlock,
+      route: routes.changePassword,
+    },
+    {
+      id: 5,
+      name: "Switch Role",
+      image: switch1,
+      route: "Switch Role",
+    },
+  ],
+};
+
+export const RiderProfileSettings = {
+  name: "Profile settings",
+  options: [
+    {
+      id: 1,
+      name: "My Profile",
+      image: UserCircle,
+      route: riderRoutes.EditProfile,
+    },
+    {
+      id: 2,
+      name: "Vehicle Information",
+      image: car,
+      route: "vehicleInfo",
+    },
+    {
+      id: 3,
+      name: "Add Bank Details",
+      image: bankIcon,
+      route: "bankDetails",
+    },
+    {
+      id: 4,
+      name: "Change Password",
+      image: padlock,
+      route: routes.changePassword,
+    },
+    {
+      id: 5,
+      name: "Switch Role",
+      image: switch1,
+      route: "Switch Role",
     },
   ],
 };

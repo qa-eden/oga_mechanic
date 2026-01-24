@@ -6,7 +6,7 @@ import {
   icons,
   ProfileSettings,
   ProfileSopprt,
-  MechanicProfileSettings,
+  SellerProfileSettings,
 } from "@/constants";
 import React, { useState } from "react";
 import {
@@ -23,7 +23,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
-import { mechanicRoutes } from "@/constants/routes";
+import { sellerRoutes } from "@/constants/routes";
 import { MapPinIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
@@ -147,18 +147,17 @@ const SellerProfile = () => {
             <Text className="uppercase text-[#999999] pb-2">
               {ProfileSettings?.name}
             </Text>
-            {MechanicProfileSettings.options.map((item) => (
+            {SellerProfileSettings.options.map((item) => (
               <ProfileTabs
                 key={String(item.id)}
                 text={item.name}
                 iconLeft={(props) => item?.image && item.image(props)}
                 onPress={() => {
-                  if (item.name === "My Profile") {
-                    router.push(mechanicRoutes.EditProfile);
-                  } else if (item.name === "Switch Role") {
+                  if (item.name === "Switch Role") {
                     setShowSwitchUserModal(true);
+                  } else if (item.route) {
+                    router.push(item.route as any);
                   }
-                  // Add other navigation logic here for other items
                 }}
               />
             ))}

@@ -2,6 +2,8 @@ import {
   userInfo,
   icons,
   ProfileSettings,
+  MechanicProfileSettings,
+  DriverProfileSettings,
   ProfileSopprt,
 } from "@/constants";
 import React, { useState } from "react";
@@ -337,20 +339,34 @@ const Profile = () => {
               Account Settings
             </Text>
             <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
-              {ProfileSettings.options.map((item) => (
-                <MenuItem
-                  key={item.id}
-                  title={item.name}
-                  icon={item.image}
-                  onPress={() => {
-                    if (item.name === "Switch Role") {
-                      setShowSwitchUserModal(true);
-                    } else if (item.route) {
-                        router.push(item.route as any);
-                    }
-                  }}
-                />
-              ))}
+              {(() => {
+                let currentSettings = ProfileSettings.options;
+                
+                if (activeRole === 'mechanic') {
+                  currentSettings = MechanicProfileSettings.options;
+                } else if (activeRole === 'driver') {
+                  currentSettings = DriverProfileSettings.options;
+                } else {
+                   // Filter out subscription for primary users if they are confused
+                   // But keeping it as per original ProfileSettings for now, just utilizing role switching
+                   currentSettings = ProfileSettings.options;
+                }
+
+                return currentSettings.map((item) => (
+                  <MenuItem
+                    key={item.id}
+                    title={item.name}
+                    icon={item.image}
+                    onPress={() => {
+                      if (item.name === "Switch Role") {
+                        setShowSwitchUserModal(true);
+                      } else if (item.route) {
+                          router.push(item.route as any);
+                      }
+                    }}
+                  />
+                ));
+              })()}
             </View>
           </Animated.View>
 
