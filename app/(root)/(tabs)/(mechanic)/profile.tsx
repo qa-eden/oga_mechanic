@@ -1,10 +1,6 @@
-import ProfileTabs from "@/components/templates/ProfileTabs";
-import ProfileHeader from "@/components/ProfileHeader";
 import {
-  images,
   userInfo,
   icons,
-  ProfileSettings,
   ProfileSopprt,
   MechanicProfileSettings,
 } from "@/constants";
@@ -24,13 +20,16 @@ import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { mechanicRoutes } from "@/constants/routes";
-import { MapPinIcon } from "react-native-heroicons/solid";
+import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
-import { useMechanicProfile } from "@/hooks/useUserProfile";
-import { useUserRoles } from "@/hooks/useUserProfile";
+import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { useRepairRequests } from "@/hooks/useRepairRequests";
+import { PrimaryUserProfileResponse } from "@/lib/api/user";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const MechanicProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -38,28 +37,21 @@ const MechanicProfile = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Use centralized logout hook
-  const { logout, isLoggingOut } = useCentralizedLogout();
-
-  // Fetch profile, roles, and repair requests list on component mount
-  const { data: mechanicProfile, isLoading: isLoadingProfile, error: profileError, refetch: refetchProfile } = useMechanicProfile(true);
-  const { data: userRoles, isLoading: isLoadingRoles, error: rolesError, refetch: refetchRoles } = useUserRoles();
-  const { data: repairRequests, isLoading: isLoadingRequests, error: requestsError, refetch: refetchRequests } = useRepairRequests();
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([refetchProfile(), refetchRoles(), refetchRequests()]);
-    setRefreshing(false);
-  };
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
-  const toggleSwitch = (
-    setState: React.Dispatch<React.SetStateAction<boolean>>,
-    value: boolean
-  ) => {
-    setState(value);
+  // Use centralized logout hook
+  const { logout, isLoggingOut } = useCentralizedLogout();
+
+  // Fetch profile and repair requests
+  const { data: mechanicProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = useMechanicProfile(true);
+  const { data: profileData, isLoading: isProfileLoading, refetch: refetchPrimaryProfile } = usePrimaryUserProfile();
+  const { data: repairRequests, refetch: refetchRequests } = useRepairRequests();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProfile(), refetchPrimaryProfile(), refetchRequests()]);
+    setRefreshing(false);
   };
 
   const handleLogout = () => {
@@ -75,41 +67,86 @@ const MechanicProfile = () => {
     setShowLogoutModal(false);
   };
 
-  const handleSwitchUser = (userType: string) => {
+  const handleSwitchUser = (_userType: string) => {
     // Handle user switching logic here
-    console.log("Switching to user type:", userType);
-    // You can add navigation logic or state management here
   };
 
-  const ProfilePref = {
-    name: "PREFERENCES",
-    options: [
-      {
-        id: 1,
-        name: "Enable Fingerprint/Face ID",
-        image: icons.faceId,
-        route: "editProfile",
-        set: setIsEnabledFaceId,
-        state: isEnabledFaceId,
-      },
-      {
-        id: 2,
-        name: "Enable password login",
-        image: icons.enablePass,
-        route: "notifications",
-        set: setIsEnabledEnablePass,
-        state: isEnabledEnablePass,
-      },
-    ],
-  };
+  const MenuItem = ({ 
+    title, 
+    icon: Icon, 
+    onPress, 
+    showChevron = true,
+    rightElement,
+    isDestructive = false
+  }: { 
+    title: string; 
+    icon?: any; 
+    onPress?: () => void;
+    showChevron?: boolean;
+    rightElement?: React.ReactNode;
+    isDestructive?: boolean;
+  }) => (
+    <TouchableOpacity 
+      onPress={onPress}
+      activeOpacity={0.7}
+      className="flex-row items-center justify-between py-4 border-b border-gray-50 last:border-0"
+    >
+      <View className="flex-row items-center gap-3">
+        {Icon && (
+          <View className={`w-10 h-10 rounded-full items-center justify-center ${isDestructive ? 'bg-red-50' : 'bg-gray-50'}`}>
+            {typeof Icon === 'function' ? Icon({ size: 20, color: isDestructive ? '#EF4444' : '#4B5563' }) : <Icon size={20} color={isDestructive ? '#EF4444' : '#4B5563'} />}
+          </View>
+        )}
+        <Text className={`text-base font-NunitoBold ${isDestructive ? 'text-red-500' : 'text-gray-900'}`}>
+          {title}
+        </Text>
+      </View>
+      
+      {rightElement ? (
+        rightElement
+      ) : showChevron ? (
+        <ChevronRightIcon size={20} color="#9CA3AF" />
+      ) : null}
+    </TouchableOpacity>
+  );
+
+  // Show loading state
+  if (isProfileLoading || isLoadingProfile) {
+    return (
+      <LoadingSpinner
+        message="Loading Profile..."
+        size="medium"
+      />
+    );
+  }
+
+  // Get user data from API or fallback to static data
+  const userData = (profileData as PrimaryUserProfileResponse)?.data;
+  const mechanicData = mechanicProfile?.data;
+  const displayName = userData?.first_name && userData?.last_name
+    ? `${userData.first_name} ${userData.last_name}`
+    : mechanicData?.user?.first_name && mechanicData?.user?.last_name
+    ? `${mechanicData.user.first_name} ${mechanicData.user.last_name}`
+    : userInfo.name;
+
+  const displayEmail = userData?.email || mechanicData?.user?.email || '';
+  const isVerified = userData?.is_verified || false;
+  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'mechanic';
+  const profileImage = mechanicData?.selfie || (userData as any)?.profile_picture || (userData as any)?.image || null;
+  
+  // Stats data
+  const completedJobs = repairRequests?.data?.filter((r: any) => r.status === 'completed')?.length || 0;
+  const pendingJobs = repairRequests?.data?.filter((r: any) => r.status === 'pending')?.length || 0;
+  const totalEarnings = mechanicData?.total_earnings || 0;
+
   return (
-    <SafeAreaView className="bg-white flex-1" edges={["top"]}>
+    <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
       <StatusBar style="dark" />
       <ScrollView
-        className="flex-1 px-5 pt-2"
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          // paddingBottom: SCROLL_PADDING_BOTTOM,
+          paddingBottom: SCROLL_PADDING_BOTTOM,
         }}
         refreshControl={
           <RefreshControl
@@ -120,132 +157,226 @@ const MechanicProfile = () => {
           />
         }
       >
-        <View className="flex-col justify-center items-center">
-          <ProfileHeader title="Profile" />
-
-          <View className="w-[70px] h-[70px] bg-[#EBEBEB] flex justify-center items-center rounded-full">
-            {mechanicProfile?.data?.selfie ? (
-              <Image
-                source={{ uri: mechanicProfile.data.selfie }}
-                className="w-[60px] h-[60px] rounded-full"
-                resizeMode="cover"
-                alt="Profile"
-              />
-            ) : (
-              <Image
-                source={images.dummyProfile}
-                className="w-[60px] h-[60px] rounded-full"
-                resizeMode="cover"
-                alt="Profile"
-              />
-            )}
-          </View>
-
-          <Text className="font-NunitoBold text-primary-800 text-[1.5rem] pt-3">
-            {mechanicProfile?.data?.user?.first_name && mechanicProfile?.data?.user?.last_name
-              ? `${mechanicProfile.data.user.first_name} ${mechanicProfile.data.user.last_name}`
-              : mechanicProfile?.data?.user?.first_name || userInfo.name}
-          </Text>
-          <View className="flex-col items-center gap-2 pt-2">
-            <View className="flex-row items-center justify-center gap-2 pr-3 py-1">
-              <MapPinIcon size={16} color={"#D30309"} />
-              <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {mechanicProfile?.data?.location || userInfo.location}
+        <View className="px-5 pt-4">
+          {/* Header */}
+          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+            <View className="mb-6">
+              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                Mechanic Account
               </Text>
             </View>
-            <View className="flex-row items-center justify-center gap-2 pl-3 py-1">
-              <icons.redPhone width={20} height={20} />
-              <Text className="text-[14px] font-NunitoBold text-gray-600">
-                {mechanicProfile?.data?.user?.phone_number || userInfo.phone}
-              </Text>
+
+            {/* Profile Card */}
+            <View className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+              <View className="flex-row items-center">
+                {/* Avatar */}
+                <View className="relative mr-4">
+                  {profileImage ? (
+                    <Image
+                      source={{ uri: profileImage }}
+                      className="w-16 h-16 rounded-2xl"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={['#D30309', '#B91C1C']}
+                      className="w-16 h-16 rounded-2xl items-center justify-center"
+                    >
+                      <Text className="text-2xl font-NunitoExtraBold text-white">
+                        {displayName ? displayName.charAt(0).toUpperCase() : 'M'}
+                      </Text>
+                    </LinearGradient>
+                  )}
+                  {isVerified && (
+                    <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
+                      <Text className="text-white text-[10px]">✓</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* User Info */}
+                <View className="flex-1">
+                  <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">
+                    {displayName || 'Mechanic'}
+                  </Text>
+                  {displayEmail && (
+                    <Text className="text-gray-500 text-sm font-NunitoMedium">
+                      {displayEmail}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Role Badge */}
+                <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
+                  <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
+                    {activeRole.replace('_', ' ')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Stats Row */}
+              <View className="flex-row mt-4 pt-4 border-t border-gray-200">
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
+                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                    {completedJobs}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Completed</Text>
+                    <ChevronRightIcon size={12} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
+                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                    {pendingJobs}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Pending</Text>
+                    <ChevronRightIcon size={12} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={() => router.push(mechanicRoutes.earnings as any)}
+                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                >
+                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                    ₦{totalEarnings >= 1000 ? `${(totalEarnings / 1000).toFixed(1)}k` : totalEarnings}
+                  </Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Earnings</Text>
+                    <ChevronRightIcon size={12} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </Animated.View>
 
-        <View className="shadow-md shadow-gray-300 bg-white mt-9 rounded-[1rem] px-4 py-2 mb-6">
-          <View className="pt-4">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfileSettings?.name}
-            </Text>
-            {MechanicProfileSettings.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
-                onPress={() => {
-                  if (item.name === "Switch Role") {
-                    setShowSwitchUserModal(true);
-                  } else if (item.route) {
-                    router.push(item.route as any);
-                  }
-                }}
-              />
-            ))}
-          </View>
-
-          <View className="pt-4 pb-2">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfilePref?.name}
-            </Text>
-            {ProfilePref.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                activeOpacity={0.8}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
-                iconRight={
-                  <Switch
-                    trackColor={{ false: "#ccc", true: "#50BE4E" }}
-                    thumbColor={item.state ? "white" : "#f4f3f4"}
-                    // ios_backgroundColor="#3e3e3e"
-                    onValueChange={(value) => toggleSwitch(item.set, value)}
-                    value={item.state}
+          {/* Account Settings Section */}
+          <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+            <View className="bg-white rounded-2xl mt-6 px-4 border border-gray-100 shadow-sm">
+              <View className="py-2">
+                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
+                  Account Settings
+                </Text>
+                {MechanicProfileSettings.options.map((item) => (
+                  <MenuItem
+                    key={String(item.id)}
+                    title={item.name}
+                    icon={item.image}
+                    onPress={() => {
+                      if (item.name === "Switch Role") {
+                        setShowSwitchUserModal(true);
+                      } else if (item.route) {
+                        router.push(item.route as any);
+                      }
+                    }}
                   />
-                }
-              />
-            ))}
-          </View>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
 
-          <View className="pt-4 pb-2">
-            <Text className="uppercase text-[#999999] pb-2">
-              {ProfileSopprt?.name}
-            </Text>
-            {ProfileSopprt.options.map((item) => (
-              <ProfileTabs
-                key={String(item.id)}
-                text={item.name}
-                iconLeft={(props) => item?.image && item.image(props)}
-              />
-            ))}
-          </View>
-        </View>
+          {/* Preferences Section */}
+          <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+            <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
+              <View className="py-2">
+                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
+                  Preferences
+                </Text>
+                <MenuItem
+                  title="Enable Fingerprint/Face ID"
+                  icon={icons.faceId}
+                  showChevron={false}
+                  rightElement={
+                    <Switch
+                      trackColor={{ false: "#E5E7EB", true: "#22C55E" }}
+                      thumbColor="white"
+                      onValueChange={setIsEnabledFaceId}
+                      value={isEnabledFaceId}
+                    />
+                  }
+                />
+                <MenuItem
+                  title="Enable password login"
+                  icon={icons.enablePass}
+                  showChevron={false}
+                  rightElement={
+                    <Switch
+                      trackColor={{ false: "#E5E7EB", true: "#22C55E" }}
+                      thumbColor="white"
+                      onValueChange={setIsEnabledEnablePass}
+                      value={isEnabledEnablePass}
+                    />
+                  }
+                />
+              </View>
+            </View>
+          </Animated.View>
 
-        <View className="py-3">
-          <TouchableOpacity
-            onPress={handleLogout}
-            disabled={isLoggingOut}
-            className={`flex-row items-center justify-center gap-2 border border-primary-300 rounded-full py-5 ${
-              isLoggingOut ? 'opacity-50' : ''
-            }`}
-          >
-            {isLoggingOut && (
-              <ActivityIndicator size="small" color="#D30309" />
-            )}
-            <Text className="text-primary-500 text-[1.3rem] font-NunitoBold">
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </Text>
-          </TouchableOpacity>
+          {/* Support Section */}
+          <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+            <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
+              <View className="py-2">
+                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
+                  Support
+                </Text>
+                {ProfileSopprt.options.map((item) => (
+                  <MenuItem
+                    key={String(item.id)}
+                    title={item.name}
+                    icon={item.image}
+                  />
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Logout Button */}
+          <Animated.View entering={FadeInDown.delay(500).duration(500)}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+              className={`flex-row items-center justify-center gap-3 bg-red-50 border border-red-100 rounded-2xl py-4 mt-6 ${
+                isLoggingOut ? 'opacity-50' : ''
+              }`}
+            >
+              {isLoggingOut ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <ArrowRightOnRectangleIcon size={22} color="#EF4444" />
+              )}
+              <Text className="text-red-500 text-base font-NunitoBold">
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Version Info */}
+            <View className="items-center mt-6 mb-4">
+              <Text className="text-gray-400 text-xs font-NunitoMedium">
+                Version 1.0.0
+              </Text>
+            </View>
+          </Animated.View>
         </View>
       </ScrollView>
 
-      {/* Logout Modal */}
+      {/* Modals */}
       <LogoutModal
         visible={showLogoutModal}
         onConfirm={confirmLogout}
         onCancel={cancelLogout}
       />
 
-      {/* Switch Role Modal */}
       <SwitchUserModal
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}
@@ -255,4 +386,4 @@ const MechanicProfile = () => {
   );
 };
 
-export default MechanicProfile
+export default MechanicProfile;

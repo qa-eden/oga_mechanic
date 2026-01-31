@@ -264,12 +264,15 @@ const FindMechanic = () => {
         {/* Step 2: Order Input Fields */}
         {formState.currentStep === 2 && (
           <View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              Service Details
-            </Text>
-            <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-              Fill in the details below to find a mechanic
-            </Text>
+            {/* Form Header */}
+            <View className="bg-primary-50 rounded-xl p-3 mb-4 border border-primary-100">
+              <Text className="text-lg font-NunitoBold text-gray-900 mb-1 text-center">
+                Request Details
+              </Text>
+              <Text className="text-sm text-gray-600 font-NunitoRegular text-center">
+                Complete the form below to find available mechanics near you
+              </Text>
+            </View>
 
             <OrderFormFields
               carSelection={formState.carSelection}

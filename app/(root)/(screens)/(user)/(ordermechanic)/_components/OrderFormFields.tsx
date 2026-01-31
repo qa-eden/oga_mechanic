@@ -1,9 +1,10 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import SelectField from '@/components/forms/SelectField';
 import { VehicleDetailsForm } from './VehicleDetailsForm';
 import { ServiceDetailsForm } from './ServiceDetailsForm';
 import { SchedulingSection } from './SchedulingSection';
+import { TruckIcon } from 'react-native-heroicons/outline';
 
 interface SelectOption {
   label: string;
@@ -99,11 +100,19 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
   // If user has car list and selected "Yes", show car dropdown + service details
   if (hasCarList && carSelection === 'Yes') {
     return (
-      <>
+      <View>
+        {/* Select Car Section */}
         <View className="mb-4">
+          <View className="flex-row items-center mb-4">
+            <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
+              <TruckIcon size={18} color="#D30309" />
+            </View>
+            <Text className="text-base font-NunitoBold text-gray-900">Select Your Vehicle</Text>
+          </View>
+          
           <SelectField
             name="selectedCar"
-            label="All cars"
+            label="Choose from saved vehicles"
             placeholder="Select a car"
             options={carOptions}
             value={selectedCar}
@@ -113,6 +122,9 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
             }}
           />
         </View>
+
+        {/* Divider */}
+        <View className="h-px bg-gray-200 mb-4" />
 
         <ServiceDetailsForm
           serviceType={serviceType}
@@ -128,6 +140,9 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
           serviceTypeOptions={serviceTypeOptions}
         />
 
+        {/* Divider */}
+        <View className="h-px bg-gray-200 my-3" />
+
         <SchedulingSection
           isScheduled={isScheduled}
           setIsScheduled={setIsScheduled}
@@ -137,14 +152,14 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
           setPreferredTimeSlot={setPreferredTimeSlot}
           timeSlotOptions={timeSlotOptions}
         />
-      </>
+      </View>
     );
   }
 
   // If user has car list and selected "No", or no car list exists
   // Show full manual entry form
   return (
-    <>
+    <View>
       <ServiceDetailsForm
         serviceType={serviceType}
         setServiceType={setServiceType}
@@ -159,6 +174,9 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         serviceTypeOptions={serviceTypeOptions}
       />
 
+      {/* Divider */}
+      <View className="h-px bg-gray-200 my-3" />
+
       <VehicleDetailsForm
         vehicleMake={vehicleMake}
         setVehicleMake={setVehicleMake}
@@ -172,6 +190,9 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         vehicleMakesLoading={vehicleMakesLoading}
       />
 
+      {/* Divider */}
+      <View className="h-px bg-gray-200 my-3" />
+
       <SchedulingSection
         isScheduled={isScheduled}
         setIsScheduled={setIsScheduled}
@@ -181,6 +202,6 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         setPreferredTimeSlot={setPreferredTimeSlot}
         timeSlotOptions={timeSlotOptions}
       />
-    </>
+    </View>
   );
 };

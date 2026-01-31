@@ -1,7 +1,7 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import SelectField from '@/components/forms/SelectField';
-import InputField from '@/components/InputField';
+import { TruckIcon } from 'react-native-heroicons/outline';
 
 interface SelectOption {
   label: string;
@@ -38,8 +38,17 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
   vehicleMakesLoading = false,
 }) => {
   return (
-    <>
-      <View className="">
+    <View className="mb-1">
+      {/* Section Header */}
+      <View className="flex-row items-center mb-3">
+        <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
+          <TruckIcon size={18} color="#D30309" />
+        </View>
+        <Text className="text-base font-NunitoBold text-gray-900">Vehicle Information</Text>
+      </View>
+
+      {/* Vehicle Make */}
+      <View className="mb-3">
         <SelectField
           name="vehicleMake"
           label="Vehicle Make"
@@ -53,27 +62,30 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
         />
       </View>
 
-      <View className="">
-        <SelectField
-          name="vehicleModel"
-          label="Vehicle Model"
-          placeholder={vehicleMake ? (vehicleMakesLoading ? "Loading models..." : "Select your vehicle model") : "Select make first"}
-          options={vehicleModelOptions}
-          value={vehicleModel}
-          onValueChange={setVehicleModel}
-        />
-      </View>
+      {/* Vehicle Model & Year Row */}
+      <View className="flex-row gap-3 mb-1">
+        <View className="flex-1">
+          <SelectField
+            name="vehicleModel"
+            label="Model"
+            placeholder={vehicleMake ? "Select model" : "Select make first"}
+            options={vehicleModelOptions}
+            value={vehicleModel}
+            onValueChange={setVehicleModel}
+          />
+        </View>
 
-      <View className="">
-        <SelectField
-          name="vehicleYear"
-          label="Vehicle Year"
-          placeholder="Select your vehicle year"
-          options={vehicleYearOptions}
-          value={vehicleYear}
-          onValueChange={setVehicleYear}
-        />
+        <View className="flex-1">
+          <SelectField
+            name="vehicleYear"
+            label="Year"
+            placeholder="Select year"
+            options={vehicleYearOptions}
+            value={vehicleYear}
+            onValueChange={setVehicleYear}
+          />
+        </View>
       </View>
-    </>
+    </View>
   );
 };

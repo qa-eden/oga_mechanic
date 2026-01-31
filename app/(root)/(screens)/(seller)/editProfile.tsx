@@ -7,11 +7,11 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
-import { CameraIcon, WrenchScrewdriverIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from "react-native-heroicons/outline";
-import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { CameraIcon, BuildingStorefrontIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from "react-native-heroicons/outline";
+import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,11 +22,10 @@ import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
-import SelectField from "@/components/forms/SelectField";
 import { LinearGradient } from "expo-linear-gradient";
 
-// Validation Schema for Mechanic Profile
-const editMechanicProfileSchema = Yup.object().shape({
+// Validation Schema for Seller Profile
+const editSellerProfileSchema = Yup.object().shape({
   first_name: Yup.string()
     .min(2, "First name must be at least 2 characters")
     .required("First name is required"),
@@ -37,44 +36,38 @@ const editMechanicProfileSchema = Yup.object().shape({
     .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
-  location: Yup.string().nullable(),
-  specialization: Yup.string().nullable(),
-  years_of_experience: Yup.string().nullable(),
+  business_name: Yup.string().nullable(),
+  business_address: Yup.string().nullable(),
 });
 
-const EditMechanicProfile = () => {
+const EditSellerProfile = () => {
   const queryClient = useQueryClient();
-  const { data: profileData, isLoading: isLoadingPrimary } = usePrimaryUserProfile();
-  const { data: mechanicProfile, isLoading: isLoadingMechanic } = useMechanicProfile(true);
-  
+  const { data: profileData, isLoading: isLoadingProfile } = usePrimaryUserProfile();
   const userData = profileData?.data;
-  const mechanicData = mechanicProfile?.data;
 
   const [initialValues, setInitialValues] = useState({
     first_name: "",
     last_name: "",
     phone_number: "",
     email: "",
-    location: "",
-    specialization: "",
-    years_of_experience: "",
+    business_name: "",
+    business_address: "",
     selfie: "",
   });
 
   useEffect(() => {
-    if (userData || mechanicData) {
+    if (userData) {
       setInitialValues({
-        first_name: userData?.first_name || mechanicData?.user?.first_name || "",
-        last_name: userData?.last_name || mechanicData?.user?.last_name || "",
-        phone_number: userData?.phone_number || mechanicData?.user?.phone_number || "",
-        email: userData?.email || mechanicData?.user?.email || "",
-        location: mechanicData?.location || "",
-        specialization: (mechanicData as any)?.specialization || "",
-        years_of_experience: (mechanicData as any)?.years_of_experience?.toString() || "",
-        selfie: mechanicData?.selfie || (userData as any)?.profile_picture || "",
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        phone_number: userData.phone_number || "",
+        email: userData.email || "",
+        business_name: (userData as any)?.business_name || "",
+        business_address: (userData as any)?.business_address || "",
+        selfie: (userData as any)?.selfie || (userData as any)?.profile_picture || "",
       });
     }
-  }, [userData, mechanicData]);
+  }, [userData]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
@@ -84,17 +77,15 @@ const EditMechanicProfile = () => {
         first_name: values.first_name,
         last_name: values.last_name,
         phone_number: values.phone_number,
-        location: values.location,
-        specialization: values.specialization,
-        years_of_experience: values.years_of_experience,
+        business_name: values.business_name,
+        business_address: values.business_address,
         selfie: values.selfie,
       };
 
       await userAPI.updateProfile(payload);
 
-      // Invalidate profile queries to refetch fresh data
+      // Invalidate profile query to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
-      queryClient.invalidateQueries({ queryKey: ["mechanicProfile"] });
       
       showToast.success("Profile updated successfully");
       router.back();
@@ -137,32 +128,13 @@ const EditMechanicProfile = () => {
     }
   };
 
-  if (isLoadingPrimary || isLoadingMechanic) {
+  if (isLoadingProfile) {
     return (
       <View className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#D30309" />
       </View>
     );
   }
-
-  const specializationOptions = [
-    { label: "General Mechanic", value: "general" },
-    { label: "Engine Specialist", value: "engine" },
-    { label: "Electrical Systems", value: "electrical" },
-    { label: "Brake Specialist", value: "brakes" },
-    { label: "Transmission", value: "transmission" },
-    { label: "AC & Cooling", value: "ac_cooling" },
-    { label: "Body Work", value: "body_work" },
-    { label: "Diagnostics", value: "diagnostics" },
-  ];
-
-  const experienceOptions = [
-    { label: "Less than 1 year", value: "0" },
-    { label: "1-2 years", value: "1" },
-    { label: "3-5 years", value: "3" },
-    { label: "5-10 years", value: "5" },
-    { label: "10+ years", value: "10" },
-  ];
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -180,12 +152,12 @@ const EditMechanicProfile = () => {
       </View>
 
       <KeyboardAwareScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
         <Formik
           initialValues={initialValues}
-          validationSchema={editMechanicProfileSchema}
+          validationSchema={editSellerProfileSchema}
           enableReinitialize
           onSubmit={handleSave}
         >
@@ -211,7 +183,7 @@ const EditMechanicProfile = () => {
                         className="w-full h-full items-center justify-center"
                       >
                         <Text className="text-4xl font-NunitoExtraBold text-white">
-                          {values.first_name ? values.first_name.charAt(0).toUpperCase() : "M"}
+                          {values.first_name ? values.first_name.charAt(0).toUpperCase() : "S"}
                         </Text>
                       </LinearGradient>
                     )}
@@ -279,52 +251,34 @@ const EditMechanicProfile = () => {
                 />
               </View>
 
-              {/* Professional Information Section */}
+              {/* Business Information Section */}
               <View className="mb-6">
                 <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-blue-50 rounded-lg items-center justify-center mr-2">
-                    <WrenchScrewdriverIcon size={16} color="#3B82F6" />
+                  <View className="w-8 h-8 bg-orange-50 rounded-lg items-center justify-center mr-2">
+                    <BuildingStorefrontIcon size={16} color="#EA580C" />
                   </View>
-                  <Text className="text-base font-NunitoBold text-gray-900">Professional Information</Text>
+                  <Text className="text-base font-NunitoBold text-gray-900">Business Information</Text>
                 </View>
 
-                {/* Specialization */}
+                {/* Business Name */}
                 <View className="mb-3">
-                  <SelectField
-                    name="specialization"
-                    label="Specialization"
-                    placeholder="Select your specialization"
-                    options={specializationOptions}
-                    value={values.specialization}
-                    onValueChange={(value) => setFieldValue("specialization", value)}
-                    error={errors.specialization}
-                    touched={touched.specialization}
+                  <FormikInput
+                    name="business_name"
+                    label="Business Name"
+                    placeholder="Enter your business name"
+                    autoCapitalize="words"
                   />
                 </View>
 
-                {/* Years of Experience */}
-                <View className="mb-3">
-                  <SelectField
-                    name="years_of_experience"
-                    label="Years of Experience"
-                    placeholder="Select experience"
-                    options={experienceOptions}
-                    value={values.years_of_experience}
-                    onValueChange={(value) => setFieldValue("years_of_experience", value)}
-                    error={errors.years_of_experience}
-                    touched={touched.years_of_experience}
-                  />
-                </View>
-
-                {/* Location */}
+                {/* Business Address */}
                 <AddressInput
-                  label="Workshop Location"
-                  value={values.location}
-                  onChangeText={(text: string) => setFieldValue("location", text)}
-                  onLocationSelect={(location: any) => setFieldValue("location", location?.address || location)}
-                  placeholder="Enter your workshop address"
-                  error={errors.location as string}
-                  touched={touched.location as boolean}
+                  label="Business Address"
+                  value={values.business_address}
+                  onChangeText={(text: string) => setFieldValue("business_address", text)}
+                  onLocationSelect={(location: any) => setFieldValue("business_address", location?.address || location)}
+                  placeholder="Enter your business address"
+                  error={errors.business_address as string}
+                  touched={touched.business_address as boolean}
                 />
               </View>
 
@@ -347,4 +301,4 @@ const EditMechanicProfile = () => {
   );
 };
 
-export default EditMechanicProfile;
+export default EditSellerProfile;

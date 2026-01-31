@@ -10,8 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
-import { CameraIcon, WrenchScrewdriverIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from "react-native-heroicons/outline";
-import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { CameraIcon, UserIcon, EnvelopeIcon } from "react-native-heroicons/outline";
+import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,11 +22,10 @@ import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
-import SelectField from "@/components/forms/SelectField";
 import { LinearGradient } from "expo-linear-gradient";
 
-// Validation Schema for Mechanic Profile
-const editMechanicProfileSchema = Yup.object().shape({
+// Validation Schema for Rider Profile
+const editRiderProfileSchema = Yup.object().shape({
   first_name: Yup.string()
     .min(2, "First name must be at least 2 characters")
     .required("First name is required"),
@@ -38,17 +37,13 @@ const editMechanicProfileSchema = Yup.object().shape({
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   location: Yup.string().nullable(),
-  specialization: Yup.string().nullable(),
-  years_of_experience: Yup.string().nullable(),
 });
 
-const EditMechanicProfile = () => {
+const EditRiderProfile = () => {
   const queryClient = useQueryClient();
-  const { data: profileData, isLoading: isLoadingPrimary } = usePrimaryUserProfile();
-  const { data: mechanicProfile, isLoading: isLoadingMechanic } = useMechanicProfile(true);
+  const { data: profileData, isLoading: isLoadingProfile } = usePrimaryUserProfile();
   
   const userData = profileData?.data;
-  const mechanicData = mechanicProfile?.data;
 
   const [initialValues, setInitialValues] = useState({
     first_name: "",
@@ -56,25 +51,21 @@ const EditMechanicProfile = () => {
     phone_number: "",
     email: "",
     location: "",
-    specialization: "",
-    years_of_experience: "",
-    selfie: "",
+    profile_picture: "",
   });
 
   useEffect(() => {
-    if (userData || mechanicData) {
+    if (userData) {
       setInitialValues({
-        first_name: userData?.first_name || mechanicData?.user?.first_name || "",
-        last_name: userData?.last_name || mechanicData?.user?.last_name || "",
-        phone_number: userData?.phone_number || mechanicData?.user?.phone_number || "",
-        email: userData?.email || mechanicData?.user?.email || "",
-        location: mechanicData?.location || "",
-        specialization: (mechanicData as any)?.specialization || "",
-        years_of_experience: (mechanicData as any)?.years_of_experience?.toString() || "",
-        selfie: mechanicData?.selfie || (userData as any)?.profile_picture || "",
+        first_name: userData?.first_name || "",
+        last_name: userData?.last_name || "",
+        phone_number: userData?.phone_number || "",
+        email: userData?.email || "",
+        location: (userData as any)?.location || "",
+        profile_picture: (userData as any)?.profile_picture || (userData as any)?.image || "",
       });
     }
-  }, [userData, mechanicData]);
+  }, [userData]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
@@ -85,16 +76,13 @@ const EditMechanicProfile = () => {
         last_name: values.last_name,
         phone_number: values.phone_number,
         location: values.location,
-        specialization: values.specialization,
-        years_of_experience: values.years_of_experience,
-        selfie: values.selfie,
+        profile_picture: values.profile_picture,
       };
 
       await userAPI.updateProfile(payload);
 
       // Invalidate profile queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
-      queryClient.invalidateQueries({ queryKey: ["mechanicProfile"] });
       
       showToast.success("Profile updated successfully");
       router.back();
@@ -127,9 +115,9 @@ const EditMechanicProfile = () => {
       if (!result.canceled && result.assets[0]) {
         if (result.assets[0].base64) {
           const base64Image = `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}`;
-          setFieldValue("selfie", base64Image);
+          setFieldValue("profile_picture", base64Image);
         } else {
-          setFieldValue("selfie", result.assets[0].uri);
+          setFieldValue("profile_picture", result.assets[0].uri);
         }
       }
     } catch (error) {
@@ -137,32 +125,13 @@ const EditMechanicProfile = () => {
     }
   };
 
-  if (isLoadingPrimary || isLoadingMechanic) {
+  if (isLoadingProfile) {
     return (
       <View className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#D30309" />
       </View>
     );
   }
-
-  const specializationOptions = [
-    { label: "General Mechanic", value: "general" },
-    { label: "Engine Specialist", value: "engine" },
-    { label: "Electrical Systems", value: "electrical" },
-    { label: "Brake Specialist", value: "brakes" },
-    { label: "Transmission", value: "transmission" },
-    { label: "AC & Cooling", value: "ac_cooling" },
-    { label: "Body Work", value: "body_work" },
-    { label: "Diagnostics", value: "diagnostics" },
-  ];
-
-  const experienceOptions = [
-    { label: "Less than 1 year", value: "0" },
-    { label: "1-2 years", value: "1" },
-    { label: "3-5 years", value: "3" },
-    { label: "5-10 years", value: "5" },
-    { label: "10+ years", value: "10" },
-  ];
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -185,7 +154,7 @@ const EditMechanicProfile = () => {
       >
         <Formik
           initialValues={initialValues}
-          validationSchema={editMechanicProfileSchema}
+          validationSchema={editRiderProfileSchema}
           enableReinitialize
           onSubmit={handleSave}
         >
@@ -199,9 +168,9 @@ const EditMechanicProfile = () => {
                   className="relative"
                 >
                   <View className="w-28 h-28 rounded-2xl items-center justify-center border-4 border-white shadow-lg mb-3 overflow-hidden">
-                    {values.selfie ? (
+                    {values.profile_picture ? (
                       <Image
-                        source={{ uri: values.selfie }}
+                        source={{ uri: values.profile_picture }}
                         className="w-full h-full"
                         resizeMode="cover"
                       />
@@ -211,7 +180,7 @@ const EditMechanicProfile = () => {
                         className="w-full h-full items-center justify-center"
                       >
                         <Text className="text-4xl font-NunitoExtraBold text-white">
-                          {values.first_name ? values.first_name.charAt(0).toUpperCase() : "M"}
+                          {values.first_name ? values.first_name.charAt(0).toUpperCase() : "R"}
                         </Text>
                       </LinearGradient>
                     )}
@@ -229,7 +198,7 @@ const EditMechanicProfile = () => {
               <View className="mb-6">
                 <View className="flex-row items-center mb-4">
                   <View className="w-8 h-8 bg-primary-50 rounded-lg items-center justify-center mr-2">
-                    <EnvelopeIcon size={16} color="#D30309" />
+                    <UserIcon size={16} color="#D30309" />
                   </View>
                   <Text className="text-base font-NunitoBold text-gray-900">Personal Information</Text>
                 </View>
@@ -279,50 +248,22 @@ const EditMechanicProfile = () => {
                 />
               </View>
 
-              {/* Professional Information Section */}
+              {/* Location Section */}
               <View className="mb-6">
                 <View className="flex-row items-center mb-4">
                   <View className="w-8 h-8 bg-blue-50 rounded-lg items-center justify-center mr-2">
-                    <WrenchScrewdriverIcon size={16} color="#3B82F6" />
+                    <EnvelopeIcon size={16} color="#3B82F6" />
                   </View>
-                  <Text className="text-base font-NunitoBold text-gray-900">Professional Information</Text>
-                </View>
-
-                {/* Specialization */}
-                <View className="mb-3">
-                  <SelectField
-                    name="specialization"
-                    label="Specialization"
-                    placeholder="Select your specialization"
-                    options={specializationOptions}
-                    value={values.specialization}
-                    onValueChange={(value) => setFieldValue("specialization", value)}
-                    error={errors.specialization}
-                    touched={touched.specialization}
-                  />
-                </View>
-
-                {/* Years of Experience */}
-                <View className="mb-3">
-                  <SelectField
-                    name="years_of_experience"
-                    label="Years of Experience"
-                    placeholder="Select experience"
-                    options={experienceOptions}
-                    value={values.years_of_experience}
-                    onValueChange={(value) => setFieldValue("years_of_experience", value)}
-                    error={errors.years_of_experience}
-                    touched={touched.years_of_experience}
-                  />
+                  <Text className="text-base font-NunitoBold text-gray-900">Location</Text>
                 </View>
 
                 {/* Location */}
                 <AddressInput
-                  label="Workshop Location"
+                  label="Your Location"
                   value={values.location}
                   onChangeText={(text: string) => setFieldValue("location", text)}
                   onLocationSelect={(location: any) => setFieldValue("location", location?.address || location)}
-                  placeholder="Enter your workshop address"
+                  placeholder="Enter your address"
                   error={errors.location as string}
                   touched={touched.location as boolean}
                 />
@@ -347,4 +288,4 @@ const EditMechanicProfile = () => {
   );
 };
 
-export default EditMechanicProfile;
+export default EditRiderProfile;

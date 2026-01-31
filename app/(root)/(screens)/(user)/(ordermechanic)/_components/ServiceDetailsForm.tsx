@@ -1,9 +1,9 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import SelectField from '@/components/forms/SelectField';
-import InputField from '@/components/InputField';
 import TextArea from '@/components/forms/TextArea';
 import AddressInput from '@/components/forms/AddressInput';
+import { WrenchScrewdriverIcon } from 'react-native-heroicons/outline';
 
 interface SelectOption {
   label: string;
@@ -40,8 +40,17 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
   serviceTypeOptions,
 }) => {
   return (
-    <>
-      <View className="">
+    <View className="mb-1">
+      {/* Section Header */}
+      <View className="flex-row items-center mb-3">
+        <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
+          <WrenchScrewdriverIcon size={18} color="#D30309" />
+        </View>
+        <Text className="text-base font-NunitoBold text-gray-900">Service Information</Text>
+      </View>
+
+      {/* Service Type */}
+      <View className="mb-3">
         <SelectField
           name="serviceType"
           label="Service Type"
@@ -52,9 +61,10 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
         />
       </View>
 
-      <View className="">
+      {/* Service Address */}
+      <View className="mb-3">
         <AddressInput
-          label="Service Address"
+          label="Service Location"
           placeholder="Where should the mechanic meet you?"
           value={serviceAddress}
           onChangeText={(text) => setServiceAddress(text)}
@@ -70,15 +80,16 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
         />
       </View>
 
-      <View className="">
+      {/* Problem Description */}
+      <View className="mb-1">
         <TextArea
           label="Problem Description"
-          placeholder="Tell the Mechanic what's Wrong with your Vehicle"
+          placeholder="Describe the issue with your vehicle in detail..."
           value={problemDescription}
           onChangeText={setProblemDescription}
           rows={4}
         />
       </View>
-    </>
+    </View>
   );
 };

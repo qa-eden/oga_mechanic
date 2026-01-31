@@ -8,7 +8,7 @@ import {
   UserIcon,
 } from "react-native-heroicons/outline";
 import { router } from "expo-router";
-import { routes } from "@/constants/routes";
+import { routes, driverRoutes, mechanicRoutes, riderRoutes, sellerRoutes } from "@/constants/routes";
 import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -146,7 +146,25 @@ const Navbar = () => {
   return (
     <View className="flex-row justify-between items-center pt-3">
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View className="flex flex-row items-center gap-2">
+      <TouchableOpacity
+        onPress={() => {
+          const roleKey = activeRole || "user";
+          const profileRoute =
+            roleKey === "driver"
+              ? driverRoutes.profile
+              : roleKey === "mechanic"
+              ? mechanicRoutes.profile
+              : roleKey === "rider"
+              ? riderRoutes.profile
+              : roleKey === "seller" || roleKey === "merchant"
+              ? sellerRoutes.profile
+              : routes.profile;
+
+          router.push(profileRoute as any);
+        }}
+        activeOpacity={0.7}
+        className="flex flex-row items-center gap-2"
+      >
         <View className="w-[45px] h-[45px] bg-[#EBEBEB] flex justify-center items-center rounded-full overflow-hidden">
           {profilePicture ? (
             <Image
@@ -184,7 +202,7 @@ const Navbar = () => {
               : 'Everything your car needs is here.'}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <TouchableOpacity 
         className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full relative"
