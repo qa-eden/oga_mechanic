@@ -133,7 +133,7 @@ const SignIn = () => {
   };
 
   return (
-    <KeyboardAwareScrollView keyboardVerticalOffset={0}>
+    <KeyboardAwareScrollView>
       <View className="pt-[2rem]">
         <HeaderAndDescTextCenter
           header={userType ? `Sign in as ${userType.charAt(0).toUpperCase() + userType.slice(1)}` : "Sign in"}

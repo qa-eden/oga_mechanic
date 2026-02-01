@@ -11,13 +11,13 @@ const LoginLayout = () => {
       <StatusBar style="dark" />
       <SafeAreaView className="flex-1">
         {/* Background Image */}
-        <ImageBackground
+        {/* <ImageBackground
           source={images?.loginBackground}
           className="h-[25vh]"
           resizeMode="cover"
-        />
+        /> */}
 
-        <SafeAreaView className="absolute top-[5%] left-0 right-0 bottom-0">
+        <SafeAreaView className="absolute top-0 left-0 right-0 bottom-0">
           <Slot />
         </SafeAreaView>
       </SafeAreaView>

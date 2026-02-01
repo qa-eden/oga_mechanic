@@ -31,7 +31,7 @@ const ResetPassword = () => {
 
   return (
     <SafeAreaView className="flex-1">
-      <KeyboardAwareScrollView keyboardVerticalOffset={90}>
+      <KeyboardAwareScrollView>
         <View className="pt-[2rem]">
           <HeaderAndDescTextCenter
             header="Reset Password"

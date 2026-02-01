@@ -100,7 +100,7 @@ const Register = () => {
   };
 
   return (
-    <KeyboardAwareScrollView keyboardVerticalOffset={90}>
+    <KeyboardAwareScrollView extraBottomPadding={20}>
       <StatusBar style="dark" />
       <View className="pt-[4rem]">
         <HeaderAndDescTextCenter

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useRef, useEffect } from 'react';
 import {
   ScrollView,
   KeyboardAvoidingView,
@@ -39,27 +39,48 @@ interface KeyboardAwareScrollViewProps extends ScrollViewProps {
  */
 const KeyboardAwareScrollView: React.FC<KeyboardAwareScrollViewProps> = ({
   children,
-  keyboardVerticalOffset = Platform.OS === 'ios' ? 0 : 0,
+  keyboardVerticalOffset = Platform.OS === 'ios' ? 0 : 20,
   containerStyle,
   dismissOnTap = true,
-  extraBottomPadding = Platform.OS === 'ios' ? 120 : 80,
+  extraBottomPadding = 0,
   scrollViewClassName = 'flex-1',
   contentContainerStyle,
   ...scrollViewProps
 }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    // Add keyboard event listeners
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        // Scroll back to top when keyboard is dismissed
+        scrollViewRef.current?.scrollTo({
+          y: 0,
+          animated: true,
+        });
+      }
+    );
+
+    // Cleanup listeners on unmount
+    return () => {
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   const content = (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[{ flex: 1 }, containerStyle]}
       keyboardVerticalOffset={keyboardVerticalOffset}
     >
       <ScrollView
+        ref={scrollViewRef}
         className={scrollViewClassName}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         bounces={true}
-        automaticallyAdjustKeyboardInsets={false}
         contentContainerStyle={[
           {
             paddingBottom: extraBottomPadding,

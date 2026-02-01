@@ -44,7 +44,7 @@ const EnterCode = () => {
   };
 
   return (
-    <KeyboardAwareScrollView keyboardVerticalOffset={90}>
+    <KeyboardAwareScrollView>
       <View className="pt-[1.5rem]">
         <View className="flex flex-row justify-between w-full py-4">
           <View className="w-fit py-4 ps-2">
