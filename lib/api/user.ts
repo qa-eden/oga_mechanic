@@ -1,5 +1,6 @@
 import api from '../axios';
 import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS, SERVICE_ENDPOINTS } from '../endpoints';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
 export interface LoginCredentials {
@@ -196,6 +197,51 @@ export interface LoginResponse {
   referenceId: string;
 }
 
+// Mechanic Profile specific interfaces
+export interface MechanicProfile {
+  id: number;
+  user: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    active_role: string;
+    date_joined: string;
+    last_login: string | null;
+    phone_number: string;
+    created_at: string;
+    updated_at: string;
+    car_make: string | null;
+    car_model: string | null;
+    car_year: string | null;
+    license_plate: string | null;
+  };
+  location: string | null;
+  lga: string | null;
+  is_approved: boolean;
+  is_active: boolean;
+  latitude?: string | null;
+  longitude?: string | null;
+  bio?: string | null;
+  cac_number?: string | null;
+  govt_id_type?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MechanicProfileResponse {
+  requestTime: string;
+  requestType: string;
+  message: string;
+  referenceId: string;
+  status: boolean;
+  data: {
+    has_mechanic_profile: boolean;
+    mechanic_profile: MechanicProfile;
+    kyc: KYCStatus;
+  };
+}
+
 // Merchant Profile specific interfaces
 export interface MerchantProfile {
   id: number;
@@ -222,12 +268,22 @@ export interface MerchantProfile {
   selfie: string | null;
   business_address: string;
   profile_picture: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
   is_approved: boolean;
   created_at: string;
   updated_at: string;
   is_following?: boolean;
   followers_count?: number;
 }
+
+export interface KYCStatus {
+  profile_exists: boolean;
+  is_complete: boolean;
+  missing_fields: string[];
+  missing_count: number;
+}
+
 
 // Merchant Profile API Response
 export interface MerchantProfileResponse {
@@ -236,7 +292,12 @@ export interface MerchantProfileResponse {
   message: string;
   referenceId: string;
   status: boolean;
-  data: MerchantProfile;
+  data: {
+    has_merchant_profile: boolean;
+    merchant_profile: MerchantProfile;
+    kyc: KYCStatus;
+    restricted: boolean;
+  };
 }
 
 export interface RegisterResponse {
@@ -263,6 +324,49 @@ export interface ChangePasswordResponse {
   status: boolean;
   message: string;
   data?: any;
+}
+
+export interface Bank {
+  id: number;
+  name: string;
+  code: string;
+  slug: string;
+  longcode?: string;
+  gateway?: string | null;
+  pay_with_bank?: boolean;
+  supports_transfer?: boolean;
+  available_for_direct_debit?: boolean;
+  active?: boolean;
+  country?: string;
+  currency?: string;
+  type?: string;
+  is_deleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BanksResponse {
+  status: boolean;
+  message: string;
+  data: Bank[];
+}
+
+export interface BankEnquiryRequest {
+  requestType: string;
+  data: {
+    account_number: string;
+    bank_code: string;
+  };
+}
+
+export interface BankEnquiryResponse {
+  status: boolean;
+  message: string;
+  data: {
+    account_number: string;
+    account_name: string;
+    bank_id?: number;
+  };
 }
 
 // API Functions
@@ -376,22 +480,38 @@ export const userAPI = {
 
   // Get merchant profile
   getMerchantProfile: async (): Promise<MerchantProfileResponse> => {
-
-
     try {
-      const response = await api.get(MERCHANT_ENDPOINTS.PROFILE);
-
+      const response = await api.get<MerchantProfileResponse>('/users/profile/merchant/');
       return response.data;
     } catch (error: any) {
-
       throw error;
     }
   },
 
   // Get mechanic profile
-  getMechanicProfile: async (): Promise<any> => {
+  getMechanicProfile: async (): Promise<MechanicProfileResponse> => {
     try {
-      const response = await api.get('/users/profile/mechanic/');
+      const response = await api.get<MechanicProfileResponse>('/users/profile/mechanic/');
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Get driver profile
+  getDriverProfile: async (): Promise<any> => {
+    try {
+      const response = await api.get('/users/profile/driver/');
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Get driver profile
+  getRiderProfile: async (): Promise<any> => {
+    try {
+      const response = await api.get('/users/profile/rider/');
       return response.data;
     } catch (error: any) {
       throw error;
@@ -408,6 +528,26 @@ export const userAPI = {
       return response.data;
     } catch (error: any) {
 
+      throw error;
+    }
+  },
+
+  // Get list of banks
+  getBanks: async (): Promise<BanksResponse> => {
+    try {
+      const response = await api.get(USER_ENDPOINTS.BANKS);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Verify bank account
+  verifyBank: async (data: BankEnquiryRequest): Promise<BankEnquiryResponse> => {
+    try {
+      const response = await api.post(USER_ENDPOINTS.BANK_ENQUIRY, data);
+      return response.data;
+    } catch (error: any) {
       throw error;
     }
   },
@@ -451,20 +591,22 @@ export const userAPI = {
   },
 
   // Switch active role or add new role
-  switchRole: async (activeRoleId: number | null, addRoles?: number[]): Promise<any> => {
+  switchRole: async (roleName: string | null, addRoles?: number[]): Promise<any> => {
     
     try {
-      const payload: any = {};
+      const payload: any = {
+        requestType: "inbound"
+      };
 
-      if (activeRoleId) {
-        payload.active_role_id = activeRoleId;
+      if (roleName) {
+        payload.role = roleName;
       }
 
       if (addRoles && addRoles.length > 0) {
         payload.add_roles = addRoles;
       }
 
-      const response = await api.put(USER_ENDPOINTS.ROLES, payload);
+      const response = await api.post(USER_ENDPOINTS.SWITCH_ROLE, payload);
 
       return response.data;
     } catch (error: any) {
@@ -577,5 +719,80 @@ export const userAPI = {
     } catch (error: any) {
       throw error;
     }
+  },
+
+  submitMechanicKYC: async (formData: FormData) => {
+    const token = await AsyncStorage.getItem('auth_token');
+    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/profile/mechanic/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      throw { response: { data: errorData } };
+    }
+    
+    return await response.json();
+  },
+
+  submitMerchantKYC: async (formData: FormData) => {
+    const token = await AsyncStorage.getItem('auth_token');
+    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/profile/merchant/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      throw { response: { data: errorData } };
+    }
+    
+    return await response.json();
+  },
+
+  submitDriverKYC: async (formData: FormData) => {
+    const token = await AsyncStorage.getItem('auth_token');
+    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/profile/driver/`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        throw { response: { data: errorData } };
+    }
+    
+    return await response.json();
   },
 };

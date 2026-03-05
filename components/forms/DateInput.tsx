@@ -8,8 +8,8 @@ interface DateInputProps {
   placeholder?: string
   value?: Date | null
   onDateChange?: (date: Date) => void
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
   required?: boolean
   minimumDate?: Date
   maximumDate?: Date
@@ -43,7 +43,6 @@ const DateInput: React.FC<DateInputProps> = ({
 
   const hasError = touched && error
 
-  // Memoized border colors to prevent recalculation
   const borderColors = useMemo(
     () => ({
       default: hasError ? "#EF4444" : "#D1D5DB",
@@ -55,18 +54,12 @@ const DateInput: React.FC<DateInputProps> = ({
   const handleFocus = useCallback(() => {
     if (!isFocused) {
       setIsFocused(true)
-
-      // Cancel any existing animation
-      if (animationRef.current) {
-        animationRef.current.stop()
-      }
-
+      if (animationRef.current) animationRef.current.stop()
       animationRef.current = Animated.timing(animatedValue, {
         toValue: 1,
         duration: 150,
         useNativeDriver: false,
       })
-
       animationRef.current.start()
     }
   }, [isFocused, animatedValue])
@@ -74,23 +67,16 @@ const DateInput: React.FC<DateInputProps> = ({
   const handleBlur = useCallback(() => {
     if (isFocused) {
       setIsFocused(false)
-
-      // Cancel any existing animation
-      if (animationRef.current) {
-        animationRef.current.stop()
-      }
-
+      if (animationRef.current) animationRef.current.stop()
       animationRef.current = Animated.timing(animatedValue, {
         toValue: 0,
         duration: 150,
         useNativeDriver: false,
       })
-
       animationRef.current.start()
     }
   }, [isFocused, animatedValue])
 
-  // Stable border color interpolation
   const borderColor = animatedValue.interpolate({
     inputRange: [0, 1],
     outputRange: [borderColors.default, borderColors.focused],
@@ -108,16 +94,18 @@ const DateInput: React.FC<DateInputProps> = ({
   }
 
   const handleDateChange = (_event: any, selectedDate?: Date) => {
-    if (selectedDate) {
-      onDateChange?.(selectedDate)
-    }
     if (Platform.OS === 'android') {
+      // On Android the native dialog handles its own dismiss
       closeDatePicker()
+      if (_event.type === 'set' && selectedDate) {
+        onDateChange?.(selectedDate)
+      }
+    } else {
+      // On iOS, picker is inline in the modal – just update the value
+      if (selectedDate) {
+        onDateChange?.(selectedDate)
+      }
     }
-  }
-
-  const handleDone = () => {
-    closeDatePicker()
   }
 
   const handleTodayPress = () => {
@@ -128,11 +116,7 @@ const DateInput: React.FC<DateInputProps> = ({
 
   const formatDate = (date: Date | null): string => {
     if (!date) return placeholder
-    
-    if (dateFormat) {
-      return dateFormat(date)
-    }
-    
+    if (dateFormat) return dateFormat(date)
     return date.toLocaleDateString(undefined, {
       weekday: 'short',
       year: 'numeric',
@@ -151,19 +135,16 @@ const DateInput: React.FC<DateInputProps> = ({
             {required && <Text className="text-red-500 ml-1">*</Text>}
           </Text>
           {showTodayButton && (
-            <TouchableOpacity
-              onPress={handleTodayPress}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={handleTodayPress} activeOpacity={0.7}>
               <Text className="text-md font-NunitoMedium text-primary-500">
-               Use Today's Date
+                Use Today's Date
               </Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Date Input Container */}
+      {/* Date Input Field */}
       <Animated.View
         className="flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1"
         style={{
@@ -171,11 +152,7 @@ const DateInput: React.FC<DateInputProps> = ({
           borderColor: borderColor,
           ...Platform.select({
             ios: {
-              shadowColor: hasError
-                ? "#EF4444"
-                : isFocused
-                ? "#F59E42"
-                : "transparent",
+              shadowColor: hasError ? "#EF4444" : isFocused ? "#F59E42" : "transparent",
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
               shadowRadius: 4,
@@ -186,7 +163,7 @@ const DateInput: React.FC<DateInputProps> = ({
           }),
         }}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={openDatePicker}
           className="flex-1 flex-row items-center justify-between py-3"
           activeOpacity={0.7}
@@ -202,52 +179,59 @@ const DateInput: React.FC<DateInputProps> = ({
       {hasError && (
         <View className="flex-row items-center mt-2">
           <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
-          <Text className="text-md font-NunitoMedium text-red-500 flex-1">
-            {error}
-          </Text>
+          <Text className="text-md font-NunitoMedium text-red-500 flex-1">{error}</Text>
         </View>
       )}
 
-      {/* Date Picker Modal */}
-      <Modal
-        visible={showDatePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={closeDatePicker}
-      >
-        <View 
-          className="flex-1 justify-end"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      {/* Android: render picker directly — it opens its own native dialog */}
+      {Platform.OS === 'android' && showDatePicker && (
+        <DateTimePicker
+          value={value || new Date()}
+          mode="date"
+          display="calendar"
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          onChange={handleDateChange}
+        />
+      )}
+
+      {/* iOS: slide-up modal with spinner */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={closeDatePicker}
         >
-          <View className="bg-white rounded-t-3xl p-6 max-h-[60%]">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-NunitoBold text-gray-900">
-                {label || 'Select Date'}
-              </Text>
-              <TouchableOpacity onPress={handleDone}>
-                <Text className="text-primary-500 font-NunitoBold">Done</Text>
-              </TouchableOpacity>
-            </View>
-            <View className="items-center">
-              <DateTimePicker
-                value={value || new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={minimumDate}
-                maximumDate={maximumDate}
-                onChange={handleDateChange}
-                style={{
-                  width: Platform.OS === 'ios' ? 300 : '100%',
-                  height: Platform.OS === 'ios' ? 200 : 50,
-                }}
-              />
+          <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View className="bg-white rounded-t-3xl p-6">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-NunitoBold text-gray-900">
+                  {label || 'Select Date'}
+                </Text>
+                <TouchableOpacity onPress={closeDatePicker}>
+                  <Text className="text-primary-500 font-NunitoBold text-base">Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="items-center">
+                <DateTimePicker
+                  value={value || new Date()}
+                  mode="date"
+                  display="spinner"
+                  minimumDate={minimumDate}
+                  maximumDate={maximumDate}
+                  onChange={handleDateChange}
+                  style={{ width: 300, height: 200 }}
+                  textColor="#000000"
+                  themeVariant="light"
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   )
 }
 
 export default DateInput
-

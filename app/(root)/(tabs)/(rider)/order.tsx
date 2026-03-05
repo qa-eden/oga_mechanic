@@ -3,9 +3,22 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import BookingCard from '@/components/cards/BookingCard';
+import { useProfileStore } from '@/hooks/useProfileStore';
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal';
+import { riderRoutes } from '@/constants/routes';
+import { router } from 'expo-router';
+import { usePrimaryUserProfile } from '@/hooks/useUserProfile';
+import { FadeInUp, FadeInDown, Layout } from 'react-native-reanimated';
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const RiderOrder = () => {
   const [activeTab, setActiveTab] = useState('recent');
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const { data: profileResponse } = usePrimaryUserProfile();
+  const profileData = profileResponse?.data;
+
+  const isPendingApproval = false; // Riders don't have a pending approval state
 
   const recentBookings = [
     {
@@ -88,6 +101,13 @@ const RiderOrder = () => {
       pickup={booking.pickup}
       dropoff={booking.dropoff}
       price={booking.price}
+      onPress={() => {
+        if (!isProfileComplete || isPendingApproval) {
+          setShowProfileModal(true);
+          return;
+        }
+        router.push(riderRoutes.takebookings as any);
+      }}
     />
   );
 
@@ -95,61 +115,70 @@ const RiderOrder = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      {/* Header */}
-      <View className="px-5 py-4 bg-white">
-        <Text className="text-xl font-NunitoBold text-gray-900 text-center">
-          Bookings
-        </Text>
-      </View>
+      <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+        {/* Header */}
+        <View className="px-5 py-4 bg-white">
+          <Text className="text-xl font-NunitoBold text-gray-900 text-center">
+            Bookings
+          </Text>
+        </View>
 
-      {/* Tab Buttons */}
-      <View className="px-5 py-4 bg-white border-b border-gray-200">
-        <View className="flex-row bg-gray-100 rounded-lg p-1">
-          <TouchableOpacity
-            onPress={() => setActiveTab('recent')}
-            className={`flex-1 py-2 px-4 rounded-md ${
-              activeTab === 'recent' ? 'bg-white shadow-sm' : ''
-            }`}
-          >
-            <Text
-              className={`text-center font-NunitoMedium ${
-                activeTab === 'recent' ? 'text-gray-900' : 'text-gray-600'
+        {/* Tab Buttons */}
+        <View className="px-5 py-4 bg-white border-b border-gray-200">
+          <View className="flex-row bg-gray-100 rounded-lg p-1">
+            <TouchableOpacity
+              onPress={() => setActiveTab('recent')}
+              className={`flex-1 py-2 px-4 rounded-md ${
+                activeTab === 'recent' ? 'bg-white shadow-sm' : ''
               }`}
             >
-              Recent bookings
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('completed')}
-            className={`flex-1 py-2 px-4 rounded-md ${
-              activeTab === 'completed' ? 'bg-white shadow-sm' : ''
-            }`}
-          >
-            <Text
-              className={`text-center font-NunitoMedium ${
-                activeTab === 'completed' ? 'text-gray-900' : 'text-gray-600'
+              <Text
+                className={`text-center font-NunitoMedium ${
+                  activeTab === 'recent' ? 'text-gray-900' : 'text-gray-600'
+                }`}
+              >
+                Recent bookings
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('completed')}
+              className={`flex-1 py-2 px-4 rounded-md ${
+                activeTab === 'completed' ? 'bg-white shadow-sm' : ''
               }`}
             >
-              Completed bookings
-            </Text>
-          </TouchableOpacity>
+              <Text
+                className={`text-center font-NunitoMedium ${
+                  activeTab === 'completed' ? 'text-gray-900' : 'text-gray-600'
+                }`}
+              >
+                Completed bookings
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      {/* Content */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-5 py-6">
-          {activeTab === 'recent' ? (
-            <View className="space-y-4">
-              {recentBookings.map(renderBookingCard)}
-            </View>
-          ) : (
-            <View className="space-y-4">
-              {completedBookings.map(renderBookingCard)}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <View className="px-5 py-6">
+            {activeTab === 'recent' ? (
+              <View className="space-y-4">
+                {recentBookings.map(renderBookingCard)}
+              </View>
+            ) : (
+              <View className="space-y-4">
+                {completedBookings.map(renderBookingCard)}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </AnimatedPageContainer>
+
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="rider"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
     </SafeAreaView>
   );
 };

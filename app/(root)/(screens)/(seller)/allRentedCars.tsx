@@ -10,9 +10,11 @@ import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal
 import RentedCarCard from '@/components/cards/RentedCarCard'
 import LoadingErrorWrapper from '@/components/LoadingErrorWrapper'
 import { useQuery } from '@tanstack/react-query'
-import { useActiveRoleProfile } from '@/hooks/useUserProfile'
-import { useCategories } from '@/hooks/useProducts'
+import { useActiveRoleProfile, usePrimaryUserProfile, useMerchantProfile } from '@/hooks/useUserProfile'
+import { useCategories, useProducts } from '@/hooks/useProducts'
 import { productsAPI } from '@/lib/api/products'
+import { useProfileStore } from '@/hooks/useProfileStore'
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal'
 
 const { CONTAINER_PADDING } = LAYOUT;
 
@@ -25,8 +27,25 @@ const AllRentedCars = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [showFilterModal, setShowFilterModal] = useState(false)
 
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Fetch primary profile data
+  const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
+
+  // Extract active role with fallback
+  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+
+  // Fetch specific merchant profile to check KYC status
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+
+  const isPendingApproval = Boolean(
+    merchantProfileQuery.data?.data?.kyc?.is_complete && 
+    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+  );
+
   // Fetch user profile based on active role to get merchant ID
-  const { data: profileData, activeRole } = useActiveRoleProfile();
+  const { data: profileData } = useActiveRoleProfile();
 
   // Extract merchant ID safely from different profile structures
   const merchantId = activeRole === 'merchant'
@@ -201,7 +220,13 @@ const AllRentedCars = () => {
         You haven't uploaded any cars for rent yet. Start by adding your first rental car to attract customers.
       </Text>
       <TouchableOpacity
-        onPress={() => router.push('/uploadCarToRent' as any)}
+        onPress={() => {
+          if (!isProfileComplete || isPendingApproval) {
+            setShowProfileModal(true);
+            return;
+          }
+          router.push('/uploadCarToRent' as any);
+        }}
         className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
       >
         <PlusIcon size={20} color="white" />
@@ -221,7 +246,13 @@ const AllRentedCars = () => {
         </TouchableOpacity>
         <Text className="text-lg font-NunitoBold text-gray-900">All Rented Cars</Text>
         <TouchableOpacity
-          onPress={() => router.push('/uploadCarToRent' as any)}
+          onPress={() => {
+            if (!isProfileComplete || isPendingApproval) {
+              setShowProfileModal(true);
+              return;
+            }
+            router.push('/uploadCarToRent' as any);
+          }}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
         >
           <PlusIcon size={25} color="white" />
@@ -418,6 +449,14 @@ const AllRentedCars = () => {
               </View>
             </TouchableOpacity>
           </Modal>
+
+          <ProfileCompletionModal
+            isVisible={showProfileModal}
+            roleName="seller"
+            onComplete={() => setShowProfileModal(false)}
+            onClose={() => setShowProfileModal(false)}
+            isPending={isPendingApproval}
+          />
         </SafeAreaView>
       )
     }

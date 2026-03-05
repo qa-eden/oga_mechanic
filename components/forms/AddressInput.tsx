@@ -5,14 +5,13 @@ import {
   TextInput, 
   TouchableOpacity, 
   Alert, 
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
   Animated,
   ScrollView,
   ActivityIndicator,
-  Dimensions
+  KeyboardAvoidingView,
 } from 'react-native'
 import { MapPinIcon } from 'react-native-heroicons/outline'
 import clsx from 'clsx'
@@ -25,8 +24,8 @@ interface AddressInputProps {
   value?: string
   onChangeText?: (text: string) => void
   onLocationSelect?: (location: any) => void
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
   multiline?: boolean
   numberOfLines?: number
   required?: boolean
@@ -39,6 +38,8 @@ interface AddressInputProps {
   noMargin?: boolean
   scrollViewRef?: React.RefObject<ScrollView>
   showCurrentLocationButton?: boolean
+  onFocus?: () => void
+  onBlur?: () => void
 }
 
 const AddressInput: React.FC<AddressInputProps> = ({
@@ -49,8 +50,8 @@ const AddressInput: React.FC<AddressInputProps> = ({
   onLocationSelect,
   error,
   touched,
-  multiline = true,
-  numberOfLines = 3,
+  multiline = false,
+  numberOfLines = 1,
   required = false,
   disabled = false,
   containerClassName = "",
@@ -60,7 +61,9 @@ const AddressInput: React.FC<AddressInputProps> = ({
   containerStyle1 = "",
   noMargin = false,
   scrollViewRef,
-  showCurrentLocationButton = false
+  showCurrentLocationButton = false,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }) => {
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<TextInput>(null)
@@ -74,7 +77,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
   const [isFetchingCurrentLocation, setIsFetchingCurrentLocation] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const [isGeocoding, setIsGeocoding] = useState(false)
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -83,7 +85,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
 
   const hasError = touched && error
 
-  // Memoized border colors to prevent recalculation
   const borderColors = useMemo(
     () => ({
       default: hasError ? "#EF4444" : "#D1D5DB",
@@ -96,75 +97,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
     setInputValue(value ?? '')
     setSearchQuery(value ?? '')
   }, [value])
-
-  // Function to scroll input into view
-  const scrollInputIntoView = useCallback(() => {
-    if (!containerRef.current || !inputRef.current) return
-
-    // Wait a bit for keyboard to fully show and layout to settle
-    setTimeout(() => {
-      containerRef.current?.measureInWindow((x, y, width, height) => {
-        const screenHeight = Dimensions.get('window').height
-        // Account for suggestions dropdown height if showing
-        const suggestionsHeight = showSuggestions ? 256 : 0
-        const totalHeight = height + suggestionsHeight
-        const inputBottom = y + totalHeight
-        const visibleAreaBottom = screenHeight - keyboardHeight
-        const padding = 20 // Padding above keyboard
-
-        // If input would be hidden by keyboard, scroll it into view
-        if (inputBottom > visibleAreaBottom - padding && keyboardHeight > 0) {
-          const scrollNeeded = inputBottom - (visibleAreaBottom - padding)
-
-          // Try to scroll parent ScrollView if ref is provided
-          if (scrollViewRef?.current) {
-            // For ScrollView, we need to scroll by the amount needed
-            // We'll use a relative scroll by measuring current position
-            scrollViewRef.current.scrollTo({
-              y: scrollNeeded,
-              animated: true,
-            })
-          } else {
-            // Without parent ScrollView ref, KeyboardAvoidingView should handle it
-            // But we can try to ensure the input stays focused
-            // This is a fallback - ideally parent should pass scrollViewRef
-            if (Platform.OS === 'android') {
-              // On Android, try to use a workaround
-              inputRef.current?.focus()
-            }
-          }
-        }
-      })
-    }, Platform.OS === 'ios' ? 250 : 350)
-  }, [keyboardHeight, scrollViewRef, showSuggestions])
-
-  // Keyboard listeners to track keyboard height and scroll into view
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height)
-        // If input is focused when keyboard shows, scroll it into view
-        if (isFocused) {
-          setTimeout(() => {
-            scrollInputIntoView()
-          }, Platform.OS === 'ios' ? 50 : 100)
-        }
-      }
-    )
-
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0)
-      }
-    )
-
-    return () => {
-      keyboardWillShow.remove()
-      keyboardWillHide.remove()
-    }
-  }, [isFocused, scrollInputIntoView])
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -225,7 +157,8 @@ const AddressInput: React.FC<AddressInputProps> = ({
             address: feature.place_name || '',
             latitude: feature.center?.[1],
             longitude: feature.center?.[0],
-            placeId: feature.id
+            placeId: feature.id,
+            context: feature.context
           })) ?? []
 
         setSuggestions(mappedSuggestions)
@@ -308,7 +241,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
     }
   }, [isFetchingCurrentLocation, onChangeText, onLocationSelect])
 
-  // Geocode address to get coordinates
   const geocodeAddress = useCallback(async (address: string) => {
     if (!address.trim() || !ENV_CONFIG.MAPBOX_ACCESS_TOKEN) {
       return null
@@ -341,7 +273,8 @@ const AddressInput: React.FC<AddressInputProps> = ({
           address: feature.place_name || address.trim(),
           latitude: feature.center[1],
           longitude: feature.center[0],
-          placeId: feature.id
+          placeId: feature.id,
+          context: feature.context
         }
       }
 
@@ -359,7 +292,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
       if (!isFocused) {
         setIsFocused(true)
 
-        // Cancel any existing animation
         if (animationRef.current) {
           animationRef.current.stop()
         }
@@ -376,11 +308,9 @@ const AddressInput: React.FC<AddressInputProps> = ({
         clearTimeout(blurTimeoutRef.current)
       }
       setShowSuggestions(searchQuery.trim().length > 0)
-      
-      // Scroll input into view when focused
-      scrollInputIntoView()
+      onFocusProp?.()
     },
-    [isFocused, animatedValue, searchQuery, scrollInputIntoView]
+    [isFocused, animatedValue, searchQuery]
   )
 
   const handleInputBlur = useCallback(
@@ -388,7 +318,6 @@ const AddressInput: React.FC<AddressInputProps> = ({
       if (isFocused) {
         setIsFocused(false)
 
-        // Cancel any existing animation
         if (animationRef.current) {
           animationRef.current.stop()
         }
@@ -404,27 +333,24 @@ const AddressInput: React.FC<AddressInputProps> = ({
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current)
       }
-      // Only hide suggestions if there are no suggestions or if the input is empty
-      // This prevents hiding when keyboard dismisses but user might still want to see suggestions
       blurTimeoutRef.current = setTimeout(async () => {
         if (!searchQuery.trim() || suggestions.length === 0) {
           setShowSuggestions(false)
         }
 
-        // Geocode the address when user finishes typing (on blur)
-        // This ensures we get coordinates even if user typed manually without selecting a suggestion
         if (inputValue.trim() && onLocationSelect) {
           const geocodedLocation = await geocodeAddress(inputValue)
           if (geocodedLocation) {
             onLocationSelect(geocodedLocation)
           }
         }
+
+        onBlurProp?.()
       }, 250)
     },
-    [isFocused, animatedValue, searchQuery, suggestions.length, inputValue, geocodeAddress, onLocationSelect]
+    [isFocused, animatedValue, searchQuery, suggestions.length, inputValue, geocodeAddress, onLocationSelect, onBlurProp]
   )
 
-  // Stable border color interpolation
   const borderColor = animatedValue.interpolate({
     inputRange: [0, 1],
     outputRange: [borderColors.default, borderColors.focused],
@@ -438,15 +364,12 @@ const AddressInput: React.FC<AddressInputProps> = ({
       setShowSuggestions(text.trim().length > 0)
       onChangeText?.(text)
 
-      // Clear any pending geocode
       if (geocodeTimeoutRef.current) {
         clearTimeout(geocodeTimeoutRef.current)
       }
 
-      // Geocode the address after user stops typing (2 seconds delay)
       if (text.trim().length > 0) {
         geocodeTimeoutRef.current = setTimeout(async () => {
-          // Only geocode if no suggestion was selected (user typed manually)
           if (!showSuggestions || suggestions.length === 0) {
             const geocodedLocation = await geocodeAddress(text)
             if (geocodedLocation && onLocationSelect) {
@@ -469,29 +392,13 @@ const AddressInput: React.FC<AddressInputProps> = ({
       setShowSuggestions(false)
       onChangeText?.(suggestion.address || suggestion.name)
       onLocationSelect?.(suggestion)
-      // Dismiss keyboard after selection
       Keyboard.dismiss()
     },
     [onChangeText, onLocationSelect]
   )
 
-  const handleWrapperPress = useCallback(() => {
-    if (!showSuggestions) {
-      Keyboard.dismiss()
-    } else {
-      // If suggestions are showing, hide them when tapping outside
-      setShowSuggestions(false)
-      Keyboard.dismiss()
-    }
-  }, [showSuggestions])
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <TouchableWithoutFeedback onPress={handleWrapperPress} accessible={false}>
-        <View 
+        <View
           ref={containerRef}
           className={clsx("w-full", containerStyle1, !noMargin && "mb-4")}
         >
@@ -528,20 +435,15 @@ const AddressInput: React.FC<AddressInputProps> = ({
             </View>
           )}
 
-          {/* Input Container */}
+          {/* Input */}
           <Animated.View
-            className={`flex flex-row ${multiline ? 'items-start' : 'items-center'} bg-white rounded-[12px] px-4 ${containerStyle}`}
+            className={`flex flex-row items-center bg-white rounded-[12px] px-4 ${containerStyle}`}
             style={{
               borderWidth: 2,
               borderColor: borderColor,
-              minHeight: multiline ? 70 : undefined,
               ...Platform.select({
                 ios: {
-                  shadowColor: hasError
-                    ? "#EF4444"
-                    : isFocused
-                    ? "#D30309"
-                    : "#000",
+                  shadowColor: hasError ? "#EF4444" : isFocused ? "#D30309" : "#000",
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: isFocused || hasError ? 0.12 : 0.05,
                   shadowRadius: 16,
@@ -552,28 +454,23 @@ const AddressInput: React.FC<AddressInputProps> = ({
               }),
             }}
           >
-            {/* Text Input */}
             <TextInput
               ref={inputRef}
               value={inputValue}
               onChangeText={handleTextChange}
               placeholder={placeholder}
               placeholderTextColor="#9CA3AF"
-              multiline={multiline}
-              numberOfLines={numberOfLines}
+              multiline={false}
               editable={!disabled}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               className={`flex-1 py-4 text-lg font-NunitoBold text-gray-900 ${inputClassName}`}
-              style={{
-                textAlignVertical: multiline ? 'top' : 'center',
-                maxWidth: '100%',
-              }}
+              style={{ textAlignVertical: 'center' }}
               textBreakStrategy="simple"
+              returnKeyType="search"
             />
 
-            {/* Location Button Marker */}
-            <View className={`ml-3 ${multiline ? 'pt-5' : ''}`}>
+            <View className="ml-3">
               {isFetchingCurrentLocation ? (
                 <ActivityIndicator size="small" color="#D30309" />
               ) : (
@@ -584,39 +481,36 @@ const AddressInput: React.FC<AddressInputProps> = ({
             </View>
           </Animated.View>
 
+          {/* Inline suggestions dropdown */}
           {showSuggestions && (
-            <View 
-              className="mt-3 bg-white rounded-[32px] overflow-hidden"
+            <View
+              className="mt-2 bg-white rounded-[20px] overflow-hidden"
               style={{
-                maxHeight: 280,
+                maxHeight: 260,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 12 },
+                shadowOffset: { width: 0, height: 8 },
                 shadowOpacity: 0.1,
-                shadowRadius: 24,
-                elevation: 8,
+                shadowRadius: 20,
+                elevation: 10,
                 borderWidth: 1,
                 borderColor: '#F3F4F6',
               }}
             >
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="always"
-                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
               >
                 {isLoadingSuggestions && (
                   <View className="flex-row items-center gap-3 px-6 py-5 bg-gray-50/50">
                     <ActivityIndicator size="small" color="#D30309" />
-                    <Text className="text-sm font-NunitoBold text-gray-400">
-                      Searching...
-                    </Text>
+                    <Text className="text-sm font-NunitoBold text-gray-400">Searching...</Text>
                   </View>
                 )}
 
                 {fetchError && (
                   <View className="px-6 py-4 bg-red-50">
-                    <Text className="text-sm font-NunitoBold text-red-500">
-                      {fetchError}
-                    </Text>
+                    <Text className="text-sm font-NunitoBold text-red-500">{fetchError}</Text>
                   </View>
                 )}
 
@@ -647,25 +541,16 @@ const AddressInput: React.FC<AddressInputProps> = ({
             </View>
           )}
 
-          {/* Error Message */}
+          {/* Error */}
           {hasError && (
-            <View className="flex-row items-center">
+            <View className="flex-row items-center mt-1">
               <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
               <Text className="text-md font-NunitoMedium text-red-500 flex-1">
                 {String(error)}
               </Text>
             </View>
           )}
-
-          {/* Helper Text */}
-          {/* {!hasError && (
-            <Text className="text-md font-NunitoRegular text-gray-500 mt-2 ml-1">
-              Tap the location icon to use current location or search for an address
-            </Text>
-          )} */}
         </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
   )
 }
 

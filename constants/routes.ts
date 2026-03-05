@@ -131,6 +131,7 @@ export const driverRoutes = {
   ConfirmOrder: "/(root)/(screens)/(driver)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(driver)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(driver)/editProfile",
+  profileDetails: "/(root)/(screens)/(driver)/profileDetails",
   takebookings: "/(root)/(screens)/(driver)/takebookings",
 } as const;
 
@@ -199,3 +200,12 @@ export const sellerRoutes = {
 
 export type SellerRouteKeys = keyof typeof sellerRoutes;
 export type SellerRouteValues = (typeof sellerRoutes)[SellerRouteKeys];
+
+// KYC Routes map by role
+export const roleKYCRoutes: Record<string, string> = {
+  mechanic: "/(root)/(screens)/(mechanic)/complete-kyc",
+  merchant: "/(root)/(screens)/(seller)/complete-kyc",
+  seller: "/(root)/(screens)/(seller)/complete-kyc",
+  driver: "/(root)/(screens)/(driver)/complete-kyc",
+  rider: "/(root)/(screens)/(rider)/complete-kyc",
+};

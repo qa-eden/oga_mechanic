@@ -7,7 +7,7 @@ import {
   BellIcon,
   UserIcon,
 } from "react-native-heroicons/outline";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
 import { routes, driverRoutes, mechanicRoutes, riderRoutes, sellerRoutes } from "@/constants/routes";
 import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,7 +36,19 @@ const getTimeOfDay = () => {
 
 const Navbar = () => {
   const { label, icon } = getTimeOfDay();
+  const segments = useSegments();
   const [activeRole, setActiveRole] = useState<string | null>(null);
+  
+  // Derive role from segments as a fallback if activeRole hasn't loaded yet
+  const segmentRole = useMemo(() => {
+    const segs = segments as string[];
+    if (segs.includes('(driver)')) return 'driver';
+    if (segs.includes('(mechanic)')) return 'mechanic';
+    if (segs.includes('(rider)')) return 'rider';
+    if (segs.includes('(sellers)')) return 'seller';
+    return null;
+  }, [segments]);
+
   const queryClient = useQueryClient();
   
   // Fetch notifications from API to get unread count
@@ -122,22 +134,23 @@ const Navbar = () => {
   // Conditionally fetch primary profile only when NOT mechanic
   const { data: primaryProfileData, isLoading: primaryLoading } = usePrimaryUserProfile(!isMechanic);
   
-  // Determine which profile data to use
-  // When logged in as mechanic, only use mechanic profile (don't use primary)
-  const profileData = isMechanic ? mechanicProfileData?.data : primaryProfileData?.data;
-  const isLoading = isMechanic ? mechanicLoading : primaryLoading;
-  
-  // Get user data from appropriate profile
-  const userData = profileData;
-  const displayName = isMechanic 
-    ? (userData?.user?.first_name || userData?.first_name || 'User')
-    : (userData?.first_name || 'User');
-  const isVerified = userData?.is_verified || false;
-  
-  // Get profile picture - for mechanic, use selfie; for others, use profile_image
-  const profilePicture = isMechanic 
-    ? userData?.selfie 
-    : userData?.profile_image || userData?.profile_picture;
+  // Determine display name, profile picture and verified status based on role
+  let displayName = 'User';
+  let profilePicture = undefined;
+  let isVerified = false;
+
+  if (isMechanic && mechanicProfileData?.data?.mechanic_profile) {
+    const mProfile = mechanicProfileData.data.mechanic_profile;
+    displayName = mProfile.user?.first_name || 'User';
+    profilePicture = (mProfile.user as any)?.profile_image || (mProfile as any)?.selfie;
+    isVerified = mProfile.is_approved;
+  } else if (!isMechanic && primaryProfileData?.data) {
+    const pProfile = primaryProfileData.data;
+    displayName = pProfile.first_name || 'User';
+    profilePicture = pProfile.profile_image || (pProfile as any)?.profile_picture;
+    isVerified = pProfile.is_verified;
+  }
+
 
   const handleNotificationPress = () => {
     router.push(routes.notifications);
@@ -148,7 +161,7 @@ const Navbar = () => {
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <TouchableOpacity
         onPress={() => {
-          const roleKey = activeRole || "user";
+          const roleKey = activeRole || segmentRole || "user";
           const profileRoute =
             roleKey === "driver"
               ? driverRoutes.profile
@@ -196,7 +209,7 @@ const Navbar = () => {
               : activeRole === 'driver' 
               ? 'Drive safely and earn more.' 
               : activeRole === 'seller' || activeRole === 'merchant'
-              ? 'Grow your auto business.' 
+              ? 'Manage your shop and orders.' 
               : activeRole === 'rider'
               ? 'Your reliable ride is just a tap away.'
               : 'Everything your car needs is here.'}

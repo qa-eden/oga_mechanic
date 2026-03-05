@@ -24,6 +24,7 @@ export const USER_ENDPOINTS = {
   REGISTER_STEP: (stepId: number) => `/users/register/step/${stepId}/`,
   REGISTER_VEHICLE: '/users/register/vehicle/',
   ROLES: '/users/roles/',
+  SWITCH_ROLE: '/users/switch-role/',
   PROFILE: '/users/profile/primary/',
   PRIMARY_PROFILE: '/users/profile/primary/',
   UPDATE_PROFILE: '/users/profile/primary/',
@@ -43,6 +44,8 @@ export const USER_ENDPOINTS = {
   NOTIFICATIONS: '/users/notifications/',
   NOTIFICATION_DETAIL: (id: number | string) => `/users/notifications/${id}/`,
   NOTIFICATION_MARK_ALL_READ: '/users/notifications/mark-all-read/',
+  BANKS: '/users/banks/',
+  BANK_ENQUIRY: '/users/bank/enquiry/',
 } as const;
 
 // Mechanic endpoints (service providers)
@@ -70,7 +73,7 @@ export const MECHANIC_ENDPOINTS = {
 
 // Driver endpoints (transportation providers)
 export const DRIVER_ENDPOINTS = {
-  PROFILE: '/driver/profile',
+  PROFILE: '/users/profile/driver/',
   UPDATE_PROFILE: '/driver/profile',
   VEHICLE: '/driver/vehicle',
   UPDATE_VEHICLE: '/driver/vehicle',
@@ -89,7 +92,7 @@ export const DRIVER_ENDPOINTS = {
 
 // Merchant endpoints (shop owners)
 export const MERCHANT_ENDPOINTS = {
-  PROFILE: 'users/profile/merchant/',
+  PROFILE: '/users/profile/merchant/',
   UPDATE_PROFILE: '/merchant/profile',
   SHOPS: '/merchant/shops',
   CREATE_SHOP: '/merchant/shops',

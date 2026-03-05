@@ -512,6 +512,7 @@ const LocationSelection = () => {
                 minimumDate={new Date()}
                  style={{ width: "100%" }}
                  themeVariant="light"
+                 textColor="#000000"
               />
             </View>
           </View>
@@ -543,6 +544,7 @@ const LocationSelection = () => {
                 onChange={handleTimeChange}
                 style={{ width: "100%" }}
                 themeVariant="light"
+                textColor="#000000"
               />
             </View>
           </View>

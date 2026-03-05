@@ -22,6 +22,8 @@ import { getLGAs } from "@/constants/nigeriaData";
 import DocumentUpload from "@/components/forms/DocumentUpload";
 import ImageUpload from "@/components/ImageUpload";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userAPI } from "@/lib/api/user";
+import { useProfileStore } from "@/hooks/useProfileStore";
 
 const validationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
@@ -271,137 +273,73 @@ const MechanicStep3 = () => {
   const handleSubmit = async (values: FormValues) => {
     // Validate required documents
     if (!cacDocument) {
-      Alert.alert(
-        "Missing Document",
-        "Please upload your CAC document."
-      );
+      Alert.alert("Missing Document", "Please upload your CAC document.");
       return;
     }
-
     if (!selfie) {
-      Alert.alert(
-        "Missing Document",
-        "Please upload your selfie."
-      );
+      Alert.alert("Missing Document", "Please upload your selfie.");
       return;
     }
-
     if (!governmentIdFront) {
-      Alert.alert(
-        "Missing Document",
-        "Please upload the front of your government ID."
-      );
+      Alert.alert("Missing Document", "Please upload the front of your government ID.");
       return;
     }
-
-    // Only require back image for non-passport documents
     if (values.govt_id_type !== "international_passport" && !governmentIdBack) {
-      Alert.alert(
-        "Missing Document",
-        "Please upload the back of your government ID."
-      );
+      Alert.alert("Missing Document", "Please upload the back of your government ID.");
       return;
     }
 
-    // Directly call the endpoint
-    continueSubmission(values);
-  };
-
-  const continueSubmission = async (values: FormValues) => {
     setIsSubmitting(true);
-
     try {
-      // Convert selected makes to expertise details format
-      const expertiseDetails: ExpertiseDetail[] = selectedMakes.map(make => ({
-        vehicle_make_id: make.id,
-        years_of_experience: make.years_of_experience,
-        certification_level: make.certification_level
-      }));
-
-      // Prepare FormData payload (matching seller step4 structure)
       const formData = new FormData();
-      formData.append('requestType', 'inbound');
       formData.append('location', values.location);
-      formData.append('lga', values.lga);
       formData.append('cac_number', values.ccac_document);
       formData.append('govt_id_type', values.govt_id_type);
-      formData.append('expertise_details', JSON.stringify(expertiseDetails));
-
-      // Add files as proper file objects
+      
+      // Append files
       if (cacDocument) {
         formData.append('cac_document', {
           uri: cacDocument.uri,
-          name: `cac_document_${Date.now()}.jpg`,
-          type: 'image/jpeg'
+          name: 'cac_document.jpg',
+          type: 'image/jpeg',
         } as any);
       }
-
       if (selfie) {
         formData.append('selfie', {
           uri: selfie.uri,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
+          name: 'selfie.jpg',
+          type: 'image/jpeg',
         } as any);
       }
-
       if (governmentIdFront) {
         formData.append('government_id_front', {
           uri: governmentIdFront.uri,
-          name: `government_id_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
+          name: 'government_id_front.jpg',
+          type: 'image/jpeg',
         } as any);
       }
-
       if (governmentIdBack) {
         formData.append('government_id_back', {
           uri: governmentIdBack.uri,
-          name: `government_id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
+          name: 'government_id_back.jpg',
+          type: 'image/jpeg',
         } as any);
       }
 
-      const token = await AsyncStorage.getItem('auth_token');
-
-      // Use direct fetch to bypass axios interceptor that converts FormData to JSON
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/register/step/4/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
-          // Don't set Content-Type - let browser set it for FormData
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
-      }
-
-      const responseData = await response.json();
-      console.log('✅ Step 4 registration successful:', responseData);
-
-      // Navigate to step 4 with all data
-      router.push({
-        pathname: mechanicRoutes.step4,
-        params: {
-          ...params,
-          location: values.location,
-          state: values.state,
-          lga: values.lga,
-          ccac_document: values.ccac_document,
-          govt_id_type: values.govt_id_type,
-          expertise_details: JSON.stringify(expertiseDetails),
-          documentsUploaded: "true",
-        },
-      });
-
-    } catch (error: any) {
-      console.error('❌ Step 4 registration failed:', error);
+      console.log('🚀 Submitting Mechanic KYC...');
+      await userAPI.submitMechanicKYC(formData);
+      
+      // Update global profile state
+      useProfileStore.getState().setIsProfileComplete(true);
+      
       Alert.alert(
-        "Registration Failed",
-        error?.response?.data?.message || error.message || "Failed to submit documents. Please try again."
+        "Success",
+        "Your profile has been submitted for review!",
+        [{ text: "OK", onPress: () => router.replace("/(root)/(tabs)/(mechanic)/home") }]
       );
+    } catch (error: any) {
+      console.error('❌ KYC Submission Failed:', error);
+      Alert.alert("Error", error?.response?.data?.message || "Failed to submit profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

@@ -5,9 +5,20 @@ import { StatusBar } from "expo-status-bar";
 // import { MapPinIcon } from 'react-native-heroicons/solid';
 // import { icons } from '@/constants';
 import BookingCard from '@/components/cards/BookingCard';
+import { useProfileStore } from '@/hooks/useProfileStore';
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal';
+import { driverRoutes } from '@/constants/routes';
+import { router } from 'expo-router';
+import { useDriverProfile } from '@/hooks/useUserProfile';
+import AnimatedPageContainer from '@/components/AnimatedPageContainer';
 
 const DriverOrder = () => {
   const [activeTab, setActiveTab] = useState("recent");
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const { data: profileData } = useDriverProfile();
+
+  const isPendingApproval = Boolean(profileData?.data?.kyc?.is_complete && !profileData?.data?.driver_profile?.is_approved);
 
   // Sample booking data
   const recentBookings = [
@@ -91,6 +102,13 @@ const DriverOrder = () => {
       pickup={booking.pickup}
       dropoff={booking.dropoff}
       price={booking.price}
+      onPress={() => {
+        if (!isProfileComplete || isPendingApproval) {
+          setShowProfileModal(true);
+          return;
+        }
+        router.push(driverRoutes.takebookings);
+      }}
     />
   );
 
@@ -98,52 +116,62 @@ const DriverOrder = () => {
     <SafeAreaView className="flex-1 pb-4 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-100">
-        <Text className="text-2xl font-NunitoBold text-center text-gray-800">
-          Bookings
-        </Text>
-      </View>
-
-      {/* Tab Navigation */}
-      <View className="bg-white px-4 py-3 border-b border-gray-100">
-        <View className="flex-row bg-gray-100 rounded-[.3rem] p-1 overflow-hidden">
-          {[
-            { key: "recent", label: "Recent bookings" },
-            { key: "completed", label: "Completed bookings" }
-          ].map((tab, index) => (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-              className={`flex-1 py-3 flex justify-center items-center rounded-[.3rem] ${index < 1 ? "mr-0" : ""
-                } ${activeTab === tab.key
-                  ? "bg-primary-500 shadow-sm px-1"
-                  : "bg-transparent"
-                }`}
-            >
-              <Text className={`font-NunitoBold text-center text-[.95rem] ${activeTab === tab.key ? "text-white" : "text-gray-500"
-                }`}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+        {/* Header */}
+        <View className="bg-white px-4 py-4 border-b border-gray-100">
+          <Text className="text-2xl font-NunitoBold text-center text-gray-800">
+            Bookings
+          </Text>
         </View>
-      </View>
 
-      {/* Content */}
-      <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
-        {activeTab === "recent" && (
-          <View className="flex flex-col gap-4">
-            {recentBookings.map(renderBookingCard)}
+        {/* Tab Navigation */}
+        <View className="bg-white px-4 py-3 border-b border-gray-100">
+          <View className="flex-row bg-gray-100 rounded-[.3rem] p-1 overflow-hidden">
+            {[
+              { key: "recent", label: "Recent bookings" },
+              { key: "completed", label: "Completed bookings" }
+            ].map((tab, index) => (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                className={`flex-1 py-3 flex justify-center items-center rounded-[.3rem] ${index < 1 ? "mr-0" : ""
+                  } ${activeTab === tab.key
+                    ? "bg-primary-500 shadow-sm px-1"
+                    : "bg-transparent"
+                  }`}
+              >
+                <Text className={`font-NunitoBold text-center text-[.95rem] ${activeTab === tab.key ? "text-white" : "text-gray-500"
+                  }`}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
-        
-        {activeTab === "completed" && (
-          <View>
-            {completedBookings.map(renderBookingCard)}
-          </View>
-        )}
-      </ScrollView>
+        </View>
+
+        {/* Content */}
+        <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
+          {activeTab === "recent" && (
+            <View className="flex flex-col gap-4">
+              {recentBookings.map(renderBookingCard)}
+            </View>
+          )}
+          
+          {activeTab === "completed" && (
+            <View>
+              {completedBookings.map(renderBookingCard)}
+            </View>
+          )}
+        </ScrollView>
+      </AnimatedPageContainer>
+
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="driver"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
     </SafeAreaView>
   )
 }

@@ -28,7 +28,8 @@ import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const RiderProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -151,9 +152,9 @@ const RiderProfile = () => {
           />
         }
       >
-        <View className="px-5 pt-4">
-          {/* Header */}
-          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          <View className="px-5 pt-4">
+            {/* Header */}
             <View className="mb-6">
               <Text className="text-2xl font-NunitoExtraBold text-gray-900">
                 Rider Account
@@ -253,10 +254,8 @@ const RiderProfile = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </Animated.View>
 
-          {/* Account Settings Section */}
-          <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+            {/* Account Settings Section */}
             <View className="bg-white rounded-2xl mt-6 px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
@@ -278,10 +277,8 @@ const RiderProfile = () => {
                 ))}
               </View>
             </View>
-          </Animated.View>
 
-          {/* Preferences Section */}
-          <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+            {/* Preferences Section */}
             <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
@@ -315,10 +312,8 @@ const RiderProfile = () => {
                 />
               </View>
             </View>
-          </Animated.View>
 
-          {/* Support Section */}
-          <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+            {/* Support Section */}
             <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
@@ -333,10 +328,8 @@ const RiderProfile = () => {
                 ))}
               </View>
             </View>
-          </Animated.View>
 
-          {/* Logout Button */}
-          <Animated.View entering={FadeInDown.delay(500).duration(500)}>
+            {/* Logout Button */}
             <TouchableOpacity
               onPress={handleLogout}
               disabled={isLoggingOut}
@@ -360,8 +353,8 @@ const RiderProfile = () => {
                 Version 1.0.0
               </Text>
             </View>
-          </Animated.View>
-        </View>
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
 
       {/* Modals */}

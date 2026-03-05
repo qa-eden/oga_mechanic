@@ -442,7 +442,7 @@ export const DriverProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: driverRoutes.EditProfile,
+      route: driverRoutes.profileDetails,
     },
     {
       id: 2,

@@ -30,6 +30,10 @@ import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useProfileStore } from "@/hooks/useProfileStore";
+import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
+import KYCBanner from "@/components/KYCBanner";
+import { useMerchantProfile } from "@/hooks/useUserProfile";
 
 const SellerProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -37,6 +41,11 @@ const SellerProfile = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -49,9 +58,54 @@ const SellerProfile = () => {
   // Fetch merchant analytics for stats
   const { data: analyticsData, refetch: refetchAnalytics } = useMerchantAnalytics();
 
+  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'merchant';
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+
+  const hasShownModalRef = React.useRef(false);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const isPendingApproval = Boolean(
+    merchantProfileQuery.data?.data?.kyc?.is_complete && 
+    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+  );
+
+  React.useEffect(() => {
+    if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
+      const merchantData = merchantProfileQuery.data.data;
+      const hasKycData = !!(merchantData as any).cac_number || !!(merchantData as any).kyc?.is_complete;
+      setIsProfileComplete(hasKycData);
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !hasKycData && !merchantProfileQuery.isLoading && !isProfileLoading && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // Reduced to 3 seconds
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchProfile(), refetchAnalytics()]);
+    await Promise.all([refetchProfile(), refetchAnalytics(), merchantProfileQuery.refetch()]);
     setRefreshing(false);
   };
 
@@ -129,7 +183,6 @@ const SellerProfile = () => {
 
   const displayEmail = userData?.email || '';
   const isVerified = userData?.is_verified || false;
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'merchant';
   const profileImage = (userData as any)?.profile_picture || (userData as any)?.image || null;
 
   return (
@@ -161,6 +214,10 @@ const SellerProfile = () => {
               <Text className="text-2xl font-NunitoExtraBold text-gray-900">
                 Seller Account
               </Text>
+            </View>
+
+            <View className="mb-4">
+              <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="seller" isPending={isPendingApproval} />
             </View>
 
             {/* Profile Card */}
@@ -367,6 +424,14 @@ const SellerProfile = () => {
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}
         onSwitchUser={handleSwitchUser}
+      />
+
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="seller"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
       />
     </SafeAreaView>
   );

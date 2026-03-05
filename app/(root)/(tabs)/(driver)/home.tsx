@@ -17,12 +17,68 @@ import OngoingBookingCard from '@/components/cards/OngoingBookingCard';
 import BookingCard from '@/components/cards/BookingCard';
 import { router } from 'expo-router';
 import { driverRoutes } from '@/constants/routes';
+import { useDriverProfile } from '@/hooks/useUserProfile';
+import { useProfileStore } from '@/hooks/useProfileStore';
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal';
+import KYCBanner from '@/components/KYCBanner';
+import AnimatedPageContainer from '@/components/AnimatedPageContainer';
+import Navbar from '@/components/Navbar';
 
 const Home = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState("No 5, Agbondodo str, Ijai...");
   const [debugCount, setDebugCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Profile check
+  const { data: profileData, isLoading: profileLoading } = useDriverProfile();
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const isPendingApproval = Boolean(
+    profileData?.data?.kyc?.is_complete && 
+    !profileData?.data?.driver_profile?.is_approved
+  );
+
+  const hasShownModalRef = React.useRef(false);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status on load
+  useEffect(() => {
+    if (profileData && !profileLoading) {
+      const isComplete = profileData.data?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !isComplete && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // Reduced to 3 seconds
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [profileData, profileLoading, setIsProfileComplete, isNewSwitch]);
 
   // Daily performance metrics data
   const dailyMetrics = [
@@ -31,6 +87,7 @@ const Home = () => {
       icon: CurrencyDollarIcon,
       label: "Today's Earning",
       value: "₦123,000",
+      bgColor: "bg-red-50",
       iconColor: "#EF4444"
     },
     {
@@ -38,14 +95,16 @@ const Home = () => {
       icon: TruckIcon,
       label: "Today's Trips",
       value: "10",
-      iconColor: "#EF4444"
+      bgColor: "bg-blue-50",
+      iconColor: "#3B82F6"
     },
     {
       id: 3,
       icon: ClockIcon,
-      label: "Today's Login Hrs",
+      label: "Today's Login",
       value: "17 Hrs",
-      iconColor: "#EF4444"
+      bgColor: "bg-orange-50",
+      iconColor: "#F97316"
     }
   ];
 
@@ -147,25 +206,16 @@ const Home = () => {
           />
         }
       >
-        {/* Header Section */}
-        <View className="bg-white px-5 py-4">
-          {/* Profile and Greeting */}
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-row items-center">
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' }}
-                className="w-12 h-12 rounded-full mr-3"
-              />
-              <View>
-                <Text className="text-xl font-bold text-gray-900">Hi, Okorie</Text>
-                <Text className="text-sm text-gray-500 flex-row items-center">
-                  Everything your car needs is here ☁️
-                </Text>
-              </View>
-            </View>
+        <AnimatedPageContainer animationType="fadeInDown" duration={600}>
+          {/* Header Section */}
+          {/* Navbar */}
+          <View className="bg-white px-5 py-2">
+            <Navbar />
           </View>
 
-          <View className="flex-row items-center justify-between">
+          <View className="bg-white px-5 pb-4">
+
+          <View className="flex-row items-center justify-between pt-4">
             {/* Location */}
             <TouchableOpacity className="flex-row items-center " onPress={handleLocationPress}>
               <MapPinIcon size={20} color="#6B7280" />
@@ -185,18 +235,37 @@ const Home = () => {
           </View>
         </View>
 
+        <View className="px-5 mb-1 mt-4">
+          <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="driver" isPending={isPendingApproval} />
+        </View>
+
         {/* Daily Performance Metrics */}
-        <View className="px-5 mb-6 mt-3">
-          <View className="flex-row space-x-3 gap-2">
+        <View className="px-5 mb-6">
+          <View className="flex-row gap-2">
             {dailyMetrics.map((metric) => {
-              // const IconComponent = metric.icon;
+              const IconComponent = metric.icon;
               return (
-                <View key={metric.id} className="flex-1 bg-white p-4 rounded-xl shadow-xs border border-gray-300">
-                  <View className="items-center mb-2">
-                    {/* <IconComponent size={20} color={metric.iconColor} /> */}
-                    <Text className="text-gray-500 text-[.86rem] text-center">{metric.label}</Text>
+                <View 
+                  key={metric.id} 
+                  className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-gray-100 items-center justify-between min-h-[120px]"
+                >
+                  <View className="items-center">
+                    <View className={`w-10 h-10 rounded-full ${metric.bgColor} items-center justify-center mb-3`}>
+                      <IconComponent size={20} color={metric.iconColor} />
+                    </View>
+                    <View className="mb-1">
+                      <Text 
+                        className="text-gray-500 text-[10px] font-NunitoBold uppercase tracking-wider text-center"
+                      >
+                        {metric.label}
+                      </Text>
+                    </View>
                   </View>
-                  <Text className="text-xl text-center font-medium text-red-500">{metric.value}</Text>
+                  <Text 
+                    className="text-base font-NunitoExtraBold text-gray-900 text-center"
+                  >
+                    {metric.value}
+                  </Text>
                 </View>
               );
             })}
@@ -218,8 +287,6 @@ const Home = () => {
           ))}
         </View>
 
-
-
         {/* Recommended Bookings - Show when offline */}
         {!isOnline ? (
           <View className="px-5 mb-6">
@@ -240,10 +307,16 @@ const Home = () => {
               <Text className="text-lg font-bold text-gray-900">Close by bookings</Text>
               <TouchableOpacity
                 className="flex-row items-center"
-                onPress={() => router.push({
-                  pathname: "/(root)/(tabs)/(driver)/home",
-                  params: { tab: "consultation" }
-                })}
+                onPress={() => {
+                  if (!isProfileComplete || isPendingApproval) {
+                    setShowProfileModal(true);
+                    return;
+                  }
+                  router.push({
+                    pathname: "/(root)/(tabs)/(driver)/home",
+                    params: { tab: "consultation" }
+                  })
+                }}
               >
                 <Text className="text-red-500 font-medium mr-1">View All</Text>
                 <ArrowRightIcon size={16} color="#EF4444" />
@@ -262,15 +335,32 @@ const Home = () => {
                   pickup={booking.pickup}
                   dropoff={booking.dropoff}
                   price={booking.price}
+                  onPress={() => {
+                    if (!isProfileComplete || isPendingApproval) {
+                      setShowProfileModal(true);
+                      return;
+                    }
+                    router.push(driverRoutes.takebookings);
+                  }}
                 />
               ))}
             </View>
           </View>
         )}
 
-        {/* Bottom Spacing */}
-        <View className="h-20" />
+          {/* Bottom Spacing */}
+          <View className="h-20" />
+        </AnimatedPageContainer>
       </ScrollView>
+
+      {/* Profile Completion Modal */}
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="driver"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
     </SafeAreaView>
   );
 };

@@ -332,6 +332,8 @@ const EnterAddressForRide = () => {
                 onChange={handleDateChange}
                 minimumDate={new Date()}
                 style={{ width: "100%" }}
+                textColor="#000000"
+                themeVariant="light"
               />
             </View>
           </View>
@@ -361,6 +363,8 @@ const EnterAddressForRide = () => {
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={handleTimeChange}
                 style={{ width: "100%" }}
+                textColor="#000000"
+                themeVariant="light"
               />
             </View>
           </View>

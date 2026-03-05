@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'reac
 import { useFormikContext } from 'formik'
 import CustomAlert from './CustomAlert'
 import { useCustomAlert } from '@/hooks/useCustomAlert'
+import { IdentificationIcon, CheckCircleIcon, InformationCircleIcon } from 'react-native-heroicons/outline'
 
 interface VINInputProps {
   name: string
@@ -27,6 +28,8 @@ const VINInput: React.FC<VINInputProps> = ({
   const [localValue, setLocalValue] = useState((values as Record<string, any>)[name] || '')
   const [isLoading, setIsLoading] = useState(false)
   const [hasLookedUp, setHasLookedUp] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [showQuickTip, setShowQuickTip] = useState(false)
   const { visible, alertConfig, hideAlert, showSuccess, showError } = useCustomAlert()
 
   // Update local value when Formik value changes
@@ -38,21 +41,13 @@ const VINInput: React.FC<VINInputProps> = ({
     setLocalValue(text)
     setFieldValue(name, text)
     
-    // Reset lookup flag if VIN is cleared or changed
-    if (text.length < 17) {
-      setHasLookedUp(false)
-    }
+    // Reset lookup flags if VIN is modified
+    setHasLookedUp(false)
+    setIsSuccess(false)
     
     // Show warning for invalid VIN format
     if (text.length === 17 && !isValidVIN(text)) {
       showError('Invalid VIN Format', 'This VIN format appears to be invalid. Please check and try again.')
-    }
-    
-    // Auto-trigger VIN lookup when it reaches 17 characters (only if no manual button and not already looked up)
-    if (!showLookupButton && text.length === 17 && onVINLookup && !hasLookedUp && isValidVIN(text)) {
-      setTimeout(() => {
-        handleManualVINLookup()
-      }, 1500)
     }
     
     // Call the parent onChangeText if provided
@@ -60,6 +55,16 @@ const VINInput: React.FC<VINInputProps> = ({
       onChangeText(text)
     }
   }
+
+  // Auto-trigger VIN lookup when it reaches 17 characters
+  useEffect(() => {
+    if (localValue.length === 17 && onVINLookup && !hasLookedUp && isValidVIN(localValue)) {
+      const timeoutId = setTimeout(() => {
+        handleAutoVINLookup()
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [localValue, hasLookedUp])
 
   // Basic VIN validation
   const isValidVIN = (vin: string): boolean => {
@@ -82,29 +87,21 @@ const VINInput: React.FC<VINInputProps> = ({
     setFieldTouched(name, true)
   }
 
-  const handleManualVINLookup = async () => {
-    if (!localValue || localValue.length !== 17) {
-      showError('Invalid VIN', 'Please enter a complete 17-character VIN number.')
-      return
-    }
-
-    if (!onVINLookup) {
-      showError('Lookup Unavailable', 'VIN lookup service is not available.')
-      return
-    }
-
-    if (isLoading || hasLookedUp) {
-      return // Prevent multiple calls
-    }
+  const handleAutoVINLookup = async () => {
+    if (!localValue || localValue.length !== 17) return
+    if (!onVINLookup) return
+    if (isLoading || hasLookedUp) return
 
     setIsLoading(true)
     setHasLookedUp(true)
+    setIsSuccess(false)
     try {
       await onVINLookup(localValue, setFieldValue)
-      showSuccess('Vehicle Found!', 'Vehicle details have been automatically populated.')
+      setIsSuccess(true)
+      // Soft feedback instead of blocking Modal
     } catch (error) {
       console.error('VIN lookup error:', error)
-      setHasLookedUp(false) // Reset flag on error so user can retry
+      setIsSuccess(false)
       showError('Lookup Failed', 'Unable to find vehicle details. Please check your VIN and try again.')
     } finally {
       setIsLoading(false)
@@ -113,108 +110,51 @@ const VINInput: React.FC<VINInputProps> = ({
 
   return (
     <View>
-      <Text className="text-sm font-medium text-gray-700 mb-2">
+     <View className="flex-row items-center justify-between mb-2">
+       <Text className="text-sm font-medium text-gray-700">
         {label} {required && <Text className="text-red-500 text-lg">*</Text>}
-      </Text>
-      
-      <TextInput
-        value={localValue}
-        onChangeText={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        className="border border-gray-400 rounded-xl px-4 py-4 text-base text-gray-900 bg-gray-50"
-        autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={17}
-      />
+       </Text>
 
-      {/* Lookup Button - Shows when user starts typing and showLookupButton is true */}
-      {showLookupButton && localValue.length > 0 && (
-        <View className="mt-3">
-          <TouchableOpacity
-            onPress={handleManualVINLookup}
-            disabled={isLoading || localValue.length !== 17}
-            className={`py-4 px-6 rounded-xl border-2 shadow-sm ${
-              isLoading || localValue.length !== 17
-                ? 'bg-gray-100 border-gray-200'
-                : 'bg-blue-500 border-blue-600 active:bg-blue-600'
-            }`}
-            style={{
-              shadowColor: isLoading || localValue.length !== 17 ? '#000' : '#3B82F6',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }}
-          >
-            {isLoading ? (
-              <View className="flex-row items-center justify-center">
-                <ActivityIndicator size="small" color="#3B82F6" />
-                <Text className="text-blue-600 font-semibold ml-3 text-base">
-                  Looking up vehicle details...
-                </Text>
-              </View>
-            ) : (
-              <View className="flex-row items-center justify-center">
-                <Text className={`text-center font-semibold text-base ${
-                  isLoading || localValue.length !== 17
-                    ? 'text-gray-400'
-                    : 'text-white'
-                }`}>
-                  {localValue.length === 17 ? (
-                    <>
-                      🔍 Lookup Vehicle Details
-                    </>
-                  ) : (
-                    <>
-                      ⏳ Complete VIN to lookup ({localValue.length}/17)
-                    </>
-                  )}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          
-          {/* Progress indicator for VIN length */}
-          {localValue.length > 0 && localValue.length < 17 && (
-            <View className="mt-2">
-              <View className="flex-row items-center justify-between mb-1">
-                <Text className="text-xs text-gray-500">VIN Progress</Text>
-                <Text className="text-xs text-gray-500">{localValue.length}/17</Text>
-              </View>
-              <View className="w-full bg-gray-200 rounded-full h-2">
-                <View 
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(localValue.length / 17) * 100}%` }}
-                />
-              </View>
-            </View>
-          )}
+       <TouchableOpacity onPress={() => setShowQuickTip(!showQuickTip)}>
+         <InformationCircleIcon size={25} color="#3B82F6" />
+       </TouchableOpacity>
+     </View>
+      
+      <View className="relative justify-center">
+        <TextInput
+          value={localValue}
+          onChangeText={handleChange}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          className="border border-gray-400 rounded-xl px-4 py-4 text-base text-gray-900 bg-gray-50 pr-12"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={17}
+        />
+        <View className="absolute right-4">
+          {isLoading && <ActivityIndicator size="small" color="#3B82F6" />}
+          {isSuccess && !isLoading && <CheckCircleIcon size={24} color="#10B981" />}
         </View>
-      )}
+      </View>
 
       {(errors as Record<string, any>)[name] && (touched as Record<string, any>)[name] && (
         <Text className="text-red-500 text-sm mt-1">{(errors as Record<string, any>)[name]}</Text>
       )}
 
       {/* Quick Tip */}
-      <View className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-        <Text className="text-xs text-blue-800 font-medium mb-1">
-          💡 <Text className="font-bold">Quick Tip:</Text> {showLookupButton 
-            ? 'Start typing your VIN and a lookup button will appear below!'
-            : 'Enter your 17-character VIN to automatically populate vehicle details!'
-          }
-        </Text>
-        <Text className="text-xs text-blue-600 mb-2">
-          The VIN can be found on your vehicle registration, insurance card, or on the driver's side dashboard.
-        </Text>
-        <Text className="text-xs text-gray-500 mb-1 hidden">
-          Sample VINs for testing: 1GNEK13ZX3R298984, 4Y1SL65848Z411439
-        </Text>
-        <Text className="text-xs text-gray-500">
-          Note: VIN lookup provides make, model, year, and body style. Color, transmission, and engine details may need manual entry.
-        </Text>
-      </View>
+      {showQuickTip && (
+        <View className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
+          <Text className="text-xs text-blue-800 font-medium mb-1">
+            💡 <Text className="font-bold">Quick Tip:</Text> Enter your 17-character VIN to automatically populate vehicle details!
+          </Text>
+          <Text className="text-xs text-blue-600 mb-2">
+            The VIN can be found on your vehicle registration, insurance card, or on the driver's side dashboard.
+          </Text>
+          <Text className="text-xs text-gray-500">
+            Note: VIN lookup provides make, model, year, and body style. Color, transmission, and engine details may need manual entry.
+          </Text>
+        </View>
+      )}
 
       {/* Custom Alert */}
       {alertConfig && (

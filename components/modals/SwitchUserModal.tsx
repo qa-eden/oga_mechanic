@@ -23,6 +23,8 @@ import { userAPI } from "@/lib/api/user";
 import { useQueryClient } from "@tanstack/react-query";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AndroidNavBarSpacer from "../AndroidNavBarSpacer";
+import ProfileCompletionModal from "./ProfileCompletionModal";
+import { useProfileStore } from "@/hooks/useProfileStore";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -45,15 +47,20 @@ interface UserOption {
   roleId?: number; // Role ID for API calls
 }
 
-const SwitchUserModal = ({
+const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
   isVisible,
   onClose,
   onSwitchUser,
-}: SwitchUserModalProps) => {
+}) => {
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [isSwitching, setIsSwitching] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [currentRole, setCurrentRole] = useState<string>("");
   const { showError, hideAlert, visible, alertConfig } = useCustomAlert();
   const queryClient = useQueryClient();
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   // Fetch user roles from API
   const {
@@ -208,25 +215,15 @@ const SwitchUserModal = ({
     if (selectedUser) {
       // Find the selected option to check if user has access
       const selectedOption = userOptions.find(option => option.id === selectedUser);
-      // const hasAccess = selectedOption?.hasAccess || false; // No longer blocking based on access
-      const roleName = selectedOption?.roleName || selectedUser; // Use original role name for navigation
+      const roleName = (selectedOption?.roleName || selectedUser) as string; 
       const roleId = selectedOption?.roleId;
 
       if (roleId) {
         try {
           setIsSwitching(true);
           
-          // If user doesn't have access, we add the role during the switch
-          if (!selectedOption?.hasAccess) {
-             // Step 1: Add the role (passing null for activeRoleId)
-             await userAPI.switchRole(null, [roleId]);
-             
-             // Step 2: Switch to the successfully added role (passing roleId for activeRoleId)
-             await userAPI.switchRole(roleId);
-          } else {
-             // Pass roleId for activeRoleId
-             await userAPI.switchRole(roleId);
-          }
+          // Switch role (API automatically adds role if user doesn't have it)
+          await userAPI.switchRole(roleName);
           
           const addRoles = !selectedOption?.hasAccess ? [roleId] : undefined;
           
@@ -246,9 +243,77 @@ const SwitchUserModal = ({
           
           // Log them in directly
           onSwitchUser(roleName);
+          // Flag that we just switched roles to trigger the 3s delay
+          setIsNewSwitch(true);
 
           if (addRoles) {
              showToast.success(`Switched to ${selectedOption?.name || roleName}`);
+          }
+          
+          // Check if profile is complete for non-primary roles
+          if (roleName !== 'primary_user') {
+            try {
+              let profileResponse: any;
+              
+              // Fetch role-specific profile
+              switch (roleName) {
+                case 'mechanic':
+                  profileResponse = await userAPI.getMechanicProfile();
+                  break;
+                case 'driver':
+                  profileResponse = await userAPI.getDriverProfile();
+                  break;
+                case 'rider':
+                  profileResponse = await userAPI.getRiderProfile();
+                  break;
+                case 'merchant':
+                case 'seller':
+                  profileResponse = await userAPI.getMerchantProfile();
+                  break;
+                default:
+                  profileResponse = null;
+              }
+
+              // Check if profile is complete
+              let isComplete = true;
+              let isPending = false;
+
+              if (profileResponse?.data) {
+                // Check for KYC object (Mechanic/Driver pattern)
+                if (profileResponse.data.kyc && typeof profileResponse.data.kyc.is_complete !== 'undefined') {
+                  isComplete = profileResponse.data.kyc.is_complete;
+                  
+                  // Check for approval if complete
+                  if (isComplete) {
+                    const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 'driver_profile';
+                    isPending = !profileResponse.data[profileKey]?.is_approved;
+                  }
+                } 
+                // Check for has_profile (Merchant pattern)
+                else if (typeof profileResponse.data.has_profile !== 'undefined') {
+                  isComplete = profileResponse.data.has_profile;
+                  
+                  // Check for approval if complete
+                  if (isComplete) {
+                      isPending = !profileResponse.data.merchant_profile?.is_approved;
+                  }
+                }
+              }
+              
+              setIsPendingApproval(isPending);
+
+              if (!isComplete) {
+                // Update global state
+                setIsProfileComplete(false);
+                
+                // Set role but don't show modal immediately
+                setCurrentRole(roleName);
+              } else {
+                setIsProfileComplete(true);
+              }
+            } catch (profileError) {
+              console.error('❌ Profile check failed:', profileError);
+            }
           }
           
           // Navigate to role-specific home page
@@ -283,70 +348,6 @@ const SwitchUserModal = ({
     }
   };
 
-  const handleSignUp = async () => {
-    try {
-      setIsSwitching(true);
-      hideAlert();
-
-      // Get the original role name and ID for navigation
-      const selectedOption = userOptions.find(option => option.id === selectedUser);
-      const roleName = selectedOption?.roleName || selectedUser;
-      const roleId = selectedOption?.roleId;
-
-      if (!roleId) {
-        showError(
-          "Error",
-          "Unable to determine role ID. Please try again."
-        );
-        setIsSwitching(false);
-        return;
-      }
-
-      // Call step 1 registration endpoint to initiate the signup process
-      const step1Response = await userAPI.registerStep(1, {
-        role_id: roleId
-      });
-
-      // Store role data for the registration flow
-      // This would typically be stored in a registration store or context
-      await AsyncStorage.setItem('registration_role_id', roleId.toString());
-      await AsyncStorage.setItem('registration_session_id', step1Response.sessionId || step1Response.session_id || '');
-
-      onClose(); // Close the switch modal
-
-      // Navigate to the specific role's step 1 registration page
-      let targetRoute: string = routes?.signUp; // fallback
-
-      switch (roleName) {
-        case 'primary_user':
-          targetRoute = routes?.userStep1;
-          break;
-        case 'driver':
-          targetRoute = driverRoutes?.step1;
-          break;
-        case 'mechanic':
-          targetRoute = mechanicRoutes?.step1;
-          break;
-        case 'rider':
-          targetRoute = driverRoutes?.chooseOptions; // Rider uses driver's choose options
-          break;
-        case 'merchant':
-          targetRoute = sellerRoutes?.step1;
-          break;
-        default:
-          targetRoute = routes?.signUp;
-      }
-
-      router.push(targetRoute as any);
-    } catch (error) {
-      showError(
-        "Sign Up Failed",
-        "Failed to initiate sign up. Please try again."
-      );
-    } finally {
-      setIsSwitching(false);
-    }
-  }
 
   return (
     <Modal
@@ -498,9 +499,18 @@ const SwitchUserModal = ({
         title={alertConfig?.title || ""}
         message={alertConfig?.message || ""}
         onClose={hideAlert}
-        onButtonPress={handleSignUp}
+        onButtonPress={hideAlert}
         type={ "info"}
-        buttonText="Sign Up"
+        buttonText="Close"
+      />
+
+      {/* Profile Completion Modal */}
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName={currentRole}
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
       />
     </Modal>
   );

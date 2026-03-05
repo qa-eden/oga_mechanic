@@ -10,8 +10,8 @@ interface DocumentUploadProps {
   acceptedTypes?: string[]
   value?: any
   onChange?: (file: any) => void
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
   required?: boolean
   disabled?: boolean
   containerClassName?: string

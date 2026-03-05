@@ -111,8 +111,9 @@ declare interface InputFieldProps extends TextInputProps {
   required?: boolean
   helperText?: string
   leftIcon?: any
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
+  noMargin?: boolean
 }
 
 declare interface PaymentProps {

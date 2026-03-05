@@ -33,8 +33,8 @@ const InputFieldPassword = ({
   onFocus,
   ...props
 }: InputFieldProps & {
-  error?: string;
-  touched?: boolean;
+  error?: any;
+  touched?: any;
   required?: boolean;
   helperText?: string;
 }) => {

@@ -13,7 +13,9 @@ import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useQuery } from '@tanstack/react-query'
 import { productsAPI } from '@/lib/api/products'
-import { useActiveRoleProfile } from '@/hooks/useUserProfile'
+import { useActiveRoleProfile, usePrimaryUserProfile, useMerchantProfile } from '@/hooks/useUserProfile'
+import { useProfileStore } from '@/hooks/useProfileStore'
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal'
 
 const { SCROLL_PADDING_BOTTOM, CARD_GAP, CARD_PADDING, CONTAINER_PADDING } = LAYOUT;
 
@@ -33,8 +35,25 @@ const AllSpareParts = () => {
     { name: "Hyundai", id: 3 }
   ]
   
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Fetch primary profile data
+  const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
+
+  // Extract active role with fallback
+  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+
+  // Fetch specific merchant profile to check KYC status
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+
+  const isPendingApproval = Boolean(
+    merchantProfileQuery.data?.data?.kyc?.is_complete && 
+    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+  );
+
   // Fetch user profile based on active role to get merchant ID
-  const { data: profileData, activeRole } = useActiveRoleProfile();
+  const { data: profileData } = useActiveRoleProfile();
   
   // Extract merchant ID safely from different profile structures
   const merchantId = activeRole === 'merchant' 
@@ -187,7 +206,13 @@ const AllSpareParts = () => {
         </TouchableOpacity>
         <Text className="text-lg font-NunitoBold text-gray-900">All Uploaded Spare Parts</Text>
         <TouchableOpacity 
-          onPress={() => router.push('/upload-sparePart' as any)}
+          onPress={() => {
+            if (!isProfileComplete || isPendingApproval) {
+              setShowProfileModal(true);
+              return;
+            }
+            router.push('/upload-sparePart' as any);
+          }}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
           >
             <PlusIcon size={25} color="white" />
@@ -215,7 +240,6 @@ const AllSpareParts = () => {
           message="Loading Spare Parts"
           subMessage="Fetching your uploaded spare parts..."
           size="medium"
-          logoSize={32}
         />
       ) : error ? (
         <View className="flex-1 items-center justify-center px-8">
@@ -272,7 +296,13 @@ const AllSpareParts = () => {
               You haven't uploaded any spare parts yet. Start by adding your first spare part listing.
             </Text>
             <TouchableOpacity 
-              onPress={() => router.push(sellerRoutes.uploadSpareParts)}
+              onPress={() => {
+                if (!isProfileComplete || isPendingApproval) {
+                  setShowProfileModal(true);
+                  return;
+                }
+                router.push(sellerRoutes.uploadSpareParts);
+              }}
               className="bg-primary-500 px-6 py-3 rounded-xl"
             >
               <Text className="text-white font-NunitoMedium">Upload Your First Spare Part</Text>
@@ -288,6 +318,14 @@ const AllSpareParts = () => {
             onConfirm={handleConfirmDelete}
             itemType="sparePart"
             itemName={selectedItem?.name || ''}
+          />
+
+          <ProfileCompletionModal
+            isVisible={showProfileModal}
+            roleName="seller"
+            onComplete={() => setShowProfileModal(false)}
+            onClose={() => setShowProfileModal(false)}
+            isPending={isPendingApproval}
           />
         </SafeAreaView>
       )

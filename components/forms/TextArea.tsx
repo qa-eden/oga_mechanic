@@ -4,8 +4,8 @@ import { View, Text, TextInput, TextInputProps } from "react-native";
 interface TextAreaProps extends TextInputProps {
   label?: string;
   placeholder?: string;
-  error?: string;
-  touched?: boolean;
+  error?: any;
+  touched?: any;
   labelStyle?: string;
   required?: boolean;
   rows?: number;

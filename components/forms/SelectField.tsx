@@ -11,19 +11,19 @@ interface SelectOption {
 interface SelectFieldProps {
   name: string
   label: string
-  placeholder: string
+  placeholder?: string
   options: SelectOption[]
   value: string
   onValueChange?: (value: string) => void
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
   required?: boolean
 }
 
 const SelectField: React.FC<SelectFieldProps> = ({
   name,
   label,
-  placeholder,
+  placeholder = "Select option",
   options,
   value,
   onValueChange,

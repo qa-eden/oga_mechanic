@@ -11,9 +11,11 @@ import { LAYOUT } from '@/constants/units'
 import { productsAPI } from '@/lib/api/products'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useQuery } from '@tanstack/react-query'
-import { useActiveRoleProfile } from '@/hooks/useUserProfile'
+import { usePrimaryUserProfile, useMerchantProfile } from '@/hooks/useUserProfile'
 import { useCategories } from '@/hooks/useProducts'
 import AndroidNavBarSpacer from '@/components/AndroidNavBarSpacer'
+import { useProfileStore } from '@/hooks/useProfileStore'
+import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -25,13 +27,70 @@ const Product = () => {
   // Calculate card width to show 2 full cards + 1 partial card (20-30% visible)
   const CARD_WIDTH = Math.floor((screenWidth - 35 - 32) / 2.15);
 
-  // Fetch user profile based on active role to get merchant ID
-  const { data: profileData, activeRole } = useActiveRoleProfile();
-  
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Fetch primary profile data
+  const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
+
+  // Extract active role with fallback
+  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+
+  // Fetch specific merchant profile to check KYC status
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+
   // Extract merchant ID safely from different profile structures
+  const profileData = primaryProfileData;
   const merchantId = activeRole === 'merchant' 
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
+
+  const isPendingApproval = Boolean(
+    merchantProfileQuery.data?.data?.kyc?.is_complete && 
+    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+  );
+
+  const hasShownModalRef = React.useRef(false);
+
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status
+  React.useEffect(() => {
+    if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
+      const merchantData = merchantProfileQuery.data.data;
+      const hasKycData = !!(merchantData as any).cac_number || !!(merchantData as any).kyc?.is_complete;
+      setIsProfileComplete(hasKycData);
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !hasKycData && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // 3 seconds delay
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
 
   // Use specific category IDs as provided
   const SPARE_PARTS_CATEGORY_ID = 24;
@@ -388,7 +447,13 @@ const Product = () => {
         <View className="w-8" />
         <Text className="text-xl font-NunitoBold text-gray-900">Uploaded Products</Text>
         <TouchableOpacity 
-          onPress={() => setShowModal(true)}
+          onPress={() => {
+            if (!isProfileComplete || isPendingApproval) {
+              setShowProfileModal(true);
+              return;
+            }
+            setShowModal(true);
+          }}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
         >
           <PlusIcon size={25} color="white" />
@@ -398,9 +463,7 @@ const Product = () => {
       {loading ? (
         <LoadingSpinner 
           message="Loading Products"
-          subMessage="Fetching your Uploaded Products..."
           size="medium"
-          logoSize={32}
         />
       ) : error ? (
         <View className="flex-1 items-center justify-center py-20">
@@ -596,6 +659,14 @@ const Product = () => {
           </View>
         </Pressable>
       </Modal>
+
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="seller"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
     </SafeAreaView>
   )
 }

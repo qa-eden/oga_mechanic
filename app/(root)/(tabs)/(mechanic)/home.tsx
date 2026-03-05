@@ -22,6 +22,11 @@ import { useQuery } from "@tanstack/react-query";
 import { mechanicAPI } from "@/lib/api/mechanic";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
+import { useMechanicProfile } from "@/hooks/useUserProfile";
+import { useProfileStore } from "@/hooks/useProfileStore";
+import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
+import KYCBanner from "@/components/KYCBanner";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 // Metric Card Skeleton Loader
 const MetricCardSkeleton = () => {
@@ -119,6 +124,56 @@ const OrderCardSkeleton = () => {
 };
 
 const MechanicHome = () => {
+  // Profile check
+  const { data: profileData, isLoading: profileLoading } = useMechanicProfile();
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const hasShownModalRef = useRef(false);
+  const timerIdRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status on load
+  useEffect(() => {
+    if (profileData && !profileLoading) {
+      const isComplete = profileData.data?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+      
+      const isApproved = profileData.data?.mechanic_profile?.is_approved ?? false;
+      const isPending = isComplete && !isApproved;
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !isComplete && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // Reduced to 3 seconds
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [profileData, profileLoading, setIsProfileComplete, isNewSwitch]);
+
+  const isPendingApproval = Boolean(profileData?.data?.kyc?.is_complete && !profileData?.data?.mechanic_profile?.is_approved);
+
   // Fetch repair requests from API with status="pending" filter
   const {
     data: pendingRequestsData,
@@ -291,14 +346,26 @@ const MechanicHome = () => {
   };
 
   const handleAccept = (orderId: string) => {
+    if (!isProfileComplete || isPendingApproval) {
+      setShowProfileModal(true);
+      return;
+    }
     openActionConfirmation('accept', orderId);
   };
 
   const handleDecline = (orderId: string) => {
+    if (!isProfileComplete || isPendingApproval) {
+      setShowProfileModal(true);
+      return;
+    }
     openActionConfirmation('decline', orderId);
   };
 
   const handleView = (orderId: string) => {
+    if (!isProfileComplete || isPendingApproval) {
+      setShowProfileModal(true);
+      return;
+    }
     router.push({
       pathname: mechanicRoutes.orderDetails,
       params: {
@@ -371,10 +438,12 @@ const MechanicHome = () => {
           />
         }
       >
-        {/* Header */}
-        <Navbar />
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          <Navbar />
 
-        <View className="py-4">
+          <View className="py-4">
+          <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="mechanic" isPending={isPendingApproval} />
+
           {/* Let's fix some cars card */}
           {/* <View className="rounded-2xl mb-6 overflow-hidden">
             <ImageBackground
@@ -541,7 +610,8 @@ const MechanicHome = () => {
           </View>
 
           {/* <View className="h-10" /> */}
-        </View>
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
 
       {/* Action Confirmation Modal */}
@@ -551,6 +621,15 @@ const MechanicHome = () => {
         onConfirm={handleConfirmAction}
         onCancel={handleCancelActionModal}
         isLoading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+      />
+
+      {/* Profile Completion Modal */}
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="mechanic"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
       />
     </SafeAreaView>
   );

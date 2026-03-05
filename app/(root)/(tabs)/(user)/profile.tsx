@@ -36,6 +36,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFavoriteProducts } from "@/hooks/useProducts";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const Profile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -196,256 +197,234 @@ const Profile = () => {
         refreshControl={<RefreshControl {...refreshControl} tintColor="#fff" />}
         bounces={false}
       >
-        {/* Header Section */}
-        <Animated.View 
-          entering={FadeInDown.duration(600)}
-          className="rounded-b-[2.5rem] overflow-hidden shadow-lg mb-6"
-        >
-          <View className="bg-white px-5 pt-6 pb-6">
-            {/* Top Bar */}
-            <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-                My Account
-              </Text>
-            </View>
-
-            {/* Profile Card */}
-            <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <View className="flex-row items-center">
-                {/* Avatar */}
-                <View className="relative mr-4">
-                  <LinearGradient
-                    colors={['#D30309', '#B91C1C']}
-                    className="w-16 h-16 rounded-2xl items-center justify-center"
-                  >
-                    <Text className="text-2xl font-NunitoExtraBold text-white">
-                      {displayName ? displayName.charAt(0).toUpperCase() : 'U'}
-                    </Text>
-                  </LinearGradient>
-                  {isVerified && (
-                    <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
-                      <Text className="text-white text-[10px]">✓</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* User Info */}
-                <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">
-                    {displayName || 'User'}
-                  </Text>
-                  {displayEmail && (
-                    <Text className="text-gray-500 text-sm font-NunitoMedium">
-                      {displayEmail}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Role Badge */}
-                <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
-                  <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
-                    {activeRole.replace('_', ' ')}
-                  </Text>
-                </View>
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          {/* Header Section */}
+          <View className="rounded-b-[2.5rem] overflow-hidden shadow-lg mb-6">
+            <View className="bg-white px-5 pt-6 pb-6">
+              {/* Top Bar */}
+              <View className="flex-row justify-between items-center mb-5">
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900">My Account</Text>
               </View>
 
-              {/* Stats Row */}
-              <View className="flex-row mt-4 pt-4 border-t border-gray-200">
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                onPress={() => router.push(routes.myOrders as any)}
-                className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-              >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">0</Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
-                    <ChevronRightIcon size={12} color="#9CA3AF" />
+              {/* Profile Card */}
+              <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <View className="flex-row items-center">
+                  {/* Avatar */}
+                  <View className="relative mr-4">
+                    <LinearGradient
+                      colors={["#D30309", "#B91C1C"]}
+                      className="w-16 h-16 rounded-2xl items-center justify-center"
+                    >
+                      <Text className="text-2xl font-NunitoExtraBold text-white">
+                        {displayName ? displayName.charAt(0).toUpperCase() : "U"}
+                      </Text>
+                    </LinearGradient>
+                    {isVerified && (
+                      <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
+                        <Text className="text-white text-[10px]">✓</Text>
+                      </View>
+                    )}
                   </View>
-              </TouchableOpacity>
-              
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push(routes.favoriteProducts as any)}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    {Array.isArray(favoritesData?.data) ? favoritesData.data.length : 0}
-                  </Text>
-                   <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Favorites</Text>
-                     <ChevronRightIcon size={12} color="#9CA3AF" />
-                  </View>
-                </TouchableOpacity>
 
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push(routes.followedMerchants as any)}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    {followedMerchantsCount}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Following</Text>
-                     <ChevronRightIcon size={12} color="#9CA3AF" />
+                  {/* User Info */}
+                  <View className="flex-1">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">{displayName || "User"}</Text>
+                    {displayEmail && <Text className="text-gray-500 text-sm font-NunitoMedium">{displayEmail}</Text>}
                   </View>
-                </TouchableOpacity>
+
+                  {/* Role Badge */}
+                  <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
+                    <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
+                      {activeRole.replace("_", " ")}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Stats Row */}
+                <View className="flex-row mt-4 pt-4 border-t border-gray-200">
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => router.push(routes.myOrders as any)}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">0</Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => router.push(routes.favoriteProducts as any)}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                      {Array.isArray(favoritesData?.data) ? favoritesData.data.length : 0}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Favorites</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => router.push(routes.followedMerchants as any)}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">{followedMerchantsCount}</Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Following</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
-        </Animated.View>
 
-        <View className="px-5 space-y-5 mt-2">
-          {/* My Garage Section */}
-          {(userData?.car_make || userData?.car_model) && (
-            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()}>
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-sm font-NunitoBold text-gray-500 uppercase ml-1">
-                  My Garage
-                </Text>
-                <TouchableOpacity onPress={() => router.push(routes.cars as any)}>
-                  <Text className="text-primary-500 text-xs font-NunitoBold">View All</Text>
-                </TouchableOpacity>
-              </View>
-              <View className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-                <View className="p-4 flex-row items-center">
-                  <View className="w-12 h-12 bg-primary-50 rounded-xl items-center justify-center mr-3">
-                    <icons.car width={24} height={24} color="#D30309" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-NunitoBold text-gray-900">
-                      {userData.car_make} {userData.car_model}
-                    </Text>
-                    <View className="flex-row items-center gap-2 mt-1">
-                      {userData.car_year && (
-                        <View className="bg-gray-100 px-2 py-0.5 rounded">
-                          <Text className="text-gray-600 text-xs font-NunitoBold">{userData.car_year}</Text>
-                        </View>
-                      )}
-                      {userData.license_plate && (
-                        <Text className="text-gray-400 text-xs font-NunitoMedium">• {userData.license_plate}</Text>
-                      )}
+          <View className="px-5 space-y-5 mt-2">
+            {/* My Garage Section */}
+            {(userData?.car_make || userData?.car_model) && (
+              <View>
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-sm font-NunitoBold text-gray-500 uppercase ml-1">My Garage</Text>
+                  <TouchableOpacity onPress={() => router.push(routes.cars as any)}>
+                    <Text className="text-primary-500 text-xs font-NunitoBold">View All</Text>
+                  </TouchableOpacity>
+                </View>
+                <View className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                  <View className="p-4 flex-row items-center">
+                    <View className="w-12 h-12 bg-primary-50 rounded-xl items-center justify-center mr-3">
+                      <icons.car width={24} height={24} color="#D30309" />
                     </View>
+                    <View className="flex-1">
+                      <Text className="text-base font-NunitoBold text-gray-900">
+                        {userData.car_make} {userData.car_model}
+                      </Text>
+                      <View className="flex-row items-center gap-2 mt-1">
+                        {userData.car_year && (
+                          <View className="bg-gray-100 px-2 py-0.5 rounded">
+                            <Text className="text-gray-600 text-xs font-NunitoBold">{userData.car_year}</Text>
+                          </View>
+                        )}
+                        {userData.license_plate && (
+                          <Text className="text-gray-400 text-xs font-NunitoMedium">
+                            • {userData.license_plate}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <ChevronRightIcon size={20} color="#9CA3AF" />
                   </View>
-                  <ChevronRightIcon size={20} color="#9CA3AF" />
                 </View>
               </View>
-            </Animated.View>
-          )}
+            )}
 
-          {/* Account Settings */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
-            <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">
-              Account Settings
-            </Text>
-            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
-              {(() => {
-                let currentSettings = ProfileSettings.options;
-                
-                if (activeRole === 'mechanic') {
-                  currentSettings = MechanicProfileSettings.options;
-                } else if (activeRole === 'driver') {
-                  currentSettings = DriverProfileSettings.options;
-                } else {
-                   // Filter out subscription for primary users if they are confused
-                   // But keeping it as per original ProfileSettings for now, just utilizing role switching
-                   currentSettings = ProfileSettings.options;
-                }
+            {/* Account Settings */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">Account Settings</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
+                {(() => {
+                  let currentSettings = ProfileSettings.options;
 
-                return currentSettings.map((item) => (
-                  <MenuItem
-                    key={item.id}
-                    title={item.name}
-                    icon={item.image}
-                    onPress={() => {
-                      if (item.name === "Switch Role") {
-                        setShowSwitchUserModal(true);
-                      } else if (item.route) {
+                  if (activeRole === "mechanic") {
+                    currentSettings = MechanicProfileSettings.options;
+                  } else if (activeRole === "driver") {
+                    currentSettings = DriverProfileSettings.options;
+                  } else {
+                    // Filter out subscription for primary users if they are confused
+                    // But keeping it as per original ProfileSettings for now, just utilizing role switching
+                    currentSettings = ProfileSettings.options;
+                  }
+
+                  return currentSettings.map((item) => (
+                    <MenuItem
+                      key={item.id}
+                      title={item.name}
+                      icon={item.image}
+                      onPress={() => {
+                        if (item.name === "Switch Role") {
+                          setShowSwitchUserModal(true);
+                        } else if (item.route) {
                           router.push(item.route as any);
-                      }
-                    }}
-                  />
-                ));
-              })()}
+                        }
+                      }}
+                    />
+                  ));
+                })()}
+              </View>
             </View>
-          </Animated.View>
 
-          {/* Preferences */}
-          <Animated.View entering={FadeInDown.delay(300).duration(600).springify()}>
-            <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">
-              Preferences
-            </Text>
-            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
-              <MenuItem
-                title="Enable Fingerprint/Face ID"
-                icon={icons.faceId}
-                showChevron={false}
-                rightElement={
-                  <Switch
-                    trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
-                    thumbColor={isEnabledFaceId ? "white" : "#F3F4F6"}
-                    onValueChange={setIsEnabledFaceId}
-                    value={isEnabledFaceId}
-                  />
-                }
-              />
-              <MenuItem
-                title="Enable password login"
-                icon={icons.enablePass}
-                showChevron={false}
-                rightElement={
-                  <Switch
-                    trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
-                    thumbColor={isEnabledEnablePass ? "white" : "#F3F4F6"}
-                    onValueChange={setIsEnabledEnablePass}
-                    value={isEnabledEnablePass}
-                  />
-                }
-              />
-            </View>
-          </Animated.View>
-
-          {/* Support */}
-          <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
-            <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">
-              Support
-            </Text>
-            <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
-              {ProfileSopprt.options.map((item) => (
+            {/* Preferences */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">Preferences</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
                 <MenuItem
-                  key={item.id}
-                  title={item.name}
-                  icon={item.image}
-                  onPress={() => {}}
+                  title="Enable Fingerprint/Face ID"
+                  icon={icons.faceId}
+                  showChevron={false}
+                  rightElement={
+                    <Switch
+                      trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                      thumbColor={isEnabledFaceId ? "white" : "#F3F4F6"}
+                      onValueChange={setIsEnabledFaceId}
+                      value={isEnabledFaceId}
+                    />
+                  }
                 />
-              ))}
+                <MenuItem
+                  title="Enable password login"
+                  icon={icons.enablePass}
+                  showChevron={false}
+                  rightElement={
+                    <Switch
+                      trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                      thumbColor={isEnabledEnablePass ? "white" : "#F3F4F6"}
+                      onValueChange={setIsEnabledEnablePass}
+                      value={isEnabledEnablePass}
+                    />
+                  }
+                />
+              </View>
             </View>
-          </Animated.View>
 
-          {/* Logout */}
-          <Animated.View entering={FadeInDown.delay(500).duration(600).springify()} className="pt-2">
-            <TouchableOpacity
-              onPress={handleLogout}
-              disabled={logoutMutation.isPending}
-              className={`flex-row items-center justify-center gap-2 bg-white border border-red-100 rounded-3xl py-4 shadow-sm ${logoutMutation.isPending ? 'opacity-50' : ''}`}
-            >
-              {logoutMutation.isPending ? (
-                <ActivityIndicator size="small" color="#EF4444" />
-              ) : (
-                <ArrowRightOnRectangleIcon size={20} color="#EF4444" />
-              )}
-              <Text className="text-red-500 text-lg font-NunitoBold">
-                {logoutMutation.isPending ? 'Logging out...' : 'Log Out'}
-              </Text>
-            </TouchableOpacity>
-            
-            <View className="items-center mt-6 mb-4">
-               <Text className="text-gray-400 text-xs font-NunitoMedium">
-                 Version 1.0.0 • Build 142
-               </Text>
+            {/* Support */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">Support</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
+                {ProfileSopprt.options.map((item) => (
+                  <MenuItem key={item.id} title={item.name} icon={item.image} onPress={() => {}} />
+                ))}
+              </View>
             </View>
-          </Animated.View>
-        </View>
+
+            {/* Logout */}
+            <View className="pt-2">
+              <TouchableOpacity
+                onPress={handleLogout}
+                disabled={logoutMutation.isPending}
+                className={`flex-row items-center justify-center gap-2 bg-white border border-red-100 rounded-3xl py-4 shadow-sm ${
+                  logoutMutation.isPending ? "opacity-50" : ""
+                }`}
+              >
+                {logoutMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <ArrowRightOnRectangleIcon size={20} color="#EF4444" />
+                )}
+                <Text className="text-red-500 text-lg font-NunitoBold">
+                  {logoutMutation.isPending ? "Logging out..." : "Log Out"}
+                </Text>
+              </TouchableOpacity>
+
+              <View className="items-center mt-6 mb-4">
+                <Text className="text-gray-400 text-xs font-NunitoMedium">Version 1.0.0 • Build 142</Text>
+              </View>
+            </View>
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
 
       {/* Modals & Alerts */}

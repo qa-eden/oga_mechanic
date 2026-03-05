@@ -1,4 +1,3 @@
-
 export const BankNameLogo = [
     {
         name: "Access Bank",
@@ -85,18 +84,11 @@ export const BankNameLogo = [
         logo: "https://nigerianbanks.xyz/logo/first-bank-of-nigeria.png",
     },
     {
-        name: "First City Monument Bank",
+        name: "First City Monument Bank (FCMB)",
         slug: "first-city-monument-bank",
         code: "214",
         ussd: "*329#",
         logo: "https://nigerianbanks.xyz/logo/first-city-monument-bank.png",
-    },
-    {
-        name: "FCMB",
-        slug: "FCMB",
-        code: "329",
-        ussd: "*329#",
-        logo: "https://upload.wikimedia.org/wikipedia/commons/b/b2/FCMB_Logo.png",
     },
     {
         name: "Globus Bank",
@@ -176,11 +168,11 @@ export const BankNameLogo = [
         logo: "https://media.licdn.com/dms/image/C4D0BAQEppvvFZ5Paqg/company-logo_200_200/0/1635229634011?e=2147483647&v=beta&t=gZjRJ7pCV1kwkEeVPQYKUTICZtQu_e-iutuGL6KdUig",
     },
     {
-        name: "PayCom",
-        slug: "paycom",
-        code: "100004",
+        name: "OPay (PayCom)",
+        slug: "opay",
+        code: "305",
         ussd: "*955#",
-        logo: "https://nigerianbanks.xyz/logo/default-image.png",
+        logo: "https://nigerianbanks.xyz/logo/opay.png",
     },
     {
         name: "Polaris Bank",
@@ -300,6 +292,62 @@ export const BankNameLogo = [
         code: "057",
         ussd: "*966#",
         logo: "https://nigerianbanks.xyz/logo/zenith-bank.png",
+    },
+    {
+        name: "Moniepoint Microfinance Bank",
+        slug: "moniepoint",
+        code: "090405",
+        ussd: "*5573#",
+        logo: "https://nigerianbanks.xyz/logo/moniepoint.png",
+    },
+    {
+        name: "PalmPay",
+        slug: "palmpay",
+        code: "999991",
+        ussd: "*861#",
+        logo: "https://nigerianbanks.xyz/logo/palmpay.png",
+    },
+    {
+        name: "Lotus Bank",
+        slug: "lotus-bank",
+        code: "303",
+        ussd: "*5045#",
+        logo: "https://nigerianbanks.xyz/logo/lotus-bank.png",
+    },
+    {
+        name: "FairMoney Microfinance Bank",
+        slug: "fairmoney",
+        code: "090270",
+        ussd: "*7015#",
+        logo: "https://nigerianbanks.xyz/logo/fairmoney.png",
+    },
+    {
+        name: "Premium Trust Bank",
+        slug: "premium-trust-bank",
+        code: "105",
+        ussd: "*858#",
+        logo: "https://nigerianbanks.xyz/logo/premium-trust-bank.png",
+    },
+    {
+        name: "Optimus Bank",
+        slug: "optimus-bank",
+        code: "107",
+        ussd: "",
+        logo: "https://nigerianbanks.xyz/logo/optimus-bank.png",
+    },
+    {
+        name: "Signature Bank",
+        slug: "signature-bank",
+        code: "106",
+        ussd: "",
+        logo: "https://nigerianbanks.xyz/logo/signature-bank.png",
+    },
+    {
+        name: "Alternative Bank",
+        slug: "alternative-bank",
+        code: "311",
+        ussd: "",
+        logo: "https://nigerianbanks.xyz/logo/alternative-bank.png",
     },
 ];
 

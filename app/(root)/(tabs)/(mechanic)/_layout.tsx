@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-// import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { icons } from "@/constants";
 // import { Dimensions } from "react-native";
 // import { routes } from "@/constants/routes";
@@ -20,10 +20,28 @@ import MechanicProfile from "./profile";
 import MechanicHome from "./home";
 
 export default function Layout() {
-  // const router = useRouter();
-  // const { width } = Dimensions.get("window");
+  const router = useRouter();
+  const segments = useSegments();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState("home");
+  
+  // Sync activeTab with current route segments
+  const getTabFromSegments = () => {
+    const segs = segments as string[];
+    if (segs.includes('earnings')) return 'earnings';
+    if (segs.includes('order')) return 'consultation';
+    if (segs.includes('profile')) return 'profile';
+    return 'home';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromSegments());
+
+  // Update activeTab when segments change (e.g. on external navigation)
+  useEffect(() => {
+    const currentTab = getTabFromSegments();
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [segments]);
 
   // Function to render tab icons with labels
   const renderTabBar = () => {
@@ -76,7 +94,16 @@ export default function Layout() {
           return (
             <TouchableOpacity
               key={routeName}
-              onPress={() => setActiveTab(routeName)}
+              onPress={() => {
+                setActiveTab(routeName);
+                // Update the URL to match the tab for consistency
+                const tabRoute = 
+                  routeName === 'home' ? './home' :
+                  routeName === 'consultation' ? './order' :
+                  routeName === 'earnings' ? './earnings' :
+                  './profile';
+                router.replace(tabRoute as any);
+              }}
               style={styles.tabBarItem}
             >
               {isActive

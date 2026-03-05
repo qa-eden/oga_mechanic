@@ -25,17 +25,32 @@ import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import LoadingErrorWrapper from "@/components/LoadingErrorWrapper";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { useActiveRoleProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useMerchantProfile } from "@/hooks/useUserProfile";
 import { useMerchantOrders } from "@/hooks/useOrders";
+import { useProfileStore } from "@/hooks/useProfileStore";
+import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
+import KYCBanner from "@/components/KYCBanner";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Fetch merchant profile based on active role
-  const { data: profileData, activeRole, isLoading: isProfileLoading, refetch: refetchProfile } = useActiveRoleProfile();
+  // Fetch primary profile data
+  const { data: primaryProfileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
+
+  // Extract active role with fallback
+  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+
+  // Fetch specific merchant profile to check KYC status - ensure enabled on mount
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
 
   // Extract merchant ID safely from different profile structures
+  const profileData = primaryProfileData;
   const merchantId = activeRole === 'merchant'
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
@@ -50,6 +65,51 @@ const SellerHome = () => {
     error: ordersError,
     refetch: refetchOrders
   } = useMerchantOrders(merchantId?.toString() || '');
+
+
+  const hasShownModalRef = React.useRef(false);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status using the specific merchant profile endpoint
+  React.useEffect(() => {
+    if (merchantProfileQuery.data && !merchantProfileQuery.isLoading) {
+      const isComplete = merchantProfileQuery.data?.data?.kyc?.is_complete ?? false;
+      const isApproved = merchantProfileQuery.data?.data?.merchant_profile?.is_approved ?? false;
+      
+      setIsProfileComplete(isComplete);
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !isComplete && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // Reduced to 3 seconds
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, setIsProfileComplete, isNewSwitch]);
+
+  const isPendingApproval = Boolean(
+    merchantProfileQuery.data?.data?.kyc?.is_complete && 
+    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+  );
 
   // Debug: Log profile data
   React.useEffect(() => {
@@ -159,6 +219,12 @@ const SellerHome = () => {
         <Navbar />
 
         <View className=" py-4">
+          <KYCBanner 
+            isVisible={!isProfileComplete || isPendingApproval} 
+            role="seller" 
+            isPending={isPendingApproval}
+          />
+
           {/* Total Sales Section */}
           <View className=" mb-2 mt-2">
             <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
@@ -303,6 +369,15 @@ const SellerHome = () => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Profile Completion Modal */}
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="seller"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
     </SafeAreaView>
   );
 };

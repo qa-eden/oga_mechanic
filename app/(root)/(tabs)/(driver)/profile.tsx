@@ -23,12 +23,15 @@ import { driverRoutes } from "@/constants/routes";
 import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
+import KYCBanner from "@/components/KYCBanner";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
 import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { useProfileStore } from "@/hooks/useProfileStore";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const DriverProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -36,14 +39,63 @@ const DriverProfile = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
 
+  // Profile complete state
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+
   // Fetch profile data
   const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
+
+  const isPendingApproval = Boolean(
+    (profileData?.data as any)?.kyc?.is_complete && 
+    !(profileData?.data as any)?.driver_profile?.is_approved
+  );
+
+  const hasShownModalRef = React.useRef(false);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status on load
+  React.useEffect(() => {
+    if (profileData && !isProfileLoading) {
+      const isComplete = (profileData?.data as any)?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+      
+      // ONLY show automatically if we just switched roles and it's not complete
+      if (isNewSwitch && !isComplete && !hasShownModalRef.current) {
+        // Start timer only if not already started
+        if (!timerIdRef.current) {
+          timerIdRef.current = setTimeout(() => {
+            setShowProfileModal(true);
+            hasShownModalRef.current = true;
+            setIsNewSwitch(false); // Reset the switch flag
+            timerIdRef.current = null;
+          }, 3000); // Reduced to 3 seconds
+        }
+      } else if (!isNewSwitch) {
+          // If not a new switch, make sure timer is cleared
+          if (timerIdRef.current) {
+              clearTimeout(timerIdRef.current);
+              timerIdRef.current = null;
+          }
+      }
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
+      }
+    };
+  }, [profileData, isProfileLoading, setIsProfileComplete, isNewSwitch]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -159,19 +211,24 @@ const DriverProfile = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#D30309"]} tintColor="#D30309" />
         }
       >
-        <View className="px-5 pt-4">
-          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
-            <View className="mb-6">
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          <View className="px-5 pt-4">
+
+            <View className="mb-4">
               <Text className="text-2xl font-NunitoExtraBold text-gray-900">Driver Account</Text>
             </View>
 
+            {/* Profile Card */}
             <View className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
               <View className="flex-row items-center">
                 <View className="relative mr-4">
                   {profileImage ? (
                     <Image source={{ uri: profileImage }} className="w-16 h-16 rounded-2xl" resizeMode="cover" />
                   ) : (
-                    <LinearGradient colors={["#D30309", "#B91C1C"]} className="w-16 h-16 rounded-2xl items-center justify-center">
+                    <LinearGradient
+                      colors={["#D30309", "#B91C1C"]}
+                      className="w-16 h-16 rounded-2xl items-center justify-center"
+                    >
                       <Text className="text-2xl font-NunitoExtraBold text-white">
                         {displayName ? displayName.charAt(0).toUpperCase() : "D"}
                       </Text>
@@ -196,10 +253,11 @@ const DriverProfile = () => {
                 </View>
               </View>
 
+              {/* Stats Row */}
               <View className="flex-row mt-4 pt-4 border-t border-gray-200">
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: driverRoutes.home as any, params: { tab: "order" } })}
+                  onPress={() => router.push(driverRoutes.order as any)}
                   className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                 >
                   <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">{completedTrips}</Text>
@@ -210,7 +268,7 @@ const DriverProfile = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: driverRoutes.home as any, params: { tab: "order" } })}
+                  onPress={() => router.push(driverRoutes.order as any)}
                   className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                 >
                   <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">{pendingTrips}</Text>
@@ -234,10 +292,17 @@ const DriverProfile = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-            <View className="bg-white rounded-2xl mt-6 px-4 border border-gray-100 shadow-sm">
+            <View className="mt-4">
+              <KYCBanner
+                isVisible={!isProfileComplete || isPendingApproval}
+                role="driver"
+                isPending={isPendingApproval}
+              />
+            </View>
+
+            {/* Account Settings Section */}
+            <View className="bg-white rounded-2xl px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
                   Account Settings
@@ -258,9 +323,8 @@ const DriverProfile = () => {
                 ))}
               </View>
             </View>
-          </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+            {/* Preferences Section */}
             <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
@@ -294,9 +358,8 @@ const DriverProfile = () => {
                 />
               </View>
             </View>
-          </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+            {/* Support Section */}
             <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
               <View className="py-2">
                 <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
@@ -307,9 +370,7 @@ const DriverProfile = () => {
                 ))}
               </View>
             </View>
-          </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(500).duration(500)}>
             <TouchableOpacity
               onPress={handleLogout}
               disabled={isLoggingOut}
@@ -321,18 +382,27 @@ const DriverProfile = () => {
               ) : (
                 <ArrowRightOnRectangleIcon size={22} color="#EF4444" />
               )}
-              <Text className="text-red-500 text-base font-NunitoBold">{isLoggingOut ? "Logging out..." : "Logout"}</Text>
+              <Text className="text-red-500 text-base font-NunitoBold">
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Text>
             </TouchableOpacity>
 
             <View className="items-center mt-6 mb-4">
               <Text className="text-gray-400 text-xs font-NunitoMedium">Version 1.0.0</Text>
             </View>
-          </Animated.View>
-        </View>
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
 
       <LogoutModal visible={showLogoutModal} onConfirm={confirmLogout} onCancel={cancelLogout} />
 
+      <ProfileCompletionModal
+        isVisible={showProfileModal}
+        roleName="driver"
+        onComplete={() => setShowProfileModal(false)}
+        onClose={() => setShowProfileModal(false)}
+        isPending={isPendingApproval}
+      />
       <SwitchUserModal
         isVisible={showSwitchUserModal}
         onClose={() => setShowSwitchUserModal(false)}

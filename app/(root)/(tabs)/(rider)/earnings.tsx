@@ -10,6 +10,8 @@ import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 import WithdrawFundsModal from "@/components/modals/WithdrawFundsModal";
 import { router } from "expo-router";
 import { riderRoutes } from "@/constants/routes";
+import { FadeInUp, FadeInDown, FadeInRight, Layout } from "react-native-reanimated";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const RiderEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
@@ -82,175 +84,182 @@ const RiderEarnings = () => {
       <StatusBar style="dark" />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="px-5 py-4 bg-white">
-          <Text className="text-xl font-NunitoBold text-gray-900 text-center">
-            Earnings
-          </Text>
-        </View>
-
-        <View className="px-5 py-6">
-          {/* Balance Card */}
-          <LinearGradient
-            colors={["#991B1B", "#B91C1C", "#DC2626"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ borderRadius: 16 }}
-            className="rounded-2xl py-10 mb-6"
-          >
-            <Text className="text-white text-sm font-NunitoMedium mb-2 mt-4 text-center">
-              Your balance
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          {/* Header */}
+          <View className="px-5 py-4 bg-white">
+            <Text className="text-xl font-NunitoBold text-gray-900 text-center">
+              Earnings
             </Text>
-            <View className="flex-row items-center justify-center mb-4">
-              {showBalance ? (
-                <NairaCurrency
-                  value={45000}
-                  className="text-white text-3xl font-NunitoBold"
-                />
-              ) : (
-                <Text className="text-white text-3xl font-NunitoBold">
-                  ₦******
-                </Text>
-              )}
-              <TouchableOpacity
-                onPress={() => setShowBalance(!showBalance)}
-                className="ml-3"
-              >
-                {showBalance ? (
-                  <EyeIcon size={20} color="white" />
-                ) : (
-                  <EyeSlashIcon size={20} color="white" />
-                )}
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row items-center justify-center w-full gap-4 px-6">
-              <TouchableOpacity
-                onPress={() => router.push('/(root)/(screens)/(rider)/bank-transfer')}
-                className="flex-row items-center justify-center mb-6 w-[50%] bg-white border border-white rounded-[.3rem] py-2"
-              >
-                <Text className="text-[#991B1B] font-NunitoBold mr-2">Fund wallet</Text>
-                <Text className="text-[#991B1B]">→</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowWithdrawModal(true)}
-                className="flex-row items-center justify-center mb-6 w-[50%] border border-white rounded-lg py-2 rounded-[.3rem]"
-              >
-                <Text className="text-white font-NunitoBold mr-2">Withdraw</Text>
-                <Text className="text-white">→</Text>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-
-          {/* Earnings Header */}
-          <View className="flex-row items-center justify-between my-4">
-            <Text className="text-lg font-NunitoBold text-gray-900">
-              Trip Earnings
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/(root)/(screens)/(rider)/withdrawalHistory')}>
-              <Text className="text-red-600 font-NunitoBold">
-                View withdrawals
-              </Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Today Section */}
-          <Text className="text-base font-NunitoBold text-gray-900 mb-4">
-            Today
-          </Text>
-
-          {earningsData.map((earning, index) => (
-            <View
-              key={`today-${index}`}
-              className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
-            >
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="font-NunitoBold text-gray-900">
-                  {earning.id}
+          <View className="px-5 py-6">
+            {/* Balance Card */}
+            <View>
+              <LinearGradient
+                colors={["#991B1B", "#B91C1C", "#DC2626"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 16 }}
+                className="rounded-2xl py-10 mb-6"
+              >
+                <Text className="text-white text-sm font-NunitoMedium mb-2 mt-4 text-center">
+                  Your balance
                 </Text>
-                <NairaCurrency
-                  value={earning.amount}
-                  className="text-lg font-NunitoBold text-gray-900"
-                />
-              </View>
-              <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
-                {earning.date}
-              </Text>
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center space-x-4">
-                  <Text className="text-xs text-gray-500">
-                    {earning.tripType}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
-                    {earning.distance}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
-                    {earning.duration}
-                  </Text>
+                <View className="flex-row items-center justify-center mb-4">
+                  {showBalance ? (
+                    <NairaCurrency
+                      value={45000}
+                      className="text-white text-3xl font-NunitoBold"
+                    />
+                  ) : (
+                    <Text className="text-white text-3xl font-NunitoBold">
+                      ₦******
+                    </Text>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => setShowBalance(!showBalance)}
+                    className="ml-3"
+                  >
+                    {showBalance ? (
+                      <EyeIcon size={20} color="white" />
+                    ) : (
+                      <EyeSlashIcon size={20} color="white" />
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity 
-                  onPress={() => router.push({
-                    pathname: '/(root)/(screens)/(rider)/trip-completed',
-                    params: { tripId: earning.id }
-                  })}
-                >
-                  <Text className="text-red-600 text-xs font-NunitoBold">
-                    View Details
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                <View className="flex-row items-center justify-center w-full gap-4 px-6">
+                  <TouchableOpacity
+                    onPress={() => router.push('/(root)/(screens)/(rider)/bank-transfer')}
+                    className="flex-row items-center justify-center mb-6 w-[50%] bg-white border border-white rounded-[.3rem] py-2"
+                  >
+                    <Text className="text-[#991B1B] font-NunitoBold mr-2">Fund wallet</Text>
+                    <Text className="text-[#991B1B]">→</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowWithdrawModal(true)}
+                    className="flex-row items-center justify-center mb-6 w-[50%] border border-white rounded-lg py-2 rounded-[.3rem]"
+                  >
+                    <Text className="text-white font-NunitoBold mr-2">Withdraw</Text>
+                    <Text className="text-white">→</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
             </View>
-          ))}
 
-          {/* Yesterday Section */}
-          <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
-            Yesterday
-          </Text>
-
-          {yesterdayEarnings.map((earning, index) => (
-            <View
-              key={`yesterday-${index}`}
-              className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
-            >
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="font-NunitoBold text-gray-900">
-                  {earning.id}
+            {/* Earnings Header */}
+            <View className="flex-row items-center justify-between my-4">
+              <Text className="text-lg font-NunitoBold text-gray-900">
+                Trip Earnings
+              </Text>
+              <TouchableOpacity onPress={() => router.push('/(root)/(screens)/(rider)/withdrawalHistory')}>
+                <Text className="text-red-600 font-NunitoBold">
+                  View withdrawals
                 </Text>
-                <NairaCurrency
-                  value={earning.amount}
-                  className="text-lg font-NunitoBold text-gray-900"
-                />
-              </View>
-              <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
-                {earning.date}
-              </Text>
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center space-x-4">
-                  <Text className="text-xs text-gray-500">
-                    {earning.tripType}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
-                    {earning.distance}
-                  </Text>
-                  <Text className="text-xs text-gray-500">
-                    {earning.duration}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  onPress={() => router.push({
-                    pathname: '/(root)/(screens)/(rider)/trip-completed',
-                    params: { tripId: earning.id }
-                  })}
-                >
-                  <Text className="text-red-600 text-xs font-NunitoBold">
-                    View Details
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
-          ))}
 
-          <View className="h-20" />
-        </View>
+            {/* Trip Earnings List */}
+            <View>
+              {/* Today Section */}
+              <Text className="text-base font-NunitoBold text-gray-900 mb-4">
+                Today
+              </Text>
+
+              {earningsData.map((earning, index) => (
+                <View
+                  key={`today-${index}`}
+                  className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="font-NunitoBold text-gray-900">
+                      {earning.id}
+                    </Text>
+                    <NairaCurrency
+                      value={earning.amount}
+                      className="text-lg font-NunitoBold text-gray-900"
+                    />
+                  </View>
+                  <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
+                    {earning.date}
+                  </Text>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center space-x-4">
+                      <Text className="text-xs text-gray-500">
+                        {earning.tripType}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {earning.distance}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {earning.duration}
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      onPress={() => router.push({
+                        pathname: '/(root)/(screens)/(rider)/trip-completed',
+                        params: { tripId: earning.id }
+                      })}
+                    >
+                      <Text className="text-red-600 text-xs font-NunitoBold">
+                        View Details
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {/* Yesterday Section */}
+              <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
+                Yesterday
+              </Text>
+
+              {yesterdayEarnings.map((earning, index) => (
+                <View
+                  key={`yesterday-${index}`}
+                  className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="font-NunitoBold text-gray-900">
+                      {earning.id}
+                    </Text>
+                    <NairaCurrency
+                      value={earning.amount}
+                      className="text-lg font-NunitoBold text-gray-900"
+                    />
+                  </View>
+                  <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
+                    {earning.date}
+                  </Text>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center space-x-4">
+                      <Text className="text-xs text-gray-500">
+                        {earning.tripType}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {earning.distance}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {earning.duration}
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      onPress={() => router.push({
+                        pathname: '/(root)/(screens)/(rider)/trip-completed',
+                        params: { tripId: earning.id }
+                      })}
+                    >
+                      <Text className="text-red-600 text-xs font-NunitoBold">
+                        View Details
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <View className="h-20" />
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
 
       {/* Withdraw Funds Modal */}

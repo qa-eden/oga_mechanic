@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, forwardRef } from "react";
 import {
   TextInput,
   View,
@@ -14,7 +12,17 @@ import type { InputFieldProps } from "@/types/type";
 import { icons } from "@/constants";
 import clsx from "clsx";
 
-const InputField = ({
+const InputField = forwardRef<TextInput, InputFieldProps & {
+  error?: any;
+  touched?: any;
+  isPasswordVisible?: boolean;
+  setIsPasswordVisible?: (value: boolean) => void;
+  leftIcon?: any;
+  required?: boolean;
+  helperText?: string;
+  containerStyle1?: string;
+  noMargin?: boolean;
+}>(({
   label,
   leftIcon,
   icon,
@@ -38,17 +46,7 @@ const InputField = ({
   autoCorrect = true,
   noMargin = false,
   ...props
-}: InputFieldProps & {
-  error?: string;
-  touched?: boolean;
-  isPasswordVisible?: boolean;
-  setIsPasswordVisible?: (value: boolean) => void;
-  leftIcon?: any;
-  required?: boolean;
-  helperText?: string;
-  containerStyle1?: string;
-  noMargin?: boolean;
-}) => {
+}, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const animatedValue = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -174,6 +172,7 @@ const InputField = ({
 
             {/* Text Input */}
             <TextInput
+              ref={ref}
               className={`flex-1 ${props.multiline ? 'py-3 min-h-[100px]' : 'py-3'} text-[1.2rem] font-NunitoMedium text-gray-900 ${inputStyle}`}
               secureTextEntry={secureTextEntry && isPasswordVisible}
               keyboardType={keyboardType}
@@ -238,6 +237,6 @@ const InputField = ({
       )}
     </View>
   );
-};
+});
 
 export default InputField;

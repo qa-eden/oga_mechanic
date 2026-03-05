@@ -20,6 +20,7 @@ interface BookingCardProps {
     color: string;
   };
   price: string;
+  onPress?: () => void;
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({
@@ -29,9 +30,14 @@ const BookingCard: React.FC<BookingCardProps> = ({
   totalDistance,
   pickup,
   dropoff,
-  price
+  price,
+  onPress
 }) => {
   const handleCardPress = () => {
+    if (onPress) {
+      onPress();
+      return;
+    }
     router.push(driverRoutes.takebookings);
   };
 

@@ -12,6 +12,7 @@ import MechanicActionConfirmationModal, { MechanicActionType } from "@/component
 import { useRepairRequests, useAcceptRepairRequest, useDeclineRepairRequest } from "@/hooks/useRepairRequests";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 // Order Card Skeleton Loader
 const OrderCardSkeleton = () => {
@@ -226,45 +227,45 @@ const MechanicOrder = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
-      {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-100">
-        <Text className="text-xl font-NunitoBold text-center text-gray-800">
-          Orders
-        </Text>
-      </View>
+      <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+        {/* Header */}
+        <View className="bg-white px-4 py-4 border-b border-gray-100">
+          <Text className="text-xl font-NunitoBold text-center text-gray-800">
+            Orders
+          </Text>
+        </View>
 
-      {/* Tab Navigation */}
-      <View className="bg-white px-4 py-3 border-b border-gray-100">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-          {[
-            { key: "all", label: "All" },
-            { key: "pending", label: "Pending" },
-            { key: "accepted", label: "Accepted" },
-            { key: "in_progress", label: "In Progress" },
-            { key: "completed", label: "Completed" },
-            { key: "cancelled", label: "Cancelled" },
-            { key: "declined", label: "Declined" }
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 mx-1 rounded-[.3rem] ${activeTab === tab.key
-                  ? "bg-red-600"
-                  : "bg-gray-100"
-                }`}
-            >
-              <Text className={`font-NunitoBold text-center text-[.9rem] ${activeTab === tab.key ? "text-white" : "text-gray-600"
-                }`}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+        {/* Tab Navigation */}
+        <View className="bg-white px-4 py-3 border-b border-gray-100">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            {[
+              { key: "all", label: "All" },
+              { key: "pending", label: "Pending" },
+              { key: "accepted", label: "Accepted" },
+              { key: "in_progress", label: "In Progress" },
+              { key: "completed", label: "Completed" },
+              { key: "cancelled", label: "Cancelled" },
+              { key: "declined", label: "Declined" }
+            ].map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 mx-1 rounded-[.3rem] ${activeTab === tab.key
+                    ? "bg-red-600"
+                    : "bg-gray-100"
+                  }`}
+              >
+                <Text className={`font-NunitoBold text-center text-[.9rem] ${activeTab === tab.key ? "text-white" : "text-gray-600"
+                  }`}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-      {/* Orders List */}
-      <ScrollView
-        className="flex-1 pt-4 mx-4"
+        <ScrollView
+          className="flex-1 pt-4 mx-4"
         refreshControl={
           <RefreshControl
             refreshing={requestsLoading}
@@ -378,14 +379,7 @@ const MechanicOrder = () => {
         )}
       </ScrollView>
 
-      {/* Action Confirmation Modal */}
-      <MechanicActionConfirmationModal
-        visible={actionModalVisible}
-        actionType={actionType}
-        onConfirm={handleConfirmAction}
-        onCancel={handleCancelActionModal}
-        isLoading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-      />
+      </AnimatedPageContainer>
     </SafeAreaView>
   );
 };

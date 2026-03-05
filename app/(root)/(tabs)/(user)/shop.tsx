@@ -18,6 +18,7 @@ import LoadingSpinner from "@/components/LoadingSpinner"
 import { ShoppingBagIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { StatusBar } from "expo-status-bar"
 import Animated, { FadeInDown } from "react-native-reanimated"
+import AnimatedPageContainer from "@/components/AnimatedPageContainer"
 
 const Shop = () => {
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
@@ -357,7 +358,7 @@ const Shop = () => {
           {/* Results Info */}
           <View className="flex-row items-center justify-between">
             <Text className="text-gray-500 text-sm font-NunitoMedium">
-              Showing {displayProducts.length} {displayProducts.length === 1 ? 'item' : 'items'}
+              Showing {displayProducts.length} {displayProducts.length === 1 ? "item" : "items"}
             </Text>
             {selectedCategory !== "All" && (
               <View className="bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
@@ -383,96 +384,89 @@ const Shop = () => {
         />
 
         {/* Products Grid */}
-        {(displayProducts as ProductListResponse[]).length > 0 ? (
-          <FlatList
-            data={displayProducts}
-            renderItem={renderProductCard}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 12, // Reduced padding (px-3)
-              paddingTop: 8,
-              paddingBottom: SCROLL_PADDING_BOTTOM,
-              gap: 12, // Reduced vertical gap
-            }}
-            columnWrapperStyle={{
-              gap: 12, // Consistent horizontal gap
-            }}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-            refreshControl={<RefreshControl {...refreshControl} />}
-            onEndReached={() => {
-              // Only load more if not searching and there are more pages
-              if (!searchTriggered && hasNextPage && !isFetchingNextPage) {
-                fetchNextPage();
-              }
-            }}
-            onEndReachedThreshold={0.1}
-            ListFooterComponent={() => {
-              if (isFetchingNextPage) {
-                return (
-                  <Animated.View
-                    entering={FadeInDown.duration(300)}
-                    className="py-6 items-center"
-                  >
-                    <View className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">
-                      <Text className="text-gray-500 text-sm font-NunitoMedium">Loading more...</Text>
+        <AnimatedPageContainer animationType="fadeInDown" duration={500} style={{ flex: 1 }}>
+          {(displayProducts as ProductListResponse[]).length > 0 ? (
+            <FlatList
+              data={displayProducts}
+              renderItem={renderProductCard}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 12, // Reduced padding (px-3)
+                paddingTop: 8,
+                paddingBottom: SCROLL_PADDING_BOTTOM,
+                gap: 12, // Reduced vertical gap
+              }}
+              columnWrapperStyle={{
+                gap: 12, // Consistent horizontal gap
+              }}
+              initialNumToRender={8}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews={true}
+              refreshControl={<RefreshControl {...refreshControl} />}
+              onEndReached={() => {
+                // Only load more if not searching and there are more pages
+                if (!searchTriggered && hasNextPage && !isFetchingNextPage) {
+                  fetchNextPage();
+                }
+              }}
+              onEndReachedThreshold={0.1}
+              ListFooterComponent={() => {
+                if (isFetchingNextPage) {
+                  return (
+                    <Animated.View entering={FadeInDown.duration(300)} className="py-6 items-center">
+                      <View className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">
+                        <Text className="text-gray-500 text-sm font-NunitoMedium">Loading more...</Text>
+                      </View>
+                    </Animated.View>
+                  );
+                }
+
+                // Show end of list message
+                if (!searchTriggered && !hasNextPage && products.length > 0) {
+                  return (
+                    <View className="py-8 items-center">
+                      <View className="w-12 h-1 bg-gray-200 rounded-full mb-3" />
+                      <Text className="text-gray-400 text-sm font-NunitoMedium">End of results</Text>
                     </View>
-                  </Animated.View>
-                );
-              }
+                  );
+                }
 
-              // Show end of list message
-              if (!searchTriggered && !hasNextPage && products.length > 0) {
-                return (
-                  <View className="py-8 items-center">
-                    <View className="w-12 h-1 bg-gray-200 rounded-full mb-3" />
-                    <Text className="text-gray-400 text-sm font-NunitoMedium">
-                      End of results
-                    </Text>
-                  </View>
-                );
-              }
-
-              return null;
-            }}
-          />
-        ) : (
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ flexGrow: 1 }}
-            refreshControl={<RefreshControl {...refreshControl} />}
-          >
-            <View className="flex-1 items-center justify-center px-6 py-20 opacity-80">
-              <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
-                <ShoppingBagIcon size={48} color="#9CA3AF" />
+                return null;
+              }}
+            />
+          ) : (
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{ flexGrow: 1 }}
+              refreshControl={<RefreshControl {...refreshControl} />}
+            >
+              <View className="flex-1 items-center justify-center px-6 py-20 opacity-80">
+                <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
+                  <ShoppingBagIcon size={48} color="#9CA3AF" />
+                </View>
+                <Text className="text-gray-900 text-center text-xl font-NunitoBold mb-2">
+                  {searchTriggered ? "No Results Found" : filtersApplied ? "No Matching Products" : "Store Empty"}
+                </Text>
+                <Text className="text-gray-500 text-center font-NunitoMedium mb-8 leading-6 max-w-[250px]">
+                  {searchTriggered && searchQuery.trim()
+                    ? `We couldn't find anything matching "${searchQuery}"`
+                    : "We couldn't find any products matching your current filters."}
+                </Text>
+                {(searchTriggered || filtersApplied) && (
+                  <TouchableOpacity
+                    onPress={handleResetSearch}
+                    className="bg-primary-500 px-8 py-3.5 rounded-2xl shadow-sm shadow-primary-200"
+                  >
+                    <Text className="text-white font-NunitoBold text-base">Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text className="text-gray-900 text-center text-xl font-NunitoBold mb-2">
-                {searchTriggered
-                  ? "No Results Found"
-                  : filtersApplied
-                    ? "No Matching Products"
-                    : "Store Empty"}
-              </Text>
-              <Text className="text-gray-500 text-center font-NunitoMedium mb-8 leading-6 max-w-[250px]">
-                {searchTriggered && searchQuery.trim()
-                  ? `We couldn't find anything matching "${searchQuery}"`
-                  : "We couldn't find any products matching your current filters."}
-              </Text>
-              {(searchTriggered || filtersApplied) && (
-                <TouchableOpacity
-                  onPress={handleResetSearch}
-                  className="bg-primary-500 px-8 py-3.5 rounded-2xl shadow-sm shadow-primary-200"
-                >
-                  <Text className="text-white font-NunitoBold text-base">Clear Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </ScrollView>
-        )}
+            </ScrollView>
+          )}
+        </AnimatedPageContainer>
       </View>
     </SafeAreaView>
   )

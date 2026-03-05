@@ -14,8 +14,8 @@ interface MultiSelectBottomSheetProps {
   options: Option[]
   selectedValues?: (string | number)[]
   onValuesChange: (values: (string | number)[]) => void
-  error?: string
-  touched?: boolean
+  error?: any
+  touched?: any
 }
 
 const { height: screenHeight } = Dimensions.get('window')

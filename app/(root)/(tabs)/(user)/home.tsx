@@ -20,10 +20,9 @@ import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import Navbar from "@/components/Navbar";
 import FloatingCartButton from "@/components/FloatingCartButton";
-
-
 import { LAYOUT } from "@/constants/units";
 import { useHomeProducts } from "@/hooks/useProducts";
+import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const Home = () => {
 
@@ -268,78 +267,70 @@ const Home = () => {
         <Navbar />
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#D30309']}
-            tintColor="#D30309"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#D30309"]} tintColor="#D30309" />
         }
       >
-      {/* Enhanced Ads Section */}
-      <View className="h-30 pt-3 mb-4">
-          <FlatList
-            ref={flatListRef}
-            data={infiniteAds}
-            renderItem={renderAdItem}
-            keyExtractor={(item, index) => `${item.id}-${index}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleAdMomentumScrollEnd}
-            snapToAlignment="start"
-            snapToInterval={screenWidth}
-            decelerationRate="fast"
-            getItemLayout={(data, index) => ({
-              length: screenWidth,
-              offset: screenWidth * index,
-              index,
-            })}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { useNativeDriver: false }
-            )}
-            initialNumToRender={3}
-            maxToRenderPerBatch={2}
-            windowSize={3}
-            removeClippedSubviews={true}
-            updateCellsBatchingPeriod={100}
-          />
-          {renderAdDotIndicator()}
-        </View>
-
-      {/* Services Grid */}
-      <View className="flex-1 px-4 ">
-        {enhancedServices.length > 0 ? (
-          <FlatList
-            scrollEnabled={false} // Disable internal scrolling since we wrapped in ScrollView
-            data={enhancedServices}
-            renderItem={renderServiceItem}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            columnWrapperStyle={{
-              justifyContent: "space-between",
-            }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingBottom: SCROLL_PADDING_BOTTOM,
-            }}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-          />
-        ) : (
-          <View className="flex-1 justify-center items-center">
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2">
-              No services found
-            </Text>
+        <AnimatedPageContainer animationType="fadeInDown" duration={500}>
+          {/* Enhanced Ads Section */}
+          <View className="h-30 pt-3 mb-4">
+            <FlatList
+              ref={flatListRef}
+              data={infiniteAds}
+              renderItem={renderAdItem}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleAdMomentumScrollEnd}
+              snapToAlignment="start"
+              snapToInterval={screenWidth}
+              decelerationRate="fast"
+              getItemLayout={(data, index) => ({
+                length: screenWidth,
+                offset: screenWidth * index,
+                index,
+              })}
+              onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
+              initialNumToRender={3}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={100}
+            />
+            {renderAdDotIndicator()}
           </View>
-        )}
-      </View>
+
+          {/* Services Grid */}
+          <View className="flex-1 px-4 ">
+            {enhancedServices.length > 0 ? (
+              <FlatList
+                scrollEnabled={false} // Disable internal scrolling since we wrapped in ScrollView
+                data={enhancedServices}
+                renderItem={renderServiceItem}
+                keyExtractor={(item) => item.id.toString()}
+                numColumns={2}
+                columnWrapperStyle={{
+                  justifyContent: "space-between",
+                }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  paddingBottom: SCROLL_PADDING_BOTTOM,
+                }}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={7}
+                removeClippedSubviews={true}
+              />
+            ) : (
+              <View className="flex-1 justify-center items-center">
+                <Text className="text-xl font-NunitoBold text-gray-900 mb-2">No services found</Text>
+              </View>
+            )}
+          </View>
+        </AnimatedPageContainer>
       </ScrollView>
     </SafeAreaView>
   );

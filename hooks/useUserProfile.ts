@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse } from '@/lib/api/user';
+import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse } from '@/lib/api/user';
 
 // Query key factory
 export const userProfileKeys = {
@@ -10,6 +10,7 @@ export const userProfileKeys = {
   profile: () => [...userProfileKeys.all, 'profile'] as const,
   roles: () => [...userProfileKeys.all, 'roles'] as const,
   notifications: () => [...userProfileKeys.all, 'notifications'] as const,
+  banks: () => [...userProfileKeys.all, 'banks'] as const,
 };
 
 // Hook to get primary user profile
@@ -31,9 +32,11 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchant(),
     queryFn: userAPI.getMerchantProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always fetch to check KYC
     retry: 2,
     enabled: enabled,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -48,6 +51,32 @@ export const useMechanicProfile = (enabled: boolean = true) => {
     refetchOnMount: false, // Don't refetch on mount if data exists
     refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1, // Reduce retries
+  });
+};
+
+// Hook to get driver profile (only when enabled)
+export const useDriverProfile = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['driver', 'profile'],
+    queryFn: () => userAPI.getDriverProfile(),
+    staleTime: 0, // Always fetch to check KYC
+    retry: 2,
+    enabled: enabled,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+};
+
+// Hook to get rider profile (only when enabled)
+export const useRiderProfile = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['rider', 'profile'],
+    queryFn: () => userAPI.getRiderProfile(),
+    staleTime: 0, // Always fetch to check KYC
+    retry: 2,
+    enabled: enabled,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -249,5 +278,26 @@ export const useFollowedMerchants = () => {
     queryFn: userAPI.getFollowedMerchants,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
+  });
+};
+
+// Hook to get list of banks
+export const useBanks = (enabled: boolean = true) => {
+  return useQuery<BanksResponse>({
+    queryKey: userProfileKeys.banks(),
+    queryFn: userAPI.getBanks,
+    staleTime: 24 * 60 * 60 * 1000, // Banks don't change often, keep for 24 hours
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to verify bank account
+export const useVerifyBank = () => {
+  return useMutation<BankEnquiryResponse, Error, BankEnquiryRequest>({
+    mutationFn: (data: BankEnquiryRequest) => userAPI.verifyBank(data),
+    onError: (error) => {
+      console.error('❌ Error verifying bank account:', error);
+    },
   });
 };
