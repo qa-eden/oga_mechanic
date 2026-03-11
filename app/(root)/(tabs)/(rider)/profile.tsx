@@ -24,9 +24,11 @@ import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroic
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
-import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useRiderProfile } from "@/hooks/useUserProfile";
+import { useProfileStore } from "@/hooks/useProfileStore";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import KYCBanner from "@/components/KYCBanner";
 import { LinearGradient } from 'expo-linear-gradient';
 import { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -43,12 +45,47 @@ const RiderProfile = () => {
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
 
-  // Fetch profile data
-  const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
+  // Fetch primary profile data
+  const { 
+    data: primaryProfileData, 
+    isLoading: isPrimaryProfileLoading, 
+    refetch: refetchPrimary 
+  } = usePrimaryUserProfile();
+
+  // Fetch rider profile data
+  const {
+    data: riderProfileResponse,
+    isLoading: isRiderProfileLoading,
+    refetch: refetchRider
+  } = useRiderProfile();
+
+  // Profile complete state
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
+
+  const isProfileLoading = isPrimaryProfileLoading || isRiderProfileLoading;
+
+  const isPendingApproval = Boolean(
+    riderProfileResponse?.data?.kyc?.is_complete && 
+    !riderProfileResponse?.data?.rider_profile?.is_approved
+  );
+
+  const hasShownModalRef = React.useRef(false);
+  const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Check profile status on load
+  React.useEffect(() => {
+    if (riderProfileResponse && !isRiderProfileLoading) {
+      const isComplete = riderProfileResponse.data?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+    }
+  }, [riderProfileResponse, isRiderProfileLoading, setIsProfileComplete]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchProfile();
+    await Promise.all([refetchPrimary(), refetchRider()]);
     setRefreshing(false);
   };
 
@@ -108,26 +145,36 @@ const RiderProfile = () => {
     </TouchableOpacity>
   );
 
-  // Show loading state
-  if (isProfileLoading) {
-    return (
-      <LoadingSpinner
-        message="Loading Profile..."
-        size="medium"
-      />
-    );
-  }
+  // Show loading state - REMOVED blocking spinner for better UX
+  // if (isProfileLoading) {
+  //   return (
+  //     <LoadingSpinner
+  //       message="Loading Profile..."
+  //       size="medium"
+  //     />
+  //   );
+  // }
 
   // Get user data from API or fallback to static data
-  const userData = (profileData as PrimaryUserProfileResponse)?.data;
+  const userData = (primaryProfileData as PrimaryUserProfileResponse)?.data;
+  const riderData = riderProfileResponse?.data;
+  
   const displayName = userData?.first_name && userData?.last_name
     ? `${userData.first_name} ${userData.last_name}`
     : userInfo.name;
 
   const displayEmail = userData?.email || '';
   const isVerified = userData?.is_verified || false;
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'rider';
-  const profileImage = (userData as any)?.profile_picture || (userData as any)?.image || null;
+  const activeRole = (primaryProfileData as PrimaryUserProfileResponse)?.active_role || 'rider';
+  
+  // Profile image fallback prioritization:
+  // 1. Rider Profile Picture (from rider-specific endpoint)
+  // 2. Primary User Profile Picture
+  const profileImage = 
+    riderData?.profile_picture || 
+    (userData as any)?.profile_picture || 
+    (userData as any)?.image || 
+    null;
   
   // Stats data (placeholder - replace with actual rider stats when available)
   const completedRides = 0;
@@ -161,8 +208,20 @@ const RiderProfile = () => {
               </Text>
             </View>
 
+            <View className="mb-4">
+              <KYCBanner 
+                isVisible={!isProfileComplete || isPendingApproval} 
+                role="rider" 
+                isPending={isPendingApproval} 
+              />
+            </View>
+
             {/* Profile Card */}
-            <View className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <TouchableOpacity 
+              activeOpacity={0.9}
+              onPress={() => router.push(riderRoutes.profileDetails as any)}
+              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+            >
               <View className="flex-row items-center">
                 {/* Avatar */}
                 <View className="relative mr-4">
@@ -213,7 +272,10 @@ const RiderProfile = () => {
               <View className="flex-row mt-4 pt-4 border-t border-gray-200">
                 <TouchableOpacity 
                   activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: riderRoutes.home as any, params: { tab: 'order' } })}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push({ pathname: riderRoutes.home as any, params: { tab: 'order' } });
+                  }}
                   className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                 >
                   <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
@@ -227,7 +289,10 @@ const RiderProfile = () => {
                 
                 <TouchableOpacity 
                   activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: riderRoutes.home as any, params: { tab: 'order' } })}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push({ pathname: riderRoutes.home as any, params: { tab: 'order' } });
+                  }}
                   className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                 >
                   <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
@@ -241,7 +306,10 @@ const RiderProfile = () => {
                 
                 <TouchableOpacity 
                   activeOpacity={0.7}
-                  onPress={() => router.push(riderRoutes.earnings as any)}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push(riderRoutes.earnings as any);
+                  }}
                   className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                 >
                   <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
@@ -253,7 +321,7 @@ const RiderProfile = () => {
                   </View>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Account Settings Section */}
             <View className="bg-white rounded-2xl mt-6 px-4 border border-gray-100 shadow-sm">

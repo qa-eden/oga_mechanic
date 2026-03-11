@@ -156,7 +156,7 @@ const ChangePassword = () => {
                           ? "Changing Password..."
                           : "Change Password"
                       }
-                      onPress={handleSubmit}
+                      onPress={() => handleSubmit()}
                       loading={changePasswordMutation.isPending}
                       disabled={changePasswordMutation.isPending}
                       className="w-full"

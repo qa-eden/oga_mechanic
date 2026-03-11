@@ -73,12 +73,19 @@ const step4Schema = Yup.object().shape({
   account_number: Yup.string().required("Required"),
 });
 
+const step5Schema = Yup.object().shape({
+  license_number: Yup.string().required("Required"),
+  license_issue_date: Yup.string().required("Required"),
+  license_expiry_date: Yup.string().required("Required"),
+});
+
 const getValidationSchema = (step: number) => {
   switch (step) {
     case 1: return step1Schema;
     case 2: return step2Schema;
     case 3: return step3Schema;
     case 4: return step4Schema;
+    case 5: return step5Schema;
     default: return step1Schema;
   }
 };
@@ -94,7 +101,7 @@ const EditDriverProfile = () => {
   const userObj = driverProfile?.user;
 
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5;
   const [initialValues, setInitialValues] = useState({
     full_name: "",
     email: "",
@@ -114,6 +121,18 @@ const EditDriverProfile = () => {
     bank_name: "",
     account_number: "",
     profile_picture: "",
+    license_number: "",
+    license_issue_date: "",
+    license_expiry_date: "",
+    license_front_image: "",
+    license_back_image: "",
+    government_id_front: "",
+    government_id_back: "",
+    vehicle_photo_front: "",
+    vehicle_photo_back: "",
+    vehicle_photo_right: "",
+    vehicle_photo_left: "",
+    insurance_document: "",
   });
 
   const [vehicleMakes, setVehicleMakes] = useState<{ label: string; value: string }[]>([]);
@@ -157,7 +176,19 @@ const EditDriverProfile = () => {
         vin: driverProfile.vin || "",
         bank_name: driverProfile.bank_name || "",
         account_number: driverProfile.account_number || "",
-        profile_picture: userObj?.profile_image || userObj?.image || "",
+        profile_picture: driverProfile?.selfie || userObj?.profile_image || userObj?.image || "",
+        license_number: driverProfile.license_number || "",
+        license_issue_date: driverProfile.license_issue_date || "",
+        license_expiry_date: driverProfile.license_expiry_date || "",
+        license_front_image: driverProfile.license_front_image || "",
+        license_back_image: driverProfile.license_back_image || "",
+        government_id_front: driverProfile.government_id_front || "",
+        government_id_back: driverProfile.government_id_back || "",
+        vehicle_photo_front: driverProfile.vehicle_photo_front || "",
+        vehicle_photo_back: driverProfile.vehicle_photo_back || "",
+        vehicle_photo_right: driverProfile.vehicle_photo_right || "",
+        vehicle_photo_left: driverProfile.vehicle_photo_left || "",
+        insurance_document: driverProfile.insurance_document || "",
       });
     }
   }, [driverProfile, userObj]);
@@ -233,12 +264,37 @@ const EditDriverProfile = () => {
       formData.append('account_number', values.account_number);
 
       if (values.profile_picture && values.profile_picture.startsWith('data:')) {
-        formData.append('profile_picture', {
+        formData.append('selfie', {
             uri: values.profile_picture,
-            name: `profile_${Date.now()}.jpg`,
+            name: `selfie_${Date.now()}.jpg`,
             type: 'image/jpeg'
         } as any);
       }
+
+      // Append documents if they are newly chosen (base64)
+      const documents = [
+        'license_front_image', 'license_back_image', 
+        'government_id_front', 'government_id_back',
+        'vehicle_photo_front', 'vehicle_photo_back', 
+        'vehicle_photo_right', 'vehicle_photo_left',
+        'insurance_document'
+      ];
+
+      documents.forEach(doc => {
+        if (values[doc] && values[doc].startsWith('data:')) {
+          formData.append(doc, {
+            uri: values[doc],
+            name: `${doc}_${Date.now()}.jpg`,
+            type: 'image/jpeg'
+          } as any);
+        }
+      });
+
+      // Add license info
+      formData.append('license_number', values.license_number);
+      formData.append('license_issue_date', values.license_issue_date);
+      formData.append('license_expiry_date', values.license_expiry_date);
+
 
       await userAPI.submitDriverKYC(formData);
       queryClient.invalidateQueries({ queryKey: ['driver', 'profile'] });
@@ -252,7 +308,7 @@ const EditDriverProfile = () => {
     }
   };
 
-  const handleImagePick = async (setFieldValue: any) => {
+  const handleImagePick = async (field: string, setFieldValue: any) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
@@ -262,17 +318,36 @@ const EditDriverProfile = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect: field === "profile_picture" ? [1, 1] : [4, 3],
         quality: 0.6,
         base64: true,
       });
       if (!result.canceled && result.assets[0].base64) {
-        setFieldValue("profile_picture", `data:image/jpeg;base64,${result.assets[0].base64}`);
+        setFieldValue(field, `data:image/jpeg;base64,${result.assets[0].base64}`);
       }
     } catch (error) {
       showToast.error("Failed to pick image");
     }
   };
+
+  const DocumentPicker = ({ label, field, value, setFieldValue }: any) => (
+    <View className="mb-4">
+      <Text className="text-gray-700 font-NunitoSemiBold mb-2">{label}</Text>
+      <TouchableOpacity 
+        onPress={() => handleImagePick(field, setFieldValue)}
+        className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 items-center justify-center overflow-hidden"
+      >
+        {value ? (
+          <Image source={{ uri: value }} className="w-full h-full" resizeMode="cover" />
+        ) : (
+          <View className="items-center">
+            <CameraIcon size={32} color="#9CA3AF" />
+            <Text className="text-gray-400 font-NunitoMedium mt-2">Tap to upload</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 
   const SectionHeader = ({ icon: Icon, title, color = "#D30309", bgColor = "bg-primary-50" }: any) => (
     <View className="flex-row items-center mb-6">
@@ -373,8 +448,9 @@ const EditDriverProfile = () => {
                 <View>
                   <SectionHeader icon={UserIcon} title="Personal Information" />
                   
+                  {/* Avatar Section */}
                   <View className="items-center mb-8">
-                    <TouchableOpacity onPress={() => handleImagePick(setFieldValue)} className="relative">
+                    <TouchableOpacity onPress={() => handleImagePick("profile_picture", setFieldValue)} className="relative">
                       <View className="w-28 h-28 rounded-2xl items-center justify-center border-4 border-white shadow-lg mb-3 overflow-hidden">
                         {values.profile_picture ? (
                           <Image source={{ uri: values.profile_picture }} className="w-full h-full" resizeMode="cover" />
@@ -586,6 +662,24 @@ const EditDriverProfile = () => {
                       touched={touched.vehicle_registration_number}
                       required
                     />
+                    
+                    <View className="mt-6">
+                      <Text className="text-base font-NunitoBold text-gray-900 mb-4">Vehicle Photos</Text>
+                      <View className="flex-row flex-wrap justify-between">
+                        <View className="w-[48%]">
+                          <DocumentPicker label="Front View" field="vehicle_photo_front" value={values.vehicle_photo_front} setFieldValue={setFieldValue} />
+                        </View>
+                        <View className="w-[48%]">
+                          <DocumentPicker label="Back View" field="vehicle_photo_back" value={values.vehicle_photo_back} setFieldValue={setFieldValue} />
+                        </View>
+                        <View className="w-[48%]">
+                          <DocumentPicker label="Right View" field="vehicle_photo_right" value={values.vehicle_photo_right} setFieldValue={setFieldValue} />
+                        </View>
+                        <View className="w-[48%]">
+                          <DocumentPicker label="Left View" field="vehicle_photo_left" value={values.vehicle_photo_left} setFieldValue={setFieldValue} />
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 </View>
               )}
@@ -637,6 +731,63 @@ const EditDriverProfile = () => {
                 </View>
               )}
 
+              {/* STEP 5: DOCUMENTS & LICENSES */}
+              {currentStep === 5 && (
+                <View>
+                  <SectionHeader icon={IdentificationIcon} title="Documents & Verification" color="#6366F1" bgColor="bg-indigo-50" />
+                  
+                  <View className="mb-6">
+                    <Text className="text-base font-NunitoBold text-gray-900 mb-4">Driver's License details</Text>
+                    <FormikInput name="license_number" placeholder="Enter license number" label="License Number" required />
+                    <View className="flex-row gap-4 mt-2">
+                       <View className="flex-1">
+                        <DateInput
+                          label="Issue Date"
+                          placeholder="Select date"
+                          value={values.license_issue_date ? new Date(values.license_issue_date) : null}
+                          onDateChange={(date: Date) => setFieldValue("license_issue_date", date.toISOString().split('T')[0])}
+                          error={errors.license_issue_date as string}
+                          touched={touched.license_issue_date as boolean}
+                          maximumDate={new Date()}
+                          required
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <DateInput
+                          label="Expiry Date"
+                          placeholder="Select date"
+                          value={values.license_expiry_date ? new Date(values.license_expiry_date) : null}
+                          onDateChange={(date: Date) => setFieldValue("license_expiry_date", date.toISOString().split('T')[0])}
+                          error={errors.license_expiry_date as string}
+                          touched={touched.license_expiry_date as boolean}
+                          minimumDate={new Date()}
+                          required
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View className="mb-6">
+                    <Text className="text-base font-NunitoBold text-gray-900 mb-4">Driver's License Images</Text>
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <DocumentPicker label="Front View" field="license_front_image" value={values.license_front_image} setFieldValue={setFieldValue} />
+                      </View>
+                      <View className="w-[48%]">
+                        <DocumentPicker label="Back View" field="license_back_image" value={values.license_back_image} setFieldValue={setFieldValue} />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View className="mb-6">
+                    <Text className="text-base font-NunitoBold text-gray-900 mb-4">Other Documents</Text>
+                    <DocumentPicker label="Government ID (Front)" field="government_id_front" value={values.government_id_front} setFieldValue={setFieldValue} />
+                    <DocumentPicker label="Government ID (Back)" field="government_id_back" value={values.government_id_back} setFieldValue={setFieldValue} />
+                    <DocumentPicker label="Insurance Document" field="insurance_document" value={values.insurance_document} setFieldValue={setFieldValue} />
+                  </View>
+                </View>
+              )}
+
               {/* Navigation Buttons */}
               <View className="flex-row gap-4 mt-10">
                 {currentStep > 1 && (
@@ -651,7 +802,7 @@ const EditDriverProfile = () => {
                 <TouchableOpacity
                   onPress={() => currentStep === totalSteps ? handleSubmit() : handleNextStep(validateForm, setTouched)}
                   disabled={isSubmitting}
-                  className="flex-1 py-4 bg-primary-500 rounded-2xl items-center shadow-md shadow-primary-200"
+                  className={`${currentStep === 1 ? 'w-full' : 'flex-2'} py-4 bg-primary-500 rounded-2xl items-center shadow-md shadow-primary-200`}
                 >
                   {isSubmitting ? (
                     <ActivityIndicator color="white" size="small" />

@@ -7,6 +7,7 @@ import { getErrorMessage, getSuccessMessage } from '../utils/errorMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { cartKeys, useCart as useCartQuery } from '../hooks/useCart';
 import { productKeys } from '../hooks/useProducts';
+import { useAuthContext } from './AuthContext';
 
 // Types
 export interface CartItem {
@@ -140,10 +141,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const cartAnimation = useRef(new Animated.Value(1)).current;
   const bounceAnimation = useRef(new Animated.Value(1)).current;
-  const queryClient = useQueryClient();
-
-  // Subscribe to React Query cart data - this syncs the context whenever cart query updates
   const { data: cartQueryData } = useCartQuery();
+  const auth = useAuthContext();
+  const queryClient = useQueryClient();
+  const userRole = auth.userData?.role;
+  const isShopRole = userRole === 'rider' || userRole === 'primary_user';
 
   // Cart animation function
   const triggerCartAnimation = () => {
@@ -183,6 +185,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Add to cart function
   const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
+    if (!isShopRole) return;
+    
     const existingItem = state.items.find(cartItem => cartItem.id === item.id);
     
     if (existingItem && existingItem.quantity >= existingItem.stock) {
@@ -294,7 +298,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Sync with server function
-  const syncWithServer = async () => {
+  const syncWithServer = useCallback(async () => {
+    if (!isShopRole) return;
     try {
       const response = await cartAPI.getCart();
       
@@ -340,7 +345,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('❌ Sync cart error:', error);
       // Don't clear cart on error, just log it
     }
-  };
+  }, [isShopRole]);
 
   // Get item quantity
   const getItemQuantity = (id: string): number => {
@@ -353,28 +358,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.items.some(item => item.id === id);
   };
 
-  // Sync with server on mount (optional - only if user is authenticated)
+  // Sync with server on mount
   useEffect(() => {
-    // Only sync cart if user is likely authenticated
-    // This prevents errors during development when API might not be available
+    // Only sync cart if user is likely authenticated and in a shop-capable role
     const checkAndSync = async () => {
       try {
         const isLoggedIn = await AsyncStorage.getItem('is_logged_in');
-        if (isLoggedIn === 'true') {
+        if (isLoggedIn === 'true' && isShopRole) {
           syncWithServer();
         }
       } catch (error) {
-        console.log('🛒 Skipping cart sync - user not authenticated');
+        console.log('🛒 Skipping cart sync');
       }
     };
 
     checkAndSync();
-  }, []);
+  }, [isShopRole, syncWithServer]);
 
   // Sync context state with React Query cart data whenever it changes
   // This ensures CartIconBtn and other components using CartContext stay in sync
   // when cart is modified from any page (cart page, product detail, etc.)
   useEffect(() => {
+    if (!isShopRole) return;
     if (cartQueryData?.data) {
       let cartData = cartQueryData.data;
 

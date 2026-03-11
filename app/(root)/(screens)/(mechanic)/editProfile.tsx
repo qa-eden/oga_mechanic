@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
-import { CameraIcon, WrenchScrewdriverIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from "react-native-heroicons/outline";
+import { CameraIcon, WrenchScrewdriverIcon, EnvelopeIcon, BriefcaseIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
 import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
@@ -18,11 +18,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
-import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
+import TextArea from "@/components/forms/TextArea";
 import { LinearGradient } from "expo-linear-gradient";
 
 // Validation Schema for Mechanic Profile
@@ -37,9 +38,12 @@ const editMechanicProfileSchema = Yup.object().shape({
     .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
+  bio: Yup.string().nullable(),
   location: Yup.string().nullable(),
   specialization: Yup.string().nullable(),
   years_of_experience: Yup.string().nullable(),
+  cac_number: Yup.string().nullable(),
+  govt_id_type: Yup.string().nullable(),
 });
 
 const EditMechanicProfile = () => {
@@ -50,31 +54,45 @@ const EditMechanicProfile = () => {
   const userData = profileData?.data;
   const mechanicData = mechanicProfile?.data;
 
+  const mechanicProfileInfo = mechanicData?.mechanic_profile;
+
   const [initialValues, setInitialValues] = useState({
     first_name: "",
     last_name: "",
     phone_number: "",
     email: "",
+    bio: "",
     location: "",
     specialization: "",
     years_of_experience: "",
     selfie: "",
+    cac_number: "",
+    govt_id_type: "",
+    cac_document: "",
+    government_id_front: "",
+    government_id_back: "",
   });
 
   useEffect(() => {
-    if (userData || mechanicData) {
+    if (userData || mechanicProfileInfo) {
       setInitialValues({
-        first_name: userData?.first_name || mechanicData?.user?.first_name || "",
-        last_name: userData?.last_name || mechanicData?.user?.last_name || "",
-        phone_number: userData?.phone_number || mechanicData?.user?.phone_number || "",
-        email: userData?.email || mechanicData?.user?.email || "",
-        location: mechanicData?.location || "",
-        specialization: (mechanicData as any)?.specialization || "",
-        years_of_experience: (mechanicData as any)?.years_of_experience?.toString() || "",
-        selfie: mechanicData?.selfie || (userData as any)?.profile_picture || "",
+        first_name: userData?.first_name || mechanicProfileInfo?.user?.first_name || "",
+        last_name: userData?.last_name || mechanicProfileInfo?.user?.last_name || "",
+        phone_number: userData?.phone_number || mechanicProfileInfo?.user?.phone_number || "",
+        email: userData?.email || mechanicProfileInfo?.user?.email || "",
+        bio: mechanicProfileInfo?.bio || "",
+        location: mechanicProfileInfo?.location || "",
+        specialization: (mechanicProfileInfo as any)?.specialization || "",
+        years_of_experience: (mechanicProfileInfo as any)?.years_of_experience?.toString() || "",
+        selfie: (mechanicProfileInfo as any)?.selfie || (userData as any)?.profile_picture || "",
+        cac_number: mechanicProfileInfo?.cac_number || "",
+        govt_id_type: mechanicProfileInfo?.govt_id_type || "",
+        cac_document: mechanicProfileInfo?.cac_document || "",
+        government_id_front: mechanicProfileInfo?.government_id_front || "",
+        government_id_back: mechanicProfileInfo?.government_id_back || "",
       });
     }
-  }, [userData, mechanicData]);
+  }, [userData, mechanicProfileInfo]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
@@ -84,13 +102,51 @@ const EditMechanicProfile = () => {
         first_name: values.first_name,
         last_name: values.last_name,
         phone_number: values.phone_number,
-        location: values.location,
-        specialization: values.specialization,
-        years_of_experience: values.years_of_experience,
-        selfie: values.selfie,
       };
 
       await userAPI.updateProfile(payload);
+      
+      const formData = new FormData();
+      formData.append('requestType', 'inbound');
+
+      const mechanicPayload = {
+        bio: values.bio,
+        location: values.location,
+        specialization: values.specialization,
+        years_of_experience: values.years_of_experience,
+      };
+
+      Object.entries(mechanicPayload).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          formData.append(key, val as string);
+        }
+      });
+
+      // Handle CAC Number and ID Type
+      if (values.cac_number) formData.append('cac_number', values.cac_number);
+      if (values.govt_id_type) formData.append('govt_id_type', values.govt_id_type);
+      
+      if (values.selfie && values.selfie.startsWith('data:')) {
+        formData.append('selfie', {
+            uri: values.selfie,
+            name: `selfie_${Date.now()}.jpg`,
+            type: 'image/jpeg'
+        } as any);
+      }
+
+      // Append documents if they are newly chosen (base64)
+      const documents = ['cac_document', 'government_id_front', 'government_id_back'];
+      documents.forEach(doc => {
+        if (values[doc] && values[doc].startsWith('data:')) {
+          formData.append(doc, {
+            uri: values[doc],
+            name: `${doc}_${Date.now()}.jpg`,
+            type: 'image/jpeg'
+          } as any);
+        }
+      });
+      
+      await userAPI.submitMechanicKYC(formData);
 
       // Invalidate profile queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
@@ -107,7 +163,7 @@ const EditMechanicProfile = () => {
     }
   };
 
-  const handleImagePick = async (setFieldValue: any) => {
+  const handleImagePick = async (field: string, setFieldValue: any) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -119,7 +175,7 @@ const EditMechanicProfile = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect: field === "selfie" ? [1, 1] : [4, 3],
         quality: 0.5,
         base64: true,
       });
@@ -127,15 +183,34 @@ const EditMechanicProfile = () => {
       if (!result.canceled && result.assets[0]) {
         if (result.assets[0].base64) {
           const base64Image = `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}`;
-          setFieldValue("selfie", base64Image);
+          setFieldValue(field, base64Image);
         } else {
-          setFieldValue("selfie", result.assets[0].uri);
+          setFieldValue(field, result.assets[0].uri);
         }
       }
     } catch (error) {
       showToast.error("Failed to pick image");
     }
   };
+
+  const DocumentPicker = ({ label, field, value, setFieldValue }: any) => (
+    <View className="mb-4">
+      <Text className="text-gray-700 font-NunitoSemiBold mb-2">{label}</Text>
+      <TouchableOpacity 
+        onPress={() => handleImagePick(field, setFieldValue)}
+        className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 items-center justify-center overflow-hidden"
+      >
+        {value ? (
+          <Image source={{ uri: value }} className="w-full h-full" resizeMode="cover" />
+        ) : (
+          <View className="items-center">
+            <CameraIcon size={32} color="#9CA3AF" />
+            <Text className="text-gray-400 font-NunitoMedium mt-2">Tap to upload</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 
   if (isLoadingPrimary || isLoadingMechanic) {
     return (
@@ -180,8 +255,16 @@ const EditMechanicProfile = () => {
       </View>
 
       <KeyboardAwareScrollView
+        className="flex-1"
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={120}
+        extraHeight={140}
+        keyboardOpeningTime={0}
+        keyboardShouldPersistTaps="handled"
+        enableResetScrollToCoords={false}
       >
         <Formik
           initialValues={initialValues}
@@ -195,7 +278,7 @@ const EditMechanicProfile = () => {
               {/* Avatar Section */}
               <View className="items-center mb-8">
                 <TouchableOpacity 
-                  onPress={() => handleImagePick(setFieldValue)}
+                  onPress={() => handleImagePick("selfie", setFieldValue)}
                   className="relative"
                 >
                   <View className="w-28 h-28 rounded-2xl items-center justify-center border-4 border-white shadow-lg mb-3 overflow-hidden">
@@ -277,6 +360,19 @@ const EditMechanicProfile = () => {
                   keyboardType="phone-pad"
                   required
                 />
+
+                {/* Bio */}
+                <View className="mb-2 mt-4">
+                  <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-wider mb-2 ml-1">Bio</Text>
+                  <TextArea
+                    placeholder="Briefly describe your experience and expertise..."
+                    value={values.bio}
+                    onChangeText={(text: string) => setFieldValue("bio", text)}
+                    error={errors.bio as string}
+                    touched={touched.bio as boolean}
+                    numberOfLines={4}
+                  />
+                </View>
               </View>
 
               {/* Professional Information Section */}
@@ -328,11 +424,81 @@ const EditMechanicProfile = () => {
                 />
               </View>
 
+              {/* Business & Documents Section */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-4">
+                  <View className="w-8 h-8 bg-amber-50 rounded-lg items-center justify-center mr-2">
+                    <BriefcaseIcon size={16} color="#F59E0B" />
+                  </View>
+                  <Text className="text-base font-NunitoBold text-gray-900">Business Details</Text>
+                </View>
+
+                <FormikInput 
+                  name="cac_number" 
+                  label="CAC Registration Number" 
+                  placeholder="RC000000" 
+                />
+
+                <View className="mt-3">
+                  <DocumentPicker 
+                    label="CAC Registration Document" 
+                    field="cac_document" 
+                    value={values.cac_document} 
+                    setFieldValue={setFieldValue} 
+                  />
+                </View>
+              </View>
+
+              <View className="mb-6">
+                <View className="flex-row items-center mb-4">
+                  <View className="w-8 h-8 bg-indigo-50 rounded-lg items-center justify-center mr-2">
+                    <ShieldCheckIcon size={16} color="#6366F1" />
+                  </View>
+                  <Text className="text-base font-NunitoBold text-gray-900">Identity Verification</Text>
+                </View>
+
+                <SelectField
+                  label="Government ID Type"
+                  name="govt_id_type"
+                  placeholder="Select ID Type"
+                  options={[
+                    { label: "NIN", value: "NIN" },
+                    { label: "Drivers license", value: "drivers_license" },
+                    { label: "Voters card", value: "voters_card" },
+                    { label: "International passport", value: "international_passport" },
+                    { label: "Permanent voter's card", value: "permanent_voters_card" },
+                  ]}
+                  value={values.govt_id_type || ''}
+                  onValueChange={(val: string) => setFieldValue("govt_id_type", val)}
+                  error={errors.govt_id_type as string}
+                  touched={touched.govt_id_type as boolean}
+                />
+
+                <View className="flex-row justify-between mt-4">
+                  <View className="w-[48%]">
+                    <DocumentPicker 
+                      label="ID Front View" 
+                      field="government_id_front" 
+                      value={values.government_id_front} 
+                      setFieldValue={setFieldValue} 
+                    />
+                  </View>
+                  <View className="w-[48%]">
+                    <DocumentPicker 
+                      label="ID Back View" 
+                      field="government_id_back" 
+                      value={values.government_id_back} 
+                      setFieldValue={setFieldValue} 
+                    />
+                  </View>
+                </View>
+              </View>
+
               {/* Save Button */}
               <View className="mt-4">
                 <FormikButton
                   title={isSubmitting ? "Saving Changes..." : "Save Changes"}
-                  onPress={handleSubmit}
+                  onPress={() => handleSubmit()}
                   loading={isSubmitting}
                   disabled={isSubmitting}
                   className="w-full"

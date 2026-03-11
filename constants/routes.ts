@@ -104,6 +104,7 @@ export const mechanicRoutes = {
   ConfirmOrder: "/(root)/(screens)/(mechanic)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(mechanic)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(mechanic)/editProfile",
+  profileDetails: "/(root)/(screens)/(mechanic)/profileDetails",
   orderDetails: "/(root)/(screens)/(mechanic)/order-details",
 } as const;
 
@@ -154,6 +155,7 @@ export const riderRoutes = {
   WithdrawalHistory: "/(root)/(screens)/(rider)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(rider)/editProfile",
   takebookings: "/(root)/(screens)/(rider)/takebookings",
+  profileDetails: "/(root)/(screens)/(rider)/profileDetails",
 } as const;
 
 export type RiderRouteKeys = keyof typeof riderRoutes;
@@ -180,6 +182,7 @@ export const sellerRoutes = {
   ConfirmOrder: "/(root)/(screens)/(seller)/confirmOrder",
   WithdrawalHistory: "/(root)/(screens)/(seller)/withdrawalHistory",
   EditProfile: "/(root)/(screens)/(seller)/editProfile",
+  profileDetails: "/(root)/(screens)/(seller)/profileDetails",
   orderDetails: "/(root)/(screens)/(seller)/orderDetails",
   uploadProducts: "/(root)/(screens)/(seller)/(products)/(uploadProducts)/uploadProducts",
   editProduct: "/(root)/(screens)/(seller)/(products)/(editProduct)/editProduct",

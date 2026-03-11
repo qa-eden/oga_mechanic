@@ -183,7 +183,18 @@ const SellerProfile = () => {
 
   const displayEmail = userData?.email || '';
   const isVerified = userData?.is_verified || false;
-  const profileImage = (userData as any)?.profile_picture || (userData as any)?.image || null;
+  
+  // Profile image fallback prioritization:
+  // 1. Merchant Selfie (primary for KYC)
+  // 2. Merchant Profile Picture
+  // 3. Primary User Profile Picture
+  const merchantProfile = merchantProfileQuery.data?.data?.merchant_profile;
+  const profileImage = 
+    merchantProfile?.selfie || 
+    merchantProfile?.profile_picture || 
+    (userData as any)?.profile_picture || 
+    (userData as any)?.image || 
+    null;
 
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
@@ -221,7 +232,11 @@ const SellerProfile = () => {
             </View>
 
             {/* Profile Card */}
-            <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <TouchableOpacity 
+              activeOpacity={0.9}
+              onPress={() => router.push(sellerRoutes.profileDetails as any)}
+              className="bg-gray-50 rounded-2xl p-4 border border-gray-100"
+            >
               <View className="flex-row items-center">
                 {/* Avatar */}
                 <View className="relative mr-4">
@@ -307,7 +322,7 @@ const SellerProfile = () => {
                   </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </Animated.View>
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { ShieldCheckIcon, ChevronRightIcon, SparklesIcon, ClockIcon } from "react-native-heroicons/solid";
 import { router } from "expo-router";
 import { roleKYCRoutes } from "@/constants/routes";
@@ -19,10 +19,11 @@ const KYCBanner = ({ isVisible, role, isPending }: KYCBannerProps) => {
 
   const handlePress = () => {
     if (isPending) {
-        import("react-native").then(({ Alert }) => {
-            Alert.alert("Under Review", "Your profile is currently under review by an admin. You will be notified once approved.");
-        });
-        return;
+      Alert.alert(
+        "Under Review",
+        "Your profile is currently under review by an admin. You will be notified once approved."
+      );
+      return;
     }
     const route = getRoleKYCRoute(role);
     router.push(route as any);

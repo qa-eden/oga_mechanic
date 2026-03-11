@@ -103,7 +103,7 @@ export const STATES_BY_COUNTRY: Record<string, State[]> = {
     { name: 'Kebbi', cities: ['Birnin Kebbi', 'Argungu', 'Yauri', 'Zuru'] },
     { name: 'Kogi', cities: ['Lokoja', 'Okene', 'Kabba', 'Anyigba'] },
     { name: 'Kwara', cities: ['Ilorin', 'Offa', 'Omu-Aran', 'Lafiagi'] },
-    { name: 'Lagos', cities: ['Lagos', 'Ikeja', 'Epe', 'Badagry', 'Ikorodu'] },
+    { name: 'Lagos', cities: ['Lagos', 'Ikeja', 'Epe', 'Badagry', 'Ikorodu', 'Lagos Island', 'Lagos Mainland', 'Lekki', 'Victoria Island', 'Surulere', 'Yaba', 'Ajah', 'Ibeju-Lekki'] },
     { name: 'Nasarawa', cities: ['Lafia', 'Keffi', 'Akwanga', 'Nasarawa'] },
     { name: 'Niger', cities: ['Minna', 'Bida', 'Kontagora', 'Suleja'] },
     { name: 'Ogun', cities: ['Abeokuta', 'Sagamu', 'Ijebu-Ode', 'Ilaro'] },

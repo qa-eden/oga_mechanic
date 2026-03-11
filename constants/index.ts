@@ -406,7 +406,7 @@ export const MechanicProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: mechanicRoutes.EditProfile,
+      route: mechanicRoutes.profileDetails,
     },
     {
       id: 2,
@@ -481,7 +481,7 @@ export const SellerProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: sellerRoutes.EditProfile,
+      route: sellerRoutes.profileDetails,
     },
     {
       id: 2,
@@ -517,7 +517,7 @@ export const RiderProfileSettings = {
       id: 1,
       name: "My Profile",
       image: UserCircle,
-      route: riderRoutes.EditProfile,
+      route: riderRoutes.profileDetails,
     },
     {
       id: 2,

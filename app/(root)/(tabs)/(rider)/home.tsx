@@ -8,8 +8,9 @@ import { router } from 'expo-router';
 import RiderRequestCard from '@/components/cards/RiderRequestCard';
 import CustomMapView from '@/components/MapView';
 import { useProfileStore } from '@/hooks/useProfileStore';
-import { usePrimaryUserProfile } from '@/hooks/useUserProfile';
+import { usePrimaryUserProfile, useRiderProfile } from '@/hooks/useUserProfile';
 import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal';
+import KYCBanner from '@/components/KYCBanner';
 import { useRef, useEffect } from 'react';
 import { FadeInUp, FadeInRight, FadeInDown, Layout } from 'react-native-reanimated';
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -28,8 +29,18 @@ const Home = () => {
   const hasShownModalRef = useRef(false);
   const timerIdRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: profileResponse, isLoading: profileLoading } = usePrimaryUserProfile();
+  const { 
+    data: profileResponse, 
+    isLoading: profileLoading, 
+    refetch: refetchPrimary 
+  } = usePrimaryUserProfile();
   const profileData = profileResponse?.data;
+
+  const {
+    data: riderProfileResponse,
+    refetch: refetchRider
+  } = useRiderProfile();
+  const riderProfile = riderProfileResponse?.data;
 
   // Check profile status on load
   useEffect(() => {
@@ -66,7 +77,19 @@ const Home = () => {
     };
   }, [profileData, profileLoading, setIsProfileComplete, isNewSwitch]);
 
-  const isPendingApproval = false; // Riders don't have a pending approval state like drivers
+  const isPendingApproval = Boolean(
+    riderProfileResponse?.data?.kyc?.is_complete && 
+    !riderProfileResponse?.data?.rider_profile?.is_approved
+  );
+
+  // Debug KYCBanner visibility
+  console.log('KYCBanner Debug:', {
+    isProfileComplete,
+    isPendingApproval,
+    shouldShow: !isProfileComplete || isPendingApproval,
+    profileData: profileData,
+    riderProfile: riderProfileResponse?.data
+  });
 
   // Generate markers for delivery requests
   const generateDeliveryMarkers = () => {
@@ -153,14 +176,16 @@ const Home = () => {
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // Simulate API call - replace with actual data fetching
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([refetchPrimary(), refetchRider()]);
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [refetchPrimary, refetchRider]);
+
+  const firstName = riderProfile?.rider_profile?.first_name || profileData?.first_name || 'Rider';
+  const profileImage = riderProfile?.rider_profile?.selfie || (profileData as any)?.profile_picture || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face';
 
   return (
     <SafeAreaView className="h-screen bg-white">
@@ -187,11 +212,11 @@ const Home = () => {
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center">
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' }}
+                  source={{ uri: profileImage }}
                   className="w-12 h-12 rounded-full mr-3"
                 />
                 <View>
-                  <Text className="text-xl font-bold text-gray-900">Hi, Waarith</Text>
+                  <Text className="text-xl font-bold text-gray-900">Hi, {firstName}</Text>
                   <Text className="text-sm text-gray-500 flex-row items-center">
                     Everything your car needs is here ☁️
                   </Text>
@@ -214,6 +239,14 @@ const Home = () => {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          <View className="px-5 mb-1 mt-4">
+            <KYCBanner 
+              isVisible={true} // Temporarily force show for testing
+              role="rider" 
+              isPending={isPendingApproval} 
+            />
           </View>
 
           {/* Map Section */}

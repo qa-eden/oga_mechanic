@@ -30,6 +30,8 @@ import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
+import { useProfileStore } from "@/hooks/useProfileStore";
+import KYCBanner from "@/components/KYCBanner";
 
 const MechanicProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -139,6 +141,22 @@ const MechanicProfile = () => {
   const pendingJobs = repairRequests?.data?.filter((r: any) => r.status === 'pending')?.length || 0;
   const totalEarnings = (mechanicData?.mechanic_profile as any)?.total_earnings || 0;
 
+  const isPendingApproval = Boolean(
+    mechanicProfile?.data?.kyc?.is_complete && 
+    !mechanicProfile?.data?.mechanic_profile?.is_approved
+  );
+
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+
+  // Check profile status on load
+  React.useEffect(() => {
+    if (mechanicProfile && !isLoadingProfile) {
+      const isComplete = mechanicProfile.data?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+    }
+  }, [mechanicProfile, isLoadingProfile, setIsProfileComplete]);
+
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
       <StatusBar style="dark" />
@@ -164,6 +182,14 @@ const MechanicProfile = () => {
               <Text className="text-2xl font-NunitoExtraBold text-gray-900">
                 Mechanic Account
               </Text>
+            </View>
+
+            <View className="mb-4">
+              <KYCBanner 
+                isVisible={!isProfileComplete || isPendingApproval} 
+                role="mechanic" 
+                isPending={isPendingApproval} 
+              />
             </View>
 
             {/* Profile Card */}

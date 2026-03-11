@@ -299,7 +299,6 @@ const EditImage = () => {
           message="Uploading Images..."
           subMessage="Please wait while we upload your new images"
           size="medium"
-          logoSize={32}
         />
       </SafeAreaView>
     );
@@ -434,7 +433,7 @@ const EditImage = () => {
         {/* Update Button */}
         <View className="bg-white rounded-2xl p-5 mb-8 border border-gray-200">
           <TouchableOpacity 
-            onPress={handleSubmit}
+            onPress={() => handleSubmit()}
             disabled={images.length === 0}
             className={`rounded-xl py-4 ${images.length === 0 ? 'bg-gray-400' : 'bg-primary-500'}`}
           >

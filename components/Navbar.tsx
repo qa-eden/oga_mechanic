@@ -9,7 +9,7 @@ import {
 } from "react-native-heroicons/outline";
 import { router, useSegments } from "expo-router";
 import { routes, driverRoutes, mechanicRoutes, riderRoutes, sellerRoutes } from "@/constants/routes";
-import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
+import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys, useDriverProfile, useRiderProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -123,16 +123,18 @@ const Navbar = () => {
     refetchRoles();
   }, [refetchRoles]);
   
-  // Check if user is logged in as mechanic
+  // Check role status
   const isMechanic = activeRole === 'mechanic';
+  const isDriver = activeRole === 'driver';
+  const isRider = activeRole === 'rider';
   
-  // For mechanic, use mechanic profile directly (without calling primary first)
-  // For other roles, use primary profile
-  // Only enable the appropriate hook based on active role to avoid unnecessary API calls
-  const { data: mechanicProfileData, isLoading: mechanicLoading } = useMechanicProfile(isMechanic);
+  // Role-specific profile hooks
+  const { data: mechanicProfileData } = useMechanicProfile(isMechanic);
+  const { data: driverProfileData } = useDriverProfile(isDriver);
+  const { data: riderProfileData } = useRiderProfile(isRider);
   
-  // Conditionally fetch primary profile only when NOT mechanic
-  const { data: primaryProfileData, isLoading: primaryLoading } = usePrimaryUserProfile(!isMechanic);
+  // Primary profile (for sellers and as general fallback)
+  const { data: primaryProfileData } = usePrimaryUserProfile(!isMechanic);
   
   // Determine display name, profile picture and verified status based on role
   let displayName = 'User';
@@ -144,7 +146,17 @@ const Navbar = () => {
     displayName = mProfile.user?.first_name || 'User';
     profilePicture = (mProfile.user as any)?.profile_image || (mProfile as any)?.selfie;
     isVerified = mProfile.is_approved;
-  } else if (!isMechanic && primaryProfileData?.data) {
+  } else if (isDriver && driverProfileData?.data?.driver_profile) {
+    const dProfile = driverProfileData.data.driver_profile;
+    displayName = dProfile.user?.first_name || 'User';
+    profilePicture = (dProfile as any)?.profile_picture || (dProfile as any)?.selfie;
+    isVerified = dProfile.is_approved || false;
+  } else if (isRider && riderProfileData?.data) {
+    const rProfile = riderProfileData.data;
+    displayName = rProfile.first_name || 'User';
+    profilePicture = rProfile.profile_picture;
+    isVerified = rProfile.is_verified || false;
+  } else if (primaryProfileData?.data) {
     const pProfile = primaryProfileData.data;
     displayName = pProfile.first_name || 'User';
     profilePicture = pProfile.profile_image || (pProfile as any)?.profile_picture;

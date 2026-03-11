@@ -32,11 +32,11 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchant(),
     queryFn: userAPI.getMerchantProfile,
-    staleTime: 0, // Always fetch to check KYC
-    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
     enabled: enabled,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -59,11 +59,11 @@ export const useDriverProfile = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['driver', 'profile'],
     queryFn: () => userAPI.getDriverProfile(),
-    staleTime: 0, // Always fetch to check KYC
-    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
     enabled: enabled,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -72,11 +72,11 @@ export const useRiderProfile = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['rider', 'profile'],
     queryFn: () => userAPI.getRiderProfile(),
-    staleTime: 0, // Always fetch to check KYC
-    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
     enabled: enabled,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -158,11 +158,11 @@ export const useUserRoles = () => {
   return useQuery<UserRolesResponse>({
     queryKey: userProfileKeys.roles(),
     queryFn: userAPI.getUserRoles,
-    staleTime: 1 * 60 * 1000, // 1 minute - shorter stale time to get fresh role data
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
-    refetchOnMount: true, // Always refetch on mount to get latest role
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -173,12 +173,95 @@ export const useUpdateUserProfile = () => {
   return useMutation({
     mutationFn: userAPI.updateProfile,
     onSuccess: (data) => {
-      // Invalidate and refetch profile queries
+      // Invalidate and refetch all user profile queries
       queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       console.log('✅ Profile updated successfully:', data);
     },
     onError: (error) => {
       console.error('❌ Error updating profile:', error);
+    },
+  });
+};
+
+// Hook to submit merchant KYC
+export const useSubmitMerchantKYC = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.submitMerchantKYC,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      console.log('✅ Merchant KYC submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting merchant KYC:', error);
+    },
+  });
+};
+
+// Hook to submit mechanic KYC
+export const useSubmitMechanicKYC = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.submitMechanicKYC,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      console.log('✅ Mechanic KYC submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting mechanic KYC:', error);
+    },
+  });
+};
+
+// Hook to submit driver KYC
+export const useSubmitDriverKYC = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.submitDriverKYC,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      console.log('✅ Driver KYC submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting driver KYC:', error);
+    },
+  });
+};
+
+// Hook to submit rider KYC
+export const useSubmitRiderKYC = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.submitRiderKYC,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      console.log('✅ Rider KYC submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting rider KYC:', error);
+    },
+  });
+};
+
+// Hook to switch user role
+export const useSwitchRole = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (roleName: string) => userAPI.switchRole(roleName),
+    onSuccess: (data, roleName) => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
+      // Invalidate notifications specifically as they are role-dependent
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
+      console.log(`✅ Role switched to ${roleName} successfully`);
+    },
+    onError: (error) => {
+      console.error('❌ Error switching role:', error);
     },
   });
 };

@@ -9,6 +9,8 @@ interface TextAreaProps extends TextInputProps {
   labelStyle?: string;
   required?: boolean;
   rows?: number;
+  onFocus?: (e: any) => void;
+  onBlur?: (e: any) => void;
 }
 
 const TextArea = ({
@@ -19,6 +21,8 @@ const TextArea = ({
   labelStyle = "mb-3",
   required = false,
   rows = 4,
+  onFocus,
+  onBlur,
   ...props
 }: TextAreaProps) => {
   const hasError = error && touched;
@@ -37,6 +41,7 @@ const TextArea = ({
 
       <TextInput
         multiline
+        scrollEnabled={false}
         numberOfLines={rows}
         placeholder={placeholder}
         placeholderTextColor="#9CA3AF"
@@ -49,6 +54,8 @@ const TextArea = ({
           minHeight: minHeight,
           textAlignVertical: 'top',
         }}
+        onFocus={onFocus}
+        onBlur={onBlur}
         {...props}
       />
 

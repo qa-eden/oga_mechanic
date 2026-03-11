@@ -25,7 +25,7 @@ import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import KYCBanner from "@/components/KYCBanner";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
-import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useDriverProfile } from "@/hooks/useUserProfile";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -53,11 +53,14 @@ const DriverProfile = () => {
   const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
 
   // Fetch profile data
-  const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
+  const { data: primaryProfileData, isLoading: isPrimaryLoading, refetch: refetchPrimaryProfile } = usePrimaryUserProfile();
+  const { data: driverProfileData, isLoading: isDriverLoading, refetch: refetchDriverProfile } = useDriverProfile();
+
+  const isProfileLoading = isPrimaryLoading || isDriverLoading;
 
   const isPendingApproval = Boolean(
-    (profileData?.data as any)?.kyc?.is_complete && 
-    !(profileData?.data as any)?.driver_profile?.is_approved
+    driverProfileData?.data?.kyc?.is_complete && 
+    !driverProfileData?.data?.driver_profile?.is_approved
   );
 
   const hasShownModalRef = React.useRef(false);
@@ -65,8 +68,8 @@ const DriverProfile = () => {
 
   // Check profile status on load
   React.useEffect(() => {
-    if (profileData && !isProfileLoading) {
-      const isComplete = (profileData?.data as any)?.kyc?.is_complete ?? false;
+    if (driverProfileData && !isDriverLoading) {
+      const isComplete = driverProfileData.data?.kyc?.is_complete ?? false;
       setIsProfileComplete(isComplete);
       
       // ONLY show automatically if we just switched roles and it's not complete
@@ -95,11 +98,11 @@ const DriverProfile = () => {
         timerIdRef.current = null;
       }
     };
-  }, [profileData, isProfileLoading, setIsProfileComplete, isNewSwitch]);
+  }, [driverProfileData, isDriverLoading, setIsProfileComplete, isNewSwitch]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchProfile();
+    await Promise.all([refetchPrimaryProfile(), refetchDriverProfile()]);
     setRefreshing(false);
   };
 
@@ -161,17 +164,34 @@ const DriverProfile = () => {
     </TouchableOpacity>
   );
 
-  if (isProfileLoading) {
-    return <LoadingSpinner message="Loading Profile..." size="medium" />;
-  }
+  // Show loading state - REMOVED blocking spinner for better UX
+  // if (isProfileLoading) {
+  //   return <LoadingSpinner message="Loading Profile..." size="medium" />;
+  // }
 
-  const userData = (profileData as PrimaryUserProfileResponse)?.data;
+  const userData = (primaryProfileData as PrimaryUserProfileResponse)?.data;
+  const driverData = driverProfileData?.data?.driver_profile;
+
   const displayName =
-    userData?.first_name && userData?.last_name ? `${userData.first_name} ${userData.last_name}` : userInfo.name;
-  const displayEmail = userData?.email || "";
+    driverData?.user?.first_name && driverData?.user?.last_name
+      ? `${driverData.user.first_name} ${driverData.user.last_name}`
+      : userData?.first_name && userData?.last_name
+      ? `${userData.first_name} ${userData.last_name}`
+      : userInfo.name;
+
+  const displayEmail = driverData?.user?.email || userData?.email || "";
   const isVerified = userData?.is_verified || false;
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || "driver";
-  const profileImage = (userData as any)?.profile_picture || (userData as any)?.image || null;
+  const activeRole = (primaryProfileData as PrimaryUserProfileResponse)?.active_role || "driver";
+
+  // Profile image fallback prioritization:
+  // 1. Driver Profile Picture (selfie/photo from driver endpoint)
+  // 2. Primary User Profile Picture
+  const profileImage =
+    (driverData as any)?.profile_picture ||
+    (driverData as any)?.selfie ||
+    (userData as any)?.profile_picture ||
+    (userData as any)?.image ||
+    null;
 
   // Placeholder stats
   const completedTrips = 0;

@@ -25,12 +25,12 @@ export const useCart = () => {
   return useQuery<CartResponse, Error>({
     queryKey: cartKeys.cart(),
     queryFn: () => productsAPI.getCart(),
-    staleTime: 0, // Always refetch when invalidated - cart data should be fresh
+    staleTime: 60 * 1000, // 1 minute - cart data shouldn't change instantly unless mutated
     gcTime: 10 * 60 * 1000, // 10 minutes cache time
     retry: 2, // Retry failed requests
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when app comes to foreground
+    refetchOnMount: false, // Don't refetch on mount if data exists and is fresh
+    refetchOnWindowFocus: false, // Disable refetch on window focus
   });
 };
 

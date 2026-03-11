@@ -336,7 +336,7 @@ const UploadCarImages = () => {
               uploadStep === 'uploading-images' ? 'Uploading Images...' :
               isSubmitting ? 'Uploading...' :
               isEditMode ? `Update ${productLabel}` : `Upload ${productLabel}`}
-            onPress={handleSubmit}
+            onPress={() => handleSubmit()}
             disabled={images.length === 0 || isSubmitting}
             loading={isSubmitting}
             loadingText="Uploading"

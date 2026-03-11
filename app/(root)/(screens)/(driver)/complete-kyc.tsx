@@ -44,6 +44,8 @@ export interface FormValues {
   state: string;
   location: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
 
   // Step 2: Vehicle
   vehicle_name: string;
@@ -72,10 +74,14 @@ const step1Schema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Email is required"),
   phone_number: Yup.string().required("Phone number is required"),
   gender: Yup.string().required("Gender is required"),
-  date_of_birth: Yup.string().required("Date of birth is required"),
+  date_of_birth: Yup.date()
+    .max(new Date(new Date().setFullYear(new Date().getFullYear() - 18)), "You must be at least 18 years old")
+    .required("Date of birth is required"),
   state: Yup.string().required("State is required"),
   location: Yup.string().required("Location is required"),
   city: Yup.string().required("City is required"),
+  latitude: Yup.number().required("Please select your address from the dropdown to verify your location"),
+  longitude: Yup.number().required("Please select your address from the dropdown to verify your location"),
 });
 
 const step2Schema = Yup.object().shape({
@@ -92,9 +98,18 @@ const step3Schema = Yup.object().shape({
   government_id: Yup.string().required("Required"),
   driver_license_type: Yup.string().required("Required"),
   license_number: Yup.string().required("Required"),
-  license_issue_date: Yup.string().required("Required"),
-  license_expiry_date: Yup.string()
+  license_issue_date: Yup.date()
+    .max(new Date(), "Issue date cannot be in the future")
+    .required("Required"),
+  license_expiry_date: Yup.date()
     .required("Required")
+    .test("is-expired", "License has expired. Please ensure this is correct.", (value) => {
+      if (!value) return true;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      // Allow expired licenses but show warning
+      return true;
+    })
     .test("is-after-issue", "Expiry date must be after issue date", function (value) {
       const { license_issue_date } = this.parent;
       if (!value || !license_issue_date) return true;
@@ -137,6 +152,18 @@ const DriverKYC = () => {
   const totalSteps = 4;
   const [isAddressFocused, setIsAddressFocused] = useState(false);
 
+  const eighteenYearsAgo = React.useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d;
+  }, []);
+
+  const today = React.useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -155,6 +182,21 @@ const DriverKYC = () => {
     return t;
   };
 
+  // Helper to safely parse date strings to Date objects (local time)
+  const parseDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+    // Handle YYYY-MM-DD format explicitly to avoid UTC shift issues
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const initialValues = React.useMemo(() => ({
     full_name: initialFullName,
     email: initialEmail,
@@ -164,6 +206,8 @@ const DriverKYC = () => {
     state: driverProfile?.state || "",
     location: driverProfile?.location || "",
     city: driverProfile?.city || "",
+    latitude: driverProfile?.latitude || undefined,
+    longitude: driverProfile?.longitude || undefined,
     vehicle_name: driverProfile?.vehicle_name || "",
     vehicle_type: getSanitizedVehicleType(driverProfile?.vehicle_type),
     vehicle_model: driverProfile?.vehicle_model || "",
@@ -186,13 +230,13 @@ const DriverKYC = () => {
       if (driverProfile.government_id_front && !govtIdFront) setGovtIdFront({ uri: driverProfile.government_id_front });
       if (driverProfile.government_id_back && !govtIdBack) setGovtIdBack({ uri: driverProfile.government_id_back });
       
-      if (driverProfile.driver_license_front_image && !licenseFront) {
-        setLicenseFront({ uri: driverProfile.driver_license_front_image });
+      if (driverProfile.license_front_image && !licenseFront) {
+        setLicenseFront({ uri: driverProfile.license_front_image });
       } else if (driverProfile.driver_license && !licenseFront) {
         setLicenseFront({ uri: driverProfile.driver_license });
       }
       
-      if (driverProfile.driver_license_back_image && !licenseBack) setLicenseBack({ uri: driverProfile.driver_license_back_image });
+      if (driverProfile.license_back_image && !licenseBack) setLicenseBack({ uri: driverProfile.license_back_image });
       if (driverProfile.insurance_document && !insuranceDoc) setInsuranceDoc({ uri: driverProfile.insurance_document });
       
       if (driverProfile.vehicle_photo_front && !vehicleFront) setVehicleFront({ uri: driverProfile.vehicle_photo_front });
@@ -259,6 +303,7 @@ const DriverKYC = () => {
       scrollRef.current.scrollToPosition(0, 0, true);
     }
   }, [currentStep]);
+
 
   const handleMakeChange = (selectedMake: string, setFieldValue: any) => {
     setFieldValue("vehicle_name", selectedMake);
@@ -379,7 +424,7 @@ const DriverKYC = () => {
     }
   };
 
-  const handleNextStep = async (validateForm: any, setTouched: any) => {
+  const handleNextStep = async (validateForm: any, setTouched: any, values: FormValues) => {
     const errors = await validateForm();
     if (Object.keys(errors).length > 0) {
       // Mark all fields in current step as touched to show errors
@@ -388,8 +433,46 @@ const DriverKYC = () => {
         return acc;
       }, {});
       setTouched(touchedFields);
+      setErrorMessage("Please fill all required text fields in this step.");
+      setShowErrorModal(true);
       return;
     }
+
+    // Step-specific document validation
+    if (currentStep === 1) {
+      if (!selfie) {
+        setErrorMessage("Please complete the liveness check (selfie) before proceeding.");
+        setShowErrorModal(true);
+        return;
+      }
+    } else if (currentStep === 3) {
+      if (!govtIdFront) {
+        setErrorMessage("Please upload the front of your Government ID.");
+        setShowErrorModal(true);
+        return;
+      }
+      if (values.government_id !== 'passport' && !govtIdBack) {
+        setErrorMessage("Please upload the back of your Government ID.");
+        setShowErrorModal(true);
+        return;
+      }
+      if (!licenseFront) {
+        setErrorMessage("Please upload the front of your Driver's License.");
+        setShowErrorModal(true);
+        return;
+      }
+      if (!licenseBack) {
+        setErrorMessage("Please upload the back of your Driver's License.");
+        setShowErrorModal(true);
+        return;
+      }
+      if (!insuranceDoc) {
+        setErrorMessage("Please upload your Comprehensive Insurance Document.");
+        setShowErrorModal(true);
+        return;
+      }
+    }
+
     setCurrentStep(prev => Math.min(prev + 1, totalSteps));
   };
 
@@ -424,6 +507,8 @@ const DriverKYC = () => {
       formData.append('state', values.state);
       formData.append('location', values.location);
       formData.append('city', values.city);
+      formData.append('latitude', values.latitude !== undefined && values.latitude !== null ? values.latitude.toString() : "");
+      formData.append('longitude', values.longitude !== undefined && values.longitude !== null ? values.longitude.toString() : "");
 
       // Step 2: Vehicle
       formData.append('vehicle_name', values.vehicle_name);
@@ -475,7 +560,7 @@ const DriverKYC = () => {
           name: `license_front_${Date.now()}.jpg`,
           type: 'image/jpeg'
         } as any);
-        formData.append('driver_license_front_image', {
+        formData.append('license_front_image', {
           uri: licenseFront.uri,
           name: `license_front_${Date.now()}.jpg`,
           type: 'image/jpeg'
@@ -483,7 +568,7 @@ const DriverKYC = () => {
       }
 
       if (licenseBack) {
-        formData.append('driver_license_back_image', {
+        formData.append('license_back_image', {
           uri: licenseBack.uri,
           name: `license_back_${Date.now()}.jpg`,
           type: 'image/jpeg'
@@ -622,7 +707,6 @@ const DriverKYC = () => {
       >
         <Formik
           innerRef={formikRef}
-          enableReinitialize
           initialValues={initialValues}
           validationSchema={getValidationSchema(currentStep)}
           onSubmit={finalSubmit}
@@ -723,7 +807,7 @@ const DriverKYC = () => {
                             error={errors.date_of_birth as string}
                             touched={touched.date_of_birth as boolean}
                             required
-                            maximumDate={new Date()} // Can't be born in the future
+                            maximumDate={eighteenYearsAgo} // Must be at least 18 years old
                           />
                         </View>
 
@@ -756,6 +840,10 @@ const DriverKYC = () => {
                             onChangeText={handleChange("location")}
                             onLocationSelect={(loc: any) => {
                               setFieldValue("location", loc.address || loc.name);
+                              if (loc.latitude && loc.longitude) {
+                                setFieldValue("latitude", loc.latitude);
+                                setFieldValue("longitude", loc.longitude);
+                              }
 
                               // Mapbox feature context parsing
                               if (loc.context && Array.isArray(loc.context)) {
@@ -774,8 +862,8 @@ const DriverKYC = () => {
                                 }
                               }
                             }}
-                            error={errors.location}
-                            touched={touched.location}
+                            error={errors.location || errors.latitude || errors.longitude}
+                            touched={touched.location || touched.latitude || touched.longitude}
                             required
                             multiline={false}
                             numberOfLines={1}
@@ -814,7 +902,7 @@ const DriverKYC = () => {
                     </View>
 
                     <TouchableOpacity
-                      onPress={() => handleNextStep(validateForm, setTouched)}
+                      onPress={() => handleNextStep(validateForm, setTouched, values)}
                       className="py-4 bg-gray-900 rounded-xl items-center shadow-md mt-4"
                     >
                       <Text className="text-white font-NunitoBold text-lg">Continue to Vehicle Info</Text>
@@ -999,7 +1087,7 @@ const DriverKYC = () => {
                         <Text className="text-gray-700 font-NunitoBold text-lg">Back</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => handleNextStep(validateForm, setTouched)}
+                        onPress={() => handleNextStep(validateForm, setTouched, values)}
                         className="flex-[2] py-4 bg-gray-900 rounded-xl items-center shadow-md"
                       >
                         <Text className="text-white font-NunitoBold text-lg">Continue to Documents</Text>
@@ -1095,10 +1183,22 @@ const DriverKYC = () => {
                               label="Issue Date"
                               placeholder="YYYY-MM-DD"
                               value={values.license_issue_date ? new Date(values.license_issue_date) : null}
-                              onDateChange={(date: Date) => setFieldValue("license_issue_date", date.toISOString().split('T')[0])}
+                              onDateChange={(date: Date) => {
+                                const issueDateStr = date.toISOString().split('T')[0];
+                                setFieldValue("license_issue_date", issueDateStr);
+                                
+                                // Auto-reset expiry if it becomes invalid (before issue date)
+                                if (values.license_expiry_date) {
+                                  const expiryDate = parseDate(values.license_expiry_date);
+                                  if (expiryDate && expiryDate < date) {
+                                    setFieldValue("license_expiry_date", "");
+                                  }
+                                }
+                              }}
                               error={errors.license_issue_date as string}
                               touched={touched.license_issue_date as boolean}
                               required
+                              maximumDate={new Date()}
                             />
                           </View>
                           <View className="flex-1">
@@ -1107,11 +1207,16 @@ const DriverKYC = () => {
                               placeholder="YYYY-MM-DD"
                               value={values.license_expiry_date ? new Date(values.license_expiry_date) : null}
                               onDateChange={(date: Date) => setFieldValue("license_expiry_date", date.toISOString().split('T')[0])}
-                              minimumDate={values.license_issue_date ? new Date(values.license_issue_date) : undefined}
+                              minimumDate={parseDate(values.license_issue_date) || undefined}
                               error={errors.license_expiry_date as string}
                               touched={touched.license_expiry_date as boolean}
                               required
                             />
+                            {/* {values.license_expiry_date && parseDate(values.license_expiry_date) && parseDate(values.license_expiry_date)! < new Date() && (
+                              <Text className="text-orange-500 text-sm mt-1">
+                                ⚠️ License has expired
+                              </Text>
+                            )} */}
                           </View>
                         </View>
 
@@ -1157,7 +1262,7 @@ const DriverKYC = () => {
                         <Text className="text-gray-700 font-NunitoBold text-lg">Back</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => handleNextStep(validateForm, setTouched)}
+                        onPress={() => handleNextStep(validateForm, setTouched, values)}
                         className="flex-[2] py-4 bg-gray-900 rounded-xl items-center shadow-md"
                       >
                         <Text className="text-white font-NunitoBold text-lg">Continue to Final Step</Text>

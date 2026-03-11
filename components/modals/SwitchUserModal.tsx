@@ -13,7 +13,7 @@ import { showToast } from "@/utils/toastUtils";
 import { MaterialIcons } from '@expo/vector-icons';
 import { ShoppingBagIcon, WrenchScrewdriverIcon, UsersIcon } from "react-native-heroicons/solid";
 import CustomButton from "../CustomButton";
-import { useUserRoles, userProfileKeys } from "@/hooks/useUserProfile";
+import { useUserRoles, userProfileKeys, useSwitchRole } from "@/hooks/useUserProfile";
 import { useRoles } from "@/hooks/useRoles";
 import { router } from "expo-router";
 import { routes, mechanicRoutes, driverRoutes, sellerRoutes } from "@/constants/routes";
@@ -57,6 +57,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentRole, setCurrentRole] = useState<string>("");
   const { showError, hideAlert, visible, alertConfig } = useCustomAlert();
+  const switchRoleMutation = useSwitchRole();
   const queryClient = useQueryClient();
   const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
   const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
@@ -223,23 +224,15 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
           setIsSwitching(true);
           
           // Switch role (API automatically adds role if user doesn't have it)
-          await userAPI.switchRole(roleName);
+          await switchRoleMutation.mutateAsync(roleName);
           
           const addRoles = !selectedOption?.hasAccess ? [roleId] : undefined;
           
           // Store the new active role for fallback purposes
           await AsyncStorage.setItem('current_active_role', roleName);
           
-          // Invalidate React Query cache
-          queryClient.invalidateQueries({ queryKey: ['userProfile', 'roles'] });
-          queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
-          queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
-          
-          // Explicitly refetch notifications
-          queryClient.refetchQueries({ queryKey: userProfileKeys.notifications() });
-          
-          // Wait a moment for queries to refetch
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Wait a moment for cache invalidation (handled by mutation) to propagate
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           // Log them in directly
           onSwitchUser(roleName);

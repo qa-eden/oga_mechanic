@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Slot } from "expo-router";
 import { useNotifications, usePrimaryUserProfile } from "@/hooks/useUserProfile";
 
 const Layout = () => {
@@ -15,15 +15,7 @@ const Layout = () => {
     refetchProfile();
   }, [refetchNotifications, refetchProfile]);
 
-  return (
-    <Stack>
-      <Stack.Screen name="(user)" options={{ headerShown: false }} />
-      <Stack.Screen name="(driver)" options={{ headerShown: false }} />
-      <Stack.Screen name="(rider)" options={{ headerShown: false }} />
-      <Stack.Screen name="(sellers)" options={{ headerShown: false }} />
-      <Stack.Screen name="(mechanic)" options={{ headerShown: false }} />
-    </Stack>
-  );
+  return <Slot />;
 };
 
 export default Layout;

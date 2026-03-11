@@ -277,7 +277,7 @@ const EditProfile = () => {
               <View className="mt-8">
                 <FormikButton
                   title={isSubmitting ? "Saving Changes..." : "Save Changes"}
-                  onPress={handleSubmit}
+                  onPress={() => handleSubmit()}
                   loading={isSubmitting}
                   disabled={isSubmitting}
                   className="w-full"

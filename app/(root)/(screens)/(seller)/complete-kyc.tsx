@@ -29,28 +29,32 @@ import SelfieUpload from "@/components/SelfieUpload";
 import LivenessCamera from "@/components/LivenessCamera";
 import SuccessModal from "@/components/modals/SuccessModal";
 import ErrorModal from "@/components/modals/ErrorModal";
+import SelectField from "@/components/forms/SelectField";
 import { userAPI } from "@/lib/api/user";
 import { useProfileStore } from "@/hooks/useProfileStore";
+import { useSubmitMerchantKYC } from "@/hooks/useUserProfile";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import { sellerRoutes } from "@/constants/routes";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
+  store_name: Yup.string().required("Store name is required"),
   location: Yup.string().required("Please enter your location"),
   latitude: Yup.string(),
   longitude: Yup.string(),
-  lga: Yup.string().nullable(),
-  business_address: Yup.string(),
+  state: Yup.string().required("Please select your state"),
+  lga: Yup.string().required("Please select your LGA"),
   cac_number: Yup.string().required("CAC document number is required"),
 });
 
 interface FormValues {
+  store_name: string;
   location: string;
   latitude: string;
   longitude: string;
+  state: string;
   lga: string;
-  business_address: string;
   cac_number: string;
 }
 
@@ -71,12 +75,14 @@ const CompleteKYC = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const submitKYCMutation = useSubmitMerchantKYC();
   const [initialFormValues, setInitialFormValues] = useState<FormValues>({
+    store_name: "",
     location: "",
     latitude: "",
     longitude: "",
+    state: "",
     lga: "",
-    business_address: "",
     cac_number: "",
   });
 
@@ -88,11 +94,12 @@ const CompleteKYC = () => {
           const profile = response.data.merchant_profile;
           
           setInitialFormValues({
+            store_name: profile.store_name || "",
             location: profile.location || "",
             latitude: profile.latitude || "",
             longitude: profile.longitude || "",
+            state: profile.state || "",
             lga: profile.lga || "",
-            business_address: profile.business_address || "",
             cac_number: profile.cac_number || "",
           });
 
@@ -135,7 +142,7 @@ const CompleteKYC = () => {
   const nigerianStates = getStatesByCountry('NG');
   const states = nigerianStates.map(state => ({
     label: state.name,
-    value: state.name.toLowerCase().replace(/\s+/g, '_')
+    value: state.name
   }));
 
   // Document Picking Logic
@@ -207,6 +214,7 @@ const CompleteKYC = () => {
           if (region) {
             const matchedState = states.find(s => s.label.toLowerCase() === region.toLowerCase());
             if (matchedState) {
+              setFieldValue("state", matchedState.label);
               
               const potentialLGAs = [city, address.subregion, address.district].filter(Boolean);
 
@@ -253,9 +261,10 @@ const CompleteKYC = () => {
     try {
       const formData = new FormData();
       formData.append('requestType', 'inbound');
+      formData.append('store_name', values.store_name);
       formData.append('location', values.location);
+      if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
-      if (values.business_address) formData.append('business_address', values.business_address);
       formData.append('cac_number', values.cac_number);
 
       // Append files
@@ -275,7 +284,7 @@ const CompleteKYC = () => {
         } as any);
       }
 
-      await userAPI.submitMerchantKYC(formData);
+      await submitKYCMutation.mutateAsync(formData);
 
       // Update global state
       useProfileStore.getState().setIsProfileComplete(true);
@@ -325,7 +334,6 @@ const CompleteKYC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <Formik
-          enableReinitialize={true}
           initialValues={initialFormValues}
           validationSchema={validationSchema}
           onSubmit={submitForm}
@@ -352,7 +360,7 @@ const CompleteKYC = () => {
                 <View className="space-y-4" style={{ zIndex: 50 }}>
                   <View style={{ zIndex: 60, elevation: 60 }}>
                   <AddressInput
-                    label="Business Search Location"
+                    label="Business Location"
                     placeholder="Search for your shop address"
                     value={values.location}
                     onChangeText={handleChange("location")}
@@ -364,13 +372,40 @@ const CompleteKYC = () => {
                   />
                   </View>
 
-                  <InputField
-                    label="Business Address (Optional)"
-                    placeholder="Enter precise business address"
-                    value={values.business_address}
-                    onChangeText={handleChange("business_address")}
-                    onBlur={handleBlur("business_address")}
-                  />
+
+                  <View className="flex-row gap-4">
+                    <View className="flex-1">
+                      <SelectField
+                        name="state"
+                        label="State"
+                        placeholder="Select State"
+                        options={states}
+                        value={values.state}
+                        onValueChange={(val) => {
+                          setFieldValue("state", val);
+                          setFieldValue("lga", ""); // Reset LGA when state changes
+                        }}
+                        error={errors.state as string}
+                        touched={touched.state}
+                        required
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <SelectField
+                        name="lga"
+                        label="LGA"
+                        placeholder="Select LGA"
+                        options={values.state ? getLGAs(values.state).map(lga => ({ label: lga, value: lga })) : []}
+                        value={values.lga}
+                        onValueChange={(val) => setFieldValue("lga", val)}
+                        error={errors.lga as string}
+                        touched={touched.lga}
+                        required
+                        // @ts-ignore - disabled prop not in SelectFieldProps but might be needed/added later
+                        disabled={!values.state}
+                      />
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -379,6 +414,17 @@ const CompleteKYC = () => {
                 <SectionHeader icon={IdentificationIcon} title="Business Documentation" />
                 
                 <View className="space-y-4">
+                  <InputField
+                    label="Store Name"
+                    placeholder="Enter your store name"
+                    value={values.store_name}
+                    onChangeText={handleChange("store_name")}
+                    onBlur={handleBlur("store_name")}
+                    error={errors.store_name}
+                    touched={touched.store_name}
+                    required
+                  />
+
                   <InputField
                     label="CAC Registration Number"
                     placeholder="Enter your CAC number"

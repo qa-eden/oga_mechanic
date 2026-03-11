@@ -10,18 +10,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
-import { CameraIcon, BuildingStorefrontIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from "react-native-heroicons/outline";
-import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { CameraIcon, BuildingStorefrontIcon, MapPinIcon, PhoneIcon, EnvelopeIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
+import { useMerchantProfile, usePrimaryUserProfile, useSubmitMerchantKYC } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
-import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
+import SelectField from "@/components/forms/SelectField";
+import { getStatesByCountry } from "@/constants/locationData";
+import { getLGAs } from "@/constants/nigeriaData";
 import { LinearGradient } from "expo-linear-gradient";
 
 // Validation Schema for Seller Profile
@@ -36,12 +39,15 @@ const editSellerProfileSchema = Yup.object().shape({
     .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
-  business_name: Yup.string().nullable(),
-  business_address: Yup.string().nullable(),
+  store_name: Yup.string().nullable(),
+  location: Yup.string().nullable(),
+  state: Yup.string().nullable(),
+  lga: Yup.string().nullable(),
+  cac_number: Yup.string().nullable(),
 });
 
 const EditSellerProfile = () => {
-  const queryClient = useQueryClient();
+  const submitKYCMutation = useSubmitMerchantKYC();
   const { data: profileData, isLoading: isLoadingProfile } = usePrimaryUserProfile();
   const userData = profileData?.data;
 
@@ -50,10 +56,17 @@ const EditSellerProfile = () => {
     last_name: "",
     phone_number: "",
     email: "",
-    business_name: "",
-    business_address: "",
+    store_name: "",
+    location: "",
+    state: "",
+    lga: "",
+    cac_number: "",
     selfie: "",
+    cac_document: "",
   });
+
+  const { data: merchantProfileData, isLoading: isLoadingMerchant } = useMerchantProfile();
+  const merchantProfileInfo = merchantProfileData?.data?.merchant_profile;
 
   useEffect(() => {
     if (userData) {
@@ -62,30 +75,54 @@ const EditSellerProfile = () => {
         last_name: userData.last_name || "",
         phone_number: userData.phone_number || "",
         email: userData.email || "",
-        business_name: (userData as any)?.business_name || "",
-        business_address: (userData as any)?.business_address || "",
-        selfie: (userData as any)?.selfie || (userData as any)?.profile_picture || "",
+        store_name: merchantProfileInfo?.store_name || "",
+        location: merchantProfileInfo?.location || "",
+        state: merchantProfileInfo?.state || "",
+        lga: merchantProfileInfo?.lga || "",
+        cac_number: merchantProfileInfo?.cac_number || "",
+        selfie: merchantProfileInfo?.selfie || (userData as any)?.profile_picture || "",
+        cac_document: merchantProfileInfo?.cac_document || "",
       });
     }
-  }, [userData]);
+  }, [userData, merchantProfileInfo]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
       setSubmitting(true);
       
-      const payload: any = {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        phone_number: values.phone_number,
-        business_name: values.business_name,
-        business_address: values.business_address,
-        selfie: values.selfie,
-      };
+      const formData = new FormData();
+      formData.append('requestType', 'inbound');
+      
+      // Personal Info
+      formData.append('first_name', values.first_name);
+      formData.append('last_name', values.last_name);
+      formData.append('phone_number', values.phone_number);
+      
+      // Business Info
+      if (values.store_name) formData.append('store_name', values.store_name);
+      if (values.location) formData.append('location', values.location);
+      if (values.state) formData.append('state', values.state);
+      if (values.lga) formData.append('lga', values.lga);
+      if (values.cac_number) formData.append('cac_number', values.cac_number);
 
-      await userAPI.updateProfile(payload);
+      // Handle Images
+      if (values.selfie && values.selfie.startsWith('data:')) {
+        formData.append('selfie', {
+          uri: values.selfie,
+          name: `selfie_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
 
-      // Invalidate profile query to refetch fresh data
-      queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
+      if (values.cac_document && values.cac_document.startsWith('data:')) {
+        formData.append('cac_document', {
+          uri: values.cac_document,
+          name: `cac_document_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any);
+      }
+
+      await submitKYCMutation.mutateAsync(formData);
       
       showToast.success("Profile updated successfully");
       router.back();
@@ -98,7 +135,7 @@ const EditSellerProfile = () => {
     }
   };
 
-  const handleImagePick = async (setFieldValue: any) => {
+  const handleImagePick = async (field: string, setFieldValue: any) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -118,15 +155,34 @@ const EditSellerProfile = () => {
       if (!result.canceled && result.assets[0]) {
         if (result.assets[0].base64) {
           const base64Image = `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}`;
-          setFieldValue("selfie", base64Image);
+          setFieldValue(field, base64Image);
         } else {
-          setFieldValue("selfie", result.assets[0].uri);
+          setFieldValue(field, result.assets[0].uri);
         }
       }
     } catch (error) {
       showToast.error("Failed to pick image");
     }
   };
+
+  const DocumentPicker = ({ label, field, value, setFieldValue }: any) => (
+    <View className="mb-4">
+      <Text className="text-gray-700 font-NunitoSemiBold mb-2">{label}</Text>
+      <TouchableOpacity 
+        onPress={() => handleImagePick(field, setFieldValue)}
+        className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 items-center justify-center overflow-hidden"
+      >
+        {value ? (
+          <Image source={{ uri: value }} className="w-full h-full" resizeMode="cover" />
+        ) : (
+          <View className="items-center">
+            <CameraIcon size={32} color="#9CA3AF" />
+            <Text className="text-gray-400 font-NunitoMedium mt-2">Tap to upload</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 
   if (isLoadingProfile) {
     return (
@@ -167,7 +223,7 @@ const EditSellerProfile = () => {
               {/* Avatar Section */}
               <View className="items-center mb-8">
                 <TouchableOpacity 
-                  onPress={() => handleImagePick(setFieldValue)}
+                  onPress={() => handleImagePick("selfie", setFieldValue)}
                   className="relative"
                 >
                   <View className="w-28 h-28 rounded-2xl items-center justify-center border-4 border-white shadow-lg mb-3 overflow-hidden">
@@ -260,33 +316,86 @@ const EditSellerProfile = () => {
                   <Text className="text-base font-NunitoBold text-gray-900">Business Information</Text>
                 </View>
 
-                {/* Business Name */}
+                {/* Store Name */}
                 <View className="mb-3">
                   <FormikInput
-                    name="business_name"
-                    label="Business Name"
-                    placeholder="Enter your business name"
+                    name="store_name"
+                    label="Store Name"
+                    placeholder="Enter your store name"
                     autoCapitalize="words"
                   />
                 </View>
 
                 {/* Business Address */}
-                <AddressInput
-                  label="Business Address"
-                  value={values.business_address}
-                  onChangeText={(text: string) => setFieldValue("business_address", text)}
-                  onLocationSelect={(location: any) => setFieldValue("business_address", location?.address || location)}
-                  placeholder="Enter your business address"
-                  error={errors.business_address as string}
-                  touched={touched.business_address as boolean}
-                />
+                <View className="mb-3">
+                  <AddressInput
+                    label="Business Location"
+                    value={values.location}
+                    onChangeText={(text: string) => setFieldValue("location", text)}
+                    onLocationSelect={(location: any) => {
+                      setFieldValue("location", location?.address || location);
+                    }}
+                    placeholder="Search for your shop address"
+                    error={errors.location as string}
+                    touched={touched.location as boolean}
+                  />
+                </View>
+
+                {/* State and LGA Row */}
+                <View className="flex-row gap-4 mb-3">
+                  <View className="flex-1">
+                    <SelectField
+                      name="state"
+                      label="State"
+                      placeholder="Select State"
+                      options={getStatesByCountry('NG').map(state => ({ label: state.name, value: state.name }))}
+                      value={values.state}
+                      onValueChange={(val) => {
+                        setFieldValue("state", val);
+                        setFieldValue("lga", ""); // Reset LGA when state changes
+                      }}
+                      error={errors.state as string}
+                      touched={touched.state}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <SelectField
+                      name="lga"
+                      label="LGA"
+                      placeholder="Select LGA"
+                      options={values.state ? getLGAs(values.state).map(lga => ({ label: lga, value: lga })) : []}
+                      value={values.lga}
+                      onValueChange={(val) => setFieldValue("lga", val)}
+                      error={errors.lga as string}
+                      touched={touched.lga}
+                    />
+                  </View>
+                </View>
+
+                {/* CAC Number */}
+                <View className="mb-3">
+                  <FormikInput
+                    name="cac_number"
+                    label="CAC Number"
+                    placeholder="RC1234567"
+                  />
+                </View>
+
+                <View className="mt-3">
+                  <DocumentPicker 
+                    label="CAC Registration Document" 
+                    field="cac_document" 
+                    value={values.cac_document} 
+                    setFieldValue={setFieldValue} 
+                  />
+                </View>
               </View>
 
               {/* Save Button */}
               <View className="mt-4">
                 <FormikButton
                   title={isSubmitting ? "Saving Changes..." : "Save Changes"}
-                  onPress={handleSubmit}
+                  onPress={() => handleSubmit()}
                   loading={isSubmitting}
                   disabled={isSubmitting}
                   className="w-full"

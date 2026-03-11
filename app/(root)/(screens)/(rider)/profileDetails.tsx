@@ -23,8 +23,8 @@ import {
   CameraIcon,
   ShieldCheckIcon,
 } from "react-native-heroicons/outline";
-import { useDriverProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
-import { driverRoutes } from "@/constants/routes";
+import { useRiderProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { riderRoutes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import { Formik } from "formik";
@@ -35,20 +35,17 @@ import SelectField from "@/components/forms/SelectField";
 import DateInput from "@/components/forms/DateInput";
 import RadioGroup from "@/components/forms/RadioGroup";
 import InputField from "@/components/InputField";
-import VINInput from "@/components/VINInput";
 import { userAPI } from "@/lib/api/user";
-import { productsAPI } from "@/lib/api/products";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/utils/toastUtils";
 import { getStatesByCountry, getCitiesByState } from "@/constants/locationData";
-import { decodeVINWithImage } from "@/utils/vinDecoder";
 import * as ImagePicker from "expo-image-picker";
 
 interface ProfileEditModalProps {
   isVisible: boolean;
   onClose: () => void;
   editingSection: string | null;
-  driverProfile: any;
+  riderProfile: any;
   userObj: any;
   banksData: any;
   isVerifyingBank: boolean;
@@ -57,16 +54,13 @@ interface ProfileEditModalProps {
   handleBankAccountLookup: any;
   handleSectionSave: any;
   handleImagePick: any;
-  handleMakeChange: any;
-  vehicleMakes: any[];
-  vehicleModels: any[];
 }
 
 const ProfileEditModal = ({
   isVisible,
   onClose,
   editingSection,
-  driverProfile,
+  riderProfile,
   userObj,
   banksData,
   isVerifyingBank,
@@ -75,9 +69,6 @@ const ProfileEditModal = ({
   handleBankAccountLookup,
   handleSectionSave,
   handleImagePick,
-  handleMakeChange,
-  vehicleMakes,
-  vehicleModels,
 }: ProfileEditModalProps) => {
   const getSectionSchema = (section: string | null) => {
     const personalSchema = Yup.object().shape({
@@ -93,14 +84,9 @@ const ProfileEditModal = ({
       city: Yup.string().required("City is required"),
     });
 
-    const vehicleSchema = Yup.object().shape({
-      vehicle_name: Yup.string().required("Required"),
-      vehicle_type: Yup.string().required("Required"),
-      vehicle_model: Yup.string().required("Required"),
-      vehicle_color: Yup.string().required("Required"),
-      plate_number: Yup.string().required("Required"),
-      vehicle_registration_number: Yup.string().required("Required"),
-      vin: Yup.string().required("Required"),
+    const rideSchema = Yup.object().shape({
+      ride_type: Yup.string().required("Required"),
+      license_plate: Yup.string().required("Required"),
     });
 
     const bankingSchema = Yup.object().shape({
@@ -111,27 +97,27 @@ const ProfileEditModal = ({
     switch (section) {
       case "personal": return personalSchema;
       case "address": return addressSchema;
-      case "vehicle": return vehicleSchema;
+      case "ride": return rideSchema;
       case "banking": return bankingSchema;
       default: return Yup.object().shape({});
     }
   };
 
   const getSectionInitialValues = (section: string | null) => {
-    if (!driverProfile) return {};
+    if (!riderProfile) return {};
     switch (section) {
       case "personal":
         return {
-          full_name: driverProfile.full_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : ""),
-          phone_number: driverProfile.phone_number || userObj?.phone_number || "",
-          gender: driverProfile.gender || "",
-          date_of_birth: driverProfile.date_of_birth || "",
-          profile_picture: driverProfile?.selfie || userObj?.profile_image || userObj?.image || "",
+          full_name: riderProfile.full_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : ""),
+          phone_number: riderProfile.phone_number || userObj?.phone_number || "",
+          gender: riderProfile.gender || "",
+          date_of_birth: riderProfile.date_of_birth || "",
+          profile_picture: riderProfile?.selfie || userObj?.profile_image || userObj?.image || "",
         };
       case "address":
-        const initialLocation = driverProfile.location || "";
-        let initialState = driverProfile.state || "";
-        let initialCity = driverProfile.city || "";
+        const initialLocation = riderProfile.location || "";
+        let initialState = riderProfile.state || "";
+        let initialCity = riderProfile.city || "";
 
         if (initialLocation && (!initialState || !initialCity)) {
           const states = getStatesByCountry('NG');
@@ -149,20 +135,15 @@ const ProfileEditModal = ({
           location: initialLocation,
           city: initialCity,
         };
-      case "vehicle":
+      case "ride":
         return {
-          vehicle_name: driverProfile.vehicle_name || "",
-          vehicle_type: driverProfile.vehicle_type || "",
-          vehicle_model: driverProfile.vehicle_model || "",
-          vehicle_color: driverProfile.vehicle_color || "",
-          plate_number: driverProfile.plate_number || "",
-          vehicle_registration_number: driverProfile.vehicle_registration_number || "",
-          vin: driverProfile.vin || "",
+          ride_type: riderProfile.ride_type || "",
+          license_plate: riderProfile.license_plate || "",
         };
       case "banking":
         return {
-          bank_name: driverProfile.bank_name || "",
-          account_number: driverProfile.account_number || "",
+          bank_name: riderProfile.bank_name || "",
+          account_number: riderProfile.account_number || "",
         };
       default:
         return {};
@@ -213,7 +194,7 @@ const ProfileEditModal = ({
                               ) : (
                                 <LinearGradient colors={["#D30309", "#B91C1C"]} className="w-full h-full items-center justify-center">
                                   <Text className="text-3xl font-NunitoExtraBold text-white">
-                                    {values.full_name ? values.full_name.charAt(0).toUpperCase() : "D"}
+                                    {values.full_name ? values.full_name.charAt(0).toUpperCase() : "R"}
                                   </Text>
                                 </LinearGradient>
                               )}
@@ -317,89 +298,22 @@ const ProfileEditModal = ({
                       </View>
                     )}
 
-                    {editingSection === "vehicle" && (
+                    {editingSection === "ride" && (
                       <View>
-                        <VINInput
-                          name="vin"
-                          label="VIN"
-                          placeholder="17-character VIN"
-                          showLookupButton={true}
+                        <SelectField
+                          label="Ride Type"
+                          name="ride_type"
+                          placeholder="Select Ride Type"
+                          options={[
+                            { label: "Motorcycle / Bike", value: "motorcycle" },
+                            { label: "Bicycle", value: "bicycle" },
+                          ]}
+                          value={values.ride_type}
+                          onValueChange={(val: string) => setFieldValue("ride_type", val)}
                           required
-                          onVINLookup={async (vin, sF) => {
-                            const result = await decodeVINWithImage(vin);
-                            if (result) {
-                              if (result.make) handleMakeChange(result.make, sF);
-                              if (result.model) setTimeout(() => sF("vehicle_model", result.model), 100);
-                              if (result.color) sF("vehicle_color", result.color);
-                            }
-                          }}
                         />
-                        <View className="mt-4">
-                          <SelectField
-                            label="Make"
-                            name="vehicle_name"
-                            placeholder="Select vehicle make"
-                            options={vehicleMakes}
-                            value={values.vehicle_name}
-                            onValueChange={(val: string) => handleMakeChange(val, setFieldValue)}
-                            required
-                          />
-                          <SelectField
-                            label="Model"
-                            name="vehicle_model"
-                            placeholder="Select vehicle model"
-                            options={vehicleModels}
-                            value={values.vehicle_model}
-                            onValueChange={(val: string) => setFieldValue("vehicle_model", val)}
-                            required
-                          />
-                          <SelectField
-                            label="Type"
-                            name="vehicle_type"
-                            placeholder="Select vehicle type"
-                            options={[
-                              { label: "Car", value: "car" },
-                              { label: "Motorcycle", value: "motorcycle" },
-                              { label: "Van", value: "van" },
-                              { label: "Truck", value: "truck" },
-                              { label: "Bicycle", value: "bicycle" },
-                              { label: "Other", value: "other" }
-                            ]}
-                            value={values.vehicle_type}
-                            onValueChange={(val: string) => setFieldValue("vehicle_type", val)}
-                            required
-                          />
-                          <InputField
-                            label="Color"
-                            placeholder="Silver"
-                            value={values.vehicle_color}
-                            onChangeText={handleChange("vehicle_color")}
-                            onBlur={handleBlur("vehicle_color")}
-                            error={errors.vehicle_color}
-                            touched={touched.vehicle_color}
-                            required
-                          />
-                          <InputField
-                            label="Plate Number"
-                            placeholder="ABC 123 XY"
-                            value={values.plate_number}
-                            onChangeText={handleChange("plate_number")}
-                            onBlur={handleBlur("plate_number")}
-                            error={errors.plate_number}
-                            touched={touched.plate_number}
-                            required
-                          />
-                          <InputField
-                            label="Registration Number"
-                            placeholder="Reg No"
-                            value={values.vehicle_registration_number}
-                            onChangeText={handleChange("vehicle_registration_number")}
-                            onBlur={handleBlur("vehicle_registration_number")}
-                            error={errors.vehicle_registration_number}
-                            touched={touched.vehicle_registration_number}
-                            required
-                          />
-                        </View>
+
+                        <FormikInput name="license_plate" placeholder="ABC 123 XY" label="License Plate" required />
                       </View>
                     )}
 
@@ -417,6 +331,7 @@ const ProfileEditModal = ({
                           }}
                           required
                         />
+
                         <View>
                           <InputField
                             label="Account Number"
@@ -491,36 +406,20 @@ const SectionHeader = ({ icon: Icon, title, color = "#D30309", bgColor = "bg-pri
   </View>
 );
 
-const ProfileDetails = () => {
+const RiderProfileDetails = () => {
   const queryClient = useQueryClient();
-  const { data: profileData, isLoading: isLoadingProfile } = useDriverProfile();
+  const { data: profileData, isLoading: isLoadingProfile } = useRiderProfile();
   const { data: banksData } = useBanks();
   const { mutate: verifyBank, isPending: isVerifyingBank } = useVerifyBank();
   
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [accountName, setAccountName] = useState<string>("");
-  const [vehicleMakes, setVehicleMakes] = useState<{ label: string; value: string }[]>([]);
-  const [vehicleModels, setVehicleModels] = useState<{ label: string; value: string }[]>([]);
-  const [allMakesData, setAllMakesData] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchMakes = async () => {
-      try {
-        const makes = await productsAPI.getVehicleMakes();
-        setAllMakesData(makes);
-        setVehicleMakes(makes.map((m: any) => ({ label: m.name, value: m.name })));
-      } catch (error) {
-        console.error("Failed to fetch makes:", error);
-      }
-    };
-    fetchMakes();
-  }, []);
-
-  const driverProfile = profileData?.data?.driver_profile;
-  const userObj = driverProfile?.user;
-  const displayName = driverProfile?.full_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : "Driver");
-  const profileImage = driverProfile?.selfie || userObj?.profile_image || userObj?.image || "";
+  const riderProfile = profileData?.data?.rider_profile;
+  const userObj = riderProfile?.user;
+  const displayName = riderProfile?.full_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : "Rider");
+  const profileImage = riderProfile?.selfie || userObj?.profile_image || userObj?.image || "";
 
   const ProfileRow = ({ label, value }: { label: string; value: string }) => (
     <View className="py-4 border-b border-gray-50 last:border-0">
@@ -528,17 +427,6 @@ const ProfileDetails = () => {
       <Text className="text-base font-NunitoBold text-gray-900">{value || "Not set"}</Text>
     </View>
   );
-
-  const handleMakeChange = (selectedMake: string, sF: any) => {
-    sF("vehicle_name", selectedMake);
-    sF("vehicle_model", "");
-    const makeObj = allMakesData.find(m => m.name === selectedMake);
-    if (makeObj?.models) {
-      setVehicleModels(makeObj.models.map((m: any) => ({ label: m.name, value: m.name })));
-    } else {
-      setVehicleModels([]);
-    }
-  };
 
   const handleBankAccountLookup = (accountNumber: string, bankName: string, setFieldError: any, setFieldTouched: any) => {
     if (accountNumber.length === 10 && bankName) {
@@ -582,23 +470,18 @@ const ProfileDetails = () => {
       formData.append('requestType', 'inbound');
       
       const fullValues = {
-        full_name: driverProfile?.full_name || "",
+        full_name: riderProfile?.full_name || "",
         email: userObj?.email || "",
-        phone_number: driverProfile?.phone_number || "",
-        gender: driverProfile?.gender || "",
-        date_of_birth: driverProfile?.date_of_birth || "",
-        state: driverProfile?.state || "",
-        location: driverProfile?.location || "",
-        city: driverProfile?.city || "",
-        vehicle_name: driverProfile?.vehicle_name || "",
-        vehicle_type: driverProfile?.vehicle_type || "",
-        vehicle_model: driverProfile?.vehicle_model || "",
-        vehicle_color: driverProfile?.vehicle_color || "",
-        plate_number: driverProfile?.plate_number || "",
-        vehicle_registration_number: driverProfile?.vehicle_registration_number || "",
-        vin: driverProfile?.vin || "",
-        bank_name: driverProfile?.bank_name || "",
-        account_number: driverProfile?.account_number || "",
+        phone_number: riderProfile?.phone_number || "",
+        gender: riderProfile?.gender || "",
+        date_of_birth: riderProfile?.date_of_birth || "",
+        state: riderProfile?.state || "",
+        location: riderProfile?.location || "",
+        city: riderProfile?.city || "",
+        ride_type: riderProfile?.ride_type || "",
+        license_plate: riderProfile?.license_plate || "",
+        bank_name: riderProfile?.bank_name || "",
+        account_number: riderProfile?.account_number || "",
         ...values
       };
 
@@ -616,8 +499,8 @@ const ProfileDetails = () => {
         } as any);
       }
 
-      await userAPI.submitDriverKYC(formData);
-      queryClient.invalidateQueries({ queryKey: ['driver', 'profile'] });
+      await userAPI.submitRiderKYC(formData);
+      queryClient.invalidateQueries({ queryKey: ['rider', 'profile'] });
       showToast.success("Section updated successfully");
       setIsModalVisible(false);
     } catch (error: any) {
@@ -662,24 +545,7 @@ const ProfileDetails = () => {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <StatusBar style="dark" />
       
-      <ProfileEditModal 
-        isVisible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        editingSection={editingSection}
-        driverProfile={driverProfile}
-        userObj={userObj}
-        banksData={banksData}
-        isVerifyingBank={isVerifyingBank}
-        accountName={accountName}
-        setAccountName={setAccountName}
-        handleBankAccountLookup={handleBankAccountLookup}
-        handleSectionSave={handleSectionSave}
-        handleImagePick={handleImagePick}
-        handleMakeChange={handleMakeChange}
-        vehicleMakes={vehicleMakes}
-        vehicleModels={vehicleModels}
-      />
-      
+      {/* Header */}
       <View className="px-5 py-4 border-b border-gray-100 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity
@@ -691,7 +557,7 @@ const ProfileDetails = () => {
           <Text className="text-xl font-NunitoBold text-gray-900">Profile Details</Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push(driverRoutes.EditProfile as any)}
+          onPress={() => router.push(riderRoutes.EditProfile as any)}
           className="w-10 h-10 bg-primary-50 rounded-full items-center justify-center"
         >
           <PencilIcon size={20} color="#D30309" />
@@ -731,10 +597,10 @@ const ProfileDetails = () => {
                 }}
               />
               <ProfileRow label="Full Name" value={displayName} />
-              <ProfileRow label="Phone Number" value={driverProfile?.phone_number || userObj?.phone_number} />
+              <ProfileRow label="Phone Number" value={riderProfile?.phone_number || userObj?.phone_number} />
               <View className="flex-row">
-                <View className="flex-1"><ProfileRow label="Date of Birth" value={driverProfile?.date_of_birth} /></View>
-                <View className="flex-1"><ProfileRow label="Gender" value={driverProfile?.gender} /></View>
+                <View className="flex-1"><ProfileRow label="Date of Birth" value={riderProfile?.date_of_birth} /></View>
+                <View className="flex-1"><ProfileRow label="Gender" value={riderProfile?.gender} /></View>
               </View>
             </View>
 
@@ -749,37 +615,26 @@ const ProfileDetails = () => {
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="Home Address" value={driverProfile?.location} />
+              <ProfileRow label="Home Address" value={riderProfile?.location} />
               <View className="flex-row">
-                <View className="flex-1"><ProfileRow label="State" value={driverProfile?.state} /></View>
-                <View className="flex-1"><ProfileRow label="City" value={driverProfile?.city} /></View>
+                <View className="flex-1"><ProfileRow label="State" value={riderProfile?.state} /></View>
+                <View className="flex-1"><ProfileRow label="City" value={riderProfile?.city} /></View>
               </View>
             </View>
 
             <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
               <SectionHeader 
                 icon={TruckIcon} 
-                title="Vehicle Information" 
+                title="Ride Details" 
                 color="#10B981" 
                 bgColor="bg-green-50" 
                 onEdit={() => {
-                  setEditingSection("vehicle");
+                  setEditingSection("ride");
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="VIN" value={driverProfile?.vin} />
-              <View className="flex-row">
-                <View className="flex-1"><ProfileRow label="Make" value={driverProfile?.vehicle_name} /></View>
-                <View className="flex-1"><ProfileRow label="Model" value={driverProfile?.vehicle_model} /></View>
-              </View>
-              <View className="flex-row">
-                <View className="flex-1"><ProfileRow label="Type" value={driverProfile?.vehicle_type} /></View>
-                <View className="flex-1"><ProfileRow label="Color" value={driverProfile?.vehicle_color} /></View>
-              </View>
-              <View className="flex-row">
-                <View className="flex-1"><ProfileRow label="Plate Number" value={driverProfile?.plate_number} /></View>
-                <View className="flex-1"><ProfileRow label="Reg Number" value={driverProfile?.vehicle_registration_number} /></View>
-              </View>
+              <ProfileRow label="Ride Type" value={riderProfile?.ride_type} />
+              <ProfileRow label="License Plate" value={riderProfile?.license_plate} />
             </View>
 
             <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -793,64 +648,62 @@ const ProfileDetails = () => {
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="Bank Name" value={driverProfile?.bank_name} />
-              <ProfileRow label="Account Number" value={driverProfile?.account_number} />
+              <ProfileRow label="Bank Name" value={riderProfile?.bank_name} />
+              <ProfileRow label="Account Number" value={riderProfile?.account_number} />
             </View>
 
+            {/* KYC Status */}
             <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
               <SectionHeader 
                 icon={ShieldCheckIcon} 
-                title="Documentation & Verification" 
+                title="Verification Status" 
                 color="#6366F1" 
                 bgColor="bg-indigo-50" 
-                onEdit={() => {
-                  router.push(driverRoutes.EditProfile as any);
-                }}
               />
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">Selfie</Text>
-                <Text className={driverProfile?.selfie ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {driverProfile?.selfie ? "Uploaded" : "Pending"}
-                </Text>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-base font-NunitoBold text-gray-900">KYC Status</Text>
+                <View className={`px-3 py-1 rounded-lg ${
+                  riderProfile?.is_approved 
+                    ? 'bg-green-100' 
+                    : 'bg-orange-100'
+                }`}>
+                  <Text className={`text-sm font-NunitoBold ${
+                    riderProfile?.is_approved 
+                      ? 'text-green-700' 
+                      : 'text-orange-700'
+                  }`}>
+                    {riderProfile?.is_approved ? 'Verified' : 'Pending'}
+                  </Text>
+                </View>
               </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">License Front</Text>
-                <Text className={driverProfile?.license_front_image ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {driverProfile?.license_front_image ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">License Back</Text>
-                <Text className={driverProfile?.license_back_image ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {driverProfile?.license_back_image ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">Govt ID Front</Text>
-                <Text className={driverProfile?.government_id_front ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {driverProfile?.government_id_front ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">Insurance</Text>
-                <Text className={driverProfile?.insurance_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {driverProfile?.insurance_document ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
+              {riderProfile?.disapproved && (
+                <View className="mt-3">
+                  <Text className="text-sm font-NunitoMedium text-red-600">
+                    Disapproval Reason: {riderProfile.disapproval_reason || 'Not specified'}
+                  </Text>
+                </View>
+              )}
             </View>
-
-            <TouchableOpacity
-              onPress={() => router.push(driverRoutes.EditProfile as any)}
-              className="mt-4 bg-primary-500 py-4 rounded-2xl items-center shadow-md active:opacity-90"
-            >
-              <Text className="text-white text-base font-NunitoBold">Full Profile Update</Text>
-            </TouchableOpacity>
           </View>
         </AnimatedPageContainer>
       </ScrollView>
+
+      <ProfileEditModal 
+        isVisible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        editingSection={editingSection}
+        riderProfile={riderProfile}
+        userObj={userObj}
+        banksData={banksData}
+        isVerifyingBank={isVerifyingBank}
+        accountName={accountName}
+        setAccountName={setAccountName}
+        handleBankAccountLookup={handleBankAccountLookup}
+        handleSectionSave={handleSectionSave}
+        handleImagePick={handleImagePick}
+      />
     </SafeAreaView>
   );
 };
 
-
-export default ProfileDetails;
+export default RiderProfileDetails;

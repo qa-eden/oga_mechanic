@@ -114,6 +114,12 @@ const DateInput: React.FC<DateInputProps> = ({
     onDateChange?.(today)
   }
 
+  const initialPickerDate = useMemo(() => {
+    // Return the actual value without forcing it to min/max bounds
+    // This prevents date jumping to today or bounds
+    return value || new Date();
+  }, [value]);
+
   const formatDate = (date: Date | null): string => {
     if (!date) return placeholder
     if (dateFormat) return dateFormat(date)
@@ -186,7 +192,7 @@ const DateInput: React.FC<DateInputProps> = ({
       {/* Android: render picker directly — it opens its own native dialog */}
       {Platform.OS === 'android' && showDatePicker && (
         <DateTimePicker
-          value={value || new Date()}
+          value={initialPickerDate}
           mode="date"
           display="calendar"
           minimumDate={minimumDate}
@@ -215,7 +221,7 @@ const DateInput: React.FC<DateInputProps> = ({
               </View>
               <View className="items-center">
                 <DateTimePicker
-                  value={value || new Date()}
+                  value={initialPickerDate}
                   mode="date"
                   display="spinner"
                   minimumDate={minimumDate}
