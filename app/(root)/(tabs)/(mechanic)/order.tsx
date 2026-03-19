@@ -135,6 +135,8 @@ const MechanicOrder = () => {
             case 'pending':
               return 'current';
             case 'accepted':
+            case 'in_transit':
+            case 'arrived':
             case 'in_progress':
               return 'ongoing';
             case 'completed':
@@ -242,17 +244,19 @@ const MechanicOrder = () => {
               { key: "all", label: "All" },
               { key: "pending", label: "Pending" },
               { key: "accepted", label: "Accepted" },
+              { key: "in_transit", label: "In Transit" },
+              { key: "arrived", label: "Arrived" },
               { key: "in_progress", label: "In Progress" },
               { key: "completed", label: "Completed" },
               { key: "cancelled", label: "Cancelled" },
-              { key: "declined", label: "Declined" }
+              { key: "rejected", label: "Rejected" }
             ].map((tab) => (
               <TouchableOpacity
                 key={tab.key}
                 onPress={() => setActiveTab(tab.key)}
                 className={`px-4 py-2 mx-1 rounded-[.3rem] ${activeTab === tab.key
-                    ? "bg-red-600"
-                    : "bg-gray-100"
+                  ? "bg-red-600"
+                  : "bg-gray-100"
                   }`}
               >
                 <Text className={`font-NunitoBold text-center text-[.9rem] ${activeTab === tab.key ? "text-white" : "text-gray-600"
@@ -266,118 +270,135 @@ const MechanicOrder = () => {
 
         <ScrollView
           className="flex-1 pt-4 mx-4"
-        refreshControl={
-          <RefreshControl
-            refreshing={requestsLoading}
-            onRefresh={refetchRequests}
-            colors={['#D30309']}
-            tintColor="#D30309"
-          />
-        }
-      >
-        {/* Loading State */}
-        {requestsLoading && (
-          <View className="">
-            {[1, 2, 3].map((index) => (
-              <OrderCardSkeleton key={`skeleton-${index}`} />
-            ))}
-          </View>
-        )}
+          refreshControl={
+            <RefreshControl
+              refreshing={requestsLoading}
+              onRefresh={refetchRequests}
+              colors={['#D30309']}
+              tintColor="#D30309"
+            />
+          }
+        >
+          {/* Loading State */}
+          {requestsLoading && (
+            <View className="">
+              {[1, 2, 3].map((index) => (
+                <OrderCardSkeleton key={`skeleton-${index}`} />
+              ))}
+            </View>
+          )}
 
-        {/* Error State */}
-        {requestsError && !requestsLoading && (
-          <AnimatedErrorCard
-            emoji="🔧"
-            title="Unable to load orders"
-            message="Failed to fetch repair requests. Pull down to refresh or try again later."
-            gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
-            textColor="text-red-800"
-            actionButton={{
-              text: "Retry",
-              onPress: () => refetchRequests(),
-              backgroundColor: "#DC2626"
-            }}
-          />
-        )}
+          {/* Error State */}
+          {requestsError && !requestsLoading && (
+            <AnimatedErrorCard
+              emoji="🔧"
+              title="Unable to load orders"
+              message="Failed to fetch repair requests. Pull down to refresh or try again later."
+              gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
+              textColor="text-red-800"
+              actionButton={{
+                text: "Retry",
+                onPress: () => refetchRequests(),
+                backgroundColor: "#DC2626"
+              }}
+            />
+          )}
 
-        {/* Success State - Show Orders */}
-        {!requestsLoading && !requestsError && getCurrentOrders().length > 0 && (
-          getCurrentOrders().map((order) => {
-            // Determine card type based on API status
-            let cardType: "current" | "ongoing" | "completed" = "current";
-            const apiStatus = (order as any).apiStatus;
-            if (apiStatus === 'accepted' || apiStatus === 'in_progress') {
-              cardType = 'ongoing';
-            } else if (apiStatus === 'completed') {
-              cardType = 'completed';
-            } else if (apiStatus === 'pending') {
-              cardType = 'current';
-            }
+          {/* Success State - Show Orders */}
+          {!requestsLoading && !requestsError && getCurrentOrders().length > 0 && (
+            getCurrentOrders().map((order) => {
+              // Determine card type based on API status
+              let cardType: "current" | "ongoing" | "completed" = "current";
+              const apiStatus = (order as any).apiStatus;
+              if (apiStatus === 'accepted' || apiStatus === 'in_progress') {
+                cardType = 'ongoing';
+              } else if (apiStatus === 'completed') {
+                cardType = 'completed';
+              } else if (apiStatus === 'pending') {
+                cardType = 'current';
+              }
 
-            return (
-              <OrderCard
-                key={order.id}
-                order={order}
-                type={cardType}
-                onAccept={handleAccept}
-                onDecline={handleDecline}
-                onMarkComplete={handleMarkComplete}
-                onView={handleView}
-              />
-            );
-          })
-        )}
+              return (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  type={cardType}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  onMarkComplete={handleMarkComplete}
+                  onView={handleView}
+                />
+              );
+            })
+          )}
 
-        {/* Empty State */}
-        {!requestsLoading && !requestsError && getCurrentOrders().length === 0 && (
-          <View className="flex-1 items-center justify-center px-6 py-20">
-            <View className="items-center">
-              {/* Icon */}
-              <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
-                <Text className="text-5xl">🔧</Text>
-              </View>
+          {/* Empty State */}
+          {!requestsLoading && !requestsError && getCurrentOrders().length === 0 && (
+            <View className="flex-1 items-center justify-center px-6 py-20">
+              <View className="items-center">
+                {/* Icon */}
+                <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
+                  <Text className="text-5xl">🔧</Text>
+                </View>
 
-              {/* Title */}
-              <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-2">
-                {activeTab === 'all'
+                {/* Title */}
+                <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-2">
+                  {activeTab === 'all'
                   ? 'No Orders Yet'
                   : activeTab === 'pending'
                     ? 'No Pending Orders'
                     : activeTab === 'accepted'
                       ? 'No Accepted Orders'
-                      : activeTab === 'in_progress'
-                        ? 'No Orders In Progress'
-                        : activeTab === 'completed'
-                          ? 'No Completed Orders'
-                          : activeTab === 'cancelled'
-                            ? 'No Cancelled Orders'
-                            : activeTab === 'declined'
-                              ? 'No Declined Orders'
-                              : 'No Orders Found'}
-              </Text>
+                      : activeTab === 'in_transit'
+                        ? 'No Orders In Transit'
+                        : activeTab === 'arrived'
+                          ? 'No Arrived Orders'
+                          : activeTab === 'in_progress'
+                            ? 'No Orders In Progress'
+                            : activeTab === 'completed'
+                              ? 'No Completed Orders'
+                              : activeTab === 'cancelled'
+                                ? 'No Cancelled Orders'
+                                : activeTab === 'rejected'
+                                  ? 'No Rejected Orders'
+                                  : 'No Orders Found'}
+                </Text>
 
-              {/* Description */}
-              <Text className="text-gray-500 font-NunitoMedium text-center text-base leading-6 max-w-xs">
-                {activeTab === 'all'
+                {/* Description */}
+                <Text className="text-gray-500 font-NunitoMedium text-center text-base leading-6 max-w-xs">
+                  {activeTab === 'all'
                   ? "You don't have any repair requests at the moment. New orders will appear here when customers request your services."
                   : activeTab === 'pending'
                     ? "There are no pending repair requests waiting for your response. Check back later for new orders."
                     : activeTab === 'accepted'
                       ? "You haven't accepted any orders yet. Accept pending requests to see them here."
-                      : activeTab === 'in_progress'
-                        ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
-                        : activeTab === 'completed'
-                          ? "You haven't completed any orders yet. Mark orders as completed to see them here."
-                          : activeTab === 'cancelled'
-                            ? "No cancelled orders found. Cancelled requests will appear here."
-                            : activeTab === 'declined'
-                              ? "No declined orders found. Declined requests will appear here."
-                              : "No orders match this filter."}
-              </Text>
+                      : activeTab === 'in_transit'
+                        ? "You don't have any orders in transit right now."
+                        : activeTab === 'arrived'
+                          ? "No orders have been marked as arrived yet."
+                          : activeTab === 'in_progress'
+                            ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
+                            : activeTab === 'completed'
+                              ? "You haven't completed any orders yet. Mark orders as completed to see them here."
+                              : activeTab === 'cancelled'
+                                ? "No cancelled orders found. Cancelled requests will appear here."
+                                : activeTab === 'rejected'
+                                  ? "No rejected orders found. Declined requests will appear here."
+                                  : "No orders match this filter."}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+        
+        {/* Action Confirmation Modal */}
+        <MechanicActionConfirmationModal
+          visible={actionModalVisible}
+          actionType={actionType}
+          onConfirm={handleConfirmAction}
+          onCancel={handleCancelActionModal}
+          isLoading={acceptRequestMutation.isPending || declineRequestMutation.isPending}
+        />
 
       </AnimatedPageContainer>
     </SafeAreaView>

@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
 import { CameraIcon, WrenchScrewdriverIcon, EnvelopeIcon, BriefcaseIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
-import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { useMechanicProfile, usePrimaryUserProfile, userProfileKeys } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -149,8 +149,7 @@ const EditMechanicProfile = () => {
       await userAPI.submitMechanicKYC(formData);
 
       // Invalidate profile queries to refetch fresh data
-      queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
-      queryClient.invalidateQueries({ queryKey: ["mechanicProfile"] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       
       showToast.success("Profile updated successfully");
       router.back();

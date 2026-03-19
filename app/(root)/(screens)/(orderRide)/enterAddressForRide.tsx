@@ -23,7 +23,7 @@ import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
 import { routes } from "@/constants/routes";
 import { useLocation } from "@/contexts/LocationContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import MapView, { Marker, PROVIDER_DEFAULT } from "@/components/MapComponent";
+import MapView, { Marker, PROVIDER_DEFAULT, MapViewRef } from "@/components/MapComponent";
 import { icons } from "@/constants";
 import * as Location from "expo-location";
 import { FontAwesome } from "@expo/vector-icons";
@@ -39,14 +39,6 @@ interface ScheduledRide {
   isScheduled: boolean;
 }
 
-// Mock data for nearby drivers
-const NEARBY_DRIVERS = [
-  { id: 1, latitude: 0.002, longitude: 0.002, rotation: 45 },
-  { id: 2, latitude: -0.002, longitude: -0.003, rotation: 120 },
-  { id: 3, latitude: 0.003, longitude: -0.001, rotation: 200 },
-  { id: 4, latitude: -0.001, longitude: 0.003, rotation: 300 },
-];
-
 const EnterAddressForRide = () => {
   const [currentOption, setCurrentOption] = useState(OrderRideOptions[0]);
   const [scheduledRide, setScheduledRide] = useState<ScheduledRide>({
@@ -57,46 +49,113 @@ const EnterAddressForRide = () => {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
 
   const {
     state: { fromLocation, toLocation },
     isScheduling,
-    setIsScheduling
+    setIsScheduling,
+    setFromLocation
   } = useLocation();
 
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapViewRef>(null);
+  const lastSpawnLocation = useRef<{ latitude: number; longitude: number } | null>(null);
 
   const [region, setRegion] = useState({
-    latitude: fromLocation?.latitude || 37.78825,
-    longitude: fromLocation?.longitude || -122.4324,
+    latitude: fromLocation?.latitude || 6.5244,
+    longitude: fromLocation?.longitude || 3.3792,
     latitudeDelta: 0.015,
     longitudeDelta: 0.0121,
   });
 
-  // State to track if we are in the process of scheduling a ride (going to location selection and back)
-  // Replaced by Context state due to persistence issues
-  // const [isSchedulingFlow, setIsSchedulingFlow] = useState(false);
+  // Initialize and animate mock drivers around user location
+  useEffect(() => {
+    if (region.latitude) {
+      const distance = lastSpawnLocation.current
+        ? Math.sqrt(
+            Math.pow(region.latitude - lastSpawnLocation.current.latitude, 2) +
+            Math.pow(region.longitude - lastSpawnLocation.current.longitude, 2)
+          )
+        : Infinity;
+
+      // Re-spawn drivers if they moved significantly (0.01 is ~1km)
+      if (distance > 0.005) {
+        const initialDrivers = [
+          { id: 1, latitude: region.latitude + 0.003, longitude: region.longitude + 0.004, rotation: 45 },
+          { id: 2, latitude: region.latitude - 0.004, longitude: region.longitude - 0.005, rotation: 120 },
+          { id: 3, latitude: region.latitude + 0.005, longitude: region.longitude - 0.002, rotation: 200 },
+          { id: 4, latitude: region.latitude - 0.003, longitude: region.longitude + 0.006, rotation: 300 },
+          { id: 5, latitude: region.latitude + 0.006, longitude: region.longitude + 0.001, rotation: 15 },
+        ];
+        setNearbyDrivers(initialDrivers);
+        lastSpawnLocation.current = { latitude: region.latitude, longitude: region.longitude };
+      }
+    }
+
+    const interval = setInterval(() => {
+      setNearbyDrivers(prevDrivers => 
+        prevDrivers.map(driver => {
+          const latDelta = (Math.random() - 0.5) * 0.0001; // Smaller steps
+          const lngDelta = (Math.random() - 0.5) * 0.0001;
+          
+          const angle = Math.atan2(latDelta, lngDelta) * (180 / Math.PI);
+          const rotation = 90 - angle;
+
+          return {
+            ...driver,
+            latitude: driver.latitude + latDelta,
+            longitude: driver.longitude + lngDelta,
+            rotation: rotation,
+          };
+        })
+      );
+    }, 1000); // More frequent updates for smoothness
+
+    return () => clearInterval(interval);
+  }, [region.latitude, region.longitude]);
 
   useEffect(() => {
     (async () => {
-      if (!fromLocation?.latitude) {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          return;
-        }
+      try {
+        if (!fromLocation?.latitude) {
+          let { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            console.log("Location permission denied");
+            return;
+          }
 
-        let location = await Location.getCurrentPositionAsync({});
-        const newRegion = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.015,
-          longitudeDelta: 0.0121,
-        };
-        setRegion(newRegion);
-        mapRef.current?.animateToRegion(newRegion, 1000);
+          let location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          
+          const newRegion = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.0121,
+          };
+          
+          setRegion(newRegion);
+          mapRef.current?.animateToRegion(newRegion, 1000);
+
+          // Update context with human readable address
+          const reverseGeocode = await Location.reverseGeocodeAsync(location.coords);
+          if (reverseGeocode.length > 0) {
+            const address = reverseGeocode[0];
+            const name = address.street || address.name || "Current Location";
+            setFromLocation({
+              name: name,
+              address: `${address.city}, ${address.region}`,
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching location:", error);
       }
     })();
-  }, [fromLocation]);
+  }, [fromLocation.latitude]); // Depend on specific field to avoid loops
 
   useEffect(() => {
     if (fromLocation?.latitude && fromLocation?.longitude) {
@@ -279,15 +338,17 @@ const EnterAddressForRide = () => {
         }}
         initialRegion={region}
         showsUserLocation={true}
+        onRegionChangeComplete={(r: any) => setRegion(r)}
         userInterfaceStyle="light"
       >
         {/* Mock Nearby Drivers */}
-        {NEARBY_DRIVERS.map((driver) => (
+        {nearbyDrivers.map((driver) => (
           <Marker
-            key={driver.id}
+            key={`driver-${driver.id}`}
+            id={`driver-${driver.id}`}
             coordinate={{
-              latitude: region.latitude + driver.latitude,
-              longitude: region.longitude + driver.longitude,
+              latitude: driver.latitude,
+              longitude: driver.longitude,
             }}
             rotation={driver.rotation}
           >

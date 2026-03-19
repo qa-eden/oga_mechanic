@@ -138,7 +138,7 @@ const ProductActionBar: React.FC<ProductActionBarProps> = ({
                 onPress={onRemoveFromCart}
                 disabled={isRemovingFromCart}
                 loading={isRemovingFromCart}
-                loadingText="Removing..."
+                loadingText="Removing"
                 className="bg-gray-800"
               />
             </View>
@@ -148,7 +148,7 @@ const ProductActionBar: React.FC<ProductActionBarProps> = ({
               onPress={onAddToCart}
               disabled={isAddingToCart || maxStock === 0}
               loading={isAddingToCart}
-              loadingText="Adding..."
+              loadingText="Adding"
             />
           )}
         </View>

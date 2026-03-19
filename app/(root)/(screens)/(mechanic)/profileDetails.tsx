@@ -22,7 +22,7 @@ import {
   CameraIcon,
   ShieldCheckIcon,
 } from "react-native-heroicons/outline";
-import { useMechanicProfile } from "@/hooks/useUserProfile";
+import { useMechanicProfile, userProfileKeys } from "@/hooks/useUserProfile";
 import { mechanicRoutes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -412,7 +412,7 @@ const ProfileDetails = () => {
       }
 
       await userAPI.submitMechanicKYC(formData);
-      queryClient.invalidateQueries({ queryKey: ['mechanic', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       showToast.success("Section updated successfully");
       setIsModalVisible(false);
     } catch (error: any) {

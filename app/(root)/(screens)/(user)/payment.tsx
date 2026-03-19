@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
 import { usePaymentPolling } from "@/hooks/usePayment";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 // Payment timeout in milliseconds (5 minutes)
 const PAYMENT_TIMEOUT_MS = 300000;
@@ -110,6 +111,20 @@ const Payment = () => {
     setLoading(false);
   };
 
+  // Verify payment once and navigate
+  const verifyPaymentAndNavigate = useCallback(async () => {
+    try {
+      const result = await verifyPayment();
+      // Result is handled by the polling hook callbacks
+    } catch (error) {
+      // If verification fails, still navigate but let user know to check status
+      if (!hasNavigatedRef.current) {
+        hasNavigatedRef.current = true;
+        navigateToResult('pending', 'Payment status unclear. Please check your orders.');
+      }
+    }
+  }, [verifyPayment, navigateToResult]);
+
   // Handle navigation state changes in WebView
   const handleNavigationStateChange = useCallback((navState: any) => {
     const { url, title } = navState;
@@ -118,15 +133,31 @@ const Payment = () => {
 
     const urlLower = url.toLowerCase();
     const titleLower = (title || '').toLowerCase();
+    
+    if (urlLower.includes('about:blank')) return;
 
-    console.log('WebView navigation:', { url, title });
+    console.log('🛒 WebView navigation:', { url, title });
 
     // Check if it's our deep link callback
     if (urlLower.startsWith('ogamechanic://')) {
       console.log('Deep link callback detected:', url);
 
       // Parse the URL to get status
-      const urlParams = new URL(url);
+      let urlParams: URL;
+      try {
+        urlParams = new URL(url);
+      } catch (e) {
+        // Fallback for non-standard URL parsing if needed
+        const query = url.split('?')[1] || '';
+        const searchParams = new URLSearchParams(query);
+        const status = searchParams.get('status');
+        if (status === 'success' || status === 'successful') {
+          setIsVerifying(true);
+          verifyPaymentAndNavigate();
+        }
+        return;
+      }
+
       const status = urlParams.searchParams.get('status');
       const reference = urlParams.searchParams.get('reference');
 
@@ -179,7 +210,7 @@ const Payment = () => {
       'payment failed',
       'transaction declined',
       'declined',
-      'cancelled',
+      'transaction cancelled',
     ];
 
     const callbackPatterns = ['/callback', '/verify', '/payment-callback'];
@@ -210,22 +241,14 @@ const Payment = () => {
     }
   }, [navigateToResult, startPolling, isPolling, verifyPaymentAndNavigate]);
 
-  // Verify payment once and navigate
-  const verifyPaymentAndNavigate = useCallback(async () => {
-    try {
-      const result = await verifyPayment();
-      // Result is handled by the polling hook callbacks
-    } catch (error) {
-      // If verification fails, still navigate but let user know to check status
-      if (!hasNavigatedRef.current) {
-        hasNavigatedRef.current = true;
-        navigateToResult('pending', 'Payment status unclear. Please check your orders.');
-      }
-    }
-  }, [verifyPayment, navigateToResult]);
 
   // Handle cancel payment
   const handleCancelPayment = useCallback(() => {
+    // If we're already verifying, don't show the cancel dialog as the outcome is already decided or being calculated
+    if (isVerifying || isPolling) {
+      return;
+    }
+
     Alert.alert(
       'Cancel Payment?',
       'Are you sure you want to cancel this payment?',
@@ -241,7 +264,7 @@ const Payment = () => {
         },
       ]
     );
-  }, [stopPolling]);
+  }, [stopPolling, isVerifying, isPolling]);
 
   if (!paymentUrl) {
     return (
@@ -277,23 +300,18 @@ const Payment = () => {
       <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
         <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
           <View className="w-10" />
-          <Text className="text-xl font-NunitoBold text-gray-900">Verifying Payment</Text>
+          <Text className="text-xl font-NunitoExtraBold text-gray-900">Payment Status</Text>
           <View className="w-10" />
         </View>
-        <View className="flex-1 items-center justify-center px-5">
-          <ActivityIndicator size="large" color="#D30309" />
-          <Text className="text-lg font-NunitoBold text-gray-900 mt-6 mb-2">
-            Verifying your payment...
-          </Text>
-          <Text className="text-gray-600 text-center mb-8">
-            Please wait while we confirm your payment with the payment provider.
-            This may take a few moments.
-          </Text>
-          <View className="bg-yellow-50 p-4 rounded-xl">
-            <Text className="text-yellow-800 text-center text-sm">
-              ⚠️ Please do not close this screen or press back.
+        <LoadingSpinner 
+            message="Verifying your payment..."
+            subMessage="Please wait while we confirm your transaction with the payment provider. This may take a few moments."
+            size="large"
+        />
+        <View className="absolute bottom-16 left-6 right-6 p-4 bg-primary-50 rounded-2xl border border-primary-100">
+            <Text className="text-primary-800 text-center font-NunitoBold text-xs">
+              ⚠️ Please do not close this screen or press back while we complete your order.
             </Text>
-          </View>
         </View>
       </SafeAreaView>
     );
@@ -306,16 +324,18 @@ const Payment = () => {
         <TouchableOpacity onPress={handleCancelPayment}>
           <icons.backBtn />
         </TouchableOpacity>
-        <Text className="text-xl font-NunitoBold text-gray-900">Payment</Text>
+        <Text className="text-xl font-NunitoExtraBold text-gray-900">Secure Payment</Text>
         <View className="w-10" />
       </View>
 
       {/* Loading State */}
       {loading && !error && (
-        <View className="absolute inset-0 top-16 items-center justify-center bg-white z-10">
-          <ActivityIndicator size="large" color="#D30309" />
-          <Text className="text-gray-600 mt-4">Loading payment page...</Text>
-        </View>
+        <LoadingSpinner 
+            variant="overlay"
+            message="Preparing Payment..."
+            subMessage="Connecting to our secure payment gateway. Your transaction is encrypted."
+            size="medium"
+        />
       )}
 
       {/* Error State */}
@@ -343,45 +363,100 @@ const Payment = () => {
             // Handle postMessage from Paystack
             try {
               const data = JSON.parse(event.nativeEvent.data);
-              console.log('WebView message:', data);
+              console.log('🛒 WebView message received:', data);
 
               if (data.event === 'successful' || data.status === 'success') {
+                console.log('🛒 Success detected via message');
                 if (!hasNavigatedRef.current) {
                   setIsVerifying(true);
                   verifyPaymentAndNavigate();
                 }
-              } else if (data.event === 'cancelled' || data.status === 'failed') {
+              } else if (data.event === 'failed' || data.status === 'failed') {
+                console.log('🛒 Failure detected via message');
                 if (!hasNavigatedRef.current) {
                   hasNavigatedRef.current = true;
-                  navigateToResult('failed', 'Payment was cancelled.');
+                  navigateToResult('failed', 'Payment was not completed. Please try again.');
+                }
+              } else if (data.event === 'cancelled' || data.event === 'closed') {
+                console.log('🛒 Cancelled/Closed detected via message');
+                if (!hasNavigatedRef.current && !isVerifying && !isPolling) {
+                  // User closed the payment window
+                  stopPolling();
+                  router.back();
                 }
               }
             } catch (e) {
-              // Not a JSON message, ignore
+              console.log('🛒 Non-JSON WebView message:', event.nativeEvent.data);
             }
           }}
-          // Inject JavaScript to listen for Paystack close/success events
+          // Inject JavaScript to listen for Paystack close/success events and monitor DOM for success text
           injectedJavaScript={`
             (function() {
-              // Listen for Paystack popup close
-              window.addEventListener('message', function(e) {
+              console.log('🛒 Paystack helper script injected');
+              
+              // Helper to send messages to RN
+              function sendToRN(data) {
                 if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify(e.data));
+                  window.ReactNativeWebView.postMessage(JSON.stringify(data));
+                }
+              }
+
+              // 1. Listen for standard Paystack/Browser message events
+              window.addEventListener('message', function(e) {
+                if (e.data) {
+                   // Forward relevant Paystack events
+                   if (e.data.event === 'successful' || e.data.event === 'cancelled' || e.data.event === 'closed') {
+                     sendToRN(e.data);
+                   }
                 }
               });
 
-              // Override Paystack close function if available
+              // 2. Click Interceptor for Modal Close/Cancel buttons
+              document.addEventListener('click', function(e) {
+                var target = e.target;
+                if (!target) return;
+                
+                var text = (target.innerText || '').toLowerCase();
+                var isCloseButton = text === 'close' || text === 'cancel payment' || target.id === 'close-button';
+                
+                if (isCloseButton) {
+                  console.log('🛒 Close/Cancel button clicked:', text);
+                  sendToRN({event: 'closed'});
+                }
+              }, true);
+
+              // 3. MutationObserver for Terminal States (Success/Hard Failure)
+              // We use a debounce to avoid firing on every tiny DOM change
+              var timeout;
+              var observer = new MutationObserver(function(mutations) {
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(function() {
+                  var bodyText = document.body.innerText;
+                  if (!bodyText) return;
+                  
+                  // Only trigger on very definitive success/failure pages
+                  // Success is usually safer to detect than failure
+                  if (bodyText.includes('Payment Successful') || bodyText.includes('Transaction Successful')) {
+                    sendToRN({event: 'successful'});
+                  } else if (bodyText.includes('Transaction Failed') && bodyText.includes('Reference:')) {
+                    // Only trigger failure if we see a formal failure page with a reference
+                    sendToRN({event: 'failed'});
+                  }
+                }, 500);
+              });
+
+              observer.observe(document.body, { childList: true, subtree: true });
+
+              // 4. Override Paystack close function as a last resort
               if (window.PaystackPop) {
                 var originalClose = window.PaystackPop.close;
                 window.PaystackPop.close = function() {
-                  if (window.ReactNativeWebView) {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({event: 'closed'}));
-                  }
+                  sendToRN({event: 'closed'});
                   if (originalClose) originalClose.apply(this, arguments);
                 };
               }
 
-              true;
+              return true;
             })();
           `}
           style={{ flex: 1, opacity: loading ? 0 : 1 }}

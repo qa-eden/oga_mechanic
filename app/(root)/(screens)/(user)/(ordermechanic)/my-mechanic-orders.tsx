@@ -11,7 +11,7 @@ import { useUserRepairRequests } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import MechanicOrderCard, { MechanicOrder } from '@/components/cards/MechanicOrderCard';
 
-type TabStatus = 'all' | 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+type TabStatus = 'all' | 'pending' | 'accepted' | 'arrived' | 'in_progress' | 'completed' | 'cancelled';
 
 const MyMechanicOrders = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -122,13 +122,12 @@ const MyMechanicOrders = () => {
 
       {/* Tabs */}
       <View className="bg-white px-5 py-3 border-b border-gray-100">
-        {/* First Row: 3 tabs */}
-        <View className="flex-row mb-2">
-          {(['all', 'pending', 'accepted'] as TabStatus[]).map((tab) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+          {(['all', 'pending', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled'] as TabStatus[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => handleTabChange(tab)}
-              className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
+              className={`px-4 py-2 rounded-[.4rem] mr-2 ${
                 activeTab === tab ? 'bg-primary-500' : 'bg-gray-200'
               }`}
               activeOpacity={0.8}
@@ -138,33 +137,11 @@ const MyMechanicOrders = () => {
                   activeTab === tab ? 'text-white' : 'text-gray-700'
                 }`}
               >
-                {tab === 'in_progress' ? 'In Progress' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('_', ' ')}
+                {tab === 'in_progress' ? 'In Progress' : tab === 'arrived' ? 'Arrived' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('_', ' ')}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
-        
-        {/* Second Row: 3 tabs */}
-        <View className="flex-row">
-          {(['in_progress', 'completed', 'cancelled'] as TabStatus[]).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => handleTabChange(tab)}
-              className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
-                activeTab === tab ? 'bg-primary-500' : 'bg-gray-200'
-              }`}
-              activeOpacity={0.8}
-            >
-              <Text
-                className={`text-center font-NunitoBold text-sm ${
-                  activeTab === tab ? 'text-white' : 'text-gray-700'
-                }`}
-              >
-                {tab === 'in_progress' ? 'In Progress' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('_', ' ')}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Content */}

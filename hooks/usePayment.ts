@@ -79,13 +79,15 @@ export const usePaymentPolling = ({
     try {
       const result = await productsAPI.verifyPayment(reference);
       
-      if (result.data?.payment_status === 'success') {
+      const payment_status = result.data?.payment_status?.toLowerCase();
+
+      if (payment_status === 'success' || payment_status === 'paid' || payment_status === 'successful') {
         cleanup();
         setIsPolling(false);
         setPaymentResult(result);
         onSuccess?.(result);
         return true;
-      } else if (result.data?.payment_status === 'failed' || result.data?.payment_status === 'cancelled') {
+      } else if (payment_status === 'failed' || payment_status === 'cancelled') {
         cleanup();
         setIsPolling(false);
         setPaymentResult(result);

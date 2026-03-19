@@ -295,7 +295,7 @@ export interface PaymentVerificationResponse {
   status: boolean;
   message: string;
   data?: {
-    payment_status: 'pending' | 'success' | 'failed' | 'cancelled';
+    payment_status: 'pending' | 'success' | 'failed' | 'cancelled' | 'paid' | 'successful';
     order_id: string;
     amount: number;
     reference: string;
@@ -310,7 +310,7 @@ export interface PaymentStatusResponse {
   message: string;
   data?: {
     order_id: string;
-    payment_status: 'pending' | 'success' | 'failed' | 'cancelled';
+    payment_status: 'pending' | 'success' | 'failed' | 'cancelled' | 'paid' | 'successful';
     order_status: string;
     total_amount: number;
     payment_reference?: string;
@@ -580,6 +580,11 @@ export const productsAPI = {
     return response.data;
   },
 
+  clearCart: async (): Promise<{ message: string; status: boolean }> => {
+    const response = await api.delete<{ message: string; status: boolean }>(SERVICE_ENDPOINTS.CLEAR_CART);
+    return response.data;
+  },
+
   updateCartItemQuantity: async (productId: string, action: "increment" | "decrement"): Promise<UpdateCartItemResponse> => {
     const payload = {
       product_id: productId,
@@ -692,8 +697,15 @@ export const productsAPI = {
 
   // Verify payment by reference
   verifyPayment: async (reference: string): Promise<PaymentVerificationResponse> => {
-    const response = await api.get<PaymentVerificationResponse>(
-      SERVICE_ENDPOINTS.VERIFY_PAYMENT(reference)
+    const payload = {
+      requestType: "inbound",
+      data: {
+        reference: reference
+      }
+    };
+    const response = await api.post<PaymentVerificationResponse>(
+      SERVICE_ENDPOINTS.ORDER_VERIFY_PAYMENT,
+      payload
     );
     return response.data;
   },
@@ -718,17 +730,6 @@ export const productsAPI = {
     return response.data;
   },
 
-  // Verify payment for an order using ID as reference
-  verifyOrderPayment: async (orderId: string): Promise<any> => {
-    const payload = {
-      requestType: "inbound", // Assuming a default or required value
-      data: {
-        reference: orderId
-      }
-    };
-    const response = await api.post(SERVICE_ENDPOINTS.ORDER_VERIFY_PAYMENT, payload);
-    return response.data;
-  },
 
   // Create product review
   createProductReview: async (productId: string, payload: { data: { rating: number; comment: string }; requestType: string }): Promise<any> => {

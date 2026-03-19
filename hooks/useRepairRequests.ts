@@ -2,33 +2,35 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mechanicAPI } from '@/lib/api/mechanic';
 
 // Hook to fetch repair requests
-export const useRepairRequests = (status?: string) => {
+export const useRepairRequests = (status?: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['mechanic', 'repair-requests', status || 'all'],
     queryFn: () => mechanicAPI.getRepairRequests(status),
-    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1, // Reduce retries to prevent excessive calls
-    refetchOnMount: false, // Don't refetch on mount if data exists and is fresh
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: false, // Don't auto-refetch on reconnect
-    refetchInterval: false, // Disable automatic polling - user can pull to refresh
-    networkMode: 'online', // Only fetch when online
+    enabled: enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    networkMode: 'online',
   });
 };
 
 // Hook to fetch mechanic analytics
-export const useMechanicAnalytics = () => {
+export const useMechanicAnalytics = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['mechanic', 'analytics'],
     queryFn: () => mechanicAPI.getMechanicAnalytics(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 1, // Reduce retries
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: false, // Don't auto-refetch on reconnect
-    networkMode: 'online', // Only fetch when online
+    enabled: enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    networkMode: 'online',
   });
 };
 
@@ -39,10 +41,11 @@ export const useAcceptRepairRequest = () => {
   return useMutation({
     mutationFn: (requestId: string) => mechanicAPI.acceptRepairRequest(requestId),
     onSuccess: (_, requestId) => {
-      // Invalidate and refetch repair requests list
+      // Invalidate and refetch all related repair request queries
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
-      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
       queryClient.invalidateQueries({ queryKey: ['repair-request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'analytics'] });
     },
   });
 };
@@ -54,10 +57,11 @@ export const useDeclineRepairRequest = () => {
   return useMutation({
     mutationFn: (requestId: string) => mechanicAPI.declineRepairRequest(requestId),
     onSuccess: (_, requestId) => {
-      // Invalidate and refetch repair requests list
+      // Invalidate and refetch all related repair request queries
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
-      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
       queryClient.invalidateQueries({ queryKey: ['repair-request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'analytics'] });
     },
   });
 };
@@ -79,18 +83,18 @@ export const useUserRepairRequests = (status?: string) => {
 };
 
 // Hook to fetch repair request detail by ID
-export const useRepairRequestDetail = (requestId: string | undefined) => {
+export const useRepairRequestDetail = (requestId: string | undefined, pollInterval: number = 0) => {
   return useQuery({
     queryKey: ['repair-request', requestId],
     queryFn: () => mechanicAPI.getRepairRequestDetail(requestId!),
     enabled: !!requestId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5000, // Reduced staleTime for tracking
+    gcTime: 5 * 60 * 1000,
     retry: 1,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: pollInterval, // Apply polling interval
     networkMode: 'online',
   });
 };
@@ -105,8 +109,9 @@ export const useUpdateRepairRequest = () => {
     onSuccess: (_, variables) => {
       // Invalidate and refetch repair request detail
       queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
-      // Invalidate user repair requests list
+      // Invalidate both user and mechanic repair requests list
       queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
     },
   });
 };
@@ -119,10 +124,11 @@ export const useUpdateRepairRequestStatus = () => {
     mutationFn: ({ requestId, status }: { requestId: string; status: string }) =>
       mechanicAPI.updateRepairRequestStatus(requestId, status),
     onSuccess: (_, variables) => {
-      // Invalidate and refetch repair requests list
+      // Invalidate and refetch all related repair request queries
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
-      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
       queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'analytics'] });
     },
   });
 };
@@ -135,10 +141,11 @@ export const useCancelRepairRequest = () => {
     mutationFn: ({ requestId, reason }: { requestId: string; reason: string }) =>
       mechanicAPI.cancelRepairRequest(requestId, reason),
     onSuccess: (_, variables) => {
-      // Invalidate and refetch repair requests list
+      // Invalidate and refetch all related repair request queries
       queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
-      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
       queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'analytics'] });
     },
   });
 };

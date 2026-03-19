@@ -218,44 +218,48 @@ const ChooseRide = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Header - Floating Pill Design */}
-      <View className="absolute top-14 left-5 right-5 z-20 flex-row justify-center pointer-events-box-none">
-        <View className="flex-row items-center bg-white rounded-full shadow-lg shadow-black/10 py-3 px-4 border border-gray-100 w-full justify-between">
-           {/* Close / Back Button */}
-           <TouchableOpacity onPress={() => router.back()} className="p-1">
+      {/* Map and Header Container */}
+      <View style={{ flex: isExpanded ? 0.3 : 1, position: 'relative' }}>
+        {/* Header - Floating Pill Design */}
+        <View className="absolute top-10 left-5 right-5 z-20 flex-row justify-center">
+          <View className="flex-row items-center bg-white rounded-full shadow-lg shadow-black/10 py-3 px-4 border border-gray-100 w-full justify-between">
+            {/* Close / Back Button */}
+            <TouchableOpacity onPress={() => router.back()} className="p-1">
               <XMarkIcon size={24} color="#1F2937" strokeWidth={2} />
-           </TouchableOpacity>
+            </TouchableOpacity>
 
-           {/* Route Text */}
-           <View className="flex-1 flex-row items-center justify-center mx-2">
+            {/* Route Text */}
+            <View className="flex-1 flex-row items-center justify-center mx-2">
               <Text className="font-NunitoBold text-primary-700 text-base" numberOfLines={1} style={{ maxWidth: '40%' }}>
-                  {fromLocation?.name || "Pickup"}
+                {fromLocation?.name || "Pickup"}
               </Text>
               <Text className="mx-2 text-gray-400">→</Text>
               <Text className="font-NunitoBold text-gray-900 text-base" numberOfLines={1} style={{ maxWidth: '40%' }}>
-                  {toLocation?.name || "Destination"}
+                {toLocation?.name || "Destination"}
               </Text>
-           </View>
-
-
+            </View>
+          </View>
         </View>
+
+        {/* Map View */}
+        <MapSection
+          region={region}
+          userLocation={userLocation ? {
+            latitude: userLocation.coords.latitude,
+            longitude: userLocation.coords.longitude,
+          } : undefined}
+          pickupLocation={fromLocation}
+          destinationLocation={toLocation}
+          renderOverlays={null}
+        />
       </View>
 
-      {/* Map View */}
-      <MapSection
-        region={region}
-        userLocation={userLocation ? {
-          latitude: userLocation.coords.latitude,
-          longitude: userLocation.coords.longitude,
-        } : undefined}
-        renderOverlays={null}
-      />
-
-      {/* Bottom Sheet */}
+      {/* Ride Selection Section (Replaces absolute bottom sheet) */}
       <View
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl px-5 pt-1 pb-8 ${
-          isExpanded ? "h-[80vh]" : ""
+        className={`bg-white rounded-t-3xl px-5 pt-1 pb-8 shadow-2xl ${
+          isExpanded ? "flex-1" : ""
         }`}
+        style={{ marginTop: -20, zIndex: 30 }}
       >
         <TouchableOpacity
           onPress={toggleBottomSheet}

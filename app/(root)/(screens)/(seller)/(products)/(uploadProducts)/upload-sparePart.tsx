@@ -581,7 +581,7 @@ const UploadSparePart = () => {
                     onPress={formikHandleSubmit}
                     disabled={!isValid || !dirty || isSubmitting}
                     loading={isSubmitting}
-                    loadingText="Processing..."
+                    loadingText="Processing"
                     className="mb-3"
                   />
                   <Text className="text-xs text-gray-500 text-center font-NunitoMedium">

@@ -11,6 +11,9 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: userAPI.login,
       onSuccess: async (response) => {
+        // Clear any leftover cache from previous sessions
+        queryClient.clear();
+        
         try {
           // Handle login response structure - data is nested under 'data' property
           const responseData = response.data || response;

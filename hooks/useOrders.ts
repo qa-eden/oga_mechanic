@@ -82,3 +82,13 @@ export const useMerchantOrders = (merchantId: string) => {
     refetchOnReconnect: true, // Only refetch when connection is restored
   });
 };
+
+// Hook to get the current user's orders
+export const useUserOrders = (status?: string) => {
+  return useQuery<OrdersResponse, Error>({
+    queryKey: [...orderKeys.all, 'user', status || 'all'],
+    queryFn: () => productsAPI.getUserOrders(status),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+};

@@ -242,9 +242,9 @@ const UploadCarToRent = () => {
         ]);
       } else {
         // For creation, navigate to image upload page
-    router.push({
+        router.push({
           pathname: sellerRoutes.uploadCarImages as any,
-      params: {
+          params: {
             formData: JSON.stringify(payload),
             productId: updatedProductId,
             productType: 'car'
@@ -259,7 +259,7 @@ const UploadCarToRent = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
@@ -268,14 +268,14 @@ const UploadCarToRent = () => {
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
-        </TouchableOpacity>
+          </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
               {isEditMode ? 'Edit Rental Car' : 'Rental Car Details'}
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
               {isEditMode ? 'Update your Rental Car Information' : 'Enter your Rental Car Information'}
-        </Text>
+            </Text>
           </View>
           <View className="w-10" />
         </View>
@@ -296,14 +296,14 @@ const UploadCarToRent = () => {
             flexGrow: 1
           }}
         >
-        {/* Form Fields */}
-        <Formik
-          initialValues={initialValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
-            <View className="space-y-6">
+          {/* Form Fields */}
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
+          >
+            {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting, setFieldValue }) => (
+              <View className="space-y-6">
                 {/* Basic Information */}
                 <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
                   <View className="flex-row items-center mb-4">
@@ -318,13 +318,13 @@ const UploadCarToRent = () => {
                     </View>
                   </View>
 
-              {/* Name of car */}
-              <FormikInput
+                  {/* Name of car */}
+                  <FormikInput
                     name="name"
-                label="Name of Car"
+                    label="Name of Car"
                     placeholder="e.g., Toyota Camry LE"
-                type="text"
-              />
+                    type="text"
+                  />
 
                   {/* Make */}
                   <SelectField
@@ -355,16 +355,16 @@ const UploadCarToRent = () => {
                     onValueChange={(value) => setFieldValue('model', value)}
                     error={errors.model as string}
                     touched={touched.model as boolean}
-              />
+                  />
 
-              {/* Year */}
-              <FormikInput
-                name="year"
-                label="Year"
+                  {/* Year */}
+                  <FormikInput
+                    name="year"
+                    label="Year"
                     placeholder="e.g., 2023"
-                keyboardType="numeric"
-                type="text"
-              />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
                   {/* Condition */}
                   <SelectField
@@ -406,7 +406,7 @@ const UploadCarToRent = () => {
                   />
 
                   {/* Transmission */}
-              <SelectField
+                  <SelectField
                     name="transmission"
                     label="Transmission"
                     placeholder="Select transmission"
@@ -415,14 +415,14 @@ const UploadCarToRent = () => {
                     onValueChange={(value) => setFieldValue('transmission', value)}
                     error={errors.transmission as string}
                     touched={touched.transmission as boolean}
-              />
+                  />
 
-              {/* Fuel type */}
-              <SelectField
+                  {/* Fuel type */}
+                  <SelectField
                     name="fuel_type"
-                label="Fuel Type"
+                    label="Fuel Type"
                     placeholder="Select fuel type"
-                options={fuelTypeOptions}
+                    options={fuelTypeOptions}
                     value={values.fuel_type}
                     onValueChange={(value) => setFieldValue('fuel_type', value)}
                     error={errors.fuel_type as string}
@@ -430,12 +430,12 @@ const UploadCarToRent = () => {
                   />
 
                   {/* Exterior color */}
-              <FormikInput
+                  <FormikInput
                     name="exterior_color"
                     label="Exterior Color"
                     placeholder="e.g., Black, White, Silver, Red"
-                type="text"
-              />
+                    type="text"
+                  />
 
                   {/* Number of seats */}
                   <FormikInput
@@ -561,13 +561,13 @@ const UploadCarToRent = () => {
                   </View>
 
                   {/* Stock */}
-              <FormikInput
+                  <FormikInput
                     name="stock"
                     label="Available Units"
                     placeholder="e.g., 1, 2, 5"
-                keyboardType="numeric"
-                type="text"
-              />
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
                   {/* Availability */}
                   <SelectField
@@ -596,13 +596,13 @@ const UploadCarToRent = () => {
 
                 {/* Continue Button */}
                 <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
-              <FormikButton
+                  <FormikButton
                     title={isEditMode ? "Update Rental Car" : "Continue to Images"}
-                type="submit"
-                onPress={formikHandleSubmit}
-                disabled={!isValid || !dirty || isSubmitting}
-                loading={isSubmitting}
-                    loadingText="Processing..."
+                    type="submit"
+                    onPress={formikHandleSubmit}
+                    disabled={!isValid || !dirty || isSubmitting}
+                    loading={isSubmitting}
+                    loadingText="Processing"
                     className="mb-3"
                   />
                   <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
@@ -612,10 +612,10 @@ const UploadCarToRent = () => {
                     }
                   </Text>
                 </View>
-            </View>
-          )}
-        </Formik>
-      </ScrollView>
+              </View>
+            )}
+          </Formik>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

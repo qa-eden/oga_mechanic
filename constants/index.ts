@@ -57,6 +57,7 @@ import orderRide from "@/assets/icons/orderRide.svg";
 import sparePartIcon from "@/assets/icons/sparePart.svg";
 import buycar from "@/assets/icons/buycar.svg";
 import carTow from "@/assets/icons/carTow.svg";
+import { HeadphonesIcon } from "@/components/icons/HeadphonesIcon";
 
 //tabs icons
 import home from "@/assets/icons/home.svg";
@@ -86,7 +87,7 @@ import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { driverRoutes, mechanicRoutes, routes, sellerRoutes, riderRoutes } from "./routes";
+import { driverRoutes, mechanicRoutes, routes, sellerRoutes, riderRoutes, generalRoutes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -327,7 +328,7 @@ export const Services: ServicesProps[] = [
     id: 7,
     name: "Chat a Specialist",
     description: "Get expert advice on your car",
-    image: mechanic2,
+    image: HeadphonesIcon,
     bgColor: "#F8FFD8",
     border: "#F6B80D",
   },
@@ -410,16 +411,16 @@ export const MechanicProfileSettings = {
     },
     {
       id: 2,
-      name: "Add Bank Details",
+      name: "Bank Details",
       image: addBank,
-      route: "notifications",
+      route: generalRoutes.bankInfo,
     },
-    {
-      id: 3,
-      name: "Savings wallet",
-      image: savingWallet,
-      route: "notifications",
-    },
+    // {
+    //   id: 3,
+    //   name: "Savings wallet",
+    //   image: savingWallet,
+    //   route: "notifications",
+    // },
     {
       id: 4,
       name: "Change Password",
@@ -450,12 +451,12 @@ export const DriverProfileSettings = {
       image: trip,
       route: "notifications",
     },
-    {
-      id: 3,
-      name: "Wallet",
-      image: savingWallet,
-      route: routes.notifications,
-    },
+    // {
+    //   id: 3,
+    //   name: "Wallet",
+    //   image: savingWallet,
+    //   route: routes.notifications,
+    // },
     {
       id: 4,
       name: "Change Password",
@@ -464,15 +465,18 @@ export const DriverProfileSettings = {
     },
     {
       id: 5,
+      name: "Bank Details",
+      image: addBank,
+      route: generalRoutes.bankInfo,
+    },
+    {
+      id: 6,
       name: "Switch Role",
       image: switch1,
       route: "Switch Role",
     },
   ],
 };
-
-
-
 
 export const SellerProfileSettings = {
   name: "Profile settings",
@@ -485,16 +489,16 @@ export const SellerProfileSettings = {
     },
     {
       id: 2,
-      name: "Add Bank Details",
+      name: "Bank Details",
       image: addBank,
-      route: "notifications",
+      route: generalRoutes.bankInfo,
     },
-    {
-      id: 3,
-      name: "Savings wallet",
-      image: savingWallet,
-      route: "notifications",
-    },
+    // {
+    //   id: 3,
+    //   name: "Savings wallet",
+    //   image: savingWallet,
+    //   route: "notifications",
+    // },
     {
       id: 4,
       name: "Change Password",
@@ -527,9 +531,9 @@ export const RiderProfileSettings = {
     },
     {
       id: 3,
-      name: "Add Bank Details",
+      name: "Bank Details",
       image: bankIcon,
-      route: "bankDetails",
+      route: generalRoutes.bankInfo,
     },
     {
       id: 4,

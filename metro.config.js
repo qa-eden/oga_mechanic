@@ -7,7 +7,7 @@ const tailwindConfig = withNativeWind(config, { input: "./global.css" });
 // Exclude problematic packages from web builds
 if (process.env.EXPO_PLATFORM === 'web') {
   tailwindConfig.resolver.blockList = [
-    /react-native-maps/,
+    /@rnmapbox\/maps/,
     /react-native-worklets/,
     /worklets/,
   ];

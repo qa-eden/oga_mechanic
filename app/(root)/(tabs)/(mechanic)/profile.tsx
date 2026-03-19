@@ -24,7 +24,7 @@ import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroic
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { useCentralizedLogout } from "@/hooks/useCentralizedLogout";
-import { useMechanicProfile, usePrimaryUserProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useMechanicProfile } from "@/hooks/useUserProfile";
 import { useRepairRequests } from "@/hooks/useRepairRequests";
 import { PrimaryUserProfileResponse } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -45,14 +45,32 @@ const MechanicProfile = () => {
   // Use centralized logout hook
   const { logout, isLoggingOut } = useCentralizedLogout();
 
-  // Fetch profile and repair requests
-  const { data: mechanicProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = useMechanicProfile(true);
-  const { data: profileData, isLoading: isProfileLoading, refetch: refetchPrimaryProfile } = usePrimaryUserProfile();
-  const { data: repairRequests, refetch: refetchRequests } = useRepairRequests();
+  // Fetch profile and repair requests using the unified hook
+  const primaryProfile = usePrimaryUserProfile();
+  const mechanicProfile = useMechanicProfile(true); // Always enabled here
+  
+  const { 
+    data: profileData, 
+    isLoading: isLoadingProfile, 
+    refetch,
+    primaryProfileData
+  } = {
+    data: (mechanicProfile.data || primaryProfile.data) as any,
+    isLoading: mechanicProfile.isLoading && !mechanicProfile.data,
+    refetch: () => {
+      primaryProfile.refetch();
+      mechanicProfile.refetch();
+    },
+    primaryProfileData: primaryProfile.data
+  };
+
+  const isMechanic = true;
+
+  const { data: repairRequests, refetch: refetchRequests } = useRepairRequests(undefined, isMechanic);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchProfile(), refetchPrimaryProfile(), refetchRequests()]);
+    await Promise.all([refetch(), refetchRequests()]);
     setRefreshing(false);
   };
 
@@ -112,8 +130,19 @@ const MechanicProfile = () => {
     </TouchableOpacity>
   );
 
+  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
+  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
+
+  // Check profile status on load
+  React.useEffect(() => {
+    if (profileData && !isLoadingProfile && isMechanic) {
+      const isComplete = (profileData as any).data?.kyc?.is_complete ?? false;
+      setIsProfileComplete(isComplete);
+    }
+  }, [profileData, isLoadingProfile, setIsProfileComplete, isMechanic]);
+
   // Show loading state
-  if (isProfileLoading || isLoadingProfile) {
+  if (isLoadingProfile) {
     return (
       <LoadingSpinner
         message="Loading Profile..."
@@ -122,9 +151,8 @@ const MechanicProfile = () => {
     );
   }
 
-  // Get user data from API or fallback to static data
-  const userData = (profileData as PrimaryUserProfileResponse)?.data;
-  const mechanicData = mechanicProfile?.data;
+  const userData = primaryProfileData?.data;
+  const mechanicData = profileData?.data || profileData;
   const displayName = userData?.first_name && userData?.last_name
     ? `${userData.first_name} ${userData.last_name}`
     : mechanicData?.mechanic_profile?.user?.first_name && mechanicData?.mechanic_profile?.user?.last_name
@@ -133,7 +161,7 @@ const MechanicProfile = () => {
 
   const displayEmail = userData?.email || mechanicData?.mechanic_profile?.user?.email || '';
   const isVerified = userData?.is_verified || false;
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'mechanic';
+  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'mechanic';
   const profileImage = (mechanicData?.mechanic_profile as any)?.selfie || (userData as any)?.profile_picture || (userData as any)?.image || null;
   
   // Stats data
@@ -142,20 +170,10 @@ const MechanicProfile = () => {
   const totalEarnings = (mechanicData?.mechanic_profile as any)?.total_earnings || 0;
 
   const isPendingApproval = Boolean(
-    mechanicProfile?.data?.kyc?.is_complete && 
-    !mechanicProfile?.data?.mechanic_profile?.is_approved
+    isMechanic &&
+    (profileData as any)?.data?.kyc?.is_complete && 
+    !(profileData as any)?.data?.mechanic_profile?.is_approved
   );
-
-  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
-  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
-
-  // Check profile status on load
-  React.useEffect(() => {
-    if (mechanicProfile && !isLoadingProfile) {
-      const isComplete = mechanicProfile.data?.kyc?.is_complete ?? false;
-      setIsProfileComplete(isComplete);
-    }
-  }, [mechanicProfile, isLoadingProfile, setIsProfileComplete]);
 
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>

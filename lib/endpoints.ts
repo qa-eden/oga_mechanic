@@ -44,8 +44,9 @@ export const USER_ENDPOINTS = {
   NOTIFICATIONS: '/users/notifications/',
   NOTIFICATION_DETAIL: (id: number | string) => `/users/notifications/${id}/`,
   NOTIFICATION_MARK_ALL_READ: '/users/notifications/mark-all-read/',
-  BANKS: '/users/banks/',
+   BANKS: '/users/banks/',
   BANK_ENQUIRY: '/users/bank/enquiry/',
+  BANK_ACCOUNTS: '/users/bank-accounts/',
 } as const;
 
 // Mechanic endpoints (service providers)
@@ -152,7 +153,6 @@ export const SERVICE_ENDPOINTS = {
   // Checkout endpoints
   CHECKOUT: '/products/checkout/',
   // Payment verification endpoints
-  VERIFY_PAYMENT: (reference: string) => `/products/verify-payment/${reference}/`,
   PAYMENT_STATUS: (orderId: string) => `/products/orders/${orderId}/payment-status/`,
   // Orders endpoints
   ORDERS: '/products/orders/',

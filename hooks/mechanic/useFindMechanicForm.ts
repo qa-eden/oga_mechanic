@@ -18,6 +18,8 @@ interface UseFindMechanicFormReturn {
   setVehicleModel: (value: string) => void;
   vehicleYear: string;
   setVehicleYear: (value: string) => void;
+  vehicleVin: string;
+  setVehicleVin: (value: string) => void;
 
   // Problem description
   problemDescription: string;
@@ -67,6 +69,7 @@ export const useFindMechanicForm = (hasCarList: boolean): UseFindMechanicFormRet
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState('');
+  const [vehicleVin, setVehicleVin] = useState('');
 
   // Problem description
   const [problemDescription, setProblemDescription] = useState('');
@@ -102,6 +105,8 @@ export const useFindMechanicForm = (hasCarList: boolean): UseFindMechanicFormRet
     setVehicleModel,
     vehicleYear,
     setVehicleYear,
+    vehicleVin,
+    setVehicleVin,
     problemDescription,
     setProblemDescription,
     serviceAddress,

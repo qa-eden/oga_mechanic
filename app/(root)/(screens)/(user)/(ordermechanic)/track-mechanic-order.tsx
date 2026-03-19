@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, RefreshControl, Modal, TouchableOpacity, Linking, Platform } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,7 +10,7 @@ import { routes } from '@/constants/routes';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
 import { getErrorMessage } from '@/utils/errorMessages';
-import { CheckCircleIcon as CheckCircleIconSolid } from 'react-native-heroicons/solid';
+import { CheckCircleIcon as CheckCircleIconSolid, MapPinIcon as MapPinIconSolid } from 'react-native-heroicons/solid';
 import {
   UserIcon,
   WrenchScrewdriverIcon,
@@ -20,6 +21,8 @@ import {
   ClockIcon,
   DocumentDuplicateIcon,
   XCircleIcon,
+  PhoneIcon,
+  ChatBubbleLeftRightIcon,
 } from 'react-native-heroicons/outline';
 import { useRepairRequestDetail, useCancelRepairRequest } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
@@ -28,6 +31,7 @@ import CancelRequestModal from '@/components/modals/CancelRequestModal';
 import { useCreateMechanicReview } from '@/hooks/useMechanics';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
 import CustomAlert from '@/components/CustomAlert';
+import MapView, { Marker } from '@/components/MapComponent';
 
 interface OrderStatus {
   id: string;
@@ -71,7 +75,7 @@ const TrackMechanicOrder = () => {
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedCancelReason, setSelectedCancelReason] = useState<string>('');
-  
+
   // Copy to clipboard state
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,16 +89,61 @@ const TrackMechanicOrder = () => {
   // Custom Alert
   const { visible: alertVisible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
 
+  // Mechanic Location State (Simulated for Now)
+  const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+
+  const isFocused = useIsFocused();
+
   // Fetch repair request detail from API
   const {
     data: orderData,
     isLoading: isLoadingData,
     error: errorData,
     refetch
-  } = useRepairRequestDetail(orderId);
+  } = useRepairRequestDetail(orderId, isFocused ? 25000 : 0); // Poll every 25 seconds only when focused
 
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
+
+  const serviceLat = orderData?.data?.service_latitude;
+  const serviceLng = orderData?.data?.service_longitude;
+
+  // Initialize and Simulate Mechanic Movement
+  useEffect(() => {
+    if (!serviceLat || !serviceLng) return;
+
+    // If we have mechanic coordinates from API, use them
+    // Otherwise, generate a placeholder near the service location
+    if (!mechanicLocation) {
+      setMechanicLocation({
+        latitude: serviceLat + 0.012, // Start slightly north
+        longitude: serviceLng + 0.012, // and slightly east
+      });
+    }
+
+    // Simulate movement if in_transit
+    if (orderData?.data?.status === 'in_transit' && mechanicLocation) {
+        const interval = setInterval(() => {
+            setMechanicLocation(prev => {
+                if (!prev) return prev;
+                // Move 5% closer to destination every interval
+                const latDiff = serviceLat - prev.latitude;
+                const lngDiff = serviceLng - prev.longitude;
+                
+                // If very close, stop moving
+                if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
+                    return prev;
+                }
+
+                return {
+                    latitude: prev.latitude + (latDiff * 0.05),
+                    longitude: prev.longitude + (lngDiff * 0.05),
+                };
+            });
+        }, 25000); // Sink with polling interval
+        return () => clearInterval(interval);
+    }
+  }, [serviceLat, serviceLng, orderData?.data?.status]);
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -119,12 +168,12 @@ const TrackMechanicOrder = () => {
       }
       await Clipboard.setStringAsync(text);
       setIsCopied(true);
-      
+
       // Clear any existing timeout
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
       }
-      
+
       // Reset after 3 seconds
       copyTimeoutRef.current = setTimeout(() => {
         setIsCopied(false);
@@ -167,6 +216,13 @@ const TrackMechanicOrder = () => {
       active: false,
     },
     {
+      id: 'arrived',
+      label: 'Mechanic Arrived',
+      description: 'The mechanic has reached your location',
+      completed: false,
+      active: false,
+    },
+    {
       id: 'in_progress',
       label: 'Service In Progress',
       description: 'The mechanic is working on your vehicle',
@@ -188,8 +244,9 @@ const TrackMechanicOrder = () => {
       'pending': 0,
       'accepted': 1,
       'in_transit': 2,
-      'in_progress': 3,
-      'completed': 4,
+      'arrived': 3,
+      'in_progress': 4,
+      'completed': 5,
       'cancelled': -1,
       'declined': -1,
     };
@@ -201,6 +258,7 @@ const TrackMechanicOrder = () => {
       'pending': orderTimestamps?.requested_at || null,
       'accepted': orderTimestamps?.accepted_at || null,
       'in_transit': orderTimestamps?.in_transit_at || null,
+      'arrived': orderTimestamps?.arrived_at || null,
       'in_progress': orderTimestamps?.in_progress_at || null,
       'completed': orderTimestamps?.completed_at || null,
     };
@@ -269,6 +327,7 @@ const TrackMechanicOrder = () => {
       requested_at: request.requested_at || null,
       accepted_at: request.accepted_at || null,
       in_transit_at: request.in_transit_at || null,
+      arrived_at: request.arrived_at || null,
       in_progress_at: request.in_progress_at || null,
       started_at: request.started_at || null,
       completed_at: request.completed_at || null,
@@ -281,6 +340,7 @@ const TrackMechanicOrder = () => {
     requested_at: (order as any).requested_at,
     accepted_at: (order as any).accepted_at,
     in_transit_at: (order as any).in_transit_at,
+    arrived_at: (order as any).arrived_at,
     in_progress_at: (order as any).in_progress_at,
     completed_at: (order as any).completed_at,
     cancelled_at: (order as any).cancelled_at,
@@ -384,6 +444,8 @@ const TrackMechanicOrder = () => {
         return 'Accepted';
       case 'in_transit':
         return 'On The Way';
+      case 'arrived':
+        return 'Arrived';
       case 'in_progress':
         return 'In Progress';
       case 'completed':
@@ -395,6 +457,26 @@ const TrackMechanicOrder = () => {
       default:
         return status;
     }
+  };
+
+  const getArrivalCode = (id: string | undefined): string => {
+    if (!id) return '0000';
+    // Simple deterministic code based on ID for demo purposes
+    // In production, this would come from the backend/DB
+    const num = parseInt(id.replace(/[^0-9]/g, '').slice(-4)) || 1234;
+    return num.toString().padStart(4, '0');
+  };
+
+  const handleCall = (phoneNumber: string) => {
+    if (!phoneNumber) return;
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+      showError('Error', 'Unable to initiate phone call');
+    });
+  };
+
+  const handleChatSupport = () => {
+    // Correctly routes to Support/Help Specialist as per user request
+    router.push(routes.chatSeller as any);
   };
 
   if (isLoadingData) {
@@ -475,8 +557,9 @@ const TrackMechanicOrder = () => {
       >
         {/* Status Banner */}
         <View className={`mx-5 mt-4 p-4 rounded-xl ${currentStatus === 'pending' ? 'bg-amber-50 border border-amber-200' :
-            currentStatus === 'accepted' ? 'bg-blue-50 border border-blue-200' :
-              currentStatus === 'in_transit' ? 'bg-blue-50 border border-blue-200' :
+          currentStatus === 'accepted' ? 'bg-blue-50 border border-blue-200' :
+            currentStatus === 'in_transit' ? 'bg-blue-50 border border-blue-200' :
+              currentStatus === 'arrived' ? 'bg-indigo-50 border border-indigo-200' :
                 currentStatus === 'in_progress' ? 'bg-purple-50 border border-purple-200' :
                   currentStatus === 'completed' ? 'bg-green-50 border border-green-200' :
                     currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-50 border border-red-200' :
@@ -484,8 +567,9 @@ const TrackMechanicOrder = () => {
           }`}>
           <View className="flex-row items-center">
             <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${currentStatus === 'pending' ? 'bg-amber-100' :
-                currentStatus === 'accepted' ? 'bg-blue-100' :
-                  currentStatus === 'in_transit' ? 'bg-blue-100' :
+              currentStatus === 'accepted' ? 'bg-blue-100' :
+                currentStatus === 'in_transit' ? 'bg-blue-100' :
+                  currentStatus === 'arrived' ? 'bg-indigo-100' :
                     currentStatus === 'in_progress' ? 'bg-purple-100' :
                       currentStatus === 'completed' ? 'bg-green-100' :
                         currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-100' :
@@ -494,14 +578,16 @@ const TrackMechanicOrder = () => {
               {currentStatus === 'pending' && <ClockIcon size={20} color="#D97706" />}
               {currentStatus === 'accepted' && <CheckCircleIconSolid size={20} color="#2563EB" />}
               {currentStatus === 'in_transit' && <TruckIcon size={20} color="#2563EB" />}
+              {currentStatus === 'arrived' && <MapPinIconSolid size={20} color="#4F46E5" />}
               {currentStatus === 'in_progress' && <WrenchScrewdriverIcon size={20} color="#7C3AED" />}
               {currentStatus === 'completed' && <CheckCircleIconSolid size={20} color="#10B981" />}
-              {(currentStatus === 'cancelled' || currentStatus === 'declined') && <XCircleIcon size={20} color="#DC2626" />}
+                {(currentStatus === 'cancelled' || currentStatus === 'declined') && <XCircleIcon size={20} color="#DC2626" />}
             </View>
             <View className="flex-1">
               <Text className={`text-lg font-NunitoBold ${currentStatus === 'pending' ? 'text-amber-800' :
-                  currentStatus === 'accepted' ? 'text-blue-800' :
-                    currentStatus === 'in_transit' ? 'text-blue-800' :
+                currentStatus === 'accepted' ? 'text-blue-800' :
+                  currentStatus === 'in_transit' ? 'text-blue-800' :
+                    currentStatus === 'arrived' ? 'text-indigo-800' :
                       currentStatus === 'in_progress' ? 'text-purple-800' :
                         currentStatus === 'completed' ? 'text-green-800' :
                           currentStatus === 'cancelled' || currentStatus === 'declined' ? 'text-red-800' :
@@ -513,12 +599,50 @@ const TrackMechanicOrder = () => {
                 {currentStatus === 'pending' && 'Waiting for mechanic to accept'}
                 {currentStatus === 'accepted' && 'Mechanic will arrive soon'}
                 {currentStatus === 'in_transit' && 'Mechanic is on the way to you'}
+                {currentStatus === 'arrived' && 'Mechanic has reached your location'}
                 {currentStatus === 'in_progress' && 'Your vehicle is being repaired'}
                 {currentStatus === 'completed' && 'Your service is complete'}
                 {(currentStatus === 'cancelled' || currentStatus === 'declined') && 'This request was cancelled'}
               </Text>
             </View>
           </View>
+
+          {/* New Interactive Actions Banner */}
+          {(currentStatus === 'accepted' || currentStatus === 'in_transit' || currentStatus === 'arrived') && (
+            <View className="flex-row mt-4 pt-4 border-t border-gray-100/50 space-x-3 gap-3">
+              <TouchableOpacity
+                onPress={() => handleCall(order.mechanic_phone || '')}
+                className="flex-1 flex-row items-center justify-center bg-gray-900/10 py-2.5 rounded-lg border border-gray-900/20"
+              >
+                <PhoneIcon size={18} color="#111827" />
+                <Text className="text-sm font-NunitoBold text-gray-900 ml-2">Call Mechanic</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleChatSupport}
+                className="flex-1 flex-row items-center justify-center bg-blue-600 py-2.5 rounded-lg"
+              >
+                <ChatBubbleLeftRightIcon size={18} color="#FFFFFF" />
+                <Text className="text-sm font-NunitoBold text-white ml-2">Chat Support</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Arrival Verification OTP */}
+          {(currentStatus === 'accepted' || currentStatus === 'in_transit' || currentStatus === 'arrived') && (
+            <View className="mt-4 pt-4 border-t border-gray-100/50 items-center">
+              <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-widest mb-2">Arrival Verification Code</Text>
+              <View className="flex-row space-x-3 gap-3">
+                {getArrivalCode(orderId).split('').map((digit, i) => (
+                  <View key={i} className="w-10 h-12 bg-white border border-gray-200 rounded-lg items-center justify-center shadow-sm">
+                    <Text className="text-xl font-NunitoExtraBold text-gray-900">{digit}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text className="text-[10px] font-NunitoMedium text-gray-400 mt-2 text-center px-4">
+                Share this code with the mechanic once they arrive to start the repair.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Order Timeline */}
@@ -572,7 +696,18 @@ const TrackMechanicOrder = () => {
 
         {/* Mechanic Card */}
         {order.mechanic_name && order.mechanic_name !== 'Unknown Mechanic' && (
-          <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4">
+          <TouchableOpacity 
+            className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4"
+            activeOpacity={0.7}
+            onPress={() => {
+              if (order.mechanic_id) {
+                router.push({
+                  pathname: routes.mechanicProfile,
+                  params: { mechanicId: order.mechanic_id }
+                });
+              }
+            }}
+          >
             <View className="flex-row items-center">
               <View className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center">
                 <UserIcon size={24} color="#6B7280" />
@@ -582,7 +717,7 @@ const TrackMechanicOrder = () => {
                 <Text className="text-base font-NunitoBold text-gray-900">{order.mechanic_name}</Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Vehicle Card */}
@@ -650,36 +785,74 @@ const TrackMechanicOrder = () => {
           </View>
         )}
 
-        {/* Service Location Card */}
-        <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4">
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              <MapPinIcon size={18} color="#6B7280" />
-              <Text className="text-sm font-NunitoBold text-gray-500 ml-2 uppercase">Service Location</Text>
-            </View>
-            <View className="flex-row">
-              <TouchableOpacity
-                onPress={() => copyToClipboard(order.service_address || '')}
-                className={`${isCopied ? 'px-3' : 'w-9'} h-9 rounded-lg ${isCopied ? 'bg-green-100' : 'bg-gray-100'} items-center justify-center mr-2`}
+        {/* Service Location / Live Tracking Map */}
+        <View className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 overflow-hidden">
+          {(currentStatus === 'accepted' || currentStatus === 'in_transit' || currentStatus === 'arrived') && serviceLat && serviceLng ? (
+            <View className="h-[250px] w-full relative">
+              <MapView
+                initialRegion={{
+                  latitude: serviceLat,
+                  longitude: serviceLng,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }}
+                style={{ flex: 1 }}
               >
-                {isCopied ? (
-                  <Text className="text-xs font-NunitoBold text-green-700">Copied</Text>
-                ) : (
-                  <DocumentDuplicateIcon size={18} color="#374151" />
+                {/* User/Service Location Marker */}
+                <Marker coordinate={{ latitude: serviceLat, longitude: serviceLng }}>
+                  <View className="bg-red-500 p-2 rounded-full border-2 border-white shadow-md">
+                    <UserIcon size={20} color="#FFFFFF" />
+                  </View>
+                </Marker>
+
+                {/* Mechanic Marker */}
+                {mechanicLocation && (
+                  <Marker coordinate={mechanicLocation}>
+                    <View className="bg-gray-900 p-2 rounded-full border-2 border-white shadow-md">
+                      <TruckIcon size={20} color="#FFFFFF" />
+                    </View>
+                  </Marker>
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => openInMaps(order.service_address || '')}
-                className="px-3 h-9 rounded-lg bg-gray-900 items-center justify-center flex-row"
-              >
-                <MapPinIcon size={14} color="#FFFFFF" />
-                <Text className="text-xs font-NunitoBold text-white ml-1">View Map</Text>
-              </TouchableOpacity>
+              </MapView>
+              <View className="absolute bottom-3 left-3 right-3 bg-white/95 p-3 rounded-lg border border-gray-100 flex-row items-center shadow-sm">
+                <MapPinIcon size={16} color="#6B7280" />
+                <Text className="text-xs font-NunitoMedium text-gray-600 ml-2 flex-1" numberOfLines={1}>
+                  {order.service_address || 'Service Location'}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text className="text-base font-NunitoMedium text-gray-900 leading-6">
-            {order.service_address || 'N/A'}
-          </Text>
+          ) : (
+            <View className="p-4">
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <MapPinIcon size={18} color="#6B7280" />
+                  <Text className="text-sm font-NunitoBold text-gray-500 ml-2 uppercase">Service Location</Text>
+                </View>
+                <View className="flex-row">
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(order.service_address || '')}
+                    className={`${isCopied ? 'px-3' : 'w-9'} h-9 rounded-lg ${isCopied ? 'bg-green-100' : 'bg-gray-100'} items-center justify-center mr-2`}
+                  >
+                    {isCopied ? (
+                      <Text className="text-xs font-NunitoBold text-green-700">Copied</Text>
+                    ) : (
+                      <DocumentDuplicateIcon size={18} color="#374151" />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => openInMaps(order.service_address || '')}
+                    className="px-3 h-9 rounded-lg bg-gray-900 items-center justify-center flex-row"
+                  >
+                    <MapPinIcon size={14} color="#FFFFFF" />
+                    <Text className="text-xs font-NunitoBold text-white ml-1">View Map</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text className="text-base font-NunitoMedium text-gray-900 leading-6">
+                {order.service_address || 'N/A'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}

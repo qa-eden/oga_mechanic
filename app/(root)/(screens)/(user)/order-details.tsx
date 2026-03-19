@@ -29,6 +29,9 @@ import CustomAlert from "@/components/CustomAlert";
 import ProductReviewModal from "@/components/modals/ProductReviewModal";
 import OrderItemModal from "@/components/modals/OrderItemModal";
 
+import CustomButton from "@/components/CustomButton";
+import { routes } from "@/constants/routes";
+
 const OrderDetails = () => {
   const { id } = useLocalSearchParams();
   const [copiedId, setCopiedId] = useState(false);
@@ -69,9 +72,7 @@ const OrderDetails = () => {
   const order = Array.isArray(orderResponse?.data) 
     ? orderResponse?.data[0] 
     : orderResponse?.data;
-
-  // ... (helper functions)
-
+  
   const handleReviewPress = (item: any) => {
     setReviewProduct(item.product);
     setReviewModalVisible(true);
@@ -84,17 +85,13 @@ const OrderDetails = () => {
     try {
         const payload = {
             requestType: "inbound", // Default request type
-            data: {
-                rating,
-                comment
-            }
+            data: { rating, comment }
         };
         const res = await productsAPI.createProductReview(reviewProduct.id, payload);
         
         if (res.status === true) {
              showAlert("Success", "Review submitted successfully!", "success");
              setReviewModalVisible(false);
-             // Optionally refetch if needed to update UI state
         } else {
              showAlert("Error", res.message || "Failed to submit review.", "error");
         }
@@ -106,18 +103,6 @@ const OrderDetails = () => {
     }
   };
 
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const copyOrderId = async () => {
     if (order?.id) {
         await Clipboard.setStringAsync(order.id);
@@ -126,14 +111,13 @@ const OrderDetails = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed': return 'text-green-700 bg-green-100 border-green-200';
-      case 'paid': return 'text-blue-700 bg-blue-100 border-blue-200';
-      case 'shipped': return 'text-purple-700 bg-purple-100 border-purple-200';
-      case 'cancelled': return 'text-red-700 bg-red-100 border-red-200';
-      default: return 'text-yellow-700 bg-yellow-100 border-yellow-200';
-    }
+  const getStatusStyle = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === 'completed' || s === 'delivered') return { text: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' };
+    if (s === 'paid' || s === 'processing') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' };
+    if (s === 'shipped') return { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' };
+    if (s === 'cancelled') return { text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' };
+    return { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' };
   };
 
   const handleItemPress = (item: any) => {
@@ -142,20 +126,15 @@ const OrderDetails = () => {
   };
 
   if (isLoading) {
-    return (
-      <LoadingSpinner message="Loading order details..." size="medium" />
-    );
+    return <LoadingSpinner message="Loading order details..." size="medium" />;
   }
 
   if (error || !order) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
         <View className="px-5 py-4 border-b border-gray-100 flex-row items-center">
-            <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-3"
-            >
-            <ArrowLeftIcon size={24} color="#1F2937" />
+            <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-3">
+              <ArrowLeftIcon size={24} color="#1F2937" />
             </TouchableOpacity>
             <Text className="text-xl font-NunitoExtraBold text-gray-900">Order Details</Text>
         </View>
@@ -164,7 +143,7 @@ const OrderDetails = () => {
                 <XCircleIcon size={48} color="#EF4444" />
             </View>
           <Text className="text-xl font-NunitoBold text-gray-900 mb-2">Failed to load order</Text>
-          <Text className="text-gray-500 text-center mb-6 px-10">We couldn't retrieve the details for this order. Please check your connection.</Text>
+          <Text className="text-gray-500 text-center mb-6 px-10">We couldn't retrieve the details for this order.</Text>
           <TouchableOpacity onPress={() => refetch()} className="py-3 px-8 bg-black rounded-full shadow-md">
             <Text className="font-NunitoBold text-white text-base">Try Again</Text>
           </TouchableOpacity>
@@ -173,276 +152,212 @@ const OrderDetails = () => {
     );
   }
 
-  const statusStyle = getStatusColor(order.status || 'pending');
+  const styles = getStatusStyle(order.status || 'pending');
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-gray-50/50" edges={["top"]}>
       <StatusBar style="dark" />
       
       {/* Header */}
-      <View className="bg-white px-5 py-4 border-b border-gray-100 flex-row items-center sticky top-0 z-10 shadow-sm">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-3"
-        >
+      <View className="bg-white px-5 py-4 border-b border-gray-100 flex-row items-center shadow-sm z-10">
+        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-4">
           <ArrowLeftIcon size={20} color="#1F2937" />
         </TouchableOpacity>
-        <View className="flex-1">
-            <Text className="text-xl font-NunitoExtraBold text-gray-900">Order Details</Text>
-        </View>
+        <Text className="text-xl font-NunitoExtraBold text-gray-900">Order Receipt</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         
-        {/* Status Banner */}
-        <Animated.View entering={FadeInDown.duration(500)} className="bg-white p-6 mb-3">
-            <View className="flex-row justify-between items-start mb-4">
+        {/* Status Card */}
+        <Animated.View entering={FadeInDown.duration(600)} className="bg-white p-6 mb-4 shadow-sm">
+            <View className="flex-row justify-between items-start mb-6">
                 <View>
-                    <Text className="text-gray-500 font-NunitoMedium text-sm mb-1">Status</Text>
-                    <View className={`px-4 py-1.5 rounded-full border self-start ${statusStyle.split(' ')[1]} ${statusStyle.split(' ')[2]}`}>
-                        <Text className={`text-xs font-NunitoBold ${statusStyle.split(' ')[0]} uppercase tracking-wider`}>
+                    <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-[2px] mb-2">Current Status</Text>
+                    <View className={`px-4 py-1.5 rounded-full border ${styles.bg} ${styles.border}`}>
+                        <Text className={`text-[11px] font-NunitoExtraBold ${styles.text} uppercase tracking-wider`}>
                             {order.status || 'PENDING'}
                         </Text>
                     </View>
                 </View>
                 <View className="items-end">
-                     <Text className="text-gray-500 font-NunitoMedium text-sm mb-1">Total Amount</Text>
-                     <Text className="text-xl font-NunitoExtraBold text-primary-600">
+                     <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-[2px] mb-2">Total Paid</Text>
+                     <Text className="text-2xl font-NunitoExtraBold text-primary-600">
                         ₦{parseFloat(order.total_amount)?.toLocaleString()}
                     </Text>
                 </View>
             </View>
             
-            <View className="flex-row items-center justify-between pt-4 border-t border-gray-100">
+            <View className="flex-row items-center justify-between pt-5 border-t border-gray-100">
                 <View>
-                    <Text className="text-gray-500 text-xs font-NunitoMedium mb-0.5">Order ID</Text>
-                    <TouchableOpacity 
-                        onPress={copyOrderId}
-                        className="flex-row items-center"
-                    >
-                        <Text className="text-gray-900 font-NunitoBold text-sm mr-2 select-all">
-                            #{order.id?.substring(0, 8)}...
+                    <Text className="text-gray-400 text-[10px] font-NunitoBold uppercase mb-1">Order Identifier</Text>
+                    <TouchableOpacity onPress={copyOrderId} className="flex-row items-center bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                        <Text className="text-gray-900 font-NunitoExtraBold text-xs mr-2">
+                            #{order.id?.substring(0, 12).toUpperCase()}
                         </Text>
                         <ClipboardDocumentIcon size={14} color={copiedId ? "#10B981" : "#9CA3AF"} />
-                        {copiedId && <Text className="text-[10px] text-green-500 ml-1 font-NunitoBold">Copied!</Text>}
                     </TouchableOpacity>
                 </View>
                 <View className="items-end">
-                    <Text className="text-gray-500 text-xs font-NunitoMedium mb-0.5">Date Placed</Text>
-                    <Text className="text-gray-900 font-NunitoBold text-sm">
-                        {new Date(order.created_at).toLocaleDateString()}
+                    <Text className="text-gray-400 text-[10px] font-NunitoBold uppercase mb-1">Order Date</Text>
+                    <Text className="text-gray-900 font-NunitoExtraBold text-sm">
+                        {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                 </View>
             </View>
         </Animated.View>
 
+        {/* Track Order Button Section */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} className="px-5 mb-6">
+            <CustomButton 
+                title="Track Live Order Status"
+                onPress={() => router.push({
+                    pathname: routes.orderTracking,
+                    params: { id: id }
+                })}
+                bgVariant="primary"
+                className="shadow-md shadow-primary-200"
+            />
+        </Animated.View>
+
         {/* Order Items */}
-        <View className="mb-3">
-            <View className="px-5 mb-2">
-                <Text className="text-base font-NunitoBold text-gray-500 uppercase tracking-wide">Items ({order.items?.length || 0})</Text>
+        <View className="px-5">
+            <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-NunitoExtraBold text-gray-900">Ordered Items</Text>
+                <View className="bg-gray-200 px-2 py-0.5 rounded-md">
+                    <Text className="text-[10px] font-NunitoBold text-gray-600">{order.items?.length || 0} TOTAL</Text>
+                </View>
             </View>
             
             {order.items?.map((item: any, index: number) => (
                 <Animated.View 
                     key={index} 
-                    entering={FadeInDown.delay(index * 100).duration(500)}
-                    className="mx-4 mb-3"
+                    entering={FadeInDown.delay(300 + index * 100).duration(600)}
+                    className="mb-4"
                 >
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={() => handleItemPress(item)}
-                    className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+                    className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100/50 flex-row"
                   >
-                    <View className="flex-row">
-                        {/* Product Image */}
-                        <View className="w-20 h-20 bg-gray-50 rounded-xl mr-4 items-center justify-center border border-gray-100 overflow-hidden">
-                            {item.product?.images?.[0]?.image ? (
-                                <Image 
-                                    source={{ uri: item.product.images[0].image }} 
-                                    className="w-full h-full"
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <ShoppingBagIcon size={32} color="#D1D5DB" />
-                            )}
-                        </View>
-                        
-                        {/* Details */}
-                        <View className="flex-1 justify-between py-0.5">
-                            <View>
-                                {/* Category Badge */}
-                               {item.product?.category?.name && (
-                                   <View className="bg-gray-100 self-start px-2 py-0.5 rounded-md mb-1.5">
-                                       <Text className="text-[10px] font-NunitoBold text-gray-600">
-                                           {item.product.category.name}
-                                       </Text>
-                                   </View>
-                               )}
-                                <Text className="text-base font-NunitoBold text-gray-900 leading-5 mb-1" numberOfLines={2}>
-                                    {item.product?.name || 'Product Item'}
-                                </Text>
-                                {/* Merchant Name (if appropriate) */}
-                                {item.product?.merchant_email && (
-                                    <Text className="text-[10px] text-gray-400 mb-1">
-                                        Sold by: {item.product.merchant_email.split('@')[0]}
-                                    </Text>
-                                )}
-                            </View>
-                            
-                            <View className="flex-row justify-between items-center mt-2">
-                                <Text className="text-gray-500 text-sm font-NunitoMedium">
-                                    Qty: <Text className="text-gray-900 font-NunitoBold">{item.quantity}</Text>
-                                </Text>
-                                <Text className="text-base font-NunitoExtraBold text-primary-600">
-                                    ₦{parseFloat(item.price)?.toLocaleString()}
-                                </Text>
-                            </View>
-
-                            {/* Review Button for Completed Orders */}
-                            {order.status?.toLowerCase() === 'completed' && (
-                                <TouchableOpacity 
-                                    onPress={(e) => {
-                                        e.stopPropagation();
-                                        handleReviewPress(item);
-                                    }}
-                                    className="mt-3 py-2 bg-gray-50 border border-gray-200 rounded-lg items-center justify-center flex-row"
-                                >
-                                    <StarIcon size={14} color="#F59E0B" />
-                                    <Text className="ml-1.5 text-xs font-NunitoBold text-gray-700">Leave a Review</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                    <View className="w-20 h-24 bg-gray-50 rounded-2xl mr-4 items-center justify-center overflow-hidden shadow-inner">
+                        {item.product?.images?.[0]?.image ? (
+                            <Image 
+                                source={{ uri: item.product.images[0].image }} 
+                                className="w-full h-full"
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <ShoppingBagIcon size={32} color="#D1D5DB" />
+                        )}
                     </View>
                     
-                    {/* Compatibility Info (if exists) */}
-                    {item.product?.vehicle_compatibility?.length > 0 && (
-                        <View className="mt-3 pt-3 border-t border-gray-50">
-                            <Text className="text-xs text-gray-500 font-NunitoMedium mb-1">Compatible with:</Text>
-                            <View className="flex-row flex-wrap gap-1">
-                                {item.product.vehicle_compatibility.slice(0, 2).map((comp: any, i: number) => (
-                                    <View key={i} className="bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                                        <Text className="text-[10px] text-gray-600 font-NunitoBold">
-                                            {comp.make_name} {comp.model_name}
-                                        </Text>
-                                    </View>
-                                ))}
-                                {item.product.vehicle_compatibility.length > 2 && (
-                                    <Text className="text-[10px] text-gray-400 self-center ml-1">
-                                        +{item.product.vehicle_compatibility.length - 2} more
-                                    </Text>
-                                )}
-                            </View>
+                    <View className="flex-1 justify-between py-1">
+                        <View>
+                            <Text className="text-sm font-NunitoExtraBold text-gray-900 leading-tight mb-1" numberOfLines={2}>
+                                {item.product?.name || 'Product Item'}
+                            </Text>
+                            <Text className="text-[10px] text-gray-400 font-NunitoBold uppercase">
+                                Unit Price: ₦{parseFloat(item.price)?.toLocaleString()}
+                            </Text>
                         </View>
-                    )}
+                        
+                        <View className="flex-row justify-between items-end mt-2">
+                            <View className="bg-gray-50 px-2 py-1 rounded-lg">
+                                <Text className="text-gray-500 text-[10px] font-NunitoBold">
+                                    QTY: <Text className="text-gray-900">{item.quantity}</Text>
+                                </Text>
+                            </View>
+                            <Text className="text-base font-NunitoExtraBold text-gray-900">
+                                ₦{((item.quantity || 1) * parseFloat(item.price || "0")).toLocaleString()}
+                            </Text>
+                        </View>
+
+                        {order.status?.toLowerCase() === 'completed' && (
+                            <TouchableOpacity 
+                                onPress={(e) => { e.stopPropagation(); handleReviewPress(item); }}
+                                className="mt-3 py-2 bg-amber-50 rounded-xl items-center justify-center flex-row border border-amber-100"
+                            >
+                                <StarIcon size={14} color="#F59E0B" />
+                                <Text className="ml-1.5 text-xs font-NunitoExtraBold text-amber-600">Leave Review</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                   </TouchableOpacity>
                 </Animated.View>
             ))}
         </View>
 
-        {/* Info Grid */}
-        <View className="px-4 flex-row gap-3 mb-4">
-             {/* Conditionally render Shipping if available */}
+        {/* Info Cards */}
+        <View className="px-5 flex-row gap-4 mb-4">
              {order.address && (
-                <View className="flex-1 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                    <View className="w-8 h-8 bg-blue-50 rounded-full items-center justify-center mb-3">
-                        <MapPinIcon size={16} color="#2563EB" />
+                <View className="flex-1 bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm">
+                    <View className="w-9 h-9 bg-blue-50 rounded-2xl items-center justify-center mb-4">
+                        <MapPinIcon size={18} color="#2563EB" />
                     </View>
-                    <Text className="text-xs text-gray-400 font-NunitoBold uppercase mb-1">Delivery To</Text>
-                    <Text className="text-sm font-NunitoBold text-gray-900 leading-tight">
+                    <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-wider mb-2">Delivery Address</Text>
+                    <Text className="text-xs font-NunitoBold text-gray-800 leading-relaxed" numberOfLines={3}>
                         {order.address}
                     </Text>
                 </View>
              )}
 
-             {/* Payment Info */}
-             <View className="flex-1 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                <View className="w-8 h-8 bg-purple-50 rounded-full items-center justify-center mb-3">
-                    <CreditCardIcon size={16} color="#7C3AED" />
+             <View className="flex-1 bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm">
+                <View className="w-9 h-9 bg-purple-50 rounded-2xl items-center justify-center mb-4">
+                    <CreditCardIcon size={18} color="#7C3AED" />
                 </View>
-                <Text className="text-xs text-gray-400 font-NunitoBold uppercase mb-1">Payment</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900 leading-tight">
-                    {order.payment_method ? order.payment_method.replace('_', ' ') : 'Online Payment'}
+                <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-wider mb-2">Payment Method</Text>
+                <Text className="text-xs font-NunitoBold text-gray-800 leading-relaxed">
+                    {order.payment_method ? order.payment_method.replace('_', ' ') : 'Online Secured Payment'}
                 </Text>
              </View>
         </View>
 
-        {/* Order Summary Card */}
-        <Animated.View entering={FadeInDown.delay(300).duration(500)} className="bg-white mx-4 p-5 rounded-3xl border border-gray-100 shadow-sm mb-6">
-            <Text className="text-base font-NunitoExtraBold text-gray-900 mb-4">Payment Summary</Text>
+        {/* Summary Details */}
+        <Animated.View entering={FadeInDown.delay(600).duration(600)} className="mx-5 p-6 bg-white rounded-[32px] border border-gray-100 shadow-sm mb-8">
+            <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-6">Payment Summary</Text>
             
-            <View className="flex-row justify-between mb-3">
-                <Text className="text-sm text-gray-500 font-NunitoMedium">Subtotal</Text>
-                <Text className="text-sm font-NunitoBold text-gray-900">
-                    ₦{parseFloat(order.total_amount)?.toLocaleString()}
-                </Text>
-            </View>
-            
-            {order.shipping_fee && parseFloat(order.shipping_fee) > 0 && (
-                <View className="flex-row justify-between mb-3">
-                    <Text className="text-sm text-gray-500 font-NunitoMedium">Shipping Fee</Text>
-                    <Text className="text-sm font-NunitoBold text-gray-900">
-                        +₦{parseFloat(order.shipping_fee).toLocaleString()}
+            <View className="space-y-4">
+                <View className="flex-row justify-between items-center">
+                    <Text className="text-sm text-gray-400 font-NunitoBold">Item Subtotal</Text>
+                    <Text className="text-sm font-NunitoExtraBold text-gray-900">
+                        ₦{parseFloat(order.total_amount)?.toLocaleString()}
                     </Text>
                 </View>
-            )}
+                
+                {order.shipping_fee && parseFloat(order.shipping_fee) > 0 && (
+                    <View className="flex-row justify-between items-center">
+                        <Text className="text-sm text-gray-400 font-NunitoBold">Delivery Fee</Text>
+                        <Text className="text-sm font-NunitoExtraBold text-gray-900">+₦{parseFloat(order.shipping_fee).toLocaleString()}</Text>
+                    </View>
+                )}
 
-            {order.discount && parseFloat(order.discount) > 0 && (
-                 <View className="flex-row justify-between mb-3">
-                    <Text className="text-sm text-green-600 font-NunitoMedium">Discount</Text>
-                    <Text className="text-sm font-NunitoBold text-green-600">
-                        -₦{parseFloat(order.discount).toLocaleString()}
+                <View className="h-px bg-gray-50 w-full my-2" />
+                
+                <View className="flex-row justify-between items-center">
+                    <Text className="text-base font-NunitoExtraBold text-gray-900">Grand Total</Text>
+                    <Text className="text-2xl font-NunitoExtraBold text-primary-600">
+                        ₦{parseFloat(order.total_amount)?.toLocaleString()}
                     </Text>
                 </View>
-            )}
-
-            <View className="h-px bg-gray-100 my-3" />
-            
-            <View className="flex-row justify-between items-center">
-                <Text className="text-base font-NunitoExtraBold text-gray-900">Total Paid</Text>
-                <Text className="text-xl font-NunitoExtraBold text-primary-600">
-                    ₦{parseFloat(order.total_amount)?.toLocaleString()}
-                </Text>
             </View>
         </Animated.View>
 
-        {/* Action Buttons */}
-        <Animated.View entering={FadeInDown.delay(400).duration(500)} className="mx-4 mb-8">
+        <Animated.View entering={FadeInDown.delay(700).duration(600)} className="mx-5">
             <TouchableOpacity 
                 activeOpacity={0.8}
-                className="flex-row items-center justify-center py-4 bg-gray-100 rounded-2xl"
+                className="flex-row items-center justify-center py-5 bg-gray-100 rounded-3xl"
             >
                 <ChatBubbleLeftEllipsisIcon size={20} color="#4B5563" />
-                <Text className="ml-2 font-NunitoBold text-gray-700">Need Help with this Order?</Text>
+                <Text className="ml-3 font-NunitoExtraBold text-gray-600 text-sm">Customer Support Center</Text>
             </TouchableOpacity>
         </Animated.View>
 
       </ScrollView>
 
-      {/* Item Detail Modal */}
-      <OrderItemModal 
-        visible={modalVisible}
-        item={selectedItem}
-        onClose={() => setModalVisible(false)}
-      />
-
-      {/* Product Review Modal */}
-      <ProductReviewModal
-        visible={reviewModalVisible}
-        productName={reviewProduct?.name}
-        onClose={() => setReviewModalVisible(false)}
-        onSubmit={submitReview}
-        isLoading={isSubmittingReview}
-      />
-
-      {/* Custom Alert */}
-      <CustomAlert 
-        visible={alertVisible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onClose={() => setAlertVisible(false)}
-      />
-
+      {/* Modals & Alerts */}
+      <OrderItemModal visible={modalVisible} item={selectedItem} onClose={() => setModalVisible(false)} />
+      <ProductReviewModal visible={reviewModalVisible} productName={reviewProduct?.name} onClose={() => setReviewModalVisible(false)} onSubmit={submitReview} isLoading={isSubmittingReview} />
+      <CustomAlert visible={alertVisible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertVisible(false)} />
     </SafeAreaView>
   );
 };

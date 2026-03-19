@@ -6,40 +6,74 @@ import { useCustomAlert } from '@/hooks/useCustomAlert'
 import { IdentificationIcon, CheckCircleIcon, InformationCircleIcon } from 'react-native-heroicons/outline'
 
 interface VINInputProps {
-  name: string
+  name?: string
   label?: string
   placeholder?: string
   required?: boolean
+  value?: string
+  onValueChange?: (value: string) => void
   onChangeText?: (text: string) => void
   onVINLookup?: (vin: string, setFieldValue: (field: string, value: any) => void) => void
-  showLookupButton?: boolean // New prop to control button visibility
+  showLookupButton?: boolean
 }
 
-const VINInput: React.FC<VINInputProps> = ({
+interface VINInputBaseProps extends VINInputProps {
+  formikContext?: any
+}
+
+const VINInputBase: React.FC<VINInputBaseProps> = ({
   name,
   label = "VIN-Vehicle Identification Number",
   placeholder = "Enter your VIN (17 characters)",
   required = false,
+  value: controlledValue,
+  onValueChange,
   onChangeText,
   onVINLookup,
-  showLookupButton = false // Default to false to avoid conflicts
+  showLookupButton = false,
+  formikContext
 }) => {
-  const { values, setFieldValue, errors, touched, setFieldTouched } = useFormikContext<Record<string, any>>()
-  const [localValue, setLocalValue] = useState((values as Record<string, any>)[name] || '')
+  const values = formikContext?.values || {};
+  const setFieldValue = formikContext?.setFieldValue;
+  const errors = formikContext?.errors || {};
+  const touched = formikContext?.touched || {};
+  const setFieldTouched = formikContext?.setFieldTouched;
+
+  const [localValue, setLocalValue] = useState(
+    controlledValue !== undefined 
+      ? controlledValue 
+      : (name ? (values as Record<string, any>)[name] : '') || ''
+  );
   const [isLoading, setIsLoading] = useState(false)
   const [hasLookedUp, setHasLookedUp] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [showQuickTip, setShowQuickTip] = useState(false)
   const { visible, alertConfig, hideAlert, showSuccess, showError } = useCustomAlert()
 
-  // Update local value when Formik value changes
+  // Sync with controlled value
   useEffect(() => {
-    setLocalValue((values as Record<string, any>)[name] || '')
-  }, [(values as Record<string, any>)[name]])
+    if (controlledValue !== undefined) {
+      setLocalValue(controlledValue);
+    }
+  }, [controlledValue]);
+
+  // Sync with Formik value if name is provided
+  useEffect(() => {
+    if (name && values && (values as Record<string, any>)[name] !== undefined) {
+      setLocalValue((values as Record<string, any>)[name] || '');
+    }
+  }, [name, values]);
 
   const handleChange = (text: string) => {
     setLocalValue(text)
-    setFieldValue(name, text)
+    
+    if (name && setFieldValue) {
+      setFieldValue(name, text)
+    }
+
+    if (onValueChange) {
+      onValueChange(text)
+    }
     
     // Reset lookup flags if VIN is modified
     setHasLookedUp(false)
@@ -64,7 +98,7 @@ const VINInput: React.FC<VINInputProps> = ({
       }, 1000)
       return () => clearTimeout(timeoutId)
     }
-  }, [localValue, hasLookedUp])
+  }, [localValue, hasLookedUp, onVINLookup])
 
   // Basic VIN validation
   const isValidVIN = (vin: string): boolean => {
@@ -80,12 +114,13 @@ const VINInput: React.FC<VINInputProps> = ({
     return true
   }
 
-  // 1GNEK13ZX3R298984 or 4Y1SL65848Z411439 or 1GNEK13ZX3R298984
-
-
   const handleBlur = () => {
-    setFieldTouched(name, true)
+    if (name && setFieldTouched) {
+      setFieldTouched(name, true)
+    }
   }
+
+  // 1GNEK13ZX3R298984 or 4Y1SL65848Z411439 or 1GNEK13ZX3R298984
 
   const handleAutoVINLookup = async () => {
     if (!localValue || localValue.length !== 17) return
@@ -96,9 +131,12 @@ const VINInput: React.FC<VINInputProps> = ({
     setHasLookedUp(true)
     setIsSuccess(false)
     try {
-      await onVINLookup(localValue, setFieldValue)
+      await onVINLookup(localValue, setFieldValue || ((field: string, val: any) => {
+        if (name && field === name && onValueChange) {
+          onValueChange(val);
+        }
+      }))
       setIsSuccess(true)
-      // Soft feedback instead of blocking Modal
     } catch (error) {
       console.error('VIN lookup error:', error)
       setIsSuccess(false)
@@ -110,15 +148,15 @@ const VINInput: React.FC<VINInputProps> = ({
 
   return (
     <View>
-     <View className="flex-row items-center justify-between mb-2">
-       <Text className="text-sm font-medium text-gray-700">
-        {label} {required && <Text className="text-red-500 text-lg">*</Text>}
-       </Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-sm font-medium text-gray-700">
+          {label} {required && <Text className="text-red-500 text-lg">*</Text>}
+        </Text>
 
-       <TouchableOpacity onPress={() => setShowQuickTip(!showQuickTip)}>
-         <InformationCircleIcon size={25} color="#3B82F6" />
-       </TouchableOpacity>
-     </View>
+        <TouchableOpacity onPress={() => setShowQuickTip(!showQuickTip)}>
+          <InformationCircleIcon size={25} color="#3B82F6" />
+        </TouchableOpacity>
+      </View>
       
       <View className="relative justify-center">
         <TextInput
@@ -137,11 +175,10 @@ const VINInput: React.FC<VINInputProps> = ({
         </View>
       </View>
 
-      {(errors as Record<string, any>)[name] && (touched as Record<string, any>)[name] && (
+      {name && (errors as Record<string, any>)[name] && (touched as Record<string, any>)[name] && (
         <Text className="text-red-500 text-sm mt-1">{(errors as Record<string, any>)[name]}</Text>
       )}
 
-      {/* Quick Tip */}
       {showQuickTip && (
         <View className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
           <Text className="text-xs text-blue-800 font-medium mb-1">
@@ -156,7 +193,6 @@ const VINInput: React.FC<VINInputProps> = ({
         </View>
       )}
 
-      {/* Custom Alert */}
       {alertConfig && (
         <CustomAlert
           visible={visible}
@@ -170,6 +206,19 @@ const VINInput: React.FC<VINInputProps> = ({
       )}
     </View>
   )
+}
+
+const FormikVINInput: React.FC<VINInputProps> = (props) => {
+  const formikContext = useFormikContext<Record<string, any>>()
+  return <VINInputBase {...props} formikContext={formikContext} />
+}
+
+const VINInput: React.FC<VINInputProps> = (props) => {
+  // If name is provided and we are not explicitly in controlled mode, use Formik
+  if (props.name && props.value === undefined) {
+    return <FormikVINInput {...props} />
+  }
+  return <VINInputBase {...props} />
 }
 
 export default VINInput

@@ -16,6 +16,7 @@ import { usePrimaryUserProfile } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
+import { userProfileKeys } from "@/hooks/useUserProfile";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
@@ -35,7 +36,7 @@ const editProfileSchema = Yup.object().shape({
     .min(2, "Last name must be at least 2 characters")
     .required("Last name is required"),
   phone_number: Yup.string()
-    .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
+    .matches(/^[0-9]{10,14}$/, "Phone number must be 10-14 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   dob: Yup.date().nullable().max(new Date(), "Date of birth cannot be in the future"),
@@ -87,7 +88,7 @@ const EditProfile = () => {
       await userAPI.updateProfile(payload);
 
       // Invalidate profile query to refetch fresh data
-      queryClient.invalidateQueries({ queryKey: ["primaryUserProfile"] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       
       showToast.success("Profile updated successfully");
       router.back();

@@ -184,7 +184,7 @@ const MechanicCancelRequestModal: React.FC<MechanicCancelRequestModalProps> = ({
                   bgVariant="danger"
                   disabled={isConfirmDisabled}
                   loading={isLoading}
-                  loadingText="Cancelling..."
+                  loadingText="Cancelling"
                 />
               </View>
             </View>

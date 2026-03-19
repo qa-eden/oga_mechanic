@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
 import BackArrowBtn from '@/components/BackArrowBtn';
@@ -9,15 +9,16 @@ import { serviceTypeOptions } from '@/constants/data';
 import { getErrorMessage } from '@/utils/errorMessages';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
+import { decodeVINWithImage } from '@/utils/vinDecoder';
 import { routes } from '@/constants/routes';
 import { LAYOUT } from '@/constants/units';
-import { CarSelectionStep } from './_components/CarSelectionStep';
-import { StepIndicator } from './_components/StepIndicator';
-import { OrderFormFields } from './_components/OrderFormFields';
-import { SuccessModal } from './_components/SuccessModal';
-import { useFindMechanicForm } from './_hooks/useFindMechanicForm';
-import { useCarList } from './_hooks/useCarList';
-import { useVehicleOptions } from './_hooks/useVehicleOptions';
+import { CarSelectionStep } from '@/components/mechanic/CarSelectionStep';
+import { StepIndicator } from '@/components/mechanic/StepIndicator';
+import { OrderFormFields } from '@/components/mechanic/OrderFormFields';
+import { SuccessModal } from '@/components/mechanic/SuccessModal';
+import { useFindMechanicForm } from '@/hooks/mechanic/useFindMechanicForm';
+import { useCarList } from '@/hooks/mechanic/useCarList';
+import { useVehicleOptions } from '@/hooks/mechanic/useVehicleOptions';
 
 const getCurrentTimeSlot = () => {
   const hour = new Date().getHours();
@@ -72,6 +73,60 @@ const FindMechanic = () => {
     },
     [selectedCarData, vehicleMakes, formState]
   );
+  
+  // Handle VIN lookup
+  const handleVINLookup = useCallback(async (vin: string) => {
+    if (!vin || vin.length < 17) return;
+
+    try {
+      const vehicleInfo = await decodeVINWithImage(vin);
+
+      if (vehicleInfo) {
+        // Update vehicle details from VIN lookup
+        if (vehicleInfo.make) {
+          // If we have vehicleMakes list, try to find the ID
+          let makeId = vehicleInfo.make;
+          if (vehicleMakes) {
+            const matchedMake = vehicleMakes.find(m => m.name.toLowerCase() === vehicleInfo.make.toLowerCase());
+            if (matchedMake) makeId = matchedMake.id.toString();
+          }
+          formState.setVehicleMake(makeId);
+
+          // We reset model when make changes in the component, but here we want to set it
+          if (vehicleInfo.model) {
+            // Wait for make to update so model options can populate? 
+            // Actually our useVehicleOptions might need makeId to be the ID, not name
+            // Let's assume setVehicleMake handles it or we'll need a slight delay
+            
+            // Try to find model ID if possible
+            let modelId = vehicleInfo.model;
+            if (vehicleMakes && makeId) {
+              const matchedMake = vehicleMakes.find(m => m.id.toString() === makeId || m.name.toLowerCase() === vehicleInfo.make.toLowerCase());
+              const matchedModel = matchedMake?.models.find(m => m.name.toLowerCase() === vehicleInfo.model.toLowerCase());
+              if (matchedModel) modelId = matchedModel.id.toString();
+            }
+            formState.setVehicleModel(modelId);
+          }
+        }
+        
+        if (vehicleInfo.modelYear) {
+          formState.setVehicleYear(vehicleInfo.modelYear.toString());
+        }
+
+        Alert.alert(
+          "Vehicle Found!",
+          `Successfully loaded details for ${vehicleInfo.make} ${vehicleInfo.model}`,
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        "VIN Lookup Failed",
+        error.message || "Unable to find vehicle information for this VIN.",
+        [{ text: "OK" }]
+      );
+    }
+  }, [vehicleMakes, formState]);
 
   const handleProceed = () => {
     // Determine if we're using car list selection or manual entry
@@ -156,6 +211,7 @@ const FindMechanic = () => {
         vehicle_make: finalVehicleMake,
         vehicle_model: finalVehicleModel,
         vehicle_year: vehicleYearNumber,
+        vehicle_vin: formState.vehicleVin || undefined,
         problem_description: formState.problemDescription.trim(),
         service_address: formState.serviceAddress.trim(),
         service_latitude: formState.serviceLatitude ? parseFloat(formState.serviceLatitude.toFixed(7)) : undefined,
@@ -232,13 +288,19 @@ const FindMechanic = () => {
         <View className="w-10" />
       </View>
 
-      <ScrollView 
-        className="flex-1 px-5 pt-6" 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: LAYOUT.SCROLL_PADDING_BOTTOM,
-        }}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        <ScrollView 
+          className="flex-1 px-5 pt-6" 
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: 20,
+          }}
+        >
         {/* Step Indicator */}
         <StepIndicator currentStep={formState.currentStep} hasCarList={hasCarList} />
 
@@ -297,6 +359,8 @@ const FindMechanic = () => {
               setVehicleModel={formState.setVehicleModel}
               vehicleYear={formState.vehicleYear}
               setVehicleYear={formState.setVehicleYear}
+              vehicleVin={formState.vehicleVin}
+              setVehicleVin={formState.setVehicleVin}
               vehicleMakeOptions={vehicleMakeOptions}
               vehicleModelOptions={vehicleModelOptions}
               vehicleYearOptions={vehicleYearOptions}
@@ -309,6 +373,7 @@ const FindMechanic = () => {
               setPreferredTimeSlot={formState.setPreferredTimeSlot}
               timeSlotOptions={timeSlotOptions}
               onCarSelect={handleCarSelect}
+              onVINLookup={handleVINLookup}
             />
 
             {/* Submit Button */}
@@ -327,8 +392,8 @@ const FindMechanic = () => {
           </View>
         )}
 
-       
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Success Modal */}
       <SuccessModal

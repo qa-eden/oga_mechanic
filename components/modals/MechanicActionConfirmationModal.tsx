@@ -7,9 +7,10 @@ import {
   TruckIcon,
   WrenchScrewdriverIcon,
   ClockIcon,
+  MapPinIcon,
 } from 'react-native-heroicons/outline';
 
-export type MechanicActionType = 'accept' | 'decline' | 'in_transit' | 'in_progress' | 'completed';
+export type MechanicActionType = 'accept' | 'decline' | 'in_transit' | 'arrived' | 'in_progress' | 'completed';
 
 interface MechanicActionConfirmationModalProps {
   visible: boolean;
@@ -49,6 +50,16 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#2563EB',
         iconBgColor: 'bg-blue-100',
         confirmText: 'Yes, Start Transit',
+        confirmBgVariant: 'primary' as const,
+      };
+    case 'arrived':
+      return {
+        title: 'Confirm Arrival',
+        message: 'Are you sure you want to mark this job as "Arrived"? This confirms you have reached the customer location.',
+        icon: MapPinIcon,
+        iconColor: '#7C3AED',
+        iconBgColor: 'bg-purple-100',
+        confirmText: 'Yes, I Have Arrived',
         confirmBgVariant: 'primary' as const,
       };
     case 'in_progress':
@@ -128,7 +139,7 @@ const MechanicActionConfirmationModal: React.FC<MechanicActionConfirmationModalP
               bgVariant={config.confirmBgVariant}
               textVariant="default"
               loading={isLoading}
-              loadingText="Processing..."
+              loadingText="Processing"
               disabled={isLoading}
             />
 

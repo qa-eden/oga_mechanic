@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse } from '@/lib/api/user';
+import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse } from '@/lib/api/user';
+import { useMechanicStore } from '@/stores/mechanicStore';
 
 // Query key factory
 export const userProfileKeys = {
@@ -11,6 +12,10 @@ export const userProfileKeys = {
   roles: () => [...userProfileKeys.all, 'roles'] as const,
   notifications: () => [...userProfileKeys.all, 'notifications'] as const,
   banks: () => [...userProfileKeys.all, 'banks'] as const,
+  bankAccounts: () => [...userProfileKeys.all, 'bankAccounts'] as const,
+  mechanic: () => [...userProfileKeys.all, 'mechanic'] as const,
+  driver: () => [...userProfileKeys.all, 'driver'] as const,
+  rider: () => [...userProfileKeys.all, 'rider'] as const,
 };
 
 // Hook to get primary user profile
@@ -18,12 +23,12 @@ export const usePrimaryUserProfile = (enabled: boolean = true) => {
   return useQuery<PrimaryUserProfileResponse>({
     queryKey: userProfileKeys.primary(),
     queryFn: userAPI.getPrimaryProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1, // Reduce retries
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnWindowFocus: false, // Don't refetch on window focus
     enabled: enabled, // Only fetch when enabled
+    refetchOnMount: "always", // Force refetch on mount to override global defaults
+    refetchOnWindowFocus: true, // Refetch on focus for critical profile data
   });
 };
 
@@ -32,51 +37,53 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchant(),
     queryFn: userAPI.getMerchantProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     retry: 1,
     enabled: enabled,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
 // Hook to get mechanic profile (only when enabled)
 export const useMechanicProfile = (enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ['mechanic', 'profile'],
+  return useQuery<MechanicProfileResponse>({
+    queryKey: userProfileKeys.mechanic(),
     queryFn: () => userAPI.getMechanicProfile(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: enabled, // Only fetch when enabled
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnWindowFocus: false, // Don't refetch on window focus
     retry: 1, // Reduce retries
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
 // Hook to get driver profile (only when enabled)
 export const useDriverProfile = (enabled: boolean = true) => {
   return useQuery({
-    queryKey: ['driver', 'profile'],
+    queryKey: userProfileKeys.driver(),
     queryFn: () => userAPI.getDriverProfile(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    enabled: enabled,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: enabled, // Only fetch when enabled
+    retry: 1, // Reduce retries
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
 // Hook to get rider profile (only when enabled)
 export const useRiderProfile = (enabled: boolean = true) => {
   return useQuery({
-    queryKey: ['rider', 'profile'],
+    queryKey: userProfileKeys.rider(),
     queryFn: () => userAPI.getRiderProfile(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    enabled: enabled,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: enabled, // Only fetch when enabled
+    retry: 1, // Reduce retries
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -85,7 +92,7 @@ export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean 
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchantByUuid(merchantUuid),
     queryFn: () => userAPI.getMerchantProfileByUuid(merchantUuid),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     retry: 2,
     enabled: enabled && !!merchantUuid,
   });
@@ -97,38 +104,67 @@ export const useActiveRoleProfile = () => {
   const primaryProfile = usePrimaryUserProfile();
   const activeRole = primaryProfile.data?.data?.active_role;
 
-  // Only fetch merchant profile if role is merchant
-  const isMerchant = activeRole === 'merchant';
+  // Add logging for debugging
+  // console.log("useActiveRoleProfile - activeRole:", activeRole);
+
+  // Role-specific profile flags
+  const isMerchant = activeRole === 'merchant' || activeRole === 'seller';
+  const isMechanic = activeRole === 'mechanic' || activeRole === 'Mechanic';
+  const isDriver = activeRole === 'driver';
+  const isRider = activeRole === 'rider';
+
+  // Fetch role-specific profiles conditionally
   const merchantProfile = useMerchantProfile(isMerchant);
+  const mechanicProfile = useMechanicProfile(isMechanic);
+  const driverProfile = useDriverProfile(isDriver);
+  const riderProfile = useRiderProfile(isRider);
 
-  console.log('🔍 useActiveRoleProfile - Active Role:', activeRole);
-  console.log('🔍 useActiveRoleProfile - Is Merchant:', isMerchant);
-  console.log('🔍 useActiveRoleProfile - Merchant Profile Loading:', merchantProfile.isLoading);
-  console.log('🔍 useActiveRoleProfile - Merchant Profile Data:', merchantProfile.data);
+  // Determine the consolidated state
+  const isFetching = primaryProfile.isFetching || 
+    (isMerchant && merchantProfile.isFetching) || 
+    (isMechanic && mechanicProfile.isFetching) || 
+    (isDriver && driverProfile.isFetching) ||
+    (isRider && riderProfile.isFetching);
 
-  // Return the appropriate profile based on active role
-  if (isMerchant && merchantProfile.data && !merchantProfile.isLoading) {
-    console.log('✅ Returning MERCHANT profile data');
-    return {
-      data: merchantProfile.data,
-      isLoading: primaryProfile.isLoading || merchantProfile.isLoading,
-      error: merchantProfile.error || primaryProfile.error,
-      refetch: async () => {
-        await primaryProfile.refetch();
-        await merchantProfile.refetch();
-      },
-      activeRole: activeRole,
-    };
-  }
+  const isLoading = primaryProfile.isLoading || 
+    (isMerchant && merchantProfile.isLoading) || 
+    (isMechanic && mechanicProfile.isLoading) || 
+    (isDriver && driverProfile.isLoading) ||
+    (isRider && riderProfile.isLoading);
 
-  // Default to primary profile (or while loading merchant profile)
-  console.log('✅ Returning PRIMARY profile data');
+  const error = primaryProfile.error || 
+    (isMerchant ? merchantProfile.error : 
+    (isMechanic ? mechanicProfile.error : 
+    (isDriver ? driverProfile.error :
+    (isRider ? riderProfile.error : null))));
+
+  const refetch = async () => {
+    await primaryProfile.refetch();
+    if (isMerchant) await merchantProfile.refetch();
+    if (isMechanic) await mechanicProfile.refetch();
+    if (isDriver) await driverProfile.refetch();
+    if (isRider) await riderProfile.refetch();
+  };
+
+  // Return the appropriate profile data based on role
+  // Only return role-specific data if it's actually loaded
+  let data: any = null;
+  if (isMerchant && merchantProfile.data) data = merchantProfile.data;
+  else if (isMechanic && mechanicProfile.data) data = mechanicProfile.data;
+  else if (isDriver && driverProfile.data) data = driverProfile.data;
+  else if (isRider && riderProfile.data) data = riderProfile.data;
+
   return {
-    data: primaryProfile.data,
-    isLoading: primaryProfile.isLoading || (isMerchant && merchantProfile.isLoading),
-    error: primaryProfile.error,
-    refetch: primaryProfile.refetch,
-    activeRole: activeRole,
+    data,
+    isLoading,
+    error,
+    refetch,
+    activeRole,
+    isMerchant,
+    isMechanic,
+    isDriver,
+    isRider,
+    primaryProfileData: primaryProfile.data,
   };
 };
 
@@ -137,7 +173,7 @@ export const useUserProfile = () => {
   return useQuery({
     queryKey: userProfileKeys.profile(),
     queryFn: userAPI.getProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     retry: 2,
   });
 };
@@ -147,7 +183,7 @@ export const useRoleUserProfile = (role?: string) => {
   return useQuery<UserProfile | MerchantProfileResponse>({
     queryKey: [...userProfileKeys.profile(), 'primary'], // Use 'primary' instead of role
     queryFn: () => userAPI.getRoleProfile(role),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     retry: 2,
     // Remove enabled condition since we always want to fetch profile
   });
@@ -158,7 +194,7 @@ export const useUserRoles = () => {
   return useQuery<UserRolesResponse>({
     queryKey: userProfileKeys.roles(),
     queryFn: userAPI.getUserRoles,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
     refetchOnMount: false,
@@ -254,10 +290,10 @@ export const useSwitchRole = () => {
   return useMutation({
     mutationFn: (roleName: string) => userAPI.switchRole(roleName),
     onSuccess: (data, roleName) => {
-      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
-      // Invalidate notifications specifically as they are role-dependent
-      queryClient.invalidateQueries({ queryKey: userProfileKeys.notifications() });
+      // Clear all cache and global UI stores on role switch
+      queryClient.clear();
+      useMechanicStore.getState().reset();
+      
       console.log(`✅ Role switched to ${roleName} successfully`);
     },
     onError: (error) => {
@@ -359,7 +395,7 @@ export const useFollowedMerchants = () => {
   return useQuery({
     queryKey: ['followedMerchants'],
     queryFn: userAPI.getFollowedMerchants,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 5 minutes
     retry: 2,
   });
 };
@@ -375,12 +411,89 @@ export const useBanks = (enabled: boolean = true) => {
   });
 };
 
+// Hook to get user bank accounts
+export const useBankAccounts = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: userProfileKeys.bankAccounts(),
+    queryFn: userAPI.getBankAccounts,
+    staleTime: 30 * 1000, // 5 minutes
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to get a single bank account
+export const useBankAccount = (id: number | string, enabled: boolean = true) => {
+  return useQuery<UserBankAccountResponse>({
+    queryKey: [...userProfileKeys.bankAccounts(), id],
+    queryFn: () => userAPI.getBankAccountById(id),
+    staleTime: 30 * 1000, // 5 minutes
+    retry: 2,
+    enabled: enabled && !!id,
+  });
+};
+
 // Hook to verify bank account
 export const useVerifyBank = () => {
   return useMutation<BankEnquiryResponse, Error, BankEnquiryRequest>({
     mutationFn: (data: BankEnquiryRequest) => userAPI.verifyBank(data),
     onError: (error) => {
       console.error('❌ Error verifying bank account:', error);
+    },
+  });
+};
+
+// Hook to add a bank account
+export const useAddBankAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<UserBankAccountResponse, Error, AddBankAccountRequest>({
+    mutationFn: (data: AddBankAccountRequest) => userAPI.addBankAccount(data),
+    onSuccess: () => {
+      // Invalidate and refetch bank accounts immediately
+      queryClient.invalidateQueries({ 
+        queryKey: userProfileKeys.bankAccounts(),
+        refetchType: 'all'
+      });
+      console.log('✅ Bank account added successfully');
+    },
+    onError: (error: any) => {
+      console.error('❌ Error adding bank account:', error);
+    },
+  });
+};
+
+// Hook to delete a bank account
+export const useDeleteBankAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number | string) => userAPI.deleteBankAccount(id),
+    onSuccess: () => {
+      // Invalidate and refetch bank accounts
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.bankAccounts() });
+      console.log('✅ Bank account deleted successfully');
+    },
+    onError: (error: any) => {
+      console.error('❌ Error deleting bank account:', error);
+    },
+  });
+};
+
+// Hook to update a bank account (e.g., set as default)
+export const useUpdateBankAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<AddBankAccountRequest['data']> }) =>
+      userAPI.updateBankAccount(id, data),
+    onSuccess: (_, { id }) => {
+      // Invalidate and refetch all bank account queries
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.bankAccounts() });
+      console.log(`✅ Bank account ${id} updated successfully`);
+    },
+    onError: (error: any) => {
+      console.error('❌ Error updating bank account:', error);
     },
   });
 };

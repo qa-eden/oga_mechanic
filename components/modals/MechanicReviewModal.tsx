@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { XMarkIcon, StarIcon } from 'react-native-heroicons/solid';
-import { StarIcon as StarIconOutline } from 'react-native-heroicons/outline';
+import { StarIcon as StarIconOutline, SparklesIcon } from 'react-native-heroicons/outline';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import CustomButton from '@/components/CustomButton';
 import TextArea from '@/components/forms/TextArea';
-import { icons } from '@/constants';
 
 interface MechanicReviewModalProps {
   visible: boolean;
@@ -14,6 +15,17 @@ interface MechanicReviewModalProps {
   onSubmit: (rating: number, comment: string) => Promise<void>;
   isLoading?: boolean;
 }
+
+const REVIEW_SUGGESTIONS = [
+  "Friendly and professional",
+  "Quick and efficient",
+  "Highly recommended",
+  "Fair pricing",
+  "Arrived exactly on time",
+  "Excellent diagnostic skills",
+  "Cleaned up after work",
+  "Honest and reliable"
+];
 
 const MechanicReviewModal: React.FC<MechanicReviewModalProps> = ({
   visible,
@@ -48,6 +60,19 @@ const MechanicReviewModal: React.FC<MechanicReviewModalProps> = ({
     }
   };
 
+  const handleApplySuggestion = (suggestion: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const trimmedComment = comment.trim();
+    if (trimmedComment === '') {
+      setComment(suggestion);
+    } else {
+      // Don't duplicate if already exists
+      if (!trimmedComment.toLowerCase().includes(suggestion.toLowerCase())) {
+        setComment(`${trimmedComment}, ${suggestion.toLowerCase()}`);
+      }
+    }
+  };
+
   const handleClose = () => {
     setRating(0);
     setComment('');
@@ -70,82 +95,126 @@ const MechanicReviewModal: React.FC<MechanicReviewModalProps> = ({
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
         >
-          <View className="bg-white rounded-t-3xl min-h-[70%]">
+          <View className="bg-white rounded-t-[40px] min-h-[75%] pb-10">
             {/* Header */}
-            <View className="flex-row items-center justify-between p-5 border-b border-gray-200">
-              <Text className="text-xl font-NunitoBold text-gray-900">
-                Review Mechanic
-              </Text>
+            <View className="flex-row items-center justify-between p-7 border-b border-gray-100">
+              <View>
+                <Text className="text-2xl font-NunitoBold text-gray-900">
+                  Review Mechanic
+                </Text>
+                <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-widest mt-0.5">Share your feedback</Text>
+              </View>
               <TouchableOpacity
                 onPress={handleClose}
-                className="w-8 h-8 items-center justify-center"
+                className="bg-gray-100 p-2 rounded-full"
               >
                 <XMarkIcon size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
             <ScrollView 
-              className="flex-1" 
+              className="px-6" 
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingVertical: 24 }}
             >
-              <View className="p-5">
-                {mechanicName && (
-                  <Text className="text-base font-NunitoMedium text-gray-700 mb-4">
-                    How was your experience with {mechanicName}?
+              {mechanicName && (
+                <View className="mb-8">
+                  <Text className="text-lg font-NunitoSemiBold text-gray-800 leading-6">
+                    How was your experience with{"\n"}
+                    <Text className="text-primary-600 font-NunitoBold">{mechanicName}?</Text>
+                  </Text>
+                </View>
+              )}
+
+              {/* Star Rating Selection */}
+              <View className="mb-10 bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-widest mb-4 text-center">
+                  Select Rating
+                </Text>
+                <View className="flex-row items-center justify-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setRating(star);
+                      }}
+                      activeOpacity={0.7}
+                      className="p-1"
+                    >
+                      {star <= rating ? (
+                        <StarIcon size={44} color="#FBBF24" />
+                      ) : (
+                        <StarIconOutline size={44} color="#D1D5DB" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {rating > 0 && (
+                  <Text className="text-center text-base font-NunitoBold text-primary-600 mt-4">
+                    {rating === 1 && 'Needs Improvement 😕'}
+                    {rating === 2 && 'Fair Experience 😐'}
+                    {rating === 3 && 'Good Service 🙂'}
+                    {rating === 4 && 'Very Good! 😊'}
+                    {rating === 5 && 'Excellent Work! 🤩'}
                   </Text>
                 )}
+              </View>
 
-                {/* Star Rating Selection */}
-                <View className="mb-6">
-                  <Text className="text-sm font-NunitoBold text-gray-700 mb-3">
-                    Rating *
-                  </Text>
-                  <View className="flex-row items-center justify-center space-x-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <TouchableOpacity
-                        key={star}
-                        onPress={() => setRating(star)}
-                        activeOpacity={0.7}
-                        className="p-2"
+              {/* Comment TextArea */}
+              <View className="mb-4">
+                <TextArea
+                  label="Detailed Feedback"
+                  placeholder="Tell us what you liked about the service..."
+                  value={comment}
+                  onChangeText={setComment}
+                  rows={5}
+                />
+              </View>
+
+              {/* Smart Suggestions */}
+              <View className="mb-10">
+                <View className="flex-row items-center mb-4">
+                  <SparklesIcon size={16} color="#D30309" strokeWidth={2.5} />
+                  <Text className="text-[11px] font-NunitoBold text-gray-400 uppercase tracking-widest ml-1.5">Quick Review Tags</Text>
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  className="flex-row"
+                  contentContainerStyle={{ paddingRight: 20 }}
+                >
+                  {REVIEW_SUGGESTIONS.map((suggestion, index) => (
+                    <TouchableOpacity 
+                      key={index}
+                      onPress={() => handleApplySuggestion(suggestion)}
+                      className="mr-2"
+                    >
+                      <LinearGradient
+                        colors={['#F9FAFB', '#EDF0F3']}
+                        style={{
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          borderColor: '#E5E7EB',
+                        }}
                       >
-                        {star <= rating ? (
-                          <StarIcon size={40} color="#FBBF24" />
-                        ) : (
-                          <StarIconOutline size={40} color="#D1D5DB" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {rating > 0 && (
-                    <Text className="text-center text-sm font-NunitoMedium text-gray-600 mt-2">
-                      {rating === 1 && 'Poor'}
-                      {rating === 2 && 'Fair'}
-                      {rating === 3 && 'Good'}
-                      {rating === 4 && 'Very Good'}
-                      {rating === 5 && 'Excellent'}
-                    </Text>
-                  )}
-                </View>
+                        <Text className="text-xs font-NunitoSemiBold text-primary-600">{suggestion}</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
-                {/* Comment TextArea */}
-                <View className="mb-4">
-                  <TextArea
-                    label="Your Review "
-                    placeholder="Share your experience with this mechanic..."
-                    value={comment}
-                    onChangeText={setComment}
-                    rows={5}
-                    
-                  />
-                </View>
-
-                {/* Submit Button */}
+              {/* Submit Button */}
+              <View className="mt-2">
                 <CustomButton
                   title="Submit Review"
                   onPress={handleSubmit}
                   bgVariant="primary"
-                  className="py-4"
+                  className="rounded-[24px] h-16 shadow-xl shadow-primary-200"
                   disabled={isLoading || rating === 0 || !comment.trim()}
                   loading={isLoading}
                 />

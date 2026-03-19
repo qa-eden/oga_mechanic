@@ -9,6 +9,8 @@ interface MapSectionProps {
     longitudeDelta: number;
   };
   userLocation?: { latitude: number; longitude: number } | null;
+  pickupLocation?: { latitude: number; longitude: number; name?: string } | null;
+  destinationLocation?: { latitude: number; longitude: number; name?: string } | null;
   driverLocation?: { latitude: number; longitude: number };
   driverName?: string;
   driverVehicle?: string;
@@ -19,6 +21,8 @@ interface MapSectionProps {
 const MapSection: React.FC<MapSectionProps> = ({
   region,
   userLocation,
+  pickupLocation,
+  destinationLocation,
   driverLocation,
   driverName,
   driverVehicle,

@@ -27,6 +27,9 @@ interface MechanicProfile {
   paymentMethods: string[];
   isVip?: boolean;
   isOnline?: boolean;
+  isVerified?: boolean;
+  phoneNumber?: string;
+  cacNumber?: string;
 }
 
 const MechanicProfile = () => {
@@ -90,13 +93,16 @@ const MechanicProfile = () => {
       reviewCount: reviewCount,
       image: apiMechanic.selfie || null, // Use selfie URL from API
       bio: apiMechanic.bio || "",
-      specialty: [], // Not provided in API
+      specialty: Array.isArray(apiMechanic.vehicle_expertise) ? apiMechanic.vehicle_expertise : [],
       yearsOfExperience: 0, // Not provided in API
       locationCoverage: apiMechanic.location || "",
       languages: [], // Not provided in API
       availability: "", // Not provided in API
       paymentMethods: [], // Not provided in API
       isOnline: apiMechanic.is_approved || false,
+      isVerified: apiMechanic.is_approved || false,
+      phoneNumber: apiMechanic.user?.phone_number || "",
+      cacNumber: apiMechanic.cac_number || "",
     };
   })();
 
@@ -179,7 +185,6 @@ const MechanicProfile = () => {
         message="Loading Mechanic Profile..."
         subMessage="Please wait while we fetch the information"
         size="medium"
-        logoSize={40}
       />
     );
   }
@@ -270,6 +275,13 @@ const MechanicProfile = () => {
                     </Text>
                   </View>
                 )}
+                {mechanic.isVerified && (
+                  <View className="bg-green-50 px-2 py-1 rounded-full ml-2">
+                    <Text className="text-[10px] font-NunitoBold text-green-600 uppercase">
+                      Verified
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <View className="flex-row items-center">
@@ -319,6 +331,22 @@ const MechanicProfile = () => {
               content={mechanic.paymentMethods}
             />
           )}
+
+          {/* Business Info */}
+          {mechanic.cacNumber ? (
+            <InfoSection
+              title="Business Registration"
+              content={`RC: ${mechanic.cacNumber}`}
+            />
+          ) : null}
+
+          {/* Contact Info */}
+          {mechanic.phoneNumber ? (
+            <InfoSection
+              title="Contact Number"
+              content={mechanic.phoneNumber}
+            />
+          ) : null}
         </View>
 
         {/* Reviews Section */}

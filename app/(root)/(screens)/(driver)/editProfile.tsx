@@ -23,7 +23,7 @@ import {
   CreditCardIcon,
   ChevronDownIcon
 } from "react-native-heroicons/outline";
-import { useDriverProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useDriverProfile, useBanks, useVerifyBank, userProfileKeys } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { productsAPI } from "@/lib/api/products";
 import { showToast } from "@/utils/toastUtils";
@@ -297,7 +297,7 @@ const EditDriverProfile = () => {
 
 
       await userAPI.submitDriverKYC(formData);
-      queryClient.invalidateQueries({ queryKey: ['driver', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       showToast.success("Profile updated successfully");
       router.back();
     } catch (error: any) {

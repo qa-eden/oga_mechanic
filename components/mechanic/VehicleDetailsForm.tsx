@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import SelectField from '@/components/forms/SelectField';
+import VINInput from '@/components/VINInput';
 import { TruckIcon } from 'react-native-heroicons/outline';
 
 interface SelectOption {
@@ -18,6 +19,9 @@ interface VehicleDetailsFormProps {
   vehicleMakeOptions: SelectOption[];
   vehicleModelOptions: SelectOption[];
   vehicleYearOptions: SelectOption[];
+  vehicleVin: string;
+  setVehicleVin: (value: string) => void;
+  onVINLookup?: (vin: string) => void;
   vehicleMakesLoading?: boolean;
 }
 
@@ -32,6 +36,9 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
   setVehicleModel,
   vehicleYear,
   setVehicleYear,
+  vehicleVin,
+  setVehicleVin,
+  onVINLookup,
   vehicleMakeOptions,
   vehicleModelOptions,
   vehicleYearOptions,
@@ -45,6 +52,16 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
           <TruckIcon size={18} color="#D30309" />
         </View>
         <Text className="text-base font-NunitoBold text-gray-900">Vehicle Information</Text>
+      </View>
+
+      {/* Vehicle VIN */}
+      <View className="mb-3">
+        <VINInput
+          label="Vehicle VIN"
+          value={vehicleVin}
+          onValueChange={setVehicleVin}
+          onVINLookup={onVINLookup ? (vin, setFieldValue) => onVINLookup(vin) : undefined}
+        />
       </View>
 
       {/* Vehicle Make */}

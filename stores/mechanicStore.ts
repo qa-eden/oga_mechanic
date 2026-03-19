@@ -15,6 +15,7 @@ interface MechanicState {
   clearError: () => void;
   clearSearchResults: () => void;
   getNearbyMechanics: (lat: number, lng: number, radius?: number) => Promise<void>;
+  reset: () => void;
 }
 
 export const useMechanicStore = create<MechanicState>((set, get) => ({
@@ -72,5 +73,15 @@ export const useMechanicStore = create<MechanicState>((set, get) => ({
         loading: false 
       });
     }
+  },
+  
+  reset: () => {
+    set({
+      mechanics: [],
+      selectedMechanic: null,
+      loading: false,
+      error: null,
+      searchResults: [],
+    });
   },
 }));

@@ -44,6 +44,7 @@ export const routes = {
   orderDetail: "/(root)/(screens)/(user)/order-details",
   paymentResult: "/(root)/(screens)/(user)/payment-result",
   orderConfirmation: "/(root)/(screens)/(user)/order-confirmation",
+  orderTracking: "/(root)/(screens)/(user)/order-tracking",
   chatSeller: "/(root)/(screens)/(user)/chat-seller",
   carDetails: "/(root)/(screens)/(user)/car-detail",
   addCar: "/(root)/(screens)/(user)/add-car",
@@ -211,4 +212,9 @@ export const roleKYCRoutes: Record<string, string> = {
   seller: "/(root)/(screens)/(seller)/complete-kyc",
   driver: "/(root)/(screens)/(driver)/complete-kyc",
   rider: "/(root)/(screens)/(rider)/complete-kyc",
+};
+
+// KYC Routes map by role
+export const generalRoutes: Record<string, string> = {
+  bankInfo: "/(root)/(screens)/(general)/BankInfo/BankInfo",
 };

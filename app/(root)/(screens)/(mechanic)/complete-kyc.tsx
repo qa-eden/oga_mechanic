@@ -37,6 +37,7 @@ import ErrorModal from "@/components/modals/ErrorModal";
 import SelfieUpload from "@/components/SelfieUpload";
 import { userAPI } from "@/lib/api/user";
 import { useProfileStore } from "@/hooks/useProfileStore";
+import { useSubmitMechanicKYC } from "@/hooks/useUserProfile";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import { mechanicRoutes } from "@/constants/routes";
@@ -77,7 +78,8 @@ const CompleteKYC = () => {
   const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
   const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitKYCMutation = useSubmitMechanicKYC();
+  const isSubmitting = submitKYCMutation.isPending;
   const [showLivenessModal, setShowLivenessModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -276,7 +278,6 @@ const CompleteKYC = () => {
       return;
     }
 
-    setIsSubmitting(true);
     try {
       const formData = new FormData();
       formData.append('requestType', 'inbound');
@@ -320,24 +321,29 @@ const CompleteKYC = () => {
         } as any);
       }
 
-      await userAPI.submitMechanicKYC(formData);
-
-      // Update global state
-      useProfileStore.getState().setIsProfileComplete(true);
-
-      setShowSuccessModal(true);
+      console.log('🚀 Submitting Mechanic KYC via Mutation...');
+      submitKYCMutation.mutate(formData, {
+        onSuccess: () => {
+          // Update global state
+          useProfileStore.getState().setIsProfileComplete(true);
+          setShowSuccessModal(true);
+        },
+        onError: (error: any) => {
+          console.error('KYC Submission Error:', error);
+          
+          const errMsg = error?.response?.data?.message || 
+                         error?.response?.data?.detail || 
+                         error?.message || 
+                         "There was an error submitting your verification. Please try again.";
+          
+          setErrorMessage(errMsg);
+          setShowErrorModal(true);
+        }
+      });
     } catch (error: any) {
-      console.error('KYC Submission Error:', error);
-      
-      const errMsg = error?.response?.data?.message || 
-                     error?.response?.data?.detail || 
-                     error?.message || 
-                     "There was an error submitting your verification. Please try again.";
-      
-      setErrorMessage(errMsg);
+      console.error('Form Preparation Error:', error);
+      setErrorMessage("Failed to prepare submission data.");
       setShowErrorModal(true);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

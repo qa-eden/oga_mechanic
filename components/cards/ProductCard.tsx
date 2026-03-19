@@ -77,6 +77,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onAddToCart={onAddToCart}
         onRemoveFromCart={onRemoveFromCart}
         isInCart={isInCart}
+        showAddToCart={showAddToCart}
+        stock={stock}
       />
       
       {showAddToCart && price && price > 0 && (

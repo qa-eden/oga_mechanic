@@ -23,7 +23,7 @@ import {
   CameraIcon,
   ShieldCheckIcon,
 } from "react-native-heroicons/outline";
-import { useRiderProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useRiderProfile, useBanks, useVerifyBank, userProfileKeys } from "@/hooks/useUserProfile";
 import { riderRoutes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -500,7 +500,7 @@ const RiderProfileDetails = () => {
       }
 
       await userAPI.submitRiderKYC(formData);
-      queryClient.invalidateQueries({ queryKey: ['rider', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       showToast.success("Section updated successfully");
       setIsModalVisible(false);
     } catch (error: any) {

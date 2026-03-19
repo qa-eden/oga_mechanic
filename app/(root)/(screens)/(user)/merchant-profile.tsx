@@ -56,7 +56,7 @@ const MerchantProfile = () => {
   })
 
   // Extract merchant data from profile API
-  const merchantData = merchantProfileData?.data 
+  const merchantData = merchantProfileData?.data?.merchant_profile 
   const userData = merchantData?.user 
   const merchantProducts = productsData?.results || []
 
@@ -138,6 +138,8 @@ const MerchantProfile = () => {
         isFavorite={item?.is_in_favorite_list}
         productId={item?.id}
         showLove={true}
+        stock={item?.stock}
+        address={item?.address}
         onPress={() => {
           router.push({
             pathname: routes.ProductDetail,

@@ -28,7 +28,7 @@ import { productsAPI } from "@/lib/api/products";
 import VINInput from "@/components/VINInput";
 import { decodeVINWithImage } from "@/utils/vinDecoder";
 import { useProfileStore } from "@/hooks/useProfileStore";
-import { useDriverProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useDriverProfile } from "@/hooks/useUserProfile";
 import ProgressBar from "@/components/ProgressBar";
 import LivenessCamera from "@/components/LivenessCamera";
 
@@ -62,10 +62,6 @@ export interface FormValues {
   license_number: string;
   license_issue_date: string;
   license_expiry_date: string;
-
-  // Step 4: Banking
-  bank_name: string;
-  account_number: string;
 }
 
 // Global Validation Schemas per Step
@@ -117,17 +113,11 @@ const step3Schema = Yup.object().shape({
     }),
 });
 
-const step4Schema = Yup.object().shape({
-  bank_name: Yup.string().required("Required"),
-  account_number: Yup.string().required("Required"),
-});
-
 const getValidationSchema = (step: number) => {
   switch (step) {
     case 1: return step1Schema;
     case 2: return step2Schema;
     case 3: return step3Schema;
-    case 4: return step4Schema;
     default: return step1Schema;
   }
 };
@@ -135,9 +125,7 @@ const getValidationSchema = (step: number) => {
 const DriverKYC = () => {
   const formikRef = useRef<FormikProps<FormValues>>(null);
   const scrollRef = useRef<any>(null);
-  const accountNumberRef = useRef<TextInput>(null);
   const { data: profileData, isLoading: profileLoading } = useDriverProfile();
-  const { data: banksData, isLoading: banksLoading } = useBanks();
 
   const driverProfile = profileData?.data?.driver_profile;
   const userObj = driverProfile?.user;
@@ -171,10 +159,7 @@ const DriverKYC = () => {
 
   const [vehicleMakes, setVehicleMakes] = useState<{ label: string; value: string }[]>([]);
   const [vehicleModels, setVehicleModels] = useState<{ label: string; value: string }[]>([]);
-  const [allMakesData, setAllMakesData] = useState<any[]>([]);
-  const [accountName, setAccountName] = useState<string>("");
-  const { mutate: verifyBank, isPending: isVerifying } = useVerifyBank();
-
+  const [allMakesData, setAllMakesData] = useState<{ name: string; models: { name: string }[] }[]>([]);
   const getSanitizedVehicleType = (type: string | undefined) => {
     if (!type) return "";
     const t = type.toLowerCase();
@@ -219,9 +204,7 @@ const DriverKYC = () => {
     driver_license_type: driverProfile?.driver_license || "",
     license_number: driverProfile?.license_number || "",
     license_issue_date: driverProfile?.license_issue_date || "",
-    license_expiry_date: driverProfile?.license_expiry_date || "",
-    bank_name: driverProfile?.bank_name || "",
-    account_number: driverProfile?.account_number || ""
+    license_expiry_date: driverProfile?.license_expiry_date || ""
   }), [driverProfile, initialFullName, initialEmail, initialPhone]);
 
   // Prefill document and photo states from profile
@@ -248,28 +231,6 @@ const DriverKYC = () => {
     }
   }, [driverProfile]);
 
-  // Trigger bank verification for prefilled data
-  React.useEffect(() => {
-    if (driverProfile?.bank_name && driverProfile?.account_number && !accountName && !isVerifying) {
-      verifyBank(
-        {
-          requestType: "inbound",
-          data: {
-            account_number: driverProfile.account_number,
-            bank_code: driverProfile.bank_name
-          }
-        },
-        {
-          onSuccess: (res) => {
-            if (res.status && res.data?.account_name) {
-              setAccountName(res.data.account_name);
-            }
-          }
-        }
-      );
-    }
-  }, [driverProfile?.bank_name, driverProfile?.account_number, verifyBank, isVerifying, accountName]);
-
   React.useEffect(() => {
     const fetchVehicleData = async () => {
       try {
@@ -287,9 +248,9 @@ const DriverKYC = () => {
   // Initialize vehicle models for prefilled data
   React.useEffect(() => {
     if (allMakesData.length > 0 && driverProfile?.vehicle_name && vehicleModels.length === 0) {
-      const makeObj = allMakesData.find(m => m.name.toLowerCase() === driverProfile.vehicle_name.toLowerCase());
+      const makeObj = allMakesData.find((m: { name: string; models: { name: string }[] }) => m.name.toLowerCase() === driverProfile.vehicle_name?.toLowerCase());
       if (makeObj && makeObj.models) {
-        const modelOptions = makeObj.models.map((model: any) => ({
+        const modelOptions = makeObj.models.map((model: { name: string }) => ({
           label: model.name,
           value: model.name
         }));
@@ -309,9 +270,9 @@ const DriverKYC = () => {
     setFieldValue("vehicle_name", selectedMake);
     setFieldValue("vehicle_model", ""); // reset model
 
-    const makeObj = allMakesData.find(m => m.name === selectedMake);
+    const makeObj = allMakesData.find((m: { name: string; models: { name: string }[] }) => m.name === selectedMake);
     if (makeObj && makeObj.models) {
-      const modelOptions = makeObj.models.map((model: any) => ({
+      const modelOptions = makeObj.models.map((model: { name: string }) => ({
         label: model.name, value: model.name
       }));
       setVehicleModels(modelOptions);
@@ -525,10 +486,6 @@ const DriverKYC = () => {
       formData.append('license_number', values.license_number);
       formData.append('license_issue_date', values.license_issue_date);
       formData.append('license_expiry_date', values.license_expiry_date);
-
-      // Step 4: Banking
-      formData.append('bank_name', values.bank_name);
-      formData.append('account_number', values.account_number);
 
       // Append Files
       if (govtIdFront) {
@@ -927,7 +884,7 @@ const DriverKYC = () => {
                           if (result) {
                             if (result.make) {
                               // Find exact match case-insensitively from available makes
-                              const makeMatch = allMakesData.find(m => m.name.toLowerCase() === result.make.toLowerCase());
+                              const makeMatch = allMakesData.find((m: { name: string; models: { name: string }[] }) => m.name.toLowerCase() === result.make.toLowerCase());
                               const finalMake = makeMatch ? makeMatch.name : result.make;
 
                               // Use handleMakeChange to populate the models list
@@ -1265,13 +1222,13 @@ const DriverKYC = () => {
                         onPress={() => handleNextStep(validateForm, setTouched, values)}
                         className="flex-[2] py-4 bg-gray-900 rounded-xl items-center shadow-md"
                       >
-                        <Text className="text-white font-NunitoBold text-lg">Continue to Final Step</Text>
+                        <Text className="text-white font-NunitoBold text-lg">Continue to Photos</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 )}
 
-                {/* STEP 4: PHOTOS & BANKING */}
+                {/* STEP 4: VEHICLE PHOTOS */}
                 {currentStep === 4 && (
                   <View className="space-y-4 pb-10">
                     <View className="bg-white p-5 rounded-2xl shadow-sm mb-4 border border-gray-100">
@@ -1293,16 +1250,18 @@ const DriverKYC = () => {
                             required
                           />
                         </View>
-                        <ImageUpload
-                          label="Right Side View"
-                          isUploaded={!!vehicleRight}
-                          imageUri={vehicleRight?.uri}
-                          onPress={() => pickDocument("vehicle_right")}
-                          required
-                        />
-                        <View className="pt-4">
+                        <View className="py-4">
                           <ImageUpload
-                            label="Left Side View"
+                            label="Right View"
+                            isUploaded={!!vehicleRight}
+                            imageUri={vehicleRight?.uri}
+                            onPress={() => pickDocument("vehicle_right")}
+                            required
+                          />
+                        </View>
+                        <View className="py-4">
+                          <ImageUpload
+                            label="Left View"
                             isUploaded={!!vehicleLeft}
                             imageUri={vehicleLeft?.uri}
                             onPress={() => pickDocument("vehicle_left")}
@@ -1312,131 +1271,10 @@ const DriverKYC = () => {
                       </View>
                     </View>
 
-                    <View className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                      <SectionHeader icon={IdentificationIcon} title="Banking Details" />
-                      <View className="space-y-4">
-                        <SelectField
-                          label="Bank Name"
-                          name="bank_name"
-                          placeholder="Select Bank"
-                          options={(banksData?.data || []).map(bank => ({
-                            label: bank.name,
-                            value: bank.code
-                          }))}
-                          value={values.bank_name}
-                          onValueChange={(val: string) => {
-                            setFieldValue("bank_name", val);
-                            setAccountName(""); // Reset account name
-                            setFieldError("account_number", undefined); // Reset error
-                            
-                            // Focus account number field when bank is selected
-                            if (val) {
-                              setTimeout(() => {
-                                accountNumberRef.current?.focus();
-                              }, 150);
-                            }
-
-                            if (val && values.account_number?.length === 10) {
-                              verifyBank(
-                                {
-                                  requestType: "inbound",
-                                  data: {
-                                    account_number: values.account_number,
-                                    bank_code: val
-                                  }
-                                },
-                                {
-                                  onSuccess: (res) => {
-                                    if (res.status && res.data?.account_name) {
-                                      setAccountName(res.data.account_name);
-                                      setFieldError("account_number", undefined);
-                                    } else {
-                                      setAccountName("");
-                                      setFieldError("account_number", res.message || "Could not verify account");
-                                      setFieldTouched("account_number", true);
-                                    }
-                                  },
-                                  onError: (err: any) => {
-                                    setAccountName("");
-                                    setFieldError("account_number", err.response?.data?.message || "Account verification service is temporarily unavailable.");
-                                    setFieldTouched("account_number", true);
-                                  }
-                                }
-                              );
-                            }
-                          }}
-                          error={errors.bank_name as string}
-                          touched={touched.bank_name as boolean}
-                          required
-                        />
-                        <InputField
-                          ref={accountNumberRef}
-                          label="Account Number"
-                          placeholder="10-digit account number"
-                          keyboardType="number-pad"
-                          value={values.account_number}
-                          onBlur={handleBlur("account_number")}
-                          error={errors.account_number}
-                          touched={touched.account_number}
-                          required
-                          onChangeText={(text: string) => {
-                            handleChange("account_number")(text);
-                            if (text.length !== 10) {
-                              setAccountName("");
-                              setFieldError("account_number", undefined);
-                            }
-                            if (text.length === 10 && values.bank_name) {
-                              setFieldError("account_number", undefined);
-                              verifyBank(
-                                {
-                                  requestType: "inbound",
-                                  data: {
-                                    account_number: text,
-                                    bank_code: values.bank_name
-                                  }
-                                },
-                                {
-                                  onSuccess: (res) => {
-                                    if (res.status && res.data?.account_name) {
-                                      setAccountName(res.data.account_name);
-                                      setFieldError("account_number", undefined);
-                                    } else {
-                                      setAccountName("");
-                                      setFieldError("account_number", res.message || "Could not verify account");
-                                      setFieldTouched("account_number", true);
-                                    }
-                                  },
-                                  onError: (err: any) => {
-                                    setAccountName("");
-                                    setFieldError("account_number", err.response?.data?.message || "Account verification service is temporarily unavailable.");
-                                    setFieldTouched("account_number", true);
-                                  }
-                                }
-                              );
-                            }
-                          }}
-                        />
-                        {isVerifying && (
-                          <View className="flex-row justify-end mt-1">
-                            <ActivityIndicator size="small" color="#D30309" />
-                            <Text className="text-xs text-gray-500 ml-1">Verifying...</Text>
-                          </View>
-                        )}
-                        {accountName ? (
-                          <View className="mt-1 flex-row justify-end">
-                            <Text className="text-sm font-NunitoBold text-green-600 bg-green-50 px-2 py-1 rounded-md">
-                              {accountName}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    </View>
-
                     <View className="flex-row gap-4 mt-4">
                       <TouchableOpacity
                         onPress={handlePrevStep}
                         className="flex-1 py-4 bg-gray-100 border border-gray-300 rounded-xl items-center shadow-sm"
-                        disabled={isSubmitting}
                       >
                         <Text className="text-gray-700 font-NunitoBold text-lg">Back</Text>
                       </TouchableOpacity>

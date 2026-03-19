@@ -61,7 +61,7 @@ export const SchedulingSection: React.FC<SchedulingSectionProps> = ({
       {isScheduled && (
         <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
           {/* Date & Time Row */}
-          <View className="flex-row gap-3">
+          <View className="flex-col gap-3">
             <View className="flex-1">
               <DateInput
                 label="Date"

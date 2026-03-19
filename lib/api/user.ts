@@ -351,6 +351,34 @@ export interface Bank {
   updatedAt?: string;
 }
 
+export interface UserBankAccount {
+  id: number;
+  user?: string;
+  bank?: Bank; // Keeping for backward compatibility if used elsewhere
+  bank_name?: string;
+  bank_code?: string;
+  account_number: string;
+  account_name: string;
+  is_default: boolean;
+  is_verified?: boolean;
+  is_active?: boolean;
+  paystack_recipient_code?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserBankAccountsResponse {
+  status: boolean;
+  message: string;
+  data: UserBankAccount[];
+}
+
+export interface UserBankAccountResponse {
+  status: boolean;
+  message: string;
+  data: UserBankAccount;
+}
+
 export interface BanksResponse {
   status: boolean;
   message: string;
@@ -372,6 +400,16 @@ export interface BankEnquiryResponse {
     account_number: string;
     account_name: string;
     bank_id?: number;
+  };
+}
+
+export interface AddBankAccountRequest {
+  requestType: string;
+  data: {
+    account_number: string;
+    account_name: string;
+    bank_code: string;
+    is_default: boolean;
   };
 }
 
@@ -542,6 +580,54 @@ export const userAPI = {
   getBanks: async (): Promise<BanksResponse> => {
     try {
       const response = await api.get(USER_ENDPOINTS.BANKS);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Get user bank accounts
+  getBankAccounts: async (): Promise<UserBankAccountsResponse> => {
+    try {
+      const response = await api.get(USER_ENDPOINTS.BANK_ACCOUNTS);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Get single bank account by ID
+  getBankAccountById: async (id: number | string): Promise<UserBankAccountResponse> => {
+    try {
+      const response = await api.get(`${USER_ENDPOINTS.BANK_ACCOUNTS}${id}/`);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  deleteBankAccount: async (id: number | string): Promise<any> => {
+    try {
+      const response = await api.delete(`${USER_ENDPOINTS.BANK_ACCOUNTS}${id}/`);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  updateBankAccount: async (id: number | string, data: any): Promise<UserBankAccountResponse> => {
+    try {
+      const response = await api.patch(`${USER_ENDPOINTS.BANK_ACCOUNTS}${id}/`, data);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Add bank account
+  addBankAccount: async (data: AddBankAccountRequest): Promise<UserBankAccountResponse> => {
+    try {
+      const response = await api.post(USER_ENDPOINTS.BANK_ACCOUNTS, data);
       return response.data;
     } catch (error: any) {
       throw error;

@@ -36,8 +36,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
         return "text-yellow-600";
       case "accepted":
         return "text-blue-600";
+      case "in_transit":
+        return "text-indigo-600";
+      case "arrived":
+        return "text-indigo-600";
       case "in_progress":
-        return "text-blue-600";
+        return "text-purple-600";
       case "completed":
         return "text-green-600";
       case "cancelled":
@@ -59,6 +63,10 @@ const OrderCard: React.FC<OrderCardProps> = ({
         return "Pending";
       case "accepted":
         return "Accepted";
+      case "in_transit":
+        return "In Transit";
+      case "arrived":
+        return "Arrived";
       case "in_progress":
         return "In Progress";
       case "completed":

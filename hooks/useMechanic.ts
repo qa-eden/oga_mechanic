@@ -81,8 +81,15 @@ export const useBookMechanic = () => {
 };
 
 export const useCreateRepairRequest = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (payload: RepairRequestPayload) => mechanicAPI.createRepairRequest(payload),
+    onSuccess: () => {
+      // Invalidate both user and mechanic repair requests list
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+    },
   });
 };
 

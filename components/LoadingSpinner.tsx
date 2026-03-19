@@ -7,6 +7,7 @@ interface LoadingSpinnerProps {
   subMessage?: string
   size?: 'small' | 'medium' | 'large'
   showLogo?: boolean
+  logoSize?: number
   variant?: 'default' | 'overlay' | 'inline'
   color?: 'primary' | 'white' | 'gray'
 }
@@ -16,41 +17,59 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   subMessage,
   size = 'medium',
   showLogo = true,
+  logoSize,
   variant = 'default',
   color = 'primary',
 }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
+  const opacityValue = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
-    // Smooth rotation animation
+    // Rotating Ring Animation
     Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: 1200,
-        easing: Easing.linear,
+        duration: 1500,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       })
     ).start();
 
-    // Subtle pulse animation for the container
+    // Breathing Animation (Scale + Opacity)
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseValue, {
-          toValue: 1.05,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseValue, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(pulseValue, {
+            toValue: 1.08,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseValue, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+            Animated.timing(opacityValue, {
+              toValue: 1,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityValue, {
+              toValue: 0.6,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
       ])
     ).start();
-  }, [spinValue, pulseValue]);
+  }, [spinValue, pulseValue, opacityValue]);
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
@@ -59,15 +78,15 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   // Size configurations
   const sizeConfig = {
-    small: { logo: 32, container: 48, text: 'text-sm', subText: 'text-xs' },
-    medium: { logo: 48, container: 72, text: 'text-base', subText: 'text-sm' },
-    large: { logo: 64, container: 96, text: 'text-lg', subText: 'text-base' },
+    small: { logo: 30, container: 56, text: 'text-sm', subText: 'text-[10px]' },
+    medium: { logo: 44, container: 80, text: 'text-lg', subText: 'text-sm' },
+    large: { logo: 60, container: 110, text: 'text-xl', subText: 'text-base' },
   };
 
   const colorConfig = {
-    primary: { bg: 'bg-primary-50', ring: 'border-primary-200', text: 'text-gray-900', subText: 'text-gray-500' },
-    white: { bg: 'bg-white/10', ring: 'border-white/30', text: 'text-white', subText: 'text-white/70' },
-    gray: { bg: 'bg-gray-100', ring: 'border-gray-200', text: 'text-gray-700', subText: 'text-gray-500' },
+    primary: { bg: 'bg-primary-50', ring: 'border-primary-100', text: 'text-gray-900', subText: 'text-gray-400', spinner: '#D30309' },
+    white: { bg: 'bg-white/10', ring: 'border-white/20', text: 'text-white', subText: 'text-white/60', spinner: '#FFFFFF' },
+    gray: { bg: 'bg-gray-50', ring: 'border-gray-100', text: 'text-gray-800', subText: 'text-gray-500', spinner: '#6B7280' },
   };
 
   const config = sizeConfig[size];
@@ -75,54 +94,71 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   // Variant styles
   const containerStyles = {
-    default: 'flex-1 items-center justify-center',
-    overlay: 'absolute inset-0 items-center justify-center bg-black/40 z-50',
-    inline: 'items-center justify-center py-8',
+    default: 'flex-1 items-center justify-center bg-white',
+    overlay: 'absolute inset-0 items-center justify-center bg-white/90 z-50',
+    inline: 'items-center justify-center py-10',
   };
 
   return (
     <View className={containerStyles[variant]}>
       <View className="items-center">
-        {/* Spinner Container with Ring */}
-        <Animated.View
-          style={{ transform: [{ scale: pulseValue }] }}
-          className={`rounded-full items-center justify-center mb-4 ${colors.bg} border-2 ${colors.ring}`}
-        >
-          <View
-            style={{ width: config.container, height: config.container }}
-            className="items-center justify-center"
-          >
-            {showLogo ? (
-              <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <icons.logo width={config.logo} height={config.logo} />
-              </Animated.View>
-            ) : (
-              // Fallback spinner dots when logo is hidden
-              <Animated.View
-                style={{ transform: [{ rotate: spin }] }}
-                className="flex-row items-center justify-center"
-              >
-                <View className="w-2 h-2 rounded-full bg-primary-500 mr-1" />
-                <View className="w-2 h-2 rounded-full bg-primary-300 mr-1" />
-                <View className="w-2 h-2 rounded-full bg-primary-200" />
-              </Animated.View>
+        {/* Main Spinner Core */}
+        <View className="relative items-center justify-center mb-6">
+            {/* Animated Outer Ring */}
+            <Animated.View 
+                style={{ 
+                    transform: [{ rotate: spin }],
+                    width: config.container + 8,
+                    height: config.container + 8,
+                }}
+                className="absolute border-2 border-transparent border-t-primary-500 rounded-full"
+            />
+            
+            {/* Pulsing Center Container */}
+            <Animated.View
+                style={{ 
+                    transform: [{ scale: pulseValue }],
+                    width: config.container,
+                    height: config.container,
+                }}
+                className={`rounded-full items-center justify-center ${colors.bg} border border-gray-100 shadow-sm`}
+            >
+                {showLogo && (
+                    <Animated.View style={{ opacity: opacityValue }}>
+                        <icons.logo width={logoSize || config.logo} height={logoSize || config.logo} />
+                    </Animated.View>
+                )}
+            </Animated.View>
+        </View>
+
+        {/* Message Group */}
+        <Animated.View style={{ opacity: opacityValue }} className="items-center px-6">
+            {message && (
+                <Text className={`${config.text} font-NunitoExtraBold ${colors.text} mb-2 text-center tracking-tight`}>
+                    {message}
+                </Text>
             )}
-          </View>
+
+            {subMessage && (
+                <Text className={`${config.subText} font-NunitoMedium ${colors.subText} text-center leading-5 max-w-[280px]`}>
+                    {subMessage}
+                </Text>
+            )}
         </Animated.View>
 
-        {/* Message */}
-        {message && (
-          <Text className={`${config.text} font-NunitoBold ${colors.text} mb-1 text-center`}>
-            {message}
-          </Text>
-        )}
-
-        {/* Sub Message */}
-        {subMessage && (
-          <Text className={`${config.subText} font-NunitoMedium ${colors.subText} text-center px-8`}>
-            {subMessage}
-          </Text>
-        )}
+        {/* Fancy Progress Dots */}
+        <View className="flex-row mt-8 space-x-1.5 gap-1.5">
+            {[0, 1, 2].map((i) => (
+                <Animated.View 
+                    key={i}
+                    style={{ 
+                        opacity: opacityValue,
+                        transform: [{ scale: pulseValue }]
+                    }}
+                    className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-primary-500' : 'bg-gray-200'}`}
+                />
+            ))}
+        </View>
       </View>
     </View>
   );

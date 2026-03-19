@@ -42,6 +42,8 @@ interface OrderFormFieldsProps {
   vehicleMakeOptions: SelectOption[];
   vehicleModelOptions: SelectOption[];
   vehicleYearOptions: SelectOption[];
+  vehicleVin: string;
+  setVehicleVin: (value: string) => void;
   vehicleMakesLoading: boolean;
 
   // Scheduling
@@ -55,6 +57,7 @@ interface OrderFormFieldsProps {
 
   // Callbacks
   onCarSelect?: (carId: string) => void;
+  onVINLookup?: (vin: string) => void;
 }
 
 /**
@@ -84,6 +87,8 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
   setVehicleModel,
   vehicleYear,
   setVehicleYear,
+  vehicleVin,
+  setVehicleVin,
   vehicleMakeOptions,
   vehicleModelOptions,
   vehicleYearOptions,
@@ -96,6 +101,7 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
   setPreferredTimeSlot,
   timeSlotOptions,
   onCarSelect,
+  onVINLookup,
 }) => {
   // If user has car list and selected "Yes", show car dropdown + service details
   if (hasCarList && carSelection === 'Yes') {
@@ -184,9 +190,12 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         setVehicleModel={setVehicleModel}
         vehicleYear={vehicleYear}
         setVehicleYear={setVehicleYear}
+        vehicleVin={vehicleVin}
+        setVehicleVin={setVehicleVin}
         vehicleMakeOptions={vehicleMakeOptions}
         vehicleModelOptions={vehicleModelOptions}
         vehicleYearOptions={vehicleYearOptions}
+        onVINLookup={onVINLookup}
         vehicleMakesLoading={vehicleMakesLoading}
       />
 

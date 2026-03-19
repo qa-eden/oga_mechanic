@@ -236,7 +236,7 @@ const Step1 = () => {
                                             }}
                                             disabled={!isValid || !dirty || isSubmitting}
                                             loading={isSubmitting}
-                                            loadingText="Processing..."
+                                            loadingText="Processing"
                                         />
 
                                         <AuthNavigateLink

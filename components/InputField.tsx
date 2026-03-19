@@ -142,6 +142,7 @@ const InputField = forwardRef<TextInput, InputFieldProps & {
             style={{
               borderWidth: 1.5,
               borderColor: borderColor,
+              minHeight: props.multiline ? 120 : 0,
               ...Platform.select({
                 ios: {
                   shadowColor: hasError
@@ -185,6 +186,8 @@ const InputField = forwardRef<TextInput, InputFieldProps & {
               textContentType={
                 keyboardType === "email-address" ? "emailAddress" : undefined
               }
+              textAlign={Platform.OS === 'ios' ? 'left' : undefined}
+              // writingDirection={Platform.OS === 'ios' ? 'ltr' : undefined}
               textAlignVertical={props.multiline ? "top" : "center"}
               {...props}
             />

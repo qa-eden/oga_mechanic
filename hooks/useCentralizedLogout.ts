@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { routes } from '@/constants/routes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { userAPI } from '@/lib/api/user';
+import { useMechanicStore } from '@/stores/mechanicStore';
+import { useRegistrationStore } from '@/stores/registrationStore';
 
 export const useCentralizedLogout = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const queryClient = useQueryClient();
 
   const logout = async () => {
     if (isLoggingOut) return; // Prevent multiple simultaneous logouts
@@ -41,13 +45,21 @@ export const useCentralizedLogout = () => {
         console.error('❌ Failed to fetch roles during logout:', rolesError);
       }
       
+      // Clear TanStack Query cache
+      queryClient.clear();
+      
+      // Clear global stores
+      useMechanicStore.getState().reset();
+      useRegistrationStore.getState().clearStepByStepData();
+
       // Clear all stored auth data (but keep roles data)
       await AsyncStorage.multiRemove([
         'auth_token',
         'refresh_token',
         'user_data',
         'is_logged_in',
-        'current_active_role' // Clear the stored active role on logout
+        'current_active_role', // Clear the stored active role on logout
+        'user_roles_data'      // Added for complete wipe
       ]);
       
       console.log('✅ All auth data cleared from AsyncStorage (roles data preserved)');
@@ -61,13 +73,18 @@ export const useCentralizedLogout = () => {
       console.error('❌ Error during centralized logout:', error);
       
       // Fallback: clear storage and navigate even if everything fails
+      queryClient.clear();
+      useMechanicStore.getState().reset();
+      useRegistrationStore.getState().clearStepByStepData();
+      
       try {
         await AsyncStorage.multiRemove([
           'auth_token',
           'refresh_token',
           'user_data',
           'is_logged_in',
-          'current_active_role'
+          'current_active_role',
+          'user_roles_data'
         ]);
         router.replace(routes?.signIn as any);
       } catch (fallbackError) {

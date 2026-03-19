@@ -14,6 +14,9 @@ import { StatusBar } from "expo-status-bar";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
+import { icons } from "@/constants";
+import { usePrimaryUserProfile, useMechanicProfile } from "@/hooks/useUserProfile";
+import { useProfileStore } from "@/hooks/useProfileStore";
 import { mechanicRoutes } from "@/constants/routes";
 import Navbar from "@/components/Navbar";
 import MechanicActionConfirmationModal, { MechanicActionType } from "@/components/modals/MechanicActionConfirmationModal";
@@ -22,8 +25,6 @@ import { useQuery } from "@tanstack/react-query";
 import { mechanicAPI } from "@/lib/api/mechanic";
 import AnimatedErrorCard from "@/components/AnimatedErrorCard";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
-import { useMechanicProfile } from "@/hooks/useUserProfile";
-import { useProfileStore } from "@/hooks/useProfileStore";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -124,8 +125,13 @@ const OrderCardSkeleton = () => {
 };
 
 const MechanicHome = () => {
-  // Profile check
-  const { data: profileData, isLoading: profileLoading } = useMechanicProfile();
+  const primaryProfile = usePrimaryUserProfile();
+  const mechanicProfile = useMechanicProfile(true); // Always enabled on mechanic home
+
+  const profileData = (mechanicProfile.data || primaryProfile.data) as any;
+  const profileLoading = mechanicProfile.isLoading && !mechanicProfile.data; // Only show strictly loading if we have no data
+  const isMechanic = true;
+
   const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
   const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
   const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
@@ -180,7 +186,7 @@ const MechanicHome = () => {
     isLoading: pendingLoading,
     error: pendingError,
     refetch: refetchPending
-  } = useRepairRequests('pending');
+  } = useRepairRequests('pending', isMechanic);
 
   // Check if pending requests are empty (only check after loading is done)
   const hasPendingRequests = !pendingLoading && pendingRequestsData?.data && Array.isArray(pendingRequestsData.data) && pendingRequestsData.data.length > 0;
@@ -223,7 +229,7 @@ const MechanicHome = () => {
     data: analyticsData,
     isLoading: analyticsLoading,
     refetch: refetchAnalytics
-  } = useMechanicAnalytics();
+  } = useMechanicAnalytics(isMechanic);
 
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
@@ -285,6 +291,8 @@ const MechanicHome = () => {
             case 'pending':
               return 'current';
             case 'accepted':
+            case 'in_transit':
+            case 'arrived':
             case 'in_progress':
               return 'ongoing';
             case 'completed':

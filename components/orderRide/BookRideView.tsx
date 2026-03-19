@@ -37,24 +37,24 @@ const BookRideView: React.FC<BookRideViewProps> = ({
   ];
 
   const handleRecentPlacePress = (place: any) => {
-      const toLocationData = {
-          name: place.name,
-          address: place.address,
-          latitude: place.latitude,
-          longitude: place.longitude
-      };
-      
-      setToLocation(toLocationData);
+    const toLocationData = {
+      name: place.name,
+      address: place.address,
+      latitude: place.latitude,
+      longitude: place.longitude
+    };
 
-      router.push({
-          pathname: routes.chooseRide,
-          params: {
-              from: JSON.stringify(fromLocation),
-              to: JSON.stringify(toLocationData),
-              rideType: "Standard",
-              isScheduled: "false"
-          }
-      });
+    setToLocation(toLocationData);
+
+    router.push({
+      pathname: routes.chooseRide,
+      params: {
+        from: JSON.stringify(fromLocation),
+        to: JSON.stringify(toLocationData),
+        rideType: "Standard",
+        isScheduled: "false"
+      }
+    });
   };
 
   return (
@@ -100,9 +100,8 @@ const BookRideView: React.FC<BookRideViewProps> = ({
                   handleScheduleRide();
                 }
               }}
-              className={`items-center p-4 rounded-2xl w-[32%] ${
-                isActive ? 'bg-primary-100 shadow-sm' : 'bg-gray-50 border border-gray-200'
-              }`}
+              className={`items-center p-4 rounded-2xl w-[32%] ${isActive ? 'bg-primary-100 shadow-sm' : 'bg-gray-50 border border-gray-200'
+                }`}
             >
               <View className={`w-12 h-8 mb-2 items-center justify-center ${service.bgColor && !isActive ? service.bgColor : ''} rounded-lg`}>
                 {React.cloneElement(service.icon as React.ReactElement<{ color?: string }>, { color: iconColor })}
@@ -132,23 +131,23 @@ const BookRideView: React.FC<BookRideViewProps> = ({
       {/* Recent Places */}
       <View>
         {recentPlaces.map((place, index) => (
-             <TouchableOpacity 
-                key={place.id}
-                onPress={() => handleRecentPlacePress(place)}
-                className={`flex-row items-center py-3 ${index !== recentPlaces.length - 1 ? "border-b border-gray-50" : ""}`}
-             >
-                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
-                    <ClockIcon size={20} color="#6B7280" />
-                </View>
-                <View>
-                    <Text className="font-NunitoBold text-base text-gray-900">
-                    {place.name}
-                    </Text>
-                    <Text className="text-gray-500 text-xs font-NunitoMedium">
-                    {place.address}
-                    </Text>
-                </View>
-            </TouchableOpacity>
+          <TouchableOpacity
+            key={place.id}
+            onPress={() => handleRecentPlacePress(place)}
+            className={`flex-row items-center py-3 ${index !== recentPlaces.length - 1 ? "border-b border-gray-50" : ""}`}
+          >
+            <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
+              <ClockIcon size={20} color="#6B7280" />
+            </View>
+            <View>
+              <Text className="font-NunitoBold text-base text-gray-900">
+                {place.name}
+              </Text>
+              <Text className="text-gray-500 text-xs font-NunitoMedium">
+                {place.address}
+              </Text>
+            </View>
+          </TouchableOpacity>
         ))}
       </View>
     </View>

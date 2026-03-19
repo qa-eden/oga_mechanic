@@ -570,7 +570,7 @@ const Cart = () => {
           onPress={handleMakePayment}
           bgVariant="primary"
           loading={isLoading}
-          loadingText="Processing..."
+          loadingText="Processing"
           disabled={cartItems.length === 0}
         />
 

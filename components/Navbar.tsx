@@ -9,9 +9,10 @@ import {
 } from "react-native-heroicons/outline";
 import { router, useSegments } from "expo-router";
 import { routes, driverRoutes, mechanicRoutes, riderRoutes, sellerRoutes } from "@/constants/routes";
-import { useNotifications, usePrimaryUserProfile, useMechanicProfile, useUserRoles, userProfileKeys, useDriverProfile, useRiderProfile } from "@/hooks/useUserProfile";
+import { useNotifications, useActiveRoleProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from "@/lib/endpoints";
 
 const getTimeOfDay = () => {
   const hour = new Date().getHours();
@@ -32,6 +33,18 @@ const getTimeOfDay = () => {
       icon: <MoonIcon size={24} color="#545677" />,
     };
   }
+};
+
+const getFullImageUrl = (path: string | null | undefined) => {
+  if (!path) return undefined;
+  if (typeof path !== 'string') return undefined;
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  
+  // Ensure we don't have double slashes
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  const cleanBase = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+  
+  return `${cleanBase}${cleanPath}`;
 };
 
 const Navbar = () => {
@@ -70,99 +83,71 @@ const Navbar = () => {
     }).length;
   }, [notificationsData]);
   
-  // Get user roles to check active role - refetch on mount to get latest role
-  const { data: rolesData, refetch: refetchRoles } = useUserRoles();
-  
-  // Check active role from roles data or AsyncStorage
+  // Use the unified active role profile hook
+  const { 
+    data: roleProfileData, 
+    isLoading: isLoadingProfile, 
+    activeRole: hookActiveRole,
+    isMechanic,
+    isDriver,
+    isRider,
+    isMerchant,
+    primaryProfileData
+  } = useActiveRoleProfile();
+
+  // Synchronize local activeRole with hookActiveRole
   useEffect(() => {
-    const checkActiveRole = async () => {
-      // First try to get from roles API response
-      if (rolesData?.data?.active_role?.name) {
-        const newRole = rolesData.data.active_role.name;
-        
-        // Only update if role has changed
-        setActiveRole((prevRole) => {
-          if (prevRole !== newRole) {
-            // Invalidate profile queries when role changes
-            queryClient.invalidateQueries({ queryKey: ['mechanic', 'profile'] });
-            queryClient.invalidateQueries({ queryKey: userProfileKeys.primary() });
-            
-            // Update AsyncStorage with the latest role
-            AsyncStorage.setItem('current_active_role', newRole).catch((error) => {
-              console.error('Error storing active role:', error);
-            });
-            
-            return newRole;
-          }
-          return prevRole;
-        });
-        return;
-      }
+    if (hookActiveRole && hookActiveRole !== activeRole) {
+      setActiveRole(hookActiveRole);
       
-      // Fallback to AsyncStorage
-      try {
-        const storedRole = await AsyncStorage.getItem('current_active_role');
-        if (storedRole) {
-          setActiveRole((prevRole) => {
-            if (prevRole !== storedRole) {
-              return storedRole;
-            }
-            return prevRole;
-          });
-        }
-      } catch (error) {
-        console.error('Error reading active role from storage:', error);
-      }
-    };
-    
-    checkActiveRole();
-  }, [rolesData, queryClient]);
+      // Update AsyncStorage with the latest role
+      AsyncStorage.setItem('current_active_role', hookActiveRole).catch((error) => {
+        console.error('Error storing active role:', error);
+      });
+    }
+  }, [hookActiveRole, activeRole]);
   
-  // Refetch roles when component mounts to ensure we have the latest role
-  useEffect(() => {
-    refetchRoles();
-  }, [refetchRoles]);
-  
-  // Check role status
-  const isMechanic = activeRole === 'mechanic';
-  const isDriver = activeRole === 'driver';
-  const isRider = activeRole === 'rider';
-  
-  // Role-specific profile hooks
-  const { data: mechanicProfileData } = useMechanicProfile(isMechanic);
-  const { data: driverProfileData } = useDriverProfile(isDriver);
-  const { data: riderProfileData } = useRiderProfile(isRider);
-  
-  // Primary profile (for sellers and as general fallback)
-  const { data: primaryProfileData } = usePrimaryUserProfile(!isMechanic);
-  
-  // Determine display name, profile picture and verified status based on role
-  let displayName = 'User';
-  let profilePicture = undefined;
-  let isVerified = false;
+  // Baseline info from profiles
+  const primaryData = primaryProfileData?.data;
+  const roleResponseData = roleProfileData?.data || roleProfileData;
 
-  if (isMechanic && mechanicProfileData?.data?.mechanic_profile) {
-    const mProfile = mechanicProfileData.data.mechanic_profile;
-    displayName = mProfile.user?.first_name || 'User';
-    profilePicture = (mProfile.user as any)?.profile_image || (mProfile as any)?.selfie;
-    isVerified = mProfile.is_approved;
-  } else if (isDriver && driverProfileData?.data?.driver_profile) {
-    const dProfile = driverProfileData.data.driver_profile;
-    displayName = dProfile.user?.first_name || 'User';
-    profilePicture = (dProfile as any)?.profile_picture || (dProfile as any)?.selfie;
-    isVerified = dProfile.is_approved || false;
-  } else if (isRider && riderProfileData?.data) {
-    const rProfile = riderProfileData.data;
-    displayName = rProfile.first_name || 'User';
-    profilePicture = rProfile.profile_picture;
-    isVerified = rProfile.is_verified || false;
-  } else if (primaryProfileData?.data) {
-    const pProfile = primaryProfileData.data;
-    displayName = pProfile.first_name || 'User';
-    profilePicture = pProfile.profile_image || (pProfile as any)?.profile_picture;
-    isVerified = pProfile.is_verified;
-  }
+  // Specific profiles extracted safely
+  const mProfile = roleResponseData?.mechanic_profile || (isMechanic ? roleResponseData : null);
+  const dProfile = roleResponseData?.driver_profile || (isDriver ? roleResponseData : null);
+  const merchProfile = roleResponseData?.merchant_profile || (isMerchant ? roleResponseData : null);
 
+  // Flattened data source for permissive lookup
+  const combinedData = {
+    ...(primaryData || {}),
+    ...(roleResponseData || {}),
+    ...(mProfile || {}),
+    ...(dProfile || {}),
+    ...(merchProfile || {}),
+    ...(mProfile?.user || {}),
+    ...(dProfile?.user || {}),
+    ...(merchProfile?.user || {}),
+  } as any;
+
+  // Robust Name Resolution
+  const displayName = 
+    (isMerchant && combinedData.store_name) ||
+    combinedData.first_name || 
+    'User';
+
+  // Robust Image Resolution (checking all potential selfie/image keys)
+  const rawImage = 
+    combinedData.selfie ||
+    combinedData.profile_picture ||
+    combinedData.profile_image ||
+    combinedData.image;
+
+  const profilePicture = getFullImageUrl(rawImage);
+
+  // Verification status
+  const isVerified = 
+    combinedData.is_verified || 
+    combinedData.is_approved || 
+    false;
 
   const handleNotificationPress = () => {
     router.push(routes.notifications);

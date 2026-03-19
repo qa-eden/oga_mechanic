@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useRef, useEffect, useCal
 import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToast } from '../utils/toastUtils';
-import { cartAPI } from '../lib/api/cart';
+import { productsAPI } from '../lib/api/products';
 import { getErrorMessage, getSuccessMessage } from '../utils/errorMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { cartKeys, useCart as useCartQuery } from '../hooks/useCart';
@@ -71,7 +71,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         return {
           ...state,
           items: updatedItems,
-          totalItems: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
+          totalItems: updatedItems.length,
           totalPrice: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         };
       } else {
@@ -82,7 +82,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         return {
           ...state,
           items: updatedItems,
-          totalItems: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
+          totalItems: updatedItems.length,
           totalPrice: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         };
       }
@@ -94,7 +94,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: updatedItems,
-        totalItems: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
+        totalItems: updatedItems.length,
         totalPrice: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       };
     }
@@ -109,7 +109,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: updatedItems,
-        totalItems: updatedItems.reduce((sum, item) => sum + item.quantity, 0),
+        totalItems: updatedItems.length,
         totalPrice: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       };
     }
@@ -123,7 +123,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items,
-        totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
+        totalItems: items.length,
         totalPrice: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       };
     }
@@ -145,7 +145,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const auth = useAuthContext();
   const queryClient = useQueryClient();
   const userRole = auth.userData?.role;
-  const isShopRole = userRole === 'rider' || userRole === 'primary_user';
+  // Allow all logged-in roles to use the cart for now, unless they are specifically restricted
+  const isShopRole = !!auth.userData && !!userRole;
 
   // Cart animation function
   const triggerCartAnimation = () => {
@@ -185,9 +186,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Add to cart function
   const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
-    if (!isShopRole) return;
+    console.log('🛒 addToCart called for:', item.id, 'User data:', auth.userData);
     
-    const existingItem = state.items.find(cartItem => cartItem.id === item.id);
+    // Server will handle role-based permissions; client-side check is too restrictive
+    
+    const existingItem = state.items.find(cartItem => cartItem.id.toString() === item.id.toString());
+    console.log('🛒 Existing item in cart:', !!existingItem);
     
     if (existingItem && existingItem.quantity >= existingItem.stock) {
       showToast.error(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`);
@@ -195,8 +199,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      console.log('🛒 Calling productsAPI.addToCart server-side...');
       // Add to server first
-      const response = await cartAPI.addToCart(item.id, 1);
+      const response = await productsAPI.addToCart(item.id, 1);
+      console.log('🛒 Server response:', response);
       
       if (response.status) {
         // Update local state
@@ -207,22 +213,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
         
         await syncWithServer(); // Get fresh cart data as requested
-        showToast.success(getSuccessMessage('cart_add'));
+        // showToast.success(getSuccessMessage('cart_add'));
       } else {
+        console.log('🛒 Server update failed:', response.message);
         showToast.error(getErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
-      console.error('Add to cart error:', error);
+      console.error('🛒 Add to cart error:', error);
       showToast.error(getErrorMessage(error, 'cart'));
     }
   };
 
   // Remove from cart function
   const removeFromCart = async (id: string) => {
-    const item = state.items.find(item => item.id === id);
+    const item = state.items.find(item => item.id.toString() === id.toString());
     
     try {
-      const response = await cartAPI.removeFromCart(id);
+      const response = await productsAPI.removeFromCart(id);
       
       if (response.status) {
         dispatch({ type: 'REMOVE_ITEM', payload: id });
@@ -246,11 +253,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update quantity function
   const updateQuantity = async (id: string, quantity: number) => {
-    const item = state.items.find(item => item.id === id);
+    const item = state.items.find(item => item.id.toString() === id.toString());
     const oldQuantity = item?.quantity || 0;
     
     try {
-      const response = await cartAPI.updateCartItem(id, quantity);
+      const response = await productsAPI.updateCartItem(id, quantity);
       
       if (response.status) {
         dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
@@ -275,7 +282,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Clear cart function
   const clearCart = async () => {
     try {
-      const response = await cartAPI.clearCart();
+      const response = await productsAPI.clearCart();
       
       if (response.status) {
         dispatch({ type: 'CLEAR_CART' });
@@ -297,43 +304,48 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sync with server function
+  // Helper for consistent mapping from various server formats
+  const mapServerItems = useCallback((data: any): CartItem[] => {
+    if (!data) return [];
+    
+    // Normalize mapping from different API structures
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data.items && Array.isArray(data.items)) { // productsAPI format
+      items = data.items;
+    } else if (data.data && Array.isArray(data.data)) { // nested data format
+      items = data.data;
+    } else if (data.data?.items && Array.isArray(data.data.items)) { // deeply nested format
+      items = data.data.items;
+    }
+
+    return items
+      .filter((item: any) => item && (item.id || item.product?.id || item.product_id))
+      .map((item: any) => ({
+        id: (item.id || item.product?.id || item.product_id).toString(),
+        name: item.product?.name || item.name || 'Product',
+        price: item.product?.price ? parseFloat(item.product.price) : 
+               item.price ? parseFloat(item.price) : 0,
+        quantity: item.quantity || 1,
+        stock: item.product?.stock || item.stock || 10,
+        image: item.product?.images?.[0]?.image || 
+               item.images?.[0]?.image || 
+               item.image || 'sparePart',
+        productId: (item.product?.id || item.product_id)?.toString(),
+      }));
+  }, []);
+
   const syncWithServer = useCallback(async () => {
     if (!isShopRole) return;
     try {
-      const response = await cartAPI.getCart();
+      const response = await productsAPI.getCart();
       
       console.log('🛒 Cart sync response:', response);
       
       if (response.status) {
-        // Handle different response structures
-        let cartData: any = response.data;
-        
-        // If response.data is not an array, check if it's wrapped in another data property
-        if (!Array.isArray(cartData)) {
-          if (cartData && Array.isArray(cartData.data)) {
-            cartData = cartData.data;
-          } else if (cartData && Array.isArray(cartData.items)) {
-            cartData = cartData.items;
-          } else {
-            console.log('🛒 No cart items found in response');
-            dispatch({ type: 'SET_CART', payload: [] });
-            return;
-          }
-        }
-        
-        // Convert server cart items to local format
-        const localItems: CartItem[] = cartData.map((serverItem: any) => ({
-          id: serverItem.product?.id || serverItem.product_id || serverItem.id,
-          name: serverItem.product?.name || serverItem.name || 'Unknown Product',
-          price: serverItem.product?.price ? parseFloat(serverItem.product.price) : 
-                 serverItem.price ? parseFloat(serverItem.price) : 0,
-          quantity: serverItem.quantity || 1,
-          stock: serverItem.product?.stock || serverItem.stock || 10, // Get stock from product object
-          image: serverItem.product?.images?.[0]?.image || 
-                 serverItem.images?.[0]?.image || 
-                 serverItem.image || 'sparePart',
-        }));
+        // Convert server cart items safely using universal mapper
+        const localItems = mapServerItems(response.data);
         
         console.log('🛒 Converted cart items:', localItems);
         dispatch({ type: 'SET_CART', payload: localItems });
@@ -345,17 +357,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('❌ Sync cart error:', error);
       // Don't clear cart on error, just log it
     }
-  }, [isShopRole]);
+  }, [isShopRole, mapServerItems]);
 
   // Get item quantity
   const getItemQuantity = (id: string): number => {
-    const item = state.items.find(item => item.id === id);
+    const item = state.items.find(item => item.id.toString() === id.toString());
     return item ? item.quantity : 0;
   };
 
   // Check if item is in cart
   const isInCart = (id: string): boolean => {
-    return state.items.some(item => item.id === id);
+    if (!id) return false;
+    return state.items.some(item => item.id.toString() === id.toString());
   };
 
   // Sync with server on mount
@@ -375,57 +388,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAndSync();
   }, [isShopRole, syncWithServer]);
 
-  // Sync context state with React Query cart data whenever it changes
-  // This ensures CartIconBtn and other components using CartContext stay in sync
-  // when cart is modified from any page (cart page, product detail, etc.)
   useEffect(() => {
-    if (!isShopRole) return;
+    // Force sync with React Query data whenever it's available
+    // We remove the isShopRole guard here because if we have cart data, we should show it
     if (cartQueryData?.data) {
-      let cartData = cartQueryData.data;
-
-      // Handle nested data structure
-      if (!Array.isArray(cartData)) {
-        if (cartData && Array.isArray((cartData as any).items)) {
-          cartData = (cartData as any).items;
-        } else {
-          return; // No valid cart items
-        }
-      }
-
-      // Convert to local format if it's an array
-      if (Array.isArray(cartData)) {
-        const localItems: CartItem[] = cartData.map((serverItem: any) => ({
-          id: serverItem.product?.id || serverItem.product_id || serverItem.id,
-          name: serverItem.product?.name || serverItem.name || 'Unknown Product',
-          price: serverItem.product?.price ? parseFloat(serverItem.product.price) :
-                 serverItem.price ? parseFloat(serverItem.price) : 0,
-          quantity: serverItem.quantity || 1,
-          stock: serverItem.product?.stock || serverItem.stock || 10,
-          image: serverItem.product?.images?.[0]?.image ||
-                 serverItem.images?.[0]?.image ||
-                 serverItem.image || 'sparePart',
-        }));
-
-        dispatch({ type: 'SET_CART', payload: localItems });
-      }
+      console.log('🛒 Syncing CartContext with React Query data');
+      const localItems = mapServerItems(cartQueryData.data);
+      dispatch({ type: 'SET_CART', payload: localItems });
     }
-  }, [cartQueryData]);
+  }, [cartQueryData, mapServerItems]);
 
-  const value: CartContextType = {
-    state,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getItemQuantity,
-    isInCart,
-    cartAnimation,
-    triggerCartAnimation,
-    syncWithServer,
+  // Derived state for perfect consistency
+  const contextState = {
+    ...state,
+    totalItems: state.items.length,
+    totalPrice: state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
   };
 
   return (
-    <CartContext.Provider value={value}>
+    <CartContext.Provider
+      value={{
+        state: contextState,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        getItemQuantity,
+        isInCart,
+        cartAnimation,
+        triggerCartAnimation,
+        syncWithServer,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

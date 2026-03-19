@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Platform } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams } from 'expo-router';
+import * as Location from 'expo-location';
+import { useLocalSearchParams, router } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
@@ -12,8 +14,10 @@ import CustomAlert from '@/components/CustomAlert';
 import MechanicActionConfirmationModal, { MechanicActionType } from '@/components/modals/MechanicActionConfirmationModal';
 import MechanicCancelRequestModal from '@/components/modals/MechanicCancelRequestModal';
 import JobCompletedModal from '@/components/modals/JobCompletedModal';
+import JobCompletionFormModal from '@/components/modals/JobCompletionFormModal';
+import MechanicOTPVerificationModal from '@/components/modals/MechanicOTPVerificationModal';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest } from '@/hooks/useRepairRequests';
+import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest, useUpdateRepairRequest } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage } from '@/utils/errorMessages';
 import {
@@ -28,8 +32,12 @@ import {
   XCircleIcon,
   ClipboardDocumentIcon,
   CalendarDaysIcon,
+  ShieldCheckIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from 'react-native-heroicons/solid';
+import MapView, { Marker } from '@/components/MapComponent';
+import { PhoneIcon, ChatBubbleLeftRightIcon } from 'react-native-heroicons/outline';
+import { routes } from '@/constants/routes';
 
 const MechanicOrderDetails = () => {
   const params = useLocalSearchParams();
@@ -42,11 +50,27 @@ const MechanicOrderDetails = () => {
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [actionType, setActionType] = useState<MechanicActionType | null>(null);
   const [jobCompletedModalVisible, setJobCompletedModalVisible] = useState(false);
+  const [completionFormVisible, setCompletionFormVisible] = useState(false);
+  const [isFinishingJob, setIsFinishingJob] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
   const { showSuccess, showError, showWarning, visible, alertConfig, hideAlert } = useCustomAlert();
   
   // Copy to clipboard state
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+
+
+  // Location tracking state
+  const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
+
+  const isFocused = useIsFocused();
+
+  // Fetch repair request detail from API
 
   // Fetch repair request detail from API
   const { 
@@ -54,16 +78,28 @@ const MechanicOrderDetails = () => {
     isLoading: isLoadingData, 
     error: errorData, 
     refetch 
-  } = useRepairRequestDetail(orderId);
+  } = useRepairRequestDetail(orderId, isFocused ? 25000 : 0);
 
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
+
+  const request = orderData?.data;
+  const customer = request?.customer;
+  const status = request?.status || 'pending';
+
+  // Auto-show OTP modal when status is arrived and not verified
+  useEffect(() => {
+    if (status === 'arrived' && !isOtpVerified) {
+      setOtpModalVisible(true);
+    }
+  }, [status, isOtpVerified]);
 
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
   const declineRequestMutation = useDeclineRepairRequest();
   const updateStatusMutation = useUpdateRepairRequestStatus();
   const cancelRequestMutation = useCancelRepairRequest();
+  const updateRepairRequestMutation = useUpdateRepairRequest();
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -86,6 +122,82 @@ const MechanicOrderDetails = () => {
     setRefreshing(false);
   };
 
+  // Track location when in transit
+  useEffect(() => {
+    let isMounted = true;
+
+    const startTracking = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            showError('Permission Denied', 'Location permission is required for live tracking.');
+            return;
+        }
+
+        // Initial location with fallback to last known if current fails
+        let location;
+        try {
+            location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+        } catch (err) {
+            console.warn('Failed to get current position, trying last known:', err);
+            location = await Location.getLastKnownPositionAsync({});
+        }
+
+        if (isMounted && location) {
+            setMechanicLocation({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+            });
+        }
+
+        // Watch location if in transit
+        if (orderData?.data?.status === 'in_transit') {
+            try {
+                locationSubscription.current = await Location.watchPositionAsync(
+                    {
+                        accuracy: Location.Accuracy.Balanced,
+                        timeInterval: 10000,
+                        distanceInterval: 10,
+                    },
+                    (location) => {
+                        if (isMounted) {
+                            setMechanicLocation({
+                                latitude: location.coords.latitude,
+                                longitude: location.coords.longitude,
+                            });
+                        }
+                    }
+                );
+            } catch (err) {
+                console.error('Error starting location watch:', err);
+            }
+        }
+      } catch (error) {
+        console.error('General location error:', error);
+      }
+    };
+
+    if (orderId && (orderData?.data?.status === 'accepted' || orderData?.data?.status === 'in_transit')) {
+        startTracking();
+    }
+
+    return () => {
+        isMounted = false;
+        if (locationSubscription.current) {
+            locationSubscription.current.remove();
+        }
+    };
+  }, [orderId, orderData?.data?.status]);
+
+  const handleCall = (phoneNumber: string) => {
+    if (!phoneNumber) return;
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+        showError('Error', 'Unable to initiate phone call');
+    });
+  };
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
@@ -94,6 +206,8 @@ const MechanicOrderDetails = () => {
         return 'Accepted User Request';
       case 'in_transit':
         return 'In Transit to Customer';
+      case 'arrived':
+        return 'Arrived at Customer Location';
       case 'in_progress':
         return 'In Progress';
       case 'completed':
@@ -105,6 +219,34 @@ const MechanicOrderDetails = () => {
       default:
         return status;
     }
+  };
+
+  const getArrivalCode = (id: string | undefined): string => {
+    if (!id) return '0000';
+    // Simple deterministic code based on ID for demo purposes
+    // Matches the logic in track-mechanic-order.tsx
+    const num = parseInt(id.replace(/[^0-9]/g, '').slice(-4)) || 1234;
+    return num.toString().padStart(4, '0');
+  };
+
+  const handleVerifyOtp = async (otp: string | number) => {
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+
+    // Simulate network delay for verification
+    setTimeout(() => {
+      const correctOtp = getArrivalCode(orderId);
+      
+      if (otp === correctOtp) {
+        setIsVerifyingOtp(false);
+        setOtpModalVisible(false);
+        setIsOtpVerified(true);
+        showSuccess('Verified', 'Arrival code verified successfully. You can now start the repair.');
+      } else {
+        setIsVerifyingOtp(false);
+        setOtpError('Invalid verification code. Please ask the customer for the correct 4-digit code.');
+      }
+    }, 1500);
   };
 
   const formatDate = (dateString: string) => {
@@ -241,18 +383,16 @@ const MechanicOrderDetails = () => {
         setActionType(null);
         showSuccess('Success', 'Repair request declined successfully.');
       } else {
-        // Status updates: in_transit, in_progress, completed
-        await updateStatusMutation.mutateAsync({ requestId: orderId, status: actionType });
-
-        // Show job completed modal for completed status
+        // Show job completion form instead of immediate update for completed status
         if (actionType === 'completed') {
           setActionModalVisible(false);
           setActionType(null);
-          // Await refetch before showing modal
-          await refetch();
-          setJobCompletedModalVisible(true);
+          setCompletionFormVisible(true);
           return;
         }
+
+        // Status updates: in_transit, in_progress, completed
+        await updateStatusMutation.mutateAsync({ requestId: orderId, status: actionType });
 
         // Await refetch to ensure data is updated before showing success alert
         await refetch();
@@ -319,6 +459,33 @@ const MechanicOrderDetails = () => {
     setSelectedCancelReason('');
   };
 
+  const handleFinalizeJob = async (resolutions: any[]) => {
+    if (!orderId) return;
+    
+    setIsFinishingJob(true);
+    try {
+      await updateRepairRequestMutation.mutateAsync({
+        requestId: orderId,
+        payload: {
+          data: {
+            status: 'completed',
+            problem_resolutions: resolutions
+          },
+          requestType: 'inbound'
+        }
+      });
+      
+      setCompletionFormVisible(false);
+      await refetch();
+      setJobCompletedModalVisible(true);
+    } catch (error: any) {
+      const errorMessage = getApiErrorMessage(error);
+      showError('Update Failed', errorMessage);
+    } finally {
+      setIsFinishingJob(false);
+    }
+  };
+
   if (isLoadingData) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -364,9 +531,6 @@ const MechanicOrderDetails = () => {
     );
   }
 
-  const request = orderData.data;
-  const customer = request.customer;
-  const status = request.status || 'pending';
   const makeName = getMakeName(request.vehicle_make);
   const modelName = getModelName(request.vehicle_make, request.vehicle_model);
 
@@ -398,6 +562,7 @@ const MechanicOrderDetails = () => {
             status === 'pending' ? 'bg-amber-50 border-2 border-amber-200' :
             status === 'accepted' ? 'bg-blue-50 border-2 border-blue-200' :
             status === 'in_transit' ? 'bg-indigo-50 border-2 border-indigo-200' :
+            status === 'arrived' ? 'bg-purple-50 border-2 border-purple-200' :
             status === 'in_progress' ? 'bg-orange-50 border-2 border-orange-200' :
             status === 'completed' ? 'bg-green-50 border-2 border-green-200' :
             status === 'cancelled' || status === 'declined' ? 'bg-red-50 border-2 border-red-200' :
@@ -408,6 +573,7 @@ const MechanicOrderDetails = () => {
                 status === 'pending' ? 'bg-amber-100' :
                 status === 'accepted' ? 'bg-blue-100' :
                 status === 'in_transit' ? 'bg-indigo-100' :
+                status === 'arrived' ? 'bg-purple-100' :
                 status === 'in_progress' ? 'bg-orange-100' :
                 status === 'completed' ? 'bg-green-100' :
                 status === 'cancelled' || status === 'declined' ? 'bg-red-100' :
@@ -416,6 +582,7 @@ const MechanicOrderDetails = () => {
                 {status === 'pending' && <ClockIcon size={24} color="#D97706" />}
                 {status === 'accepted' && <CheckCircleIcon size={24} color="#2563EB" />}
                 {status === 'in_transit' && <TruckIcon size={24} color="#4F46E5" />}
+                {status === 'arrived' && <MapPinIcon size={24} color="#7C3AED" />}
                 {status === 'in_progress' && <WrenchScrewdriverIcon size={24} color="#EA580C" />}
                 {status === 'completed' && <CheckCircleSolidIcon size={24} color="#16A34A" />}
                 {(status === 'cancelled' || status === 'declined') && <XCircleIcon size={24} color="#DC2626" />}
@@ -425,6 +592,7 @@ const MechanicOrderDetails = () => {
                   status === 'pending' ? 'text-amber-800' :
                   status === 'accepted' ? 'text-blue-800' :
                   status === 'in_transit' ? 'text-indigo-800' :
+                  status === 'arrived' ? 'text-purple-800' :
                   status === 'in_progress' ? 'text-orange-800' :
                   status === 'completed' ? 'text-green-800' :
                   status === 'cancelled' || status === 'declined' ? 'text-red-800' :
@@ -436,6 +604,7 @@ const MechanicOrderDetails = () => {
                   status === 'pending' ? 'text-amber-600' :
                   status === 'accepted' ? 'text-blue-600' :
                   status === 'in_transit' ? 'text-indigo-600' :
+                  status === 'arrived' ? 'text-purple-600' :
                   status === 'in_progress' ? 'text-orange-600' :
                   status === 'completed' ? 'text-green-600' :
                   status === 'cancelled' || status === 'declined' ? 'text-red-600' :
@@ -444,6 +613,7 @@ const MechanicOrderDetails = () => {
                   {status === 'pending' && 'Waiting for your response'}
                   {status === 'accepted' && 'Head to customer location'}
                   {status === 'in_transit' && 'On your way to customer'}
+                  {status === 'arrived' && 'You have reached the customer'}
                   {status === 'in_progress' && 'Working on the repair'}
                   {status === 'completed' && 'Job successfully completed'}
                   {status === 'cancelled' && 'This job was cancelled'}
@@ -452,6 +622,63 @@ const MechanicOrderDetails = () => {
               </View>
             </View>
           </View>
+
+          {/* Live Tracking Map for Mechanic */}
+          {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && request.service_latitude && request.service_longitude && (
+            <View className="rounded-2xl overflow-hidden h-64 mb-5 border-2 border-gray-100 shadow-sm">
+                <MapView
+                    initialRegion={{
+                        latitude: request.service_latitude,
+                        longitude: request.service_longitude,
+                        latitudeDelta: 0.05,
+                        longitudeDelta: 0.05,
+                    }}
+                    style={{ flex: 1 }}
+                >
+                    {/* Destination Marker (User) */}
+                    <Marker coordinate={{ latitude: request.service_latitude, longitude: request.service_longitude }}>
+                        <View className="bg-red-500 p-2 rounded-full border-2 border-white shadow-md">
+                            <UserIcon size={20} color="#FFFFFF" />
+                        </View>
+                    </Marker>
+
+                    {/* Current Position Marker (Mechanic) */}
+                    {mechanicLocation && (
+                        <Marker coordinate={mechanicLocation}>
+                            <View className="bg-gray-900 p-2 rounded-full border-2 border-white shadow-md">
+                                <TruckIcon size={20} color="#FFFFFF" />
+                            </View>
+                        </Marker>
+                    )}
+                </MapView>
+                <View className="absolute bottom-3 left-3 right-3 bg-white/95 p-3 rounded-lg border border-gray-100 flex-row items-center">
+                    <MapPinIcon size={16} color="#6B7280" />
+                    <Text className="text-xs font-NunitoMedium text-gray-600 ml-2 flex-1" numberOfLines={1}>
+                        Destination: {request.service_address || 'Customer Location'}
+                    </Text>
+                </View>
+            </View>
+          )}
+
+          {/* Action Buttons for communication */}
+          {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && (
+            <View className="flex-row items-center justify-between mb-5 gap-3">
+              <TouchableOpacity
+                onPress={() => handleCall(customer?.phone_number || '')}
+                className="flex-1 flex-row items-center justify-center bg-gray-50 py-3 rounded-xl border border-gray-200"
+              >
+                <PhoneIcon size={18} color="#374151" />
+                <Text className="text-sm font-NunitoBold text-gray-700 ml-2">Call Customer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(routes.chatSeller as any)}
+                className="flex-1 flex-row items-center justify-center bg-blue-600 py-3 rounded-xl shadow-sm"
+              >
+                <ChatBubbleLeftRightIcon size={18} color="#FFFFFF" />
+                <Text className="text-sm font-NunitoBold text-white ml-2">Chat Support</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Customer Information Card */}
           <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
@@ -732,7 +959,7 @@ const MechanicOrderDetails = () => {
                     )}
                   </View>
                   <View className={`w-0.5 h-12 ${
-                    request.in_progress_at ? 'bg-green-500' : 'bg-gray-200'
+                    request.arrived_at ? 'bg-green-500' : 'bg-gray-200'
                   }`} />
                 </View>
                 <View className="flex-1 pb-4">
@@ -748,7 +975,39 @@ const MechanicOrderDetails = () => {
                 </View>
               </View>
 
-              {/* Step 4: Work Started */}
+              {/* Step 4: Arrived */}
+              <View className="flex-row">
+                <View className="items-center mr-4">
+                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                    request.arrived_at ? 'bg-green-500' :
+                    status === 'arrived' ? 'bg-purple-500' : 'bg-gray-200'
+                  }`}>
+                    {request.arrived_at ? (
+                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                    ) : status === 'arrived' ? (
+                      <MapPinIcon size={16} color="#FFFFFF" />
+                    ) : (
+                      <View className="w-3 h-3 rounded-full bg-gray-400" />
+                    )}
+                  </View>
+                  <View className={`w-0.5 h-12 ${
+                    request.in_progress_at ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                </View>
+                <View className="flex-1 pb-4">
+                  <Text className={`text-sm font-NunitoBold ${
+                    request.arrived_at || status === 'arrived' ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    Arrived At Location
+                  </Text>
+                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                    {request.arrived_at ? formatDateTime(request.arrived_at) :
+                     status === 'arrived' ? 'Reached' : 'Pending'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Step 5: Work Started */}
               <View className="flex-row">
                 <View className="items-center mr-4">
                   <View className={`w-8 h-8 rounded-full items-center justify-center ${
@@ -873,7 +1132,7 @@ const MechanicOrderDetails = () => {
       </ScrollView>
 
       {/* Action Buttons - Conditional based on status */}
-      {orderId && (status === 'pending' || status === 'accepted' || status === 'in_transit' || status === 'in_progress') && (
+      {orderId && (status === 'pending' || status === 'accepted' || status === 'in_transit' || status === 'arrived' || status === 'in_progress') && (
         <View className="bg-white border-t border-gray-200 px-5 py-4 pb-12">
           <View className="flex-row space-x-3 gap-3">
             {/* Pending: Accept and Decline */}
@@ -946,23 +1205,75 @@ const MechanicOrderDetails = () => {
               </>
             )}
 
-            {/* In Transit: In Progress and Cancel */}
+            {/* In Transit: Confirm Arrival and Cancel */}
             {status === 'in_transit' && (
               <>
                 <TouchableOpacity
-                  onPress={() => openActionConfirmation('in_progress')}
+                  onPress={() => openActionConfirmation('arrived')}
                   disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
+                  className={`flex-1 flex-row items-center justify-center bg-purple-100 border border-purple-600 rounded-[.4rem] py-3 ${
                     updateStatusMutation.isPending || cancelRequestMutation.isPending
                       ? 'opacity-50'
                       : ''
                   }`}
                 >
-                  <WrenchScrewdriverIcon size={18} color="#16A34A" />
-                  <Text className="text-green-700 font-NunitoSemiBold ml-2">
-                    Start Work
+                  <MapPinIcon size={18} color="#7C3AED" />
+                  <Text className="text-purple-700 font-NunitoSemiBold ml-2">
+                    Confirm Arrival
                   </Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setCancelModalVisible(true)}
+                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
+                    updateStatusMutation.isPending || cancelRequestMutation.isPending
+                      ? 'opacity-50'
+                      : ''
+                  }`}
+                >
+                  <XCircleIcon size={18} color="#DC2626" />
+                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
+                    Cancel Job
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Arrived: Verify OTP, then Start Work and Cancel */}
+            {status === 'arrived' && (
+              <>
+                {!isOtpVerified ? (
+                  <TouchableOpacity
+                    onPress={() => setOtpModalVisible(true)}
+                    disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                    className={`flex-1 flex-row items-center justify-center bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
+                      updateStatusMutation.isPending || cancelRequestMutation.isPending
+                        ? 'opacity-50'
+                        : ''
+                    }`}
+                  >
+                    <ShieldCheckIcon size={18} color="#2563EB" />
+                    <Text className="text-blue-700 font-NunitoSemiBold ml-2">
+                      Verify Arrival
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => openActionConfirmation('in_progress')}
+                    disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
+                    className={`flex-1 flex-row items-center justify-center bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
+                      updateStatusMutation.isPending || cancelRequestMutation.isPending
+                        ? 'opacity-50'
+                        : ''
+                    }`}
+                  >
+                    <WrenchScrewdriverIcon size={18} color="#16A34A" />
+                    <Text className="text-green-700 font-NunitoSemiBold ml-2">
+                      Start Work
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   onPress={() => setCancelModalVisible(true)}
@@ -1012,6 +1323,14 @@ const MechanicOrderDetails = () => {
         isLoading={cancelRequestMutation.isPending}
       />
 
+      {/* Job Completion Form Modal */}
+      <JobCompletionFormModal
+        visible={completionFormVisible}
+        onClose={() => setCompletionFormVisible(false)}
+        onSubmit={handleFinalizeJob}
+        isLoading={isFinishingJob}
+      />
+
       {/* Action Confirmation Modal */}
       <MechanicActionConfirmationModal
         visible={actionModalVisible}
@@ -1021,22 +1340,18 @@ const MechanicOrderDetails = () => {
         isLoading={isActionPending()}
       />
 
-      {/* Job Completed Success Modal */}
+      {/* Job Success Modal */}
       <JobCompletedModal
         visible={jobCompletedModalVisible}
         onClose={() => setJobCompletedModalVisible(false)}
-        showViewEarnings={true}
       />
 
-      {/* Custom Alert */}
       <CustomAlert
         visible={visible}
-        title={alertConfig?.title || ""}
-        message={alertConfig?.message || ""}
+        title={alertConfig?.title || 'Alert'}
+        message={alertConfig?.message || ''}
         type={alertConfig?.type || 'info'}
         onClose={hideAlert}
-        autoDismiss={alertConfig?.autoDismiss}
-        autoDismissDelay={alertConfig?.autoDismissDelay}
       />
     </SafeAreaView>
   );

@@ -36,6 +36,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFavoriteProducts } from "@/hooks/useProducts";
+import { useUserOrders } from "@/hooks/useOrders";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const Profile = () => {
@@ -64,8 +65,15 @@ const Profile = () => {
     data: followedMerchantsData,
     refetch: refetchFollowedMerchants
   } = useFollowedMerchants();
+
+  // Fetch orders count
+  const {
+      data: ordersData,
+      refetch: refetchOrders
+  } = useUserOrders();
   
   const followedMerchantsCount = Array.isArray(followedMerchantsData?.data) ? followedMerchantsData.data.length : 0;
+  const ordersCount = Array.isArray(ordersData?.data) ? ordersData.data.length : 0;
 
   const { visible, alertConfig, hideAlert } = useCustomAlert();
   const logoutMutation = useLogout();
@@ -73,8 +81,12 @@ const Profile = () => {
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {
-      await refetch();
-      await Promise.all([refetch(), refetchFavorites(), refetchFollowedMerchants()]);
+      await Promise.all([
+        refetch(), 
+        refetchFavorites(), 
+        refetchFollowedMerchants(),
+        refetchOrders()
+      ]);
     }
   });
 
@@ -247,7 +259,7 @@ const Profile = () => {
                     onPress={() => router.push(routes.myOrders as any)}
                     className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
                   >
-                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">0</Text>
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">{ordersCount}</Text>
                     <View className="flex-row items-center">
                       <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
                       <ChevronRightIcon size={12} color="#9CA3AF" />

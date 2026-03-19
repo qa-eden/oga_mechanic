@@ -745,7 +745,7 @@ const EditRentCar = () => {
                       }}
                       disabled={isSubmitting || formikIsSubmitting}
                       loading={isSubmitting || formikIsSubmitting}
-                      loadingText="Updating..."
+                      loadingText="Updating"
                       className="mb-3"
                     />
 

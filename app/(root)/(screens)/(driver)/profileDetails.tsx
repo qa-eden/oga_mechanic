@@ -23,7 +23,7 @@ import {
   CameraIcon,
   ShieldCheckIcon,
 } from "react-native-heroicons/outline";
-import { useDriverProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useDriverProfile, useBanks, useVerifyBank, userProfileKeys } from "@/hooks/useUserProfile";
 import { driverRoutes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
@@ -617,7 +617,7 @@ const ProfileDetails = () => {
       }
 
       await userAPI.submitDriverKYC(formData);
-      queryClient.invalidateQueries({ queryKey: ['driver', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       showToast.success("Section updated successfully");
       setIsModalVisible(false);
     } catch (error: any) {

@@ -381,7 +381,7 @@ const Step3 = () => {
                                                 onPress={() => formikHandleSubmit()}
                                                 disabled={!isValid || !dirty || isSubmitting}
                                                 loading={isSubmitting}
-                                                loadingText="Processing..."
+                                                loadingText="Processing"
                                             />
 
                                             <AuthNavigateLink

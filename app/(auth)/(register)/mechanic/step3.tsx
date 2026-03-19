@@ -24,6 +24,7 @@ import ImageUpload from "@/components/ImageUpload";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { userAPI } from "@/lib/api/user";
 import { useProfileStore } from "@/hooks/useProfileStore";
+import { useSubmitMechanicKYC } from "@/hooks/useUserProfile";
 
 const validationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
@@ -68,7 +69,10 @@ const MechanicStep3 = () => {
   const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
   const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
   const [selectedMakes, setSelectedMakes] = useState<SelectedMake[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingInternal, setIsSubmittingInternal] = useState(false);
+  const submitKYCMutation = useSubmitMechanicKYC();
+
+  const isSubmitting = isSubmittingInternal || submitKYCMutation.isPending;
 
   // Fetch vehicle makes
   const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
@@ -289,7 +293,7 @@ const MechanicStep3 = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmittingInternal(true);
     try {
       const formData = new FormData();
       formData.append('location', values.location);
@@ -326,22 +330,28 @@ const MechanicStep3 = () => {
         } as any);
       }
 
-      console.log('🚀 Submitting Mechanic KYC...');
-      await userAPI.submitMechanicKYC(formData);
-      
-      // Update global profile state
-      useProfileStore.getState().setIsProfileComplete(true);
-      
-      Alert.alert(
-        "Success",
-        "Your profile has been submitted for review!",
-        [{ text: "OK", onPress: () => router.replace("/(root)/(tabs)/(mechanic)/home") }]
-      );
+      console.log('🚀 Submitting Mechanic KYC via Mutation...');
+      submitKYCMutation.mutate(formData, {
+        onSuccess: () => {
+          // Update global profile state
+          useProfileStore.getState().setIsProfileComplete(true);
+          
+          Alert.alert(
+            "Success",
+            "Your profile has been submitted for review!",
+            [{ text: "OK", onPress: () => router.replace("/(root)/(tabs)/(mechanic)/home") }]
+          );
+        },
+        onError: (error: any) => {
+          console.error('❌ KYC Submission Failed:', error);
+          Alert.alert("Error", error?.response?.data?.message || "Failed to submit profile. Please try again.");
+        }
+      });
     } catch (error: any) {
-      console.error('❌ KYC Submission Failed:', error);
-      Alert.alert("Error", error?.response?.data?.message || "Failed to submit profile. Please try again.");
+      console.error('❌ Form Preparation Error:', error);
+      Alert.alert("Error", "Failed to prepare submission data.");
     } finally {
-      setIsSubmitting(false);
+      // isSubmitting is handled by mutation state primarily
     }
   };
 

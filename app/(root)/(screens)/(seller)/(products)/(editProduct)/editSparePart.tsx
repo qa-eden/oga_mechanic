@@ -562,7 +562,7 @@ const EditSparePart = () => {
                     onPress={formikHandleSubmit}
                     disabled={!isValid || isSubmitting}
                     loading={isSubmitting}
-                    loadingText="Updating..."
+                    loadingText="Updating"
                     className="mb-3"
                   />
                   <Text className="text-xs text-gray-500 text-center font-NunitoMedium">

@@ -24,7 +24,7 @@ import { Country } from "react-native-country-picker-modal";
 import { getStatesByCountry, getCitiesByState } from "@/constants/locationData";
 import { userAPI } from "@/lib/api/user";
 import { useProfileStore } from "@/hooks/useProfileStore";
-import { useRiderProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useRiderProfile } from "@/hooks/useUserProfile";
 import ProgressBar from "@/components/ProgressBar";
 import LivenessCamera from "@/components/LivenessCamera";
 
@@ -49,10 +49,6 @@ export interface FormValues {
   // Step 3: Identity & Docs
   government_id: string; // Document type (e.g. "nin", "passport")
   id_number: string;
-
-  // Step 4: Banking
-  bank_name: string;
-  account_number: string;
 }
 
 // Global Validation Schemas per Step
@@ -85,17 +81,11 @@ const step3Schema = Yup.object().shape({
   id_number: Yup.string().required("Required"),
 });
 
-const step4Schema = Yup.object().shape({
-  bank_name: Yup.string().required("Required"),
-  account_number: Yup.string().required("Required"),
-});
-
 const getValidationSchema = (step: number) => {
   switch (step) {
     case 1: return step1Schema;
     case 2: return step2Schema;
     case 3: return step3Schema;
-    case 4: return step4Schema;
     default: return step1Schema;
   }
 };
@@ -103,9 +93,7 @@ const getValidationSchema = (step: number) => {
 const RiderKYC = () => {
   const formikRef = useRef<FormikProps<FormValues>>(null);
   const scrollRef = useRef<any>(null);
-  const accountNumberRef = useRef<TextInput>(null);
   const { data: profileData, isLoading: profileLoading } = useRiderProfile();
-  const { data: banksData, isLoading: banksLoading } = useBanks();
 
   const riderProfile = profileData?.data?.rider_profile;
   const userObj = riderProfile?.user;
@@ -116,7 +104,8 @@ const RiderKYC = () => {
   const initialEmail = userObj?.email || "";
 
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const [errorMessage, setErrorMessage] = useState("");
+  const totalSteps = 3;
   const [isAddressFocused, setIsAddressFocused] = useState(false);
 
   const eighteenYearsAgo = React.useMemo(() => {
@@ -134,10 +123,6 @@ const RiderKYC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const [accountName, setAccountName] = useState<string>("");
-  const { mutate: verifyBank, isPending: isVerifying } = useVerifyBank();
 
   // Helper to safely parse date strings to Date objects (local time)
   const parseDate = (dateStr: string | null | undefined): Date | null => {
@@ -168,9 +153,7 @@ const RiderKYC = () => {
     ride_type: riderProfile?.ride_type || "",
     license_plate: riderProfile?.license_plate || "",
     government_id: riderProfile?.government_id || "",
-    id_number: riderProfile?.id_number || "",
-    bank_name: riderProfile?.bank_name || "",
-    account_number: riderProfile?.account_number || ""
+    id_number: riderProfile?.id_number || ""
   }), [riderProfile, initialFullName, initialEmail, initialPhone]);
 
   // Prefill document and photo states from profile
@@ -183,28 +166,6 @@ const RiderKYC = () => {
       if (riderProfile.ride_photo_back && !rideBack) setRideBack({ uri: riderProfile.ride_photo_back });
     }
   }, [riderProfile]);
-
-  // Trigger bank verification for prefilled data
-  React.useEffect(() => {
-    if (riderProfile?.bank_name && riderProfile?.account_number && !accountName && !isVerifying) {
-      verifyBank(
-        {
-          requestType: "inbound",
-          data: {
-            account_number: riderProfile.account_number,
-            bank_code: riderProfile.bank_name
-          }
-        },
-        {
-          onSuccess: (res) => {
-            if (res.status && res.data?.account_name) {
-              setAccountName(res.data.account_name);
-            }
-          }
-        }
-      );
-    }
-  }, [riderProfile?.bank_name, riderProfile?.account_number, verifyBank, isVerifying, accountName]);
 
   React.useEffect(() => {
     if (scrollRef.current) {
@@ -304,10 +265,6 @@ const RiderKYC = () => {
       // Step 3: Identity & Docs
       formData.append('government_id', values.government_id);
       formData.append('id_number', values.id_number);
-
-      // Step 4: Banking
-      formData.append('bank_name', values.bank_name);
-      formData.append('account_number', values.account_number);
 
       // Append Files
       if (govtIdFront) {
@@ -869,143 +826,12 @@ const RiderKYC = () => {
                         <Text className="text-gray-700 font-NunitoBold text-lg">Back</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => handleNextStep(validateForm, setTouched, values)}
+                        onPress={() => handleSubmit()}
                         className="flex-[2] py-4 bg-gray-900 rounded-xl items-center shadow-md"
                       >
-                        <Text className="text-white font-NunitoBold text-lg">Continue to Banking</Text>
+                        <Text className="text-white font-NunitoBold text-lg">Complete Verification</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                )}
-
-                {/* STEP 4: BANKING */}
-                {currentStep === 4 && (
-                  <View className="space-y-4 pb-10">
-                    <View className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                      <SectionHeader icon={IdentificationIcon} title="Banking Details" />
-                      <View className="space-y-4">
-                        <SelectField
-                          label="Bank Name"
-                          name="bank_name"
-                          placeholder="Select Bank"
-                          options={(banksData?.data || []).map(bank => ({
-                            label: bank.name,
-                            value: bank.code
-                          }))}
-                          value={values.bank_name}
-                          onValueChange={(val: string) => {
-                            setFieldValue("bank_name", val);
-                            setAccountName(""); // Reset account name
-                            setFieldError("account_number", undefined); // Reset error
-                            
-                            // Focus account number field when bank is selected
-                            if (val) {
-                              setTimeout(() => {
-                                accountNumberRef.current?.focus();
-                              }, 150);
-                            }
-
-                            if (val && values.account_number?.length === 10) {
-                              verifyBank(
-                                {
-                                  requestType: "inbound",
-                                  data: {
-                                    account_number: values.account_number,
-                                    bank_code: val
-                                  }
-                                },
-                                {
-                                  onSuccess: (res) => {
-                                    if (res.status && res.data?.account_name) {
-                                      setAccountName(res.data.account_name);
-                                      setFieldError("account_number", undefined);
-                                    } else {
-                                      setAccountName("");
-                                      setFieldError("account_number", res.message || "Could not verify account");
-                                      setFieldTouched("account_number", true);
-                                    }
-                                  },
-                                  onError: (err: any) => {
-                                    setAccountName("");
-                                    setFieldError("account_number", err.response?.data?.message || "Account verification service is temporarily unavailable.");
-                                    setFieldTouched("account_number", true);
-                                  }
-                                }
-                              );
-                            }
-                          }}
-                          error={errors.bank_name as string}
-                          touched={touched.bank_name as boolean}
-                          required
-                        />
-                        <InputField
-                          ref={accountNumberRef}
-                          label="Account Number"
-                          placeholder="10-digit account number"
-                          keyboardType="number-pad"
-                          value={values.account_number}
-                          onBlur={handleBlur("account_number")}
-                          error={errors.account_number}
-                          touched={touched.account_number}
-                          required
-                          onChangeText={(text: string) => {
-                            handleChange("account_number")(text);
-                            if (text.length !== 10) {
-                              setAccountName("");
-                              setFieldError("account_number", undefined);
-                            }
-                            if (text.length === 10 && values.bank_name) {
-                              setFieldError("account_number", undefined);
-                              verifyBank(
-                                {
-                                  requestType: "inbound",
-                                  data: {
-                                    account_number: text,
-                                    bank_code: values.bank_name
-                                  }
-                                },
-                                {
-                                  onSuccess: (res) => {
-                                    if (res.status && res.data?.account_name) {
-                                      setAccountName(res.data.account_name);
-                                      setFieldError("account_number", undefined);
-                                    } else {
-                                      setAccountName("");
-                                      setFieldError("account_number", res.message || "Could not verify account");
-                                      setFieldTouched("account_number", true);
-                                    }
-                                  },
-                                  onError: (err: any) => {
-                                    setAccountName("");
-                                    setFieldError("account_number", err.response?.data?.message || "Account verification service is temporarily unavailable.");
-                                    setFieldTouched("account_number", true);
-                                  }
-                                }
-                              );
-                            }
-                          }}
-                        />
-                        {isVerifying && <ActivityIndicator size="small" color="#D30309" className="absolute right-3 top-12" />}
-                        {accountName ? (
-                          <View className="bg-green-50 p-3 rounded-lg mt-1 border border-green-100">
-                            <Text className="text-green-700 text-sm font-NunitoBold">{accountName}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() => handleSubmit()}
-                      disabled={isSubmitting}
-                      className="py-4 bg-gray-900 rounded-xl items-center shadow-md mt-4"
-                    >
-                      {isSubmitting ? (
-                        <ActivityIndicator color="white" size="small" className="mr-2" />
-                      ) : null}
-                      <Text className="text-white font-NunitoBold text-lg">
-                        {isSubmitting ? "Submitting..." : "Complete Verification"}
-                      </Text>
-                    </TouchableOpacity>
                   </View>
                 )}
                 </View>

@@ -21,7 +21,7 @@ import {
   CreditCardIcon,
   ChevronRightIcon,
 } from "react-native-heroicons/outline";
-import { useRiderProfile, useBanks, useVerifyBank } from "@/hooks/useUserProfile";
+import { useRiderProfile, useBanks, useVerifyBank, userProfileKeys } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,7 +29,6 @@ import { Formik, FormikProps } from "formik";
 import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
 import FormikInput from "@/components/forms/FormikInput";
-import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
 import DateInput from "@/components/forms/DateInput";
@@ -179,8 +178,7 @@ const EditRiderProfile = () => {
       }
 
       await userAPI.submitRiderKYC(formData);
-      queryClient.invalidateQueries({ queryKey: userProfileKeys.primary() });
-      queryClient.invalidateQueries({ queryKey: ['rider', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
       showToast.success("Profile updated successfully");
       router.back();
     } catch (error: any) {
@@ -266,7 +264,7 @@ const EditRiderProfile = () => {
   }
 
   // Define userProfileKeys inside component to avoid import issues or define properly above
-  const userProfileKeys = { primary: () => ['userProfile', 'primary'] };
+  // Define userProfileKeys inside component to avoid import issues or define properly above
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>

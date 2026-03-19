@@ -39,8 +39,12 @@ const MechanicOrderCard: React.FC<MechanicOrderCardProps> = ({ order, onPress })
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'accepted':
-      case 'in_progress':
         return 'bg-blue-100 text-blue-800';
+      case 'in_transit':
+      case 'arrived':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'in_progress':
+        return 'bg-purple-100 text-purple-800';
       case 'completed':
         return 'bg-green-100 text-green-800';
       case 'declined':
@@ -57,6 +61,10 @@ const MechanicOrderCard: React.FC<MechanicOrderCardProps> = ({ order, onPress })
         return 'Pending';
       case 'accepted':
         return 'Accepted';
+      case 'in_transit':
+        return 'On The Way';
+      case 'arrived':
+        return 'Arrived';
       case 'in_progress':
         return 'In Progress';
       case 'completed':
@@ -127,7 +135,9 @@ const MechanicOrderCard: React.FC<MechanicOrderCardProps> = ({ order, onPress })
               
               <View className="flex-1">
                 <Text className="text-[15px] font-NunitoBold text-gray-900 mb-1" numberOfLines={1}>
-                  {order.mechanicName}
+                  {order.status === 'pending' && (order.mechanicName === 'Unknown Mechanic' || !order.mechanicName) 
+                    ? 'Finding a Mechanic...' 
+                    : `Mechanic: ${order.mechanicName}`}
                 </Text>
                 <View className="bg-primary-50 px-2 py-0.5 rounded">
                   <Text className="text-[10px] font-NunitoBold text-primary-600">

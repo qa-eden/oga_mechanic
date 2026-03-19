@@ -96,10 +96,11 @@ const FloatingCartButton = ({ bottom = 100, right = 20 }: FloatingCartButtonProp
     })
   ).current;
   
-  // Calculate total items from API data
+  // Calculate total items from API data - use length for unique products to match Cart page
   const itemCount = (() => {
     if (!cartData?.data?.items) return 0;
-    return cartData.data.items.reduce((total, item) => total + (item.quantity || 0), 0);
+    const items = cartData.data.items.filter((item: any) => item && item.product);
+    return items.length;
   })();
 
   const hasItems = itemCount > 0;
