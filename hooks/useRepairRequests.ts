@@ -149,3 +149,37 @@ export const useCancelRepairRequest = () => {
     },
   });
 };
+
+// Hook to verify repair request OTP
+export const useVerifyRepairRequestOtp = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ requestId, otpCode }: { requestId: string; otpCode: string }) =>
+      mechanicAPI.verifyRepairRequestOtp(requestId, otpCode),
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch repair request detail
+      queryClient.invalidateQueries({ queryKey: ['repair-request', variables.requestId] });
+      // Invalidate both user and mechanic repair requests list
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+    },
+  });
+};
+
+// Hook to verify repair completion (from user part)
+export const useVerifyRepairCompletion = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (requestId: string) => mechanicAPI.verifyRepairCompletion(requestId),
+    onSuccess: (_, requestId) => {
+      // Invalidate and refetch all related repair request queries
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'repair-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['repair-request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'analytics'] });
+    },
+  });
+};
+

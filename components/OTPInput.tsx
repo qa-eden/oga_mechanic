@@ -44,15 +44,17 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   pinCodeContainer: {
-    width: 50,
-    height: 50,
+    width: 44,
+    height: 48,
     backgroundColor: "#f9f9f9",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#ccc",
     justifyContent: "center",
     alignItems: "center",
+    marginHorizontal: 1,
   },
+
   pinCodeText: {
     fontSize: 20,
     fontWeight: "bold",

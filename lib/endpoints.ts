@@ -69,8 +69,10 @@ export const MECHANIC_ENDPOINTS = {
   SCHEDULE: '/mechanic/schedule',
   VEHICLE_MAKES: '/mechanics/vehicle-makes/',
   REPAIR_REQUESTS: '/mechanics/repair-requests/',
+  VERIFY_OTP: (id: string) => `/mechanics/repair-requests/${id}/verify-otp/`,
   ANALYTICS: '/mechanics/mechanic-analytics/',
 } as const;
+
 
 // Driver endpoints (transportation providers)
 export const DRIVER_ENDPOINTS = {

@@ -18,9 +18,12 @@ import {
     CreditCardIcon, 
     ShoppingBagIcon,
     ChatBubbleLeftEllipsisIcon,
-    ClipboardDocumentIcon
+    ClipboardDocumentIcon,
+    ArchiveBoxIcon,
+    TruckIcon,
+    CheckCircleIcon
 } from "react-native-heroicons/outline";
-import { XCircleIcon, StarIcon } from "react-native-heroicons/solid";
+import { XCircleIcon, StarIcon, CheckCircleIcon as CheckCircleIconSolid } from "react-native-heroicons/solid";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Clipboard from 'expo-clipboard';
@@ -154,6 +157,57 @@ const OrderDetails = () => {
 
   const styles = getStatusStyle(order.status || 'pending');
 
+  const getStatusIndex = (status: string) => {
+    const s = status?.toLowerCase() || ''
+    if (s === 'pending') return 0
+    if (s === 'paid') return 1
+    if (s === 'processing' || s === 'packed') return 2
+    if (s === 'shipped') return 3
+    if (s === 'out_for_delivery') return 4
+    if (s === 'delivered' || s === 'completed') return 5
+    return 0
+  }
+
+  const currentIndex = getStatusIndex(order.status)
+
+  const steps = [
+    {
+      title: "Order Placed",
+      time: order.created_at ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently",
+      description: "We have received your order",
+      icon: ArchiveBoxIcon,
+      timestamp: order.created_at
+    },
+    {
+      title: "Payment Confirmed",
+      time: order.paid_at ? new Date(order.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "",
+      description: "Payment has been successfully processed",
+      icon: CreditCardIcon,
+      timestamp: order.paid_at
+    },
+    {
+      title: "Processing",
+      time: "",
+      description: "Your order is being prepared for shipment",
+      icon: CheckCircleIcon,
+      timestamp: (order.status === 'processing' || order.status === 'packed') ? order.updated_at : null
+    },
+    {
+      title: "Shipped",
+      time: order.shipped_at ? new Date(order.shipped_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "",
+      description: "Package is on its way",
+      icon: TruckIcon,
+      timestamp: order.shipped_at
+    },
+    {
+      title: "Delivered",
+      time: (order.status === 'delivered' || order.status === 'completed') ? new Date(order.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "",
+      description: "Order reached destination",
+      icon: ShoppingBagIcon,
+      timestamp: (order.status === 'delivered' || order.status === 'completed') ? order.updated_at : null
+    }
+  ]
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50/50" edges={["top"]}>
       <StatusBar style="dark" />
@@ -206,17 +260,57 @@ const OrderDetails = () => {
             </View>
         </Animated.View>
 
-        {/* Track Order Button Section */}
-        <Animated.View entering={FadeInDown.delay(200).duration(600)} className="px-5 mb-6">
-            <CustomButton 
-                title="Track Live Order Status"
-                onPress={() => router.push({
-                    pathname: routes.orderTracking,
-                    params: { id: id }
+
+        {/* Status Timeline */}
+        <Animated.View entering={FadeInDown.delay(250).duration(600)} className="bg-white mx-5 mb-6 p-6 rounded-[32px] border border-gray-100 shadow-sm">
+            <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-6">Order Journey</Text>
+            
+            <View className="ml-1">
+                {steps.map((step, index) => {
+                    const isCompleted = index <= currentIndex || (order.status?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'completed');
+                    const isActive = index === currentIndex && (order.status?.toLowerCase() !== 'delivered' && order.status?.toLowerCase() !== 'completed');
+                    const isPending = index > currentIndex && (order.status?.toLowerCase() !== 'delivered' && order.status?.toLowerCase() !== 'completed');
+
+                    return (
+                        <View key={index} className="flex-row items-start">
+                            {/* Connector and Dot */}
+                            <View className="items-center mr-4">
+                                <View 
+                                    className={`w-7 h-7 rounded-full items-center justify-center z-10 
+                                    ${isCompleted ? 'bg-green-500' : 
+                                        isActive ? 'bg-primary-500 shadow-sm shadow-primary-300' : 'bg-gray-100'}`}
+                                >
+                                    {isCompleted ? (
+                                        <CheckCircleIconSolid size={16} color="white" />
+                                    ) : (
+                                        <step.icon size={14} color={isActive ? "white" : "#9CA3AF"} />
+                                    )}
+                                </View>
+                                {index < steps.length - 1 && (
+                                    <View 
+                                        className={`w-[2px] h-10 ${isCompleted ? 'bg-green-500' : 'bg-gray-100'}`} 
+                                    />
+                                )}
+                            </View>
+
+                            {/* Content */}
+                            <View className="flex-1 pb-4">
+                                <View className="flex-row justify-between items-center mb-0.5">
+                                    <Text className={`text-sm font-NunitoBold ${isPending ? 'text-gray-400' : 'text-gray-900'}`}>
+                                        {step.title}
+                                    </Text>
+                                    {step.time ? (
+                                        <Text className="text-[10px] font-NunitoSemiBold text-gray-400">{step.time}</Text>
+                                    ) : null}
+                                </View>
+                                <Text className={`text-[10px] font-NunitoMedium leading-4 ${isPending ? 'text-gray-300' : 'text-gray-500'}`}>
+                                    {isActive ? step.description : isCompleted ? "Completed" : "Pending"}
+                                </Text>
+                            </View>
+                        </View>
+                    );
                 })}
-                bgVariant="primary"
-                className="shadow-md shadow-primary-200"
-            />
+            </View>
         </Animated.View>
 
         {/* Order Items */}

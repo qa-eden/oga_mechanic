@@ -4,15 +4,18 @@ import { View, Text, ScrollView, TouchableOpacity, Animated, Share, Image } from
 import { useEffect, useRef } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useLocalSearchParams, router } from "expo-router"
-import { CheckCircleIcon } from "react-native-heroicons/solid"
 import { 
   ClipboardDocumentIcon, 
   CreditCardIcon, 
   TruckIcon, 
   ArrowRightIcon,
   QuestionMarkCircleIcon,
-  ChatBubbleBottomCenterTextIcon
+  ChatBubbleBottomCenterTextIcon,
+  ArchiveBoxIcon,
+  ShoppingBagIcon,
+  CheckCircleIcon as CheckCircleIconOutline
 } from "react-native-heroicons/outline"
+import { CheckCircleIcon as CheckCircleIconSolid } from "react-native-heroicons/solid"
 import { icons } from "@/constants"
 import CustomButton from "@/components/CustomButton"
 import { routes } from "@/constants/routes"
@@ -101,6 +104,52 @@ const OrderConfirmation = () => {
     outputRange: [0, -15],
   });
 
+  const getStatusIndex = (status: string) => {
+    const s = status?.toLowerCase() || ''
+    if (s === 'pending') return 0
+    if (s === 'paid') return 1
+    if (s === 'processing' || s === 'packed') return 2
+    if (s === 'shipped') return 3
+    if (s === 'out_for_delivery') return 4
+    if (s === 'delivered' || s === 'completed') return 5
+    return 0
+  }
+
+  const currentIndex = getStatusIndex(order?.status)
+
+  const steps = [
+    {
+      title: "Order Placed",
+      time: order?.created_at ? new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently",
+      description: "We have received your order",
+      icon: ArchiveBoxIcon
+    },
+    {
+      title: "Payment Confirmed",
+      time: order?.paid_at ? new Date(order.paid_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+      description: "Payment successful",
+      icon: CreditCardIcon
+    },
+    {
+      title: "Processing",
+      time: "",
+      description: "Preparing your order",
+      icon: CheckCircleIconOutline
+    },
+    {
+      title: "Shipped",
+      time: "",
+      description: "On its way",
+      icon: TruckIcon
+    },
+    {
+      title: "Delivered",
+      time: "",
+      description: "Reached destination",
+      icon: ShoppingBagIcon
+    }
+  ]
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50/30" edges={["top"]}>
       <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
@@ -125,7 +174,7 @@ const OrderConfirmation = () => {
           >
             <View className="relative items-center justify-center p-4">
                 <View className="w-28 h-28 bg-green-50 rounded-full items-center justify-center shadow-sm">
-                    <CheckCircleIcon size={70} color="#10B981" />
+                    <CheckCircleIconSolid size={70} color="#10B981" />
                 </View>
                 {/* Visual echoes/rings */}
                 <Animated.View 
@@ -238,17 +287,62 @@ const OrderConfirmation = () => {
               </Animated.View>
             )}
 
+            {/* Order Journey Timeline */}
+            <View 
+                className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-gray-100/50"
+            >
+                <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-6">Order Journey</Text>
+                
+                <View className="ml-1">
+                    {steps.map((step, index) => {
+                        const isCompleted = index <= currentIndex || (order?.status?.toLowerCase() === 'delivered' || order?.status?.toLowerCase() === 'completed');
+                        const isActive = index === currentIndex && (order?.status?.toLowerCase() !== 'delivered' && order?.status?.toLowerCase() !== 'completed');
+                        const isPending = index > currentIndex && (order?.status?.toLowerCase() !== 'delivered' && order?.status?.toLowerCase() !== 'completed');
+
+                        return (
+                            <View key={index} className="flex-row items-start">
+                                {/* Connector and Dot */}
+                                <View className="items-center mr-4">
+                                    <View 
+                                        className={`w-7 h-7 rounded-full items-center justify-center z-10 
+                                        ${isCompleted ? 'bg-green-500' : 
+                                            isActive ? 'bg-primary-500 shadow-sm shadow-primary-300' : 'bg-gray-100'}`}
+                                    >
+                                        {isCompleted ? (
+                                            <CheckCircleIconSolid size={16} color="white" />
+                                        ) : (
+                                            <step.icon size={14} color={isActive ? "white" : "#9CA3AF"} />
+                                        )}
+                                    </View>
+                                    {index < steps.length - 1 && (
+                                        <View 
+                                            className={`w-[2px] h-10 ${isCompleted ? 'bg-green-500' : 'bg-gray-100'}`} 
+                                        />
+                                    )}
+                                </View>
+
+                                {/* Content */}
+                                <View className="flex-1 pb-4">
+                                    <View className="flex-row justify-between items-center mb-0.5">
+                                        <Text className={`text-sm font-NunitoBold ${isPending ? 'text-gray-400' : 'text-gray-900'}`}>
+                                            {step.title}
+                                        </Text>
+                                        {isCompleted && step.time ? (
+                                            <Text className="text-[10px] font-NunitoSemiBold text-gray-400">{step.time}</Text>
+                                        ) : null}
+                                    </View>
+                                    <Text className={`text-[10px] font-NunitoMedium leading-4 ${isPending ? 'text-gray-300' : 'text-gray-500'}`}>
+                                        {isActive ? step.description : isCompleted ? "Completed" : "Pending"}
+                                    </Text>
+                                </View>
+                            </View>
+                        );
+                    })}
+                </View>
+            </View>
+
             {/* Action Buttons */}
             <View className="space-y-3 pt-4 gap-3">
-                <CustomButton 
-                    title="Track Delivery Status"
-                    onPress={() => router.push({
-                        pathname: routes.orderTracking,
-                        params: { id: orderId }
-                    })}
-                    bgVariant="primary" 
-                    className="rounded-2xl"
-                />
 
                 <CustomButton 
                     title="Continue Shopping"

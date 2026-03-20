@@ -24,7 +24,7 @@ import {
   PhoneIcon,
   ChatBubbleLeftRightIcon,
 } from 'react-native-heroicons/outline';
-import { useRepairRequestDetail, useCancelRepairRequest } from '@/hooks/useRepairRequests';
+import { useRepairRequestDetail, useCancelRepairRequest, useVerifyRepairCompletion } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import MechanicReviewModal from '@/components/modals/MechanicReviewModal';
 import CancelRequestModal from '@/components/modals/CancelRequestModal';
@@ -85,6 +85,9 @@ const TrackMechanicOrder = () => {
 
   // Cancel request mutation
   const cancelRequestMutation = useCancelRepairRequest();
+  
+  // Verify completion mutation
+  const verifyCompletionMutation = useVerifyRepairCompletion();
 
   // Custom Alert
   const { visible: alertVisible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
@@ -123,25 +126,25 @@ const TrackMechanicOrder = () => {
 
     // Simulate movement if in_transit
     if (orderData?.data?.status === 'in_transit' && mechanicLocation) {
-        const interval = setInterval(() => {
-            setMechanicLocation(prev => {
-                if (!prev) return prev;
-                // Move 5% closer to destination every interval
-                const latDiff = serviceLat - prev.latitude;
-                const lngDiff = serviceLng - prev.longitude;
-                
-                // If very close, stop moving
-                if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
-                    return prev;
-                }
+      const interval = setInterval(() => {
+        setMechanicLocation(prev => {
+          if (!prev) return prev;
+          // Move 5% closer to destination every interval
+          const latDiff = serviceLat - prev.latitude;
+          const lngDiff = serviceLng - prev.longitude;
 
-                return {
-                    latitude: prev.latitude + (latDiff * 0.05),
-                    longitude: prev.longitude + (lngDiff * 0.05),
-                };
-            });
-        }, 25000); // Sink with polling interval
-        return () => clearInterval(interval);
+          // If very close, stop moving
+          if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
+            return prev;
+          }
+
+          return {
+            latitude: prev.latitude + (latDiff * 0.05),
+            longitude: prev.longitude + (lngDiff * 0.05),
+          };
+        });
+      }, 25000); // Sink with polling interval
+      return () => clearInterval(interval);
     }
   }, [serviceLat, serviceLng, orderData?.data?.status]);
 
@@ -232,7 +235,14 @@ const TrackMechanicOrder = () => {
     {
       id: 'completed',
       label: 'Service Completed',
-      description: 'Your service has been completed successfully',
+      description: 'The mechanic has finished the repair',
+      completed: false,
+      active: false,
+    },
+    {
+      id: 'verified',
+      label: 'Job Verified',
+      description: 'You have confirmed the service completion',
       completed: false,
       active: false,
     },
@@ -247,11 +257,23 @@ const TrackMechanicOrder = () => {
       'arrived': 3,
       'in_progress': 4,
       'completed': 5,
+      'verified': 6,
+      'verify_completed': 6,
       'cancelled': -1,
       'declined': -1,
     };
 
-    const currentIndex = statusMap[currentStatus] ?? 0;
+    const apiStatus = currentStatus.toLowerCase();
+    let currentStep = statusMap[apiStatus] ?? 0;
+    
+    // If status is verify_completed or we have the timestamp, it's fully completed
+    const isVerified = (apiStatus === 'verified' || apiStatus === 'verify_completed' || !!orderTimestamps?.verify_completed_at);
+    
+    if (isVerified) {
+      currentStep = 7;
+    } else if (apiStatus === 'completed') {
+      currentStep = 6;
+    }
 
     // Map timestamps to status steps
     const timestampMap: Record<string, string | null> = {
@@ -261,14 +283,20 @@ const TrackMechanicOrder = () => {
       'arrived': orderTimestamps?.arrived_at || null,
       'in_progress': orderTimestamps?.in_progress_at || null,
       'completed': orderTimestamps?.completed_at || null,
+      'verified': orderTimestamps?.verify_completed_at || null,
     };
 
-    return statusFlow.map((status, index) => ({
-      ...status,
-      completed: index < currentIndex,
-      active: index === currentIndex,
-      timestamp: timestampMap[status.id] || null,
-    }));
+    return statusFlow.map((status, index) => {
+      const timestamp = timestampMap[status.id];
+      
+      return {
+        ...status,
+        completed: !!timestamp,
+        // Active is the current step only if it doesn't have a timestamp yet
+        active: index === currentStep && !timestamp,
+        timestamp: timestamp || null,
+      };
+    });
   };
 
   // Transform API data to component format
@@ -332,6 +360,7 @@ const TrackMechanicOrder = () => {
       started_at: request.started_at || null,
       completed_at: request.completed_at || null,
       cancelled_at: request.cancelled_at || null,
+      verify_completed_at: request.verify_completed_at || null,
     };
   })();
 
@@ -344,6 +373,7 @@ const TrackMechanicOrder = () => {
     in_progress_at: (order as any).in_progress_at,
     completed_at: (order as any).completed_at,
     cancelled_at: (order as any).cancelled_at,
+    verify_completed_at: (order as any).verify_completed_at,
   });
 
   const onRefresh = async () => {
@@ -367,27 +397,39 @@ const TrackMechanicOrder = () => {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      const finalReason = selectedCancelReason === 'Other' ? cancelReason.trim() : selectedCancelReason;
+    const finalReason = selectedCancelReason === 'Other' ? cancelReason.trim() : selectedCancelReason;
 
-      await cancelRequestMutation.mutateAsync({
-        requestId: orderId,
-        reason: finalReason,
-      });
+    cancelRequestMutation.mutate(
+      { requestId: orderId, reason: finalReason },
+      {
+        onSuccess: () => {
+          showSuccess('Success', 'Request cancelled successfully');
+          setShowCancelModal(false);
+          setCancelReason('');
+          setSelectedCancelReason('');
+          setTimeout(() => {
+            router.back();
+          }, 2000);
+        },
+        onError: (err: any) => {
+          showError('Error', getErrorMessage(err));
+        },
+      }
+    );
+  };
 
-      showSuccess('Request Cancelled', 'Your repair request has been cancelled.');
-      setShowCancelModal(false);
-      setSelectedCancelReason('');
-      setCancelReason('');
-      setTimeout(() => {
-        router.back();
-      }, 2000);
-    } catch (error) {
-      showError('Error', 'Failed to cancel request. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleVerifyCompletion = () => {
+    if (!orderId) return;
+    
+    verifyCompletionMutation.mutate(orderId, {
+      onSuccess: () => {
+        showSuccess('Success', 'Repair completion verified successfully');
+        refetch(); // Refetch to update status and hide button
+      },
+      onError: (err: any) => {
+        showError('Error', getErrorMessage(err));
+      },
+    });
   };
 
   const handleReviewSubmit = async (rating: number, comment: string) => {
@@ -450,6 +492,9 @@ const TrackMechanicOrder = () => {
         return 'In Progress';
       case 'completed':
         return 'Completed';
+      case 'verified':
+      case 'verify_completed':
+        return 'Verified';
       case 'cancelled':
         return 'Cancelled';
       case 'declined':
@@ -459,12 +504,10 @@ const TrackMechanicOrder = () => {
     }
   };
 
-  const getArrivalCode = (id: string | undefined): string => {
-    if (!id) return '0000';
-    // Simple deterministic code based on ID for demo purposes
-    // In production, this would come from the backend/DB
-    const num = parseInt(id.replace(/[^0-9]/g, '').slice(-4)) || 1234;
-    return num.toString().padStart(4, '0');
+  const getOtpDisplayValue = (otp: string | number | undefined): string => {
+    if (!otp) return '------';
+    const otpStr = otp.toString();
+    return otpStr.length >= 6 ? otpStr : otpStr.padStart(6, '0');
   };
 
   const handleCall = (phoneNumber: string) => {
@@ -530,10 +573,10 @@ const TrackMechanicOrder = () => {
   }
 
   const canEdit = ['pending', 'accepted'].includes(currentStatus);
-  const canCancel = !['completed', 'cancelled', 'declined'].includes(currentStatus);
+  const canCancel = !['completed', 'verified', 'verify_completed', 'cancelled', 'declined'].includes(currentStatus);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={["top", "bottom"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
         <BackArrowBtn onPress={() => router.push(routes.myMechanicOrders)} />
@@ -545,7 +588,9 @@ const TrackMechanicOrder = () => {
 
       <ScrollView
         className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
+
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
@@ -562,8 +607,9 @@ const TrackMechanicOrder = () => {
               currentStatus === 'arrived' ? 'bg-indigo-50 border border-indigo-200' :
                 currentStatus === 'in_progress' ? 'bg-purple-50 border border-purple-200' :
                   currentStatus === 'completed' ? 'bg-green-50 border border-green-200' :
-                    currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-50 border border-red-200' :
-                      'bg-gray-50 border border-gray-200'
+                    currentStatus === 'verified' || currentStatus === 'verify_completed' ? 'bg-green-50 border border-green-200' :
+                      currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-50 border border-red-200' :
+                        'bg-gray-50 border border-gray-200'
           }`}>
           <View className="flex-row items-center">
             <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${currentStatus === 'pending' ? 'bg-amber-100' :
@@ -572,16 +618,17 @@ const TrackMechanicOrder = () => {
                   currentStatus === 'arrived' ? 'bg-indigo-100' :
                     currentStatus === 'in_progress' ? 'bg-purple-100' :
                       currentStatus === 'completed' ? 'bg-green-100' :
-                        currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-100' :
-                          'bg-gray-100'
+                        currentStatus === 'verified' || currentStatus === 'verify_completed' ? 'bg-green-100' :
+                          currentStatus === 'cancelled' || currentStatus === 'declined' ? 'bg-red-100' :
+                            'bg-gray-100'
               }`}>
               {currentStatus === 'pending' && <ClockIcon size={20} color="#D97706" />}
               {currentStatus === 'accepted' && <CheckCircleIconSolid size={20} color="#2563EB" />}
               {currentStatus === 'in_transit' && <TruckIcon size={20} color="#2563EB" />}
               {currentStatus === 'arrived' && <MapPinIconSolid size={20} color="#4F46E5" />}
               {currentStatus === 'in_progress' && <WrenchScrewdriverIcon size={20} color="#7C3AED" />}
-              {currentStatus === 'completed' && <CheckCircleIconSolid size={20} color="#10B981" />}
-                {(currentStatus === 'cancelled' || currentStatus === 'declined') && <XCircleIcon size={20} color="#DC2626" />}
+              {(currentStatus === 'completed' || currentStatus === 'verified' || currentStatus === 'verify_completed') && <CheckCircleIconSolid size={20} color="#10B981" />}
+              {(currentStatus === 'cancelled' || currentStatus === 'declined') && <XCircleIcon size={20} color="#DC2626" />}
             </View>
             <View className="flex-1">
               <Text className={`text-lg font-NunitoBold ${currentStatus === 'pending' ? 'text-amber-800' :
@@ -590,8 +637,9 @@ const TrackMechanicOrder = () => {
                     currentStatus === 'arrived' ? 'text-indigo-800' :
                       currentStatus === 'in_progress' ? 'text-purple-800' :
                         currentStatus === 'completed' ? 'text-green-800' :
-                          currentStatus === 'cancelled' || currentStatus === 'declined' ? 'text-red-800' :
-                            'text-gray-800'
+                          currentStatus === 'verified' || currentStatus === 'verify_completed' ? 'text-green-800' :
+                            currentStatus === 'cancelled' || currentStatus === 'declined' ? 'text-red-800' :
+                              'text-gray-800'
                 }`}>
                 {getStatusLabel(currentStatus)}
               </Text>
@@ -602,6 +650,7 @@ const TrackMechanicOrder = () => {
                 {currentStatus === 'arrived' && 'Mechanic has reached your location'}
                 {currentStatus === 'in_progress' && 'Your vehicle is being repaired'}
                 {currentStatus === 'completed' && 'Your service is complete'}
+                {(currentStatus === 'verified' || currentStatus === 'verify_completed') && 'You have confirmed the service completion'}
                 {(currentStatus === 'cancelled' || currentStatus === 'declined') && 'This request was cancelled'}
               </Text>
             </View>
@@ -630,16 +679,35 @@ const TrackMechanicOrder = () => {
           {/* Arrival Verification OTP */}
           {(currentStatus === 'accepted' || currentStatus === 'in_transit' || currentStatus === 'arrived') && (
             <View className="mt-4 pt-4 border-t border-gray-100/50 items-center">
-              <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-widest mb-2">Arrival Verification Code</Text>
-              <View className="flex-row space-x-3 gap-3">
-                {getArrivalCode(orderId).split('').map((digit, i) => (
-                  <View key={i} className="w-10 h-12 bg-white border border-gray-200 rounded-lg items-center justify-center shadow-sm">
-                    <Text className="text-xl font-NunitoExtraBold text-gray-900">{digit}</Text>
+              <View className="flex-row items-center justify-between w-full mb-2">
+                <View className="w-8" />
+                <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-widest">Arrival Verification Code</Text>
+                <TouchableOpacity 
+                  onPress={() => copyToClipboard(orderData?.data?.otp_code?.toString() || '')}
+                  className="p-1"
+                >
+                  <DocumentDuplicateIcon size={18} color={isCopied ? "#10B981" : "#6B7280"} />
+                </TouchableOpacity>
+              </View>
+
+              {orderData?.data?.is_otp_verified && (
+                <View className="flex-row items-center mb-3 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                  <CheckCircleIconSolid size={14} color="#10B981" />
+                  <Text className="text-[10px] font-NunitoBold text-green-700 ml-1">VERIFIED</Text>
+                </View>
+              )}
+
+              <View className="flex-row space-x-2 gap-2">
+                {getOtpDisplayValue(orderData?.data?.otp_code).split('').map((digit, i) => (
+                  <View key={i} className={`w-10 h-12 ${orderData?.data?.is_otp_verified ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} border rounded-lg items-center justify-center shadow-sm`}>
+                    <Text className={`text-xl font-NunitoExtraBold ${orderData?.data?.is_otp_verified ? 'text-green-700' : 'text-gray-900'}`}>{digit}</Text>
                   </View>
                 ))}
               </View>
               <Text className="text-[10px] font-NunitoMedium text-gray-400 mt-2 text-center px-4">
-                Share this code with the mechanic once they arrive to start the repair.
+                {orderData?.data?.is_otp_verified 
+                  ? "This code has been verified. The repair is now in progress."
+                  : "Share this code with the mechanic once they arrive to start the repair."}
               </Text>
             </View>
           )}
@@ -696,7 +764,7 @@ const TrackMechanicOrder = () => {
 
         {/* Mechanic Card */}
         {order.mechanic_name && order.mechanic_name !== 'Unknown Mechanic' && (
-          <TouchableOpacity 
+          <TouchableOpacity
             className="bg-white mx-5 mt-4 rounded-xl border border-gray-200 p-4"
             activeOpacity={0.7}
             onPress={() => {
@@ -855,45 +923,58 @@ const TrackMechanicOrder = () => {
           )}
         </View>
 
-        {/* Action Buttons */}
-        <View className="px-5 py-6">
-          <View className="flex-row gap-2 space-x-3 mb-3">
-            {canEdit && (
-              <View className="flex-1">
-                <CustomButton
-                  title="Edit Request"
-                  onPress={handleEdit}
-                  bgVariant="outline"
-                  textVariant='outline'
-                  className="py-3"
-                />
-              </View>
-            )}
-            {canCancel && (
-              <View className="flex-1">
-                <CustomButton
-                  title="Cancel Request"
-                  onPress={handleCancel}
-                  bgVariant="danger"
-                  className="py-3"
-                  disabled={isLoading}
-                  loading={isLoading}
-                />
-              </View>
-            )}
-          </View>
+      </ScrollView>
 
-          {/* Review Button - Only show for completed orders */}
-          {currentStatus === 'completed' && order.mechanic_id && (
-            <CustomButton
-              title="Give Review"
-              onPress={() => setShowReviewModal(true)}
-              bgVariant="primary"
-              className="py-3"
-            />
+      {/* Action Buttons Sticky at Bottom */}
+      <View className="px-5 pt-4 pb-10 bg-white border-t border-gray-100">
+        <View className="flex-row gap-3 mb-3">
+          {canEdit && (
+            <View className="flex-1">
+              <CustomButton
+                title="Edit Request"
+                onPress={handleEdit}
+                bgVariant="outline"
+                textVariant='outline'
+                className="py-3"
+              />
+            </View>
+          )}
+          {canCancel && (
+            <View className="flex-1">
+              <CustomButton
+                title="Cancel Request"
+                onPress={handleCancel}
+                bgVariant="danger"
+                className="py-3"
+                disabled={cancelRequestMutation.isPending}
+                loading={cancelRequestMutation.isPending}
+              />
+            </View>
           )}
         </View>
-      </ScrollView>
+
+        {/* Review Button - Only show for completed orders */}
+        {currentStatus === 'completed' && order.mechanic_id && !orderData?.data?.verify_completed_at && (
+          <CustomButton
+            title="Verify Completion"
+            onPress={handleVerifyCompletion}
+            bgVariant="success"
+            className="py-3"
+            disabled={verifyCompletionMutation.isPending}
+            loading={verifyCompletionMutation.isPending}
+          />
+        )}
+
+        {/* Review Button - Only show for completed orders */}
+        {(currentStatus === 'verified' || currentStatus === 'verify_completed') && order.mechanic_id && (
+          <CustomButton
+            title="Give Review"
+            onPress={() => setShowReviewModal(true)}
+            bgVariant="primary"
+            className="py-3"
+          />
+        )}
+      </View>
 
       {/* Review Modal */}
       <MechanicReviewModal

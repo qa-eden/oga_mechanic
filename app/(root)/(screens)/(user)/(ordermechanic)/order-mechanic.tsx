@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Alert, Keyboard, Platform, Dimensions, KeyboardAvoidingView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, ScrollView, Alert, Keyboard, Platform, Dimensions, KeyboardAvoidingView, TouchableOpacity, Modal, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
 import SelectField from '@/components/forms/SelectField';
@@ -40,6 +40,7 @@ const OrderMechanic = () => {
   const [serviceLongitude, setServiceLongitude] = useState<number | undefined>(undefined);
   const [preferredDate, setPreferredDate] = useState<Date | null>(null);
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
+  const [isScheduled, setIsScheduled] = useState(false);
   const [notes, setNotes] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -207,10 +208,10 @@ const OrderMechanic = () => {
   }, [focusedInput, scrollInputIntoView]);
 
   const handleSubmitRequest = () => {
-    if (!mechanicId) {
-      Alert.alert('Missing mechanic', 'Unable to submit request. Mechanic details are missing.');
-      return;
-    }
+    // if (!mechanicId) {
+    //   Alert.alert('Missing mechanic', 'Unable to submit request. Mechanic details are missing.');
+    //   return;
+    // }
 
     if (
       !serviceType ||
@@ -219,8 +220,7 @@ const OrderMechanic = () => {
       !vehicleYear ||
       !problemDescription.trim() ||
       !serviceAddress.trim() ||
-      !preferredDate ||
-      !preferredTimeSlot
+      (isScheduled && (!preferredDate || !preferredTimeSlot))
     ) {
       Alert.alert('Incomplete details', 'Please fill in all required fields before submitting.');
       return;
@@ -232,19 +232,22 @@ const OrderMechanic = () => {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       data: {
-        mechanic_id: mechanicId,
+        ...(mechanicId && { mechanic_id: mechanicId }),
         service_type: serviceType,
         vehicle_make: vehicleMake,
         vehicle_model: vehicleModel,
         vehicle_year: vehicleYearNumber,
         problem_description: problemDescription.trim(),
         service_address: serviceAddress.trim(),
-        service_latitude: serviceLatitude ? serviceLatitude.toFixed(5) : undefined,
-        service_longitude: serviceLongitude ? serviceLongitude.toFixed(5) : undefined,
-        preferred_date: preferredDate.toISOString().split('T')[0],
-        preferred_time_slot: preferredTimeSlot,
+        service_latitude: serviceLatitude ? parseFloat(serviceLatitude.toFixed(5)) : undefined,
+        service_longitude: serviceLongitude ? parseFloat(serviceLongitude.toFixed(5)) : undefined,
+        schedule: isScheduled,
+        ...(isScheduled && {
+          preferred_date: preferredDate?.toISOString().split('T')[0],
+          preferred_time_slot: preferredTimeSlot,
+        }),
         notes: notes.trim() || undefined,
       },
       requestType: 'inbound',
@@ -341,7 +344,7 @@ const OrderMechanic = () => {
 
 
   return (
-    <SafeAreaView className="bg-white flex-1">
+    <SafeAreaView className="bg-white flex-1" edges={["top", "bottom"]}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
         <BackArrowBtn />
@@ -363,6 +366,7 @@ const OrderMechanic = () => {
           className="flex-1 px-5 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
           {/* Loading state for edit mode */}
           {editMode && isLoadingOrder && (
@@ -481,30 +485,54 @@ const OrderMechanic = () => {
             />
           </View>
 
-          <View
-            ref={(ref) => {
-              inputRefs.current['date'] = ref;
-            }}
-          >
-            <DateInput
-              label="Preferred Date"
-              placeholder="Select date"
-              value={preferredDate}
-              onDateChange={setPreferredDate}
-              required
-              minimumDate={new Date()}
-              showTodayButton
-            />
-          </View>
+          {/* Scheduling Section */}
+          <View className="mt-4 mb-2">
+            <View className="flex-row items-center justify-between mb-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <View className="flex-1 mr-3">
+                <Text className="text-base font-NunitoBold text-gray-900">Schedule for later</Text>
+                <Text className="text-sm font-NunitoRegular text-gray-500 mt-0.5">
+                  Book a mechanic for a specific date & time
+                </Text>
+              </View>
+              <Switch
+                value={isScheduled}
+                onValueChange={setIsScheduled}
+                trackColor={{ false: '#D1D5DB', true: '#D30309' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
 
-          <SelectField
-            name="timeSlot"
-            label="Preferred Time Slot"
-            placeholder="Select a time slot"
-            options={timeSlotOptions}
-            value={preferredTimeSlot}
-            onValueChange={setPreferredTimeSlot}
-          />
+            {isScheduled && (
+              <View className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                <View
+                  ref={(ref) => {
+                    inputRefs.current['date'] = ref;
+                  }}
+                >
+                  <DateInput
+                    label="Preferred Date"
+                    placeholder="Select date"
+                    value={preferredDate}
+                    onDateChange={setPreferredDate}
+                    required
+                    minimumDate={new Date()}
+                    showTodayButton
+                  />
+                </View>
+
+                <View className="mt-4">
+                  <SelectField
+                    name="timeSlot"
+                    label="Preferred Time Slot"
+                    placeholder="Select a time slot"
+                    options={timeSlotOptions}
+                    value={preferredTimeSlot}
+                    onValueChange={setPreferredTimeSlot}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
 
           <View
             ref={(ref) => {
@@ -525,33 +553,32 @@ const OrderMechanic = () => {
             />
           </View>
 
-          {/* Proceed Button */}
-          {!isLoadingOrder && (
-            <View className="mt-8 mb-6">
-              <CustomButton
-                title={
-                  editMode
-                    ? (isUpdating ? "Updating request..." : "Update Request")
-                    : (isPending ? "Submitting request..." : "Submit Request")
-                }
-                onPress={handleSubmitRequest}
-                bgVariant="primary"
-                className="py-4"
-                loading={isPending || isUpdating}
-                disabled={isPending || isUpdating}
-              />
-            </View>
-          )}
+        </ScrollView>
 
           {/* Error Display */}
           {(error || updateError) && (
-            <View className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <View className="mx-5 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <Text className="text-red-600 text-sm font-NunitoMedium text-center">
                 {getErrorMessage(error || updateError, 'general')}
               </Text>
             </View>
           )}
-        </ScrollView>
+        {!isLoadingOrder && (
+          <View className="px-5 py-4 bg-white border-t border-gray-100 pb-10">
+            <CustomButton
+              title={
+                editMode
+                  ? (isUpdating ? "Updating request..." : "Update Request")
+                  : (isPending ? "Submitting request..." : "Submit Request")
+              }
+              onPress={handleSubmitRequest}
+              bgVariant="primary"
+              className="py-4"
+              loading={isPending || isUpdating}
+              disabled={isPending || isUpdating}
+            />
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* Success Modal */}

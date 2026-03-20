@@ -246,5 +246,54 @@ export const mechanicAPI = {
   getMechanicAnalytics: async (): Promise<any> => {
     const response = await api.get(MECHANIC_ENDPOINTS.ANALYTICS);
     return response.data;
+  },
+
+  // Verify repair request OTP
+  verifyRepairRequestOtp: async (requestId: string, otpCode: string): Promise<any> => {
+    const response = await api.post(MECHANIC_ENDPOINTS.VERIFY_OTP(requestId), {
+      data: {
+        otp_code: otpCode,
+      },
+      requestType: 'inbound',
+    });
+
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+
+    return response.data;
+  },
+
+  // Verify repair completion (from user part)
+  verifyRepairCompletion: async (requestId: string): Promise<any> => {
+    const response = await api.patch(`${MECHANIC_ENDPOINTS.REPAIR_REQUESTS}${requestId}/`, {
+      data: {
+        status: 'verify_completed',
+      },
+      requestType: 'inbound',
+    });
+
+    // Check if API returned status: false (error in successful HTTP response)
+    if (response.data?.status === false && response.data?.message) {
+      const error: any = new Error(response.data.message);
+      error.response = {
+        data: {
+          status: false,
+          message: response.data.message,
+        },
+      };
+      throw error;
+    }
+
+    return response.data;
   }
 };
+

@@ -506,7 +506,7 @@ const MechanicHome = () => {
                   <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
                     Completed
                   </Text>
-                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                  <Text className="text-2xl font-NunitoBold text-gray-900 text-end">
                     {analyticsData?.data?.summary?.completed_repair_requests || 0}
                   </Text>
                 </View>

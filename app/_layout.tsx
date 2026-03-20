@@ -66,21 +66,23 @@ function AppContent() {
   );
 }
 
-export default function RootLayout() {
-  // Create a client with optimized defaults to prevent excessive API calls
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 30 * 1000, // 30 seconds - data is fresh for 30 seconds
-        gcTime: 10 * 60 * 1000, // 10 minutes - cache time
-        retry: 2,
-        refetchOnMount: true, // Refetch on mount if data is stale
-        refetchOnWindowFocus: true, // Refetch when window regains focus
-        refetchOnReconnect: true, // Only refetch when connection is restored
-        refetchInterval: false, // Disable automatic polling by default
-      },
+// Create a client with optimized defaults to prevent excessive API calls
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000, // 30 seconds - data is fresh for 30 seconds
+      gcTime: 10 * 60 * 1000, // 10 minutes - cache time
+      retry: 2,
+      refetchOnMount: true, // Refetch on mount if data is stale
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnReconnect: true, // Only refetch when connection is restored
+      refetchInterval: false, // Disable automatic polling by default
     },
-  });
+  },
+});
+
+export default function RootLayout() {
+
 
   const [loaded, error] = useFonts({
     "Nunito-Bold": require("../assets/fonts/nunito/Nunito-Bold.ttf"),

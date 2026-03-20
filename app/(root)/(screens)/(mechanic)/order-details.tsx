@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ import JobCompletedModal from '@/components/modals/JobCompletedModal';
 import JobCompletionFormModal from '@/components/modals/JobCompletionFormModal';
 import MechanicOTPVerificationModal from '@/components/modals/MechanicOTPVerificationModal';
 import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest, useUpdateRepairRequest } from '@/hooks/useRepairRequests';
+import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest, useUpdateRepairRequest, useVerifyRepairRequestOtp } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage } from '@/utils/errorMessages';
 import {
@@ -41,7 +41,10 @@ import { routes } from '@/constants/routes';
 
 const MechanicOrderDetails = () => {
   const params = useLocalSearchParams();
-  const orderId = Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined);
+  const orderId = useMemo(() => Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined), [params?.orderId]);
+  
+  const isFocused = useIsFocused();
+  const pollInterval = isFocused ? 25000 : 0;
 
   const [refreshing, setRefreshing] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
@@ -55,7 +58,6 @@ const MechanicOrderDetails = () => {
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
-  const [isOtpVerified, setIsOtpVerified] = useState(false);
   const { showSuccess, showError, showWarning, visible, alertConfig, hideAlert } = useCustomAlert();
   
   // Copy to clipboard state
@@ -68,17 +70,14 @@ const MechanicOrderDetails = () => {
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
-  const isFocused = useIsFocused();
-
-  // Fetch repair request detail from API
-
   // Fetch repair request detail from API
   const { 
     data: orderData, 
     isLoading: isLoadingData, 
     error: errorData, 
     refetch 
-  } = useRepairRequestDetail(orderId, isFocused ? 25000 : 0);
+  } = useRepairRequestDetail(orderId, pollInterval);
+
 
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
@@ -89,10 +88,10 @@ const MechanicOrderDetails = () => {
 
   // Auto-show OTP modal when status is arrived and not verified
   useEffect(() => {
-    if (status === 'arrived' && !isOtpVerified) {
+    if (status === 'arrived' && !request?.is_otp_verified) {
       setOtpModalVisible(true);
     }
-  }, [status, isOtpVerified]);
+  }, [status, request?.is_otp_verified]);
 
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
@@ -100,6 +99,7 @@ const MechanicOrderDetails = () => {
   const updateStatusMutation = useUpdateRepairRequestStatus();
   const cancelRequestMutation = useCancelRepairRequest();
   const updateRepairRequestMutation = useUpdateRepairRequest();
+  const verifyOtpMutation = useVerifyRepairRequestOtp();
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -199,55 +199,71 @@ const MechanicOrderDetails = () => {
   };
 
   const getStatusLabel = (status: string) => {
+    if (status === 'completed' || status === 'verify_completed') {
+      return (status === 'verify_completed' || request?.verify_completed_at) ? 'Job Verified' : 'Awaiting Verification';
+    }
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return 'New Request';
       case 'accepted':
-        return 'Accepted User Request';
+        return 'Accepted';
       case 'in_transit':
-        return 'In Transit to Customer';
+        return 'In Transit';
       case 'arrived':
-        return 'Arrived at Customer Location';
+        return 'Arrived';
       case 'in_progress':
         return 'In Progress';
-      case 'completed':
-        return 'Completed by Mechanic';
       case 'cancelled':
         return 'Cancelled';
       case 'declined':
         return 'Declined';
       default:
-        return status;
+        return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
     }
   };
 
-  const getArrivalCode = (id: string | undefined): string => {
-    if (!id) return '0000';
-    // Simple deterministic code based on ID for demo purposes
-    // Matches the logic in track-mechanic-order.tsx
-    const num = parseInt(id.replace(/[^0-9]/g, '').slice(-4)) || 1234;
-    return num.toString().padStart(4, '0');
+  const getOtpDisplayValue = (otp: string | number | undefined): string => {
+    if (!otp) return '------';
+    const otpStr = otp.toString();
+    return otpStr.length >= 6 ? otpStr : otpStr.padStart(6, '0');
   };
 
   const handleVerifyOtp = async (otp: string | number) => {
+    if (!orderId) return;
+    
     setIsVerifyingOtp(true);
     setOtpError(null);
 
-    // Simulate network delay for verification
-    setTimeout(() => {
-      const correctOtp = getArrivalCode(orderId);
+    try {
+      await verifyOtpMutation.mutateAsync({ 
+        requestId: orderId, 
+        otpCode: otp.toString() 
+      });
       
-      if (otp === correctOtp) {
-        setIsVerifyingOtp(false);
-        setOtpModalVisible(false);
-        setIsOtpVerified(true);
-        showSuccess('Verified', 'Arrival code verified successfully. You can now start the repair.');
-      } else {
-        setIsVerifyingOtp(false);
-        setOtpError('Invalid verification code. Please ask the customer for the correct 4-digit code.');
+      setIsVerifyingOtp(false);
+      setOtpModalVisible(false);
+      showSuccess('Verified', 'Arrival code verified successfully. Starting repair...');
+      
+      // Auto-trigger status update to in_progress
+      try {
+        await updateStatusMutation.mutateAsync({ 
+          requestId: orderId, 
+          status: 'in_progress' 
+        });
+        await refetch();
+      } catch (statusError) {
+        console.error('Failed to auto-update status:', statusError);
+        // We don't show an error here because OTP was verified successfully, 
+        // the mechanic can still manually update status if needed.
       }
-    }, 1500);
+      
+    } catch (error: any) {
+      setIsVerifyingOtp(false);
+      const errorMessage = getApiErrorMessage(error);
+      setOtpError(errorMessage || 'Invalid verification code. Please ask the customer for the correct 6-digit code.');
+    }
   };
+
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -563,8 +579,9 @@ const MechanicOrderDetails = () => {
             status === 'accepted' ? 'bg-blue-50 border-2 border-blue-200' :
             status === 'in_transit' ? 'bg-indigo-50 border-2 border-indigo-200' :
             status === 'arrived' ? 'bg-purple-50 border-2 border-purple-200' :
-            status === 'in_progress' ? 'bg-orange-50 border-2 border-orange-200' :
-            status === 'completed' ? 'bg-green-50 border-2 border-green-200' :
+            status === 'in_progress' ? 'bg-orange-50 border border-orange-200' :
+            (status === 'completed' || status === 'verify_completed') ? 
+                ((status === 'verify_completed' || request?.verify_completed_at) ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') :
             status === 'cancelled' || status === 'declined' ? 'bg-red-50 border-2 border-red-200' :
             'bg-gray-50 border-2 border-gray-200'
           }`}>
@@ -575,7 +592,8 @@ const MechanicOrderDetails = () => {
                 status === 'in_transit' ? 'bg-indigo-100' :
                 status === 'arrived' ? 'bg-purple-100' :
                 status === 'in_progress' ? 'bg-orange-100' :
-                status === 'completed' ? 'bg-green-100' :
+                (status === 'completed' || status === 'verify_completed') ? 
+                    ((status === 'verify_completed' || request?.verify_completed_at) ? 'bg-green-100' : 'bg-blue-100') :
                 status === 'cancelled' || status === 'declined' ? 'bg-red-100' :
                 'bg-gray-100'
               }`}>
@@ -583,9 +601,13 @@ const MechanicOrderDetails = () => {
                 {status === 'accepted' && <CheckCircleIcon size={24} color="#2563EB" />}
                 {status === 'in_transit' && <TruckIcon size={24} color="#4F46E5" />}
                 {status === 'arrived' && <MapPinIcon size={24} color="#7C3AED" />}
-                {status === 'in_progress' && <WrenchScrewdriverIcon size={24} color="#EA580C" />}
-                {status === 'completed' && <CheckCircleSolidIcon size={24} color="#16A34A" />}
-                {(status === 'cancelled' || status === 'declined') && <XCircleIcon size={24} color="#DC2626" />}
+                {status === 'in_progress' && <WrenchScrewdriverIcon size={20} color="#EA580C" />}
+              {(status === 'completed' || status === 'verify_completed') && (
+                (status === 'verify_completed' || request?.verify_completed_at) ? 
+                <CheckCircleSolidIcon size={20} color="#16A34A" /> : 
+                <ClockIcon size={20} color="#2563EB" />
+              )}
+  {(status === 'cancelled' || status === 'declined') && <XCircleIcon size={24} color="#DC2626" />}
               </View>
               <View className="flex-1">
                 <Text className={`text-lg font-NunitoBold ${
@@ -593,8 +615,9 @@ const MechanicOrderDetails = () => {
                   status === 'accepted' ? 'text-blue-800' :
                   status === 'in_transit' ? 'text-indigo-800' :
                   status === 'arrived' ? 'text-purple-800' :
-                  status === 'in_progress' ? 'text-orange-800' :
-                  status === 'completed' ? 'text-green-800' :
+                    status === 'in_progress' ? 'text-orange-800' :
+                    (status === 'completed' || status === 'verify_completed') ? 
+                        ((status === 'verify_completed' || request?.verify_completed_at) ? 'text-green-800' : 'text-blue-800') :
                   status === 'cancelled' || status === 'declined' ? 'text-red-800' :
                   'text-gray-800'
                 }`}>
@@ -615,8 +638,9 @@ const MechanicOrderDetails = () => {
                   {status === 'in_transit' && 'On your way to customer'}
                   {status === 'arrived' && 'You have reached the customer'}
                   {status === 'in_progress' && 'Working on the repair'}
-                  {status === 'completed' && 'Job successfully completed'}
-                  {status === 'cancelled' && 'This job was cancelled'}
+                  {(status === 'completed' || status === 'verify_completed') && 
+                    ((status === 'verify_completed' || request?.verify_completed_at) ? 'The customer has verified this job.' : 'Waiting for the customer to verify completion.')}
+                {status === 'cancelled' && 'This request was cancelled.'}
                   {status === 'declined' && 'You declined this request'}
                 </Text>
               </View>
@@ -777,6 +801,50 @@ const MechanicOrderDetails = () => {
               </View>
             )}
           </View>
+
+          {/* Arrival Verification OTP */}
+          {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && (
+            <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center">
+                  <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
+                    <ShieldCheckIcon size={20} color="#374151" />
+                  </View>
+                  <Text className="text-lg font-NunitoBold text-gray-900">Verification OTP</Text>
+                </View>
+                {request?.is_otp_verified ? (
+                  <View className="bg-green-100 px-3 py-1 rounded-full border border-green-200">
+                    <Text className="text-[10px] font-NunitoBold text-green-700">VERIFIED</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    onPress={() => copyToClipboard(request?.otp_code?.toString() || '')}
+                    className={`p-2 rounded-lg border ${isCopied ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}
+                  >
+                    <ClipboardDocumentIcon size={18} color={isCopied ? "#10B981" : "#6B7280"} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View className="bg-gray-50 rounded-xl p-4 items-center">
+                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-widest mb-3">
+                  Customer Verification Code
+                </Text>
+                <View className="flex-row items-center space-x-2 gap-2">
+                  {getOtpDisplayValue(request?.otp_code).split('').map((digit, i) => (
+                    <View key={i} className={`w-9 h-11 ${request?.is_otp_verified ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'} border rounded-lg items-center justify-center shadow-sm`}>
+                      <Text className={`text-xl font-NunitoExtraBold ${request?.is_otp_verified ? 'text-green-700' : 'text-gray-900'}`}>{digit}</Text>
+                    </View>
+                  ))}
+                </View>
+                {!request?.is_otp_verified && (
+                  <Text className="text-[10px] font-NunitoMedium text-gray-400 mt-2 text-center">
+                    Ask the customer for the verification code once you arrive.
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Schedule Card */}
           <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
@@ -1043,10 +1111,10 @@ const MechanicOrderDetails = () => {
               <View className="flex-row">
                 <View className="items-center mr-4">
                   <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.completed_at ? 'bg-green-500' :
+                    (request.completed_at || status === 'verify_completed') ? 'bg-green-500' :
                     request.cancelled_at ? 'bg-red-500' : 'bg-gray-200'
                   }`}>
-                    {request.completed_at ? (
+                    {(request.completed_at || status === 'verify_completed') ? (
                       <CheckCircleSolidIcon size={20} color="#FFFFFF" />
                     ) : request.cancelled_at ? (
                       <XCircleIcon size={20} color="#FFFFFF" />
@@ -1054,20 +1122,52 @@ const MechanicOrderDetails = () => {
                       <View className="w-3 h-3 rounded-full bg-gray-400" />
                     )}
                   </View>
+                  {!request.cancelled_at && (
+                    <View className={`w-0.5 h-12 ${
+                      (request.verify_completed_at || status === 'verify_completed') ? 'bg-green-500' : 'bg-gray-200'
+                    }`} />
+                  )}
                 </View>
                 <View className="flex-1">
                   <Text className={`text-sm font-NunitoBold ${
-                    request.completed_at ? 'text-green-700' :
+                    (request.completed_at || status === 'verify_completed') ? 'text-green-700' :
                     request.cancelled_at ? 'text-red-700' : 'text-gray-400'
                   }`}>
                     {request.cancelled_at ? 'Job Cancelled' : 'Job Completed'}
                   </Text>
                   <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.completed_at ? formatDateTime(request.completed_at) :
+                    {(request.completed_at || status === 'verify_completed') ? formatDateTime(request.completed_at || request.verify_completed_at) :
                      request.cancelled_at ? formatDateTime(request.cancelled_at) : 'Pending'}
                   </Text>
                 </View>
               </View>
+
+              {/* Step 6: User Verified */}
+              {!request.cancelled_at && (
+                <View className="flex-row">
+                  <View className="items-center mr-4">
+                    <View className={`w-8 h-8 rounded-full items-center justify-center ${
+                      (request.verify_completed_at || status === 'verify_completed') ? 'bg-green-500' : 'bg-gray-200'
+                    }`}>
+                      {(request.verify_completed_at || status === 'verify_completed') ? (
+                        <CheckCircleSolidIcon size={20} color="#FFFFFF" />
+                      ) : (
+                        <View className="w-3 h-3 rounded-full bg-gray-400" />
+                      )}
+                    </View>
+                  </View>
+                  <View className="flex-1">
+                    <Text className={`text-sm font-NunitoBold ${
+                      (request.verify_completed_at || status === 'verify_completed') ? 'text-green-700' : 'text-gray-400'
+                    }`}>
+                      User Verified Completion
+                    </Text>
+                    <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
+                      {(request.verify_completed_at || status === 'verify_completed') ? formatDateTime(request.verify_completed_at) : 'Awaiting confirmation'}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
 
@@ -1243,7 +1343,7 @@ const MechanicOrderDetails = () => {
             {/* Arrived: Verify OTP, then Start Work and Cancel */}
             {status === 'arrived' && (
               <>
-                {!isOtpVerified ? (
+                {!request?.is_otp_verified ? (
                   <TouchableOpacity
                     onPress={() => setOtpModalVisible(true)}
                     disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
@@ -1311,8 +1411,18 @@ const MechanicOrderDetails = () => {
         </View>
       )}
 
+      {/* OTP Verification Modal */}
+      <MechanicOTPVerificationModal
+        visible={otpModalVisible}
+        onClose={() => setOtpModalVisible(false)}
+        onVerify={handleVerifyOtp}
+        isVerifying={isVerifyingOtp}
+        error={otpError}
+      />
+
       {/* Cancel Modal */}
       <MechanicCancelRequestModal
+
         visible={cancelModalVisible}
         onClose={handleCloseCancelModal}
         onConfirm={handleCancelRequest}

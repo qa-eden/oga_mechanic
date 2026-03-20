@@ -62,12 +62,12 @@ const MechanicOTPVerificationModal = ({
 
               <Text style={styles.modalTitle}>Verification Required</Text>
               <Text style={styles.modalDescription}>
-                Please enter the 4-digit verification code provided by the customer to start the repair work.
+                Please enter the 6-digit verification code provided by the customer to start the repair work.
               </Text>
 
               <View style={styles.otpContainer}>
                 <OTPInput 
-                  numberOfDigits={4} 
+                  numberOfDigits={6} 
                   onComplete={handleComplete} 
                 />
               </View>
@@ -84,10 +84,10 @@ const MechanicOTPVerificationModal = ({
               ) : (
                 <TouchableOpacity
                   onPress={() => onVerify(localOtp)}
-                  disabled={localOtp.length !== 4 || isVerifying}
+                  disabled={localOtp.length !== 6 || isVerifying}
                   style={[
                     styles.verifyButton,
-                    (localOtp.length !== 4 || isVerifying) && styles.disabledButton,
+                    (localOtp.length !== 6 || isVerifying) && styles.disabledButton,
                   ]}
                 >
                   <Text style={styles.verifyButtonText}>Verify & Start Repair</Text>

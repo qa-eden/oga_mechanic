@@ -8,17 +8,17 @@ import { mechanicRoutes } from '@/constants/routes';
 interface JobCompletedModalProps {
   visible: boolean;
   onClose: () => void;
-  showViewEarnings?: boolean;
+  showHomeButton?: boolean;
 }
 
 const JobCompletedModal: React.FC<JobCompletedModalProps> = ({
   visible,
   onClose,
-  showViewEarnings = true,
+  showHomeButton = true,
 }) => {
-  const handleViewEarnings = () => {
+  const handleGoHome = () => {
     onClose();
-    router.push(mechanicRoutes.earnings);
+    router.push(mechanicRoutes.home);
   };
 
   return (
@@ -42,15 +42,15 @@ const JobCompletedModal: React.FC<JobCompletedModalProps> = ({
 
           {/* Message */}
           <Text className="text-gray-600 text-center mb-6 font-NunitoRegular leading-6">
-            Congratulations! You have successfully completed this repair job.
+            Congratulations! Please ask the customer to verify this completion on their app to finalize the repair and receive your earnings.
           </Text>
 
           {/* Buttons */}
           <View className="w-full space-y-3">
-            {showViewEarnings && (
+            {showHomeButton && (
               <CustomButton
-                onPress={handleViewEarnings}
-                title="View Earnings"
+                onPress={handleGoHome}
+                title="Go to Home"
                 bgVariant="primary"
                 textVariant="default"
               />
@@ -61,7 +61,7 @@ const JobCompletedModal: React.FC<JobCompletedModalProps> = ({
               title="Close"
               bgVariant="outline"
               textVariant="outline"
-              className={showViewEarnings ? "mt-3" : ""}
+              className={showHomeButton ? "mt-3" : ""}
             />
           </View>
         </View>
