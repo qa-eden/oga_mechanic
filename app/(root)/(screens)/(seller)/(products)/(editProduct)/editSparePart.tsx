@@ -21,6 +21,29 @@ interface VehicleCompatibility {
   make: number;
   models: number[];
 }
+// import CustomButton from '@/components/CustomButton'
+
+const PRIMARY = '#D30309';
+
+const SectionCard = ({ children, title, subtitle, icon, accentColor }: any) => (
+  <View 
+    className="bg-white rounded-[16px] p-5 mb-5 border border-gray-100" 
+    style={{ borderTopWidth: 3, borderTopColor: accentColor, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}
+  >
+    <View className="flex-row items-center mb-5 gap-3">
+      <View style={{ backgroundColor: `${accentColor}1A` }} className="w-10 h-10 rounded-xl items-center justify-center">
+        <Text className="text-[20px]">{icon}</Text>
+      </View>
+      <View className="flex-1">
+        <Text style={{ color: '#111827' }} className="text-[15px] font-NunitoBold mb-0.5">{title}</Text>
+        <Text className="text-[12px] text-gray-500 font-NunitoMedium">{subtitle}</Text>
+      </View>
+    </View>
+    <View className="gap-4">
+      {children}
+    </View>
+  </View>
+);
 
 const EditSparePart = () => {
   const [vehicleCompatibility, setVehicleCompatibility] = useState<VehicleCompatibility[]>([])
@@ -217,7 +240,7 @@ const EditSparePart = () => {
   };
 
   const removeVehicleCompatibility = (index: number) => {
-    setVehicleCompatibility(vehicleCompatibility.filter((_, i) => i !== index));
+    setVehicleCompatibility(vehicleCompatibility.filter((_: any, i: number) => i !== index));
   };
 
   const updateVehicleMake = (index: number, makeId: number) => {
@@ -293,18 +316,7 @@ const EditSparePart = () => {
               
 
                 {/* Basic Information */}
-                <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
-                  <View className="flex-row items-center mb-4">
-                    <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">1</Text>
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-lg font-NunitoBold text-gray-900">Basic Information</Text>
-                      <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Update Product Details
-                      </Text>
-                    </View>
-                  </View>
+                <SectionCard accentColor={PRIMARY} icon="📋" title="Basic Information" subtitle="Update Product Details">
  
                   {/* Category */}
                   <SelectField
@@ -345,22 +357,11 @@ const EditSparePart = () => {
                     error={errors.condition as string}
                     touched={touched.condition as boolean}
                   />
-                </View>
+                  </SectionCard>
 
                 {/* Vehicle Compatibility */}
-                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                  <View className="flex-row items-center justify-between mb-4">
-                    <View className="flex-row items-center flex-1">
-                      <View className="w-8 h-8 bg-primary-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">2</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Compatible Vehicles</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Select Makes and Models
-                        </Text>
-                      </View>
-                    </View>
+                <SectionCard accentColor={PRIMARY} icon="🚗" title="Compatible Vehicles" subtitle="Select Makes and Models">
+                  <View className="flex-row items-center justify-end mb-4">
                     <TouchableOpacity
                       onPress={addVehicleCompatibility}
                       disabled={makesLoading}
@@ -439,21 +440,10 @@ const EditSparePart = () => {
                       </TouchableOpacity>
                     </View>
                   )}
-                </View>
+                </SectionCard>
 
                 {/* Description */}
-                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                  <View className="flex-row items-center mb-4">
-                    <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">3</Text>
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
-                      <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Provide Details About the Product
-                      </Text>
-                    </View>
-                  </View>
+                <SectionCard accentColor={PRIMARY} icon="📝" title="Description" subtitle="Provide Details About the Product">
 
                   <FormikTextArea
                     name="description"
@@ -463,62 +453,18 @@ const EditSparePart = () => {
                     maxLength={500}
                     helperText="Describe the spare part's features, compatibility, and condition"
                   />
-                </View>
+                </SectionCard>
 
                 {/* Pricing & Availability */}
-                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                  <View className="flex-row items-center mb-4">
-                    <View className="w-8 h-8 bg-emerald-500 rounded-lg items-center justify-center mr-3">
-                      <Text className="text-white font-NunitoBold text-sm">4</Text>
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-lg font-NunitoBold text-gray-900">Pricing & Availability</Text>
-                      <Text className="text-xs text-gray-500 font-NunitoMedium">
-                        Set your Price and Stock
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Price and Currency */}
-                  <View className="mb-4">
-                    <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                      Price
-                    </Text>
-                    <View className="flex-row gap-3">
-                      <View className="flex-1">
-                        <FormikInput
-                          name="price"
-                          label=""
-                          placeholder="e.g., 25000.00"
-                          keyboardType="numeric"
-                          type="text"
-                        />
-                      </View>
-                      <View className="w-32">
-                        <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                          Currency
-                        </Text>
-                        <View className="flex-row bg-gray-100 rounded-lg p-1">
-                          <TouchableOpacity
-                            onPress={() => setFieldValue('currency', 'NGN')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN' ? 'bg-white' : 'bg-transparent'}`}
-                          >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN' ? 'text-gray-900' : 'text-gray-500'}`}>
-                              ₦
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => setFieldValue('currency', 'USD')}
-                            className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD' ? 'bg-white' : 'bg-transparent'}`}
-                          >
-                            <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD' ? 'text-gray-900' : 'text-gray-500'}`}>
-                              $
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
+                <SectionCard accentColor={PRIMARY} icon="💰" title="Pricing & Availability" subtitle="Set your Price and Stock">
+                  {/* Price */}
+                  <FormikInput
+                    name="price"
+                    label="Price (₦)"
+                    placeholder="e.g., 25000.00"
+                    keyboardType="numeric"
+                    type="text"
+                  />
 
                   {/* Stock */}
                   <FormikInput
@@ -552,10 +498,10 @@ const EditSparePart = () => {
                     error={errors.delivery_option as string}
                     touched={touched.delivery_option as boolean}
                   />
-                </View>
+                </SectionCard>
 
                 {/* Submit Button */}
-                <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
+                <View className="bg-white rounded-[16px] p-5 mb-2 border border-gray-100 shadow-sm">
                   <FormikButton
                     title="Update Product Details"
                     type="submit"

@@ -21,8 +21,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import Navbar from "@/components/Navbar";
 import FloatingCartButton from "@/components/FloatingCartButton";
 import { LAYOUT } from "@/constants/units";
-import { useHomeProducts } from "@/hooks/useProducts";
+import { useHomeProducts, useActiveBiddingProducts } from "@/hooks/useProducts";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
+import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 
 const Home = () => {
 
@@ -30,84 +31,16 @@ const Home = () => {
 
   // Fetch home products to get category IDs
   const { data: homeProducts, refetch: refetchHomeProducts } = useHomeProducts();
+  const { data: activeBiddingRes, refetch: refetchActiveBidding } = useActiveBiddingProducts();
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchHomeProducts();
+    await Promise.all([
+      refetchHomeProducts(),
+      refetchActiveBidding()
+    ]);
     setRefreshing(false);
   };
-
-  const { width: screenWidth } = Dimensions.get("window");
-  const [activeAdIndex, setActiveAdIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
-
-  // Create infinite loop data for seamless scrolling
-  const infiniteAds = [...Ads, ...Ads, ...Ads];
-
-  // Auto-scroll effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveAdIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % Ads.length;
-        // Logic to handling specific index scrolling can be complex with infinite lists, 
-        // simplifying to basic next index or reset for stability in this view.
-         flatListRef.current?.scrollToIndex({
-          index: nextIndex,
-          animated: true,
-        });
-        return nextIndex;
-      });
-    }, 8000); 
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleAdMomentumScrollEnd = (event: any) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
-    const actualIndex = index % Ads.length;
-    setActiveAdIndex(actualIndex);
-  };
-
-  const renderAdItem = useCallback(({ item, index }: { item: any; index: number }) => (
-    <View style={{ width: screenWidth, alignItems: 'center' }}>
-      <View style={{ width: screenWidth - 18 }}>
-        <AdsComponents
-          image={item.image}
-          title={item.title}
-          description={item.description}
-          onPress={() => {}}
-        />
-      </View>
-    </View>
-  ), [screenWidth]);
-
-  const renderAdDotIndicator = () => (
-    <View
-      style={{
-        position: "absolute",
-        bottom: 8,
-        left: 0,
-        right: 0,
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      {Ads.map((_, i) => (
-        <View
-          key={i}
-          style={{
-            width: i === activeAdIndex ? 24 : 8,
-            height: 8,
-            borderRadius: 4,
-            marginHorizontal: 4,
-          }}
-          className={i === activeAdIndex ? "bg-primary-500" : "bg-primary-200"}
-        />
-      ))}
-    </View>
-  );
 
   // Extract category IDs from the actual products
   const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
@@ -164,7 +97,7 @@ const Home = () => {
         router.push(routes.enterAddressForRide);
         break;
       case "Chat a Specialist":
-        router.push(routes.chatSeller);
+        router.push(routes.supportSuggestions as any);
         break;
       case "Find a Mechanic":
         router.push(routes.findMechanic);
@@ -274,37 +207,11 @@ const Home = () => {
         }
       >
         <AnimatedPageContainer animationType="fadeInDown" duration={500}>
-          {/* Enhanced Ads Section */}
-          <View className="h-30 pt-3 mb-4">
-            <FlatList
-              ref={flatListRef}
-              data={infiniteAds}
-              renderItem={renderAdItem}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={handleAdMomentumScrollEnd}
-              snapToAlignment="start"
-              snapToInterval={screenWidth}
-              decelerationRate="fast"
-              getItemLayout={(data, index) => ({
-                length: screenWidth,
-                offset: screenWidth * index,
-                index,
-              })}
-              onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
-              initialNumToRender={3}
-              maxToRenderPerBatch={2}
-              windowSize={3}
-              removeClippedSubviews={true}
-              updateCellsBatchingPeriod={100}
-            />
-            {renderAdDotIndicator()}
-          </View>
+          {/* Enhanced Ads Section using standard Bidding Carousel */}
+          <BiddingCarousel />
 
           {/* Services Grid */}
-          <View className="flex-1 px-4 ">
+          <View className="flex-1 px-4 mt-6">
             {enhancedServices.length > 0 ? (
               <FlatList
                 scrollEnabled={false} // Disable internal scrolling since we wrapped in ScrollView

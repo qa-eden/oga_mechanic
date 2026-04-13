@@ -28,10 +28,12 @@ export const USER_ENDPOINTS = {
   PROFILE: '/users/profile/primary/',
   PRIMARY_PROFILE: '/users/profile/primary/',
   UPDATE_PROFILE: '/users/profile/primary/',
-  CARS: '/user/cars',
-  ADD_CAR: '/user/cars',
-  UPDATE_CAR: (id: string) => `/user/cars/${id}`,
-  DELETE_CAR: (id: string) => `/user/cars/${id}`,
+  /** GET list (paginated ?page=), POST create — same collection */
+  CARS: '/users/my-vehicles/',
+  /** POST multipart: vin?, make, model, year, license_plate?, uploaded_images[] */
+  ADD_CAR: '/users/my-vehicles/',
+  UPDATE_CAR: (id: string) => `/users/my-vehicles/${id}/`,
+  DELETE_CAR: (id: string) => `/users/my-vehicles/${id}/`,
   FIND_MECHANIC: '/user/mechanics/find',
   BOOK_MECHANIC: '/user/mechanics/book',
   ORDER_RIDE: '/user/rides/order',
@@ -47,6 +49,10 @@ export const USER_ENDPOINTS = {
    BANKS: '/users/banks/',
   BANK_ENQUIRY: '/users/bank/enquiry/',
   BANK_ACCOUNTS: '/users/bank-accounts/',
+  WALLET: '/users/wallet/',
+  EARNINGS: '/users/earnings/',
+  WITHDRAWALS: '/users/withdrawals/',
+  WITHDRAW_WALLET: '/users/wallet/withdraw/',
 } as const;
 
 // Mechanic endpoints (service providers)
@@ -71,6 +77,7 @@ export const MECHANIC_ENDPOINTS = {
   REPAIR_REQUESTS: '/mechanics/repair-requests/',
   VERIFY_OTP: (id: string) => `/mechanics/repair-requests/${id}/verify-otp/`,
   ANALYTICS: '/mechanics/mechanic-analytics/',
+  SERVICE_TYPES: '/mechanics/service-types/',
 } as const;
 
 
@@ -112,6 +119,7 @@ export const MERCHANT_ENDPOINTS = {
   EARNINGS: '/merchant/earnings',
   WITHDRAW: '/merchant/earnings/withdraw',
   ANALYTICS: '/products/merchant/analytics/',
+  SUBSCRIPTION: '/products/merchant/subscription/',
 } as const;
 
 // Common service endpoints (used by multiple roles)
@@ -131,7 +139,7 @@ export const SERVICE_ENDPOINTS = {
   PAYMENTS_VERIFY: (id: string) => `/payments/${id}/verify`,
   PAYMENTS_HISTORY: '/payments/history',
   SHOP_PRODUCTS: '/shop/products',
-  SHOP_PRODUCT_DETAIL: (id: string) => `/shop/products/${id}`,
+  SHOP_PRODUCT_DETAIL: (id: string) => `/products/products/${id}`,
   SHOP_CATEGORIES: '/shop/categories',
   SHOP_SEARCH: '/shop/search',
   PRODUCTS_HOME: '/products/home/',
@@ -161,8 +169,16 @@ export const SERVICE_ENDPOINTS = {
   ORDER_STATUS: (orderId: string) => `/products/orders/${orderId}/status/`,
   ORDER_VERIFY_PAYMENT: '/products/orders/verify-payment/',
   PRODUCT_REVIEWS: (id: string) => `/products/products/${id}/reviews/`,
+  PRODUCT_BIDS: (id: string) => `/products/bidding/${id}/bids/`,
+  PATCH_BID: (bidId: string) => `/products/bids/${bidId}/`,
+  DELETE_BID: (bidId: string) => `/products/bids/${bidId}/`,
+  MY_BIDS: '/products/bidding/my-bids/',
+  ACTIVE_BIDDING_PRODUCTS: 'products/bidding/active-products/',
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_FAQ: '/support/faq',
   SUPPORT_TICKETS: '/support/tickets',
   SUPPORT_CREATE_TICKET: '/support/tickets',
+  SUPPORT_CONVERSATIONS: '/communications/support/conversations/',
+  COMMUNICATIONS_CHAT_ROOMS: '/communications/chat-rooms/',
+  SUPPORT_UPLOAD: '/communications/support/upload/',
 } as const;

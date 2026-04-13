@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import SelectField from '@/components/forms/SelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import TextArea from '@/components/forms/TextArea';
 import AddressInput from '@/components/forms/AddressInput';
 import { WrenchScrewdriverIcon } from 'react-native-heroicons/outline';
@@ -11,8 +11,8 @@ interface SelectOption {
 }
 
 interface ServiceDetailsFormProps {
-  serviceType: string;
-  setServiceType: (value: string) => void;
+  serviceTypes: string[];
+  setServiceTypes: (value: string[]) => void;
   problemDescription: string;
   setProblemDescription: (value: string) => void;
   serviceAddress: string;
@@ -29,8 +29,8 @@ interface ServiceDetailsFormProps {
  * Used in multiple places in the find-mechanic flow
  */
 export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
-  serviceType,
-  setServiceType,
+  serviceTypes,
+  setServiceTypes,
   problemDescription,
   setProblemDescription,
   serviceAddress,
@@ -51,13 +51,13 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
 
       {/* Service Type */}
       <View className="mb-3">
-        <SelectField
+        <MultiSelectField
           name="serviceType"
           label="Service Type"
           placeholder="Select the service you need"
           options={serviceTypeOptions}
-          value={serviceType}
-          onValueChange={setServiceType}
+          value={serviceTypes}
+          onValueChange={setServiceTypes}
         />
       </View>
 

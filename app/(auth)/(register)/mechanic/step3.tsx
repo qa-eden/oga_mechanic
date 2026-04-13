@@ -293,42 +293,36 @@ const MechanicStep3 = () => {
       return;
     }
 
-    setIsSubmittingInternal(true);
+    // isSubmittingInternal(true); // Already set before this block
     try {
+      // Helper function to handle image upload if it's a local URI
+      const getFileObject = (uri: string, type: string) => {
+        if (!uri) return null;
+        // If it's already a URL, we don't need to wrap it as a file object
+        if (uri.startsWith('http')) return uri;
+        
+        return {
+          uri,
+          name: `${type}_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const cacFile = getFileObject(cacDocument?.uri || "", 'cac');
+      const selfieFile = getFileObject(selfie?.uri || "", 'selfie');
+      const idFrontFile = getFileObject(governmentIdFront?.uri || "", 'govt_front');
+      const idBackFile = getFileObject(governmentIdBack?.uri || "", 'govt_back');
+
       const formData = new FormData();
       formData.append('location', values.location);
       formData.append('cac_number', values.ccac_document);
       formData.append('govt_id_type', values.govt_id_type);
       
-      // Append files
-      if (cacDocument) {
-        formData.append('cac_document', {
-          uri: cacDocument.uri,
-          name: 'cac_document.jpg',
-          type: 'image/jpeg',
-        } as any);
-      }
-      if (selfie) {
-        formData.append('selfie', {
-          uri: selfie.uri,
-          name: 'selfie.jpg',
-          type: 'image/jpeg',
-        } as any);
-      }
-      if (governmentIdFront) {
-        formData.append('government_id_front', {
-          uri: governmentIdFront.uri,
-          name: 'government_id_front.jpg',
-          type: 'image/jpeg',
-        } as any);
-      }
-      if (governmentIdBack) {
-        formData.append('government_id_back', {
-          uri: governmentIdBack.uri,
-          name: 'government_id_back.jpg',
-          type: 'image/jpeg',
-        } as any);
-      }
+      // Append Files (now as file objects or existing URLs)
+      if (cacFile) formData.append('cac_document', cacFile);
+      if (selfieFile) formData.append('selfie', selfieFile);
+      if (idFrontFile) formData.append('government_id_front', idFrontFile);
+      if (idBackFile) formData.append('government_id_back', idBackFile);
 
       console.log('🚀 Submitting Mechanic KYC via Mutation...');
       submitKYCMutation.mutate(formData, {

@@ -3,13 +3,14 @@ import { View, Text, ScrollView, Alert, Keyboard, Platform, Dimensions, Keyboard
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
 import SelectField from '@/components/forms/SelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import TextArea from '@/components/forms/TextArea';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import AddressInput from '@/components/forms/AddressInput';
 import DateInput from '@/components/forms/DateInput';
 import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { router, useLocalSearchParams } from 'expo-router';
-import { serviceTypeOptions } from '@/constants/data';
+import { useServiceTypes } from '@/hooks/useServiceTypes';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage } from '@/utils/errorMessages';
 import { routes } from '@/constants/routes';
@@ -30,7 +31,7 @@ const OrderMechanic = () => {
     : (params?.orderId as string | undefined);
   const editMode = params?.editMode === 'true';
 
-  const [serviceType, setServiceType] = useState('');
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([]);
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState('');
@@ -61,6 +62,9 @@ const OrderMechanic = () => {
 
   // Fetch vehicle makes from API
   const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
+
+  // Fetch service types from API
+  const { serviceTypes, loading: serviceTypesLoading, error: serviceTypesError } = useServiceTypes();
 
   // Convert vehicle makes to select options
   const vehicleMakeOptions = useMemo(() => {
@@ -97,7 +101,7 @@ const OrderMechanic = () => {
 
   const vehicleYearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: 50 }, (_, i) => {
+    return Array.from({ length: 50 }, (_: any, i: number) => {
       const year = currentYear - i;
       return { label: year.toString(), value: year.toString() };
     });
@@ -129,7 +133,14 @@ const OrderMechanic = () => {
       const order = existingOrderData.data;
       
       // Set form values from existing order
-      if (order.service_type) setServiceType(order.service_type);
+      if (Array.isArray((order as any).service_categories)) {
+        setSelectedServiceTypes(((order as any).service_categories as any[]).map((x) => String(x)));
+      } else if (Array.isArray((order as any).service_types)) {
+        // Backwards compatibility with older payloads
+        setSelectedServiceTypes(((order as any).service_types as any[]).map((x) => String(x)));
+      } else if (order.service_type) {
+        setSelectedServiceTypes([String(order.service_type)]);
+      }
       if (order.vehicle_make) setVehicleMake(order.vehicle_make.toString());
       if (order.vehicle_model) setVehicleModel(order.vehicle_model.toString());
       if (order.vehicle_year) setVehicleYear(order.vehicle_year.toString());
@@ -214,7 +225,7 @@ const OrderMechanic = () => {
     // }
 
     if (
-      !serviceType ||
+      selectedServiceTypes.length === 0 ||
       !vehicleMake ||
       !vehicleModel ||
       !vehicleYear ||
@@ -235,7 +246,9 @@ const OrderMechanic = () => {
     const payload: any = {
       data: {
         ...(mechanicId && { mechanic_id: mechanicId }),
-        service_type: serviceType,
+        ...(selectedServiceTypes.length === 1
+          ? { service_type: selectedServiceTypes[0] }
+          : { service_categories: selectedServiceTypes }),
         vehicle_make: vehicleMake,
         vehicle_model: vehicleModel,
         vehicle_year: vehicleYearNumber,
@@ -403,13 +416,13 @@ const OrderMechanic = () => {
           </View>
         )} */}
 
-          <SelectField
+          <MultiSelectField
             name="serviceType"
             label="Service Type"
             placeholder="Select the service you need"
-            options={serviceTypeOptions}
-            value={serviceType}
-            onValueChange={setServiceType}
+            options={serviceTypes}
+            value={selectedServiceTypes}
+            onValueChange={setSelectedServiceTypes}
           />
 
           <SelectField

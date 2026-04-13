@@ -283,14 +283,14 @@ export const Services: ServicesProps[] = [
     bgColor: "#FEF2F2",
     border: "#FCA5A5",
   },
-  {
-    id: 1,
-    name: "Order a Ride",
-    description: "Book a ride to your destination",
-    image: orderRide,
-    bgColor: "#F3F2FE",
-    border: "#ACA6FF",
-  },
+  // {
+  //   id: 1,
+  //   name: "Order a Ride",
+  //   description: "Book a ride to your destination",
+  //   image: orderRide,
+  //   bgColor: "#F3F2FE",
+  //   border: "#ACA6FF",
+  // },
   {
     id: 3,
     name: "Buy a Car",
@@ -307,14 +307,14 @@ export const Services: ServicesProps[] = [
     bgColor: "#FFF8F5",
     border: " #5A4F49",
   },
-  {
-    id: 4,
-    name: "Tow your car",
-    description: "Get your car towed",
-    image: carTow,
-    bgColor: "#F3FFF1",
-    border: "#189804",
-  },
+  // {
+  //   id: 4,
+  //   name: "Tow your car",
+  //   description: "Get your car towed",
+  //   image: carTow,
+  //   bgColor: "#F3FFF1",
+  //   border: "#189804",
+  // },
   {
     id: 5,
     name: "Rent a car",
@@ -390,6 +390,12 @@ export const ProfileSettings = {
       route: "Switch Role",
     },
     {
+      id: 11,
+      name: "My Bids",
+      image: savingWallet,
+      route: routes.myBids,
+    },
+    {
       id: 4,
       name: "Subscription",
       image: sub,
@@ -430,6 +436,12 @@ export const MechanicProfileSettings = {
       name: "Switch Role",
       image: switch1,
       route: "Switch Role",
+    },
+    {
+      id: 7,
+      name: "My Bids",
+      image: savingWallet,
+      route: routes.myBids,
     },
   ],
 };
@@ -473,6 +485,12 @@ export const DriverProfileSettings = {
       image: switch1,
       route: "Switch Role",
     },
+    {
+      id: 8,
+      name: "My Bids",
+      image: savingWallet,
+      route: routes.myBids,
+    },
   ],
 };
 
@@ -491,12 +509,12 @@ export const SellerProfileSettings = {
       image: addBank,
       route: generalRoutes.bankInfo,
     },
-    // {
-    //   id: 3,
-    //   name: "Savings wallet",
-    //   image: savingWallet,
-    //   route: "notifications",
-    // },
+    {
+      id: 3,
+      name: "Subscription",
+      image: sub,
+      route: sellerRoutes.subscription,
+    },
     {
       id: 4,
       name: "Change Password",
@@ -508,6 +526,12 @@ export const SellerProfileSettings = {
       name: "Switch Role",
       image: switch1,
       route: "Switch Role",
+    },
+    {
+      id: 6,
+      name: "My Bids",
+      image: savingWallet,
+      route: routes.myBids,
     },
   ],
 };
@@ -544,6 +568,12 @@ export const RiderProfileSettings = {
       name: "Switch Role",
       image: switch1,
       route: "Switch Role",
+    },
+    {
+      id: 9,
+      name: "My Bids",
+      image: savingWallet,
+      route: routes.myBids,
     },
   ],
 };

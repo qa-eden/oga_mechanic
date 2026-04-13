@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput } from 'react-native'
+import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput, Image } from 'react-native'
 import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
 import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface SelectOption {
   label: string
   value: string
+  /** Optional row thumbnail (e.g. saved vehicle photo) */
+  imageUri?: string | null
 }
 
 interface SelectFieldProps {
@@ -162,9 +164,21 @@ const SelectField: React.FC<SelectFieldProps> = ({
           onPress={openDrawer}
           className="flex-1 flex-row items-center justify-between py-3"
         >
-          <Text className={`text-[1.2rem] font-NunitoMedium ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
-            {selectedOption ? selectedOption.label : placeholder}
-          </Text>
+          <View className="flex-row items-center flex-1 min-w-0 pr-2">
+            {selectedOption?.imageUri ? (
+              <Image
+                source={{ uri: selectedOption.imageUri }}
+                className="w-10 h-10 rounded-lg mr-3 bg-gray-200"
+                resizeMode="cover"
+              />
+            ) : null}
+            <Text
+              className={`text-[1.2rem] font-NunitoMedium flex-1 ${selectedOption ? "text-gray-900" : "text-gray-400"}`}
+              numberOfLines={2}
+            >
+              {selectedOption ? selectedOption.label : placeholder}
+            </Text>
+          </View>
           <ChevronDownIcon size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </Animated.View>
@@ -196,7 +210,9 @@ const SelectField: React.FC<SelectFieldProps> = ({
               
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-lg font-NunitoBold text-gray-900">
-                  Select {label}
+                  {/^(select|choose)\b/i.test(String(label).trim())
+                    ? label
+                    : `Select ${label}`}
                 </Text>
                 {searchQuery.trim() && (
                   <Text className="text-sm font-NunitoMedium text-gray-500">
@@ -233,9 +249,21 @@ const SelectField: React.FC<SelectFieldProps> = ({
                       onPress={() => handleSelect(option.value)}
                       className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl"
                     >
-                      <Text className="text-base font-NunitoMedium text-gray-900">
-                        {option.label}
-                      </Text>
+                      <View className="flex-row items-center flex-1 min-w-0 pr-3">
+                        {option.imageUri ? (
+                          <Image
+                            source={{ uri: option.imageUri }}
+                            className="w-12 h-12 rounded-xl mr-3 bg-gray-200 shrink-0"
+                            resizeMode="cover"
+                          />
+                        ) : null}
+                        <Text
+                          className="text-base font-NunitoMedium text-gray-900 flex-1"
+                          numberOfLines={2}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
                       {value === option.value && (
                         <CheckIcon size={20} color="#0A6DEE" />
                       )}

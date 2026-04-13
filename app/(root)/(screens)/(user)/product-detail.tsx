@@ -38,6 +38,7 @@ import {
   ProductFeatures,
   ProductActionBar,
   ProductReviews,
+  ProductRepairHistory,
 } from "@/components/product-detail";
 
 const ProductDetail = () => {
@@ -394,6 +395,13 @@ const ProductDetail = () => {
             blindSpotMonitor={(product as any).blind_spot_monitor}
           />
         </Animated.View>
+
+        {/* Repair History */}
+        {product.repair_history && product.repair_history.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(325).duration(400)}>
+            <ProductRepairHistory repairHistory={product.repair_history} />
+          </Animated.View>
+        )}
 
         {/* Reviews */}
         <Animated.View entering={FadeInDown.delay(350).duration(400)}>

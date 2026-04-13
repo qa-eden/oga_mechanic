@@ -9,6 +9,7 @@ import { TruckIcon } from 'react-native-heroicons/outline';
 interface SelectOption {
   label: string;
   value: string;
+  imageUri?: string | null;
 }
 
 interface OrderFormFieldsProps {
@@ -17,11 +18,14 @@ interface OrderFormFieldsProps {
   selectedCar: string;
   setSelectedCar: (value: string) => void;
   hasCarList: boolean;
+  /** Populated from GET /users/my-vehicles/ via useCarList */
   carOptions: SelectOption[];
+  /** While vehicles are loading */
+  carsLoading?: boolean;
 
   // Service details
-  serviceType: string;
-  setServiceType: (value: string) => void;
+  serviceTypes: string[];
+  setServiceTypes: (value: string[]) => void;
   problemDescription: string;
   setProblemDescription: (value: string) => void;
   serviceAddress: string;
@@ -70,8 +74,9 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
   setSelectedCar,
   hasCarList,
   carOptions,
-  serviceType,
-  setServiceType,
+  carsLoading = false,
+  serviceTypes,
+  setServiceTypes,
   problemDescription,
   setProblemDescription,
   serviceAddress,
@@ -119,7 +124,13 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
           <SelectField
             name="selectedCar"
             label="Choose from saved vehicles"
-            placeholder="Select a car"
+            placeholder={
+              carsLoading
+                ? "Loading your vehicles…"
+                : carOptions.length === 0
+                  ? "No saved vehicles"
+                  : "Select a car"
+            }
             options={carOptions}
             value={selectedCar}
             onValueChange={(carId) => {
@@ -133,8 +144,8 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         <View className="h-px bg-gray-200 mb-4" />
 
         <ServiceDetailsForm
-          serviceType={serviceType}
-          setServiceType={setServiceType}
+          serviceTypes={serviceTypes}
+          setServiceTypes={setServiceTypes}
           problemDescription={problemDescription}
           setProblemDescription={setProblemDescription}
           serviceAddress={serviceAddress}
@@ -167,8 +178,8 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
   return (
     <View>
       <ServiceDetailsForm
-        serviceType={serviceType}
-        setServiceType={setServiceType}
+        serviceTypes={serviceTypes}
+        setServiceTypes={setServiceTypes}
         problemDescription={problemDescription}
         setProblemDescription={setProblemDescription}
         serviceAddress={serviceAddress}

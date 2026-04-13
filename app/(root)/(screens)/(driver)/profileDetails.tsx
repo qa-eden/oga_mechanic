@@ -608,12 +608,21 @@ const ProfileDetails = () => {
         }
       });
 
-      if (values.profile_picture && values.profile_picture.startsWith('data:')) {
-        formData.append('profile_picture', {
-            uri: values.profile_picture,
-            name: `profile_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-        } as any);
+      const getFileObject = (uri: string) => {
+        if (!uri) return null;
+        if (uri.startsWith('http')) return uri;
+        return {
+          uri,
+          name: `profile_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      if (values.profile_picture && (values.profile_picture.startsWith('file://') || values.profile_picture.startsWith('content://') || values.profile_picture.startsWith('data:'))) {
+        const profileFile = getFileObject(values.profile_picture);
+        if (profileFile) {
+          formData.append('profile_picture', profileFile);
+        }
       }
 
       await userAPI.submitDriverKYC(formData);

@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import ImageUploadSection from '@/components/ImageUploadSection'
 import { sellerRoutes } from '@/constants/routes'
 import CustomButton from '@/components/CustomButton'
+import { useVehicleMakes } from '@/hooks/useVehicleMakes'
 
 const UploadCarImages = () => {
   const [images, setImages] = useState<string[]>([])
@@ -26,50 +27,28 @@ const UploadCarImages = () => {
   const type = productType || 'car'; // Default to 'car' for backward compatibility
   const isSparePart = type === 'spare-part';
   
+  const { data: vehicleMakes } = useVehicleMakes();
+
   // Dynamic text based on product type
   const productLabel = isSparePart ? 'Spare Part' : 'Car';
   const productLabelLower = isSparePart ? 'spare part' : 'car';
 
   // Get make and model names for display
   const getMakeName = (makeId: number) => {
-    // Map of common make IDs to names (this should ideally come from the API or be passed as props)
-    const makeNames: { [key: number]: string } = {
-      1: 'Toyota',
-      2: 'Honda',
-      3: 'Ford',
-      4: 'Nissan',
-      5: 'Chevrolet',
-      6: 'Hyundai',
-      7: 'Kia',
-      8: 'Mazda',
-      9: 'Subaru',
-      10: 'Volkswagen',
-      11: 'BMW',
-      12: 'Mercedes-Benz',
-      13: 'Audi',
-      14: 'Lexus',
-      15: 'Infiniti',
-      16: 'Acura',
-      17: 'Volvo',
-      18: 'Jaguar',
-      19: 'Land Rover',
-      20: 'Porsche',
-      21: 'Mitsubishi',
-      22: 'Suzuki',
-      23: 'Isuzu',
-      24: 'Peugeot',
-      25: 'Renault'
-    };
-    return makeNames[makeId] || `Make ID: ${makeId}`;
+    if (!vehicleMakes) return `Make ID: ${makeId}`;
+    const make = vehicleMakes.find((m: any) => m.id === makeId);
+    return make ? make.name : `Make ID: ${makeId}`;
   };
 
   const getModelName = (modelId: number) => {
-    // Map of common model IDs to names (this should ideally come from the API or be passed as props)
-    const modelNames: { [key: number]: string } = {
-      26: 'Civic',
-      // Add more model mappings as needed
-    };
-    return modelNames[modelId] || `Model ID: ${modelId}`;
+    if (!vehicleMakes) return `Model ID: ${modelId}`;
+    for (const make of vehicleMakes) {
+      if (make.models) {
+        const model = make.models.find((m: any) => m.id === modelId);
+        if (model) return model.name;
+      }
+    }
+    return `Model ID: ${modelId}`;
   };
 
   const handleImagesChange = (newImages: string[]) => {
@@ -94,16 +73,23 @@ const UploadCarImages = () => {
         throw new Error(`Product ID not found. Please try creating the ${productLabelLower} listing again.`)
       }
 
-      // Create FormData for image upload
+      // Prepare FormData for multipart image upload
       const formData = new FormData()
       
-      // Add each image to the form data
+      // Add each local image URI to the form data as a file object
       images.forEach((imageUri, index) => {
-        formData.append('images', {
-          uri: imageUri,
-          type: 'image/jpeg',
-          name: `${type}_image_${index + 1}.jpg`,
-        } as any)
+        if (imageUri) {
+          // Format the file object for FormData (required by React Native fetch)
+          const uriParts = imageUri.split('.');
+          const fileExtension = uriParts[uriParts.length - 1].toLowerCase();
+          const fileName = `image_${Date.now()}_${index}.${fileExtension}`;
+          
+          formData.append('images', {
+            uri: imageUri,
+            type: `image/${fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'jpeg' : fileExtension}`,
+            name: fileName,
+          } as any);
+        }
       })
 
       // API call: POST to products/products/{id}/images/upload/

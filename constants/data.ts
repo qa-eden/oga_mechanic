@@ -475,7 +475,8 @@ export const featureOptions = [
     'Blind Spot Monitor'
 ]
 
-export const serviceTypeOptions = [
+// Legacy service type options - kept as fallback
+export const fallbackServiceTypeOptions = [
   { label: 'Diagnostics', value: 'diagnostics' },
   { label: 'Routine Maintenance', value: 'maintenance' },
   { label: 'Repair', value: 'repair' },
@@ -516,3 +517,32 @@ export const serviceTypeOptions = [
   { label: 'Annual Service', value: 'annual_service' },
   { label: 'Other', value: 'other' },
 ];
+
+// Dynamic service types function - use this in components
+export const getServiceTypeOptions = async (): Promise<{ label: string; value: string }[]> => {
+  try {
+    const { mechanicAPI } = await import('../lib/api/mechanic');
+    const response = await mechanicAPI.getServiceTypes();
+    
+    if (response.results && response.results.length > 0) {
+      return response.results.map((service: any) => {
+        const vehicleInfo = service.vehicle_make_name && service.vehicle_model_name 
+          ? `${service.vehicle_make_name} and ${service.vehicle_model_name}`
+          : service.vehicle_make_name 
+          ? `${service.vehicle_make_name} - All Models`
+          : 'All Models';
+        
+        return {
+          label: `${service.name} (${vehicleInfo})`,
+          value: service.id
+        };
+      });
+    }
+    
+    // Fallback to hardcoded options if API fails
+    return fallbackServiceTypeOptions;
+  } catch (error) {
+    console.warn('Failed to fetch service types from API, using fallback:', error);
+    return fallbackServiceTypeOptions;
+  }
+};

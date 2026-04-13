@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface UseFindMechanicFormReturn {
   // Car selection
@@ -8,8 +8,8 @@ interface UseFindMechanicFormReturn {
   setSelectedCar: (value: string) => void;
 
   // Service details
-  serviceType: string;
-  setServiceType: (value: string) => void;
+  serviceTypes: string[];
+  setServiceTypes: (value: string[]) => void;
 
   // Vehicle details
   vehicleMake: string;
@@ -55,15 +55,19 @@ interface UseFindMechanicFormReturn {
 }
 
 /**
- * Custom hook to manage all form state for the Find Mechanic screen
+ * Custom hook to manage all form state for the Find Mechanic screen.
+ * @param carsReady When false, saved-vehicle list is still loading (do not trust hasCarList yet).
  */
-export const useFindMechanicForm = (hasCarList: boolean): UseFindMechanicFormReturn => {
+export const useFindMechanicForm = (
+  hasCarList: boolean,
+  carsReady: boolean
+): UseFindMechanicFormReturn => {
   // Car selection
   const [carSelection, setCarSelection] = useState<'Yes' | 'No' | null>(null);
   const [selectedCar, setSelectedCar] = useState('');
 
   // Service details
-  const [serviceType, setServiceType] = useState('');
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
   // Vehicle details
   const [vehicleMake, setVehicleMake] = useState('');
@@ -89,16 +93,24 @@ export const useFindMechanicForm = (hasCarList: boolean): UseFindMechanicFormRet
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Initialize step: if no car list, start at step 2 (order fields), otherwise start at step 1
-  const [currentStep, setCurrentStep] = useState<1 | 2>(hasCarList ? 1 : 2);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+
+  useEffect(() => {
+    if (!carsReady) return;
+    setCurrentStep(hasCarList ? 1 : 2);
+    if (!hasCarList) {
+      setCarSelection(null);
+      setSelectedCar("");
+    }
+  }, [carsReady, hasCarList]);
 
   return {
     carSelection,
     setCarSelection,
     selectedCar,
     setSelectedCar,
-    serviceType,
-    setServiceType,
+    serviceTypes,
+    setServiceTypes,
     vehicleMake,
     setVehicleMake,
     vehicleModel,

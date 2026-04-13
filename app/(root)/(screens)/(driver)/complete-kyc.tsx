@@ -487,97 +487,75 @@ const DriverKYC = () => {
       formData.append('license_issue_date', values.license_issue_date);
       formData.append('license_expiry_date', values.license_expiry_date);
 
-      // Append Files
+      // Helper function to handle image upload if it's a local URI
+      const getFileObject = (image: any) => {
+        if (!image || !image.uri) return null;
+        // If it's already a URL, we don't need to wrap it as a file object
+        if (image.uri.startsWith('http')) return image.uri;
+        
+        return {
+          uri: image.uri,
+          name: image.name || `file_${Date.now()}.jpg`,
+          type: image.type || 'image/jpeg'
+        } as any;
+      };
+
+      // Append Files (now as file objects or existing URLs)
       if (govtIdFront) {
-        formData.append('government_id_front', {
-          uri: govtIdFront.uri,
-          name: `govt_id_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdFront);
+        if (file) formData.append('government_id_front', file);
       }
 
       if (govtIdBack) {
-        formData.append('government_id_back', {
-          uri: govtIdBack.uri,
-          name: `govt_id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdBack);
+        if (file) formData.append('government_id_back', file);
       } else if (values.government_id === 'passport' && govtIdFront) {
         // If passport, use front image for back payload
-        formData.append('government_id_back', {
-          uri: govtIdFront.uri,
-          name: `govt_id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdFront);
+        if (file) formData.append('government_id_back', file);
       }
 
       if (licenseFront) {
-        formData.append('driver_license', {
-          uri: licenseFront.uri,
-          name: `license_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-        formData.append('license_front_image', {
-          uri: licenseFront.uri,
-          name: `license_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(licenseFront);
+        if (file) {
+          formData.append('driver_license', file);
+          formData.append('license_front_image', file);
+        }
       }
 
       if (licenseBack) {
-        formData.append('license_back_image', {
-          uri: licenseBack.uri,
-          name: `license_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(licenseBack);
+        if (file) formData.append('license_back_image', file);
       }
 
       if (insuranceDoc) {
-        formData.append('insurance_document', {
-          uri: insuranceDoc.uri,
-          name: `insurance_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(insuranceDoc);
+        if (file) formData.append('insurance_document', file);
       }
 
       if (vehicleFront) {
-        formData.append('vehicle_photo_front', {
-          uri: vehicleFront.uri,
-          name: `vehicle_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(vehicleFront);
+        if (file) formData.append('vehicle_photo_front', file);
       }
 
       if (vehicleBack) {
-        formData.append('vehicle_photo_back', {
-          uri: vehicleBack.uri,
-          name: `vehicle_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(vehicleBack);
+        if (file) formData.append('vehicle_photo_back', file);
       }
 
       if (vehicleRight) {
-        formData.append('vehicle_photo_right', {
-          uri: vehicleRight.uri,
-          name: `vehicle_right_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(vehicleRight);
+        if (file) formData.append('vehicle_photo_right', file);
       }
 
       if (vehicleLeft) {
-        formData.append('vehicle_photo_left', {
-          uri: vehicleLeft.uri,
-          name: `vehicle_left_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(vehicleLeft);
+        if (file) formData.append('vehicle_photo_left', file);
       }
 
       if (selfie) {
-        formData.append('selfie', {
-          uri: selfie.uri,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(selfie);
+        if (file) formData.append('selfie', file);
       }
 
       await userAPI.submitDriverKYC(formData);

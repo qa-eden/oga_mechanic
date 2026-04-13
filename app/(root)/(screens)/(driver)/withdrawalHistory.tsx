@@ -1,41 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NairaCurrency } from '@/utils/useCurrencyFormatter';
 import BackArrowBtn from '@/components/BackArrowBtn';
 
+import { useWithdrawals } from "@/hooks/useUserProfile";
+import { groupTransactionsByMonth } from "@/utils/dateFormatter";
+import { RefreshControl, ActivityIndicator } from "react-native";
+import WithdrawalFilterBar from "@/components/WithdrawalFilterBar";
+import { WithdrawalFilters } from "@/lib/api/user";
+
 const WithdrawalHistory = () => {
-  const withdrawalData = [
-    {
-      id: "#WD001",
-      date: "April 14, 2025 - 2:53 PM",
-      amount: 25000,
-      status: "Completed",
-      method: "Bank Transfer",
-    },
-    {
-      id: "#WD002",
-      date: "April 13, 2025 - 10:30 AM",
-      amount: 15000,
-      status: "Completed",
-      method: "Bank Transfer",
-    },
-    {
-      id: "#WD003",
-      date: "April 12, 2025 - 8:15 AM",
-      amount: 20000,
-      status: "Completed",
-      method: "Bank Transfer",
-    },
-    {
-      id: "#WD004",
-      date: "April 11, 2025 - 6:45 AM",
-      amount: 18000,
-      status: "Completed",
-      method: "Bank Transfer",
-    },
-  ];
+  const [filters, setFilters] = useState<WithdrawalFilters>({});
+
+  const { data: response, isLoading, refetch, isRefetching } = useWithdrawals(filters);
+  const withdrawals = response?.data || [];
+
+  const groupedWithdrawals = groupTransactionsByMonth(withdrawals);
+  const months = Object.keys(groupedWithdrawals).sort((a, b) => {
+    return new Date(b).getTime() - new Date(a).getTime();
+  });
+
+  const handleFilterChange = (newFilters: WithdrawalFilters) => {
+    setFilters(newFilters);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#B91C1C" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -51,37 +48,66 @@ const WithdrawalHistory = () => {
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <WithdrawalFilterBar 
+        onFilterChange={handleFilterChange} 
+        activeFilters={filters}
+      />
+
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#B91C1C" />
+        }
+      >
         <View className="px-5 py-6">
-          {withdrawalData.map((withdrawal, index) => (
-            <View
-              key={`withdrawal-${index}`}
-              className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
-            >
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="font-NunitoBold text-gray-900">
-                  {withdrawal.id}
-                </Text>
-                <NairaCurrency
-                  value={withdrawal.amount}
-                  className="text-lg font-NunitoBold text-gray-900"
-                />
-              </View>
-              <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
-                {withdrawal.date}
-              </Text>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xs text-gray-500">
-                  {withdrawal.method}
-                </Text>
-                <View className="px-2 py-1 bg-green-100 rounded-full">
-                  <Text className="text-xs text-green-700 font-NunitoBold">
-                    {withdrawal.status}
+          {months.length === 0 && !isLoading ? (
+            <View className="items-center justify-center py-20">
+              <Text className="text-gray-400 font-NunitoMedium">No withdrawal history found</Text>
+            </View>
+          ) : (
+            months.map((monthYear) => (
+              <View key={monthYear} className="mb-6">
+                {/* Month Header */}
+                <View className="items-center py-6">
+                  <Text className="text-sm text-gray-500 font-NunitoMedium tracking-wider">
+                    {monthYear}
                   </Text>
                 </View>
+
+                {/* Withdrawals for this month */}
+                {groupedWithdrawals[monthYear].map((withdrawal, index) => (
+                  <View
+                    key={`${withdrawal.id}-${index}`}
+                    className="bg-white rounded-xl p-4 mb-3 border border-gray-200"
+                  >
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text className="font-NunitoBold text-gray-900">
+                        {withdrawal.description || "Withdraw to bank"}
+                      </Text>
+                      <NairaCurrency
+                        value={typeof withdrawal.amount === 'string' ? parseFloat(withdrawal.amount) : withdrawal.amount}
+                        className="text-lg font-NunitoBold text-red-600"
+                      />
+                    </View>
+                    <Text className="text-sm text-gray-600 font-NunitoMedium mb-2">
+                      Reference ID: {withdrawal.reference || String(withdrawal.id).slice(0, 8)}
+                    </Text>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xs text-gray-500">
+                        Bank Transfer
+                      </Text>
+                      <View className={`px-2 py-1 rounded-full ${withdrawal.status?.toLowerCase() === 'completed' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                        <Text className={`text-xs font-NunitoBold ${withdrawal.status?.toLowerCase() === 'completed' ? 'text-green-700' : 'text-gray-700'}`}>
+                          {withdrawal.status || "Completed"}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
               </View>
-            </View>
-          ))}
+            ))
+          )}
 
           <View className="h-20" />
         </View>

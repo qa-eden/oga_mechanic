@@ -12,15 +12,25 @@ export interface CarDetails {
 }
 
 export interface RepairRequestData {
-  mechanic_id: string;
-  service_type: string;
-  vehicle_make: string;
-  vehicle_model: string;
-  vehicle_year: number;
+  mechanic_id?: string;
+  /** Single service type (ID) when only one selected */
+  service_type?: string;
+  /** Multi-select service categories (IDs) when multiple selected */
+  service_categories?: string[];
+  /**
+   * Linked saved vehicle UUID (for "Choose from saved vehicles" flow).
+   * Backend can derive make/model/year/vin from this relation.
+   */
+  user_vehicle?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_year?: number;
+  vehicle_vin?: string;
   problem_description: string;
   service_address: string;
   service_latitude?: number;
   service_longitude?: number;
+  schedule?: boolean;
   preferred_date?: string;
   preferred_time_slot?: string;
 }
@@ -48,8 +58,34 @@ export interface FindMechanicResponse {
   message: string;
 }
 
+export interface ServiceType {
+  id: string;
+  name: string;
+  description?: string;
+  base_price: string;
+  vehicle_make_name: string;
+  vehicle_model_name?: string;
+  vehicle_make: number | null;
+  vehicle_model?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceTypesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: ServiceType[];
+}
+
 // API Functions
 export const mechanicAPI = {
+  // Get service types
+  getServiceTypes: async (): Promise<ServiceTypesResponse> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.SERVICE_TYPES);
+    return response.data;
+  },
+
   // Find mechanics based on car details
   findMechanic: async (carDetails: CarDetails): Promise<FindMechanicResponse> => {
     const response = await api.post(SERVICE_ENDPOINTS.MECHANICS_FIND, carDetails);

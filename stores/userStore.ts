@@ -12,6 +12,7 @@ interface UserState {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  hasHydrated: boolean;
   
   // Actions
   login: (credentials: LoginCredentials) => Promise<boolean>;
@@ -33,6 +34,7 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       loading: false,
       error: null,
+      hasHydrated: false,
 
       // Actions
       login: async (credentials: LoginCredentials) => {
@@ -41,20 +43,23 @@ export const useUserStore = create<UserState>()(
           
           const response = await userAPI.login(credentials);
           
-          // Store tokens and user data
-          await AsyncStorage.setItem('auth_token', response.accessToken);
-          await AsyncStorage.setItem('refresh_token', response.refreshToken);
-          await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
-          
-          set({
-            user: response.user,
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
-            isAuthenticated: true,
-            loading: false,
-          });
-          
-          return true;
+          if (response.status && response.data) {
+            // Store tokens and user data
+            await AsyncStorage.setItem('auth_token', response.data.access);
+            await AsyncStorage.setItem('refresh_token', response.data.refresh);
+            await AsyncStorage.setItem('user_data', JSON.stringify(response.data.user));
+            
+            set({
+              user: response.data.user,
+              accessToken: response.data.access,
+              refreshToken: response.data.refresh,
+              isAuthenticated: true,
+              loading: false,
+            });
+            
+            return true;
+          }
+          return false;
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || 'Login failed';
           showToast.error(errorMessage);
@@ -182,6 +187,15 @@ export const useUserStore = create<UserState>()(
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => {
+        return (state) => {
+          state?.clearError(); // Just an example of using the state
+          // To update the state properly, we can just rely on the initial hasHydrated: false
+          // and set it here if we have a way. 
+          // Actually, in Zustand persist, if you want to set state after rehydration:
+          useUserStore.setState({ hasHydrated: true });
+        };
+      },
     }
   )
 );

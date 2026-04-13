@@ -45,7 +45,7 @@ export const routes = {
   paymentResult: "/(root)/(screens)/(user)/payment-result",
   orderConfirmation: "/(root)/(screens)/(user)/order-confirmation",
   orderTracking: "/(root)/(screens)/(user)/order-tracking",
-  chatSeller: "/(root)/(screens)/(user)/chat-seller",
+  chatSpecialist: "/(root)/(screens)/(user)/chat-specialist",
   carDetails: "/(root)/(screens)/(user)/car-detail",
   addCar: "/(root)/(screens)/(user)/add-car",
   AllMechanic: "/(root)/(screens)/(mechanicScreens)/all-mechanic",
@@ -59,7 +59,10 @@ export const routes = {
   notifications: "/(root)/(screens)/(notifications)/notification",
   notificationDetail: "/(root)/(screens)/(notifications)/notification-detail",
   followedMerchants: "/(root)/(screens)/(user)/followed-merchants",
-
+  activeBids: "/(root)/(screens)/(user)/active-bids",
+  biddingDetail: "/(root)/(screens)/(user)/bidding-detail",
+  myBids: "/(root)/(screens)/(user)/my-bids",
+  supportSuggestions: "/(root)/(screens)/(user)/support-suggestions",
 
   //calls
   videoCall: "/(root)/(screens)/(calls)/video-call",
@@ -200,6 +203,8 @@ export const sellerRoutes = {
   productDetails: "/(root)/(screens)/(seller)/productDetails",
   productDetailsDetailed: "/(root)/(screens)/(seller)/productDetailsDetailed",
   deleteSuccess: "/(root)/(screens)/(seller)/deleteSuccess",
+  subscription: "/(root)/(screens)/(seller)/subscription",
+  subscriptionPayment: "/(root)/(screens)/(seller)/subscription-payment",
 } as const;
 
 export type SellerRouteKeys = keyof typeof sellerRoutes;

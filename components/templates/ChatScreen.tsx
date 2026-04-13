@@ -10,11 +10,19 @@ import {
   FlatList,
   Animated,
   Alert,
-  Linking,
+  Pressable,
+  Keyboard,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import * as DocumentPicker from "expo-document-picker";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient"; // Recommended for better visuals
 import BackArrowBtn from "@/components/BackArrowBtn";
-import { PaperAirplaneIcon, PhoneIcon, PaperClipIcon, UserIcon } from "react-native-heroicons/outline";
+import { 
+  PaperAirplaneIcon, 
+  PhoneIcon, 
+  PaperClipIcon, 
+  UserIcon 
+} from "react-native-heroicons/outline";
 import ChatMessage from "@/components/cards/ChatMessage";
 import { Message } from "@/utils/chatUtils";
 
@@ -28,306 +36,354 @@ interface Participant {
 
 interface ChatScreenProps {
   participant: Participant;
-  initialMessages?: Message[];
+  messages: Message[];
+  onSendMessage: (text: string) => void;
+  onTyping?: (isTyping: boolean) => void;
+  isTyping?: boolean;
+  isLoadingHistory?: boolean;
+  initialText?: string;
   headerSubtitle?: string;
   onCall?: () => void;
+  onReconnect?: () => void;
   showAttachmentButton?: boolean;
+  onAttachFile?: (file: { uri: string; name: string; mimeType: string; size?: number }) => void;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({
   participant,
-  initialMessages = [],
+  messages = [],
+  onSendMessage,
+  onTyping,
+  isTyping = false,
+  isLoadingHistory = false,
+  initialText,
   headerSubtitle = "Chat",
   onCall,
+  onReconnect,
   showAttachmentButton = true,
+  onAttachFile,
 }) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [inputText, setInputText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [inputText, setInputText] = useState(initialText || "");
+  const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const typingAnimation = useRef(new Animated.Value(0)).current;
+  const inputRef = useRef<TextInput>(null);
 
+  // Animations
+  const typingOpacity = useRef(new Animated.Value(0)).current;
+  const sendButtonScale = useRef(new Animated.Value(1)).current;
+
+  // Smooth typing indicator
   useEffect(() => {
     if (isTyping) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(typingAnimation, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(typingAnimation, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
+          Animated.timing(typingOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(typingOpacity, { toValue: 0.3, duration: 600, useNativeDriver: true }),
         ])
       ).start();
     } else {
-      typingAnimation.setValue(0);
+      typingOpacity.setValue(0);
     }
   }, [isTyping]);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages, isTyping]);
+
   const handleSendMessage = () => {
     if (inputText.trim()) {
-      const newMessage: Message = {
-        id: messages.length + 1,
-        text: inputText.trim(),
-        isSent: true,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        status: 'sending',
-      };
-      setMessages((prev) => [...prev, newMessage]);
+      onSendMessage(inputText.trim());
       setInputText("");
 
-      // Simulate message delivery
-      setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === newMessage.id ? { ...msg, status: 'sent' } : msg
-          )
-        );
-      }, 1000);
-
-      // Simulate message read
-      setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === newMessage.id ? { ...msg, status: 'read' } : msg
-          )
-        );
-      }, 3000);
-
-      // Scroll to bottom
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      // Button press animation
+      Animated.sequence([
+        Animated.timing(sendButtonScale, { toValue: 0.85, duration: 80, useNativeDriver: true }),
+        Animated.timing(sendButtonScale, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]).start();
     }
   };
 
-  const handleCall = () => {
-    if (onCall) return onCall();
-    Alert.alert(
-      "Call",
-      `Call ${participant.name} at ${participant.phone}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Call",
-          onPress: () => {
-            const phoneNumber = participant.phone.replace(/\s/g, '');
-            const url = `tel:${phoneNumber}`;
-            Linking.canOpenURL(url)
-              .then((supported) => {
-                if (supported) {
-                  return Linking.openURL(url);
-                } else {
-                  Alert.alert("Error", "Phone calls are not supported on this device");
-                }
-              })
-              .catch((err) => {
-                console.error('An error occurred', err);
-                Alert.alert("Error", "Failed to initiate call");
-              });
-          }
-        },
-      ]
-    );
+  const handleTyping = (text: string) => {
+    setInputText(text);
+    onTyping?.(text.length > 0);
   };
 
-  const handleAttachment = () => {
-    Alert.alert("Attachment", "Choose attachment type", [
-      { text: "Photo", onPress: () => {} },
-      { text: "Document", onPress: () => {} },
-      { text: "Cancel", style: "cancel" },
-    ]);
+  const handleAttachment = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        if (onAttachFile) {
+          onAttachFile({
+            uri: file.uri,
+            name: file.name,
+            mimeType: file.mimeType || "application/octet-stream",
+            size: file.size,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error picking document:", err);
+      Alert.alert("Error", "Could not pick a file.");
+    }
   };
 
   const renderTypingIndicator = () => (
-    <View className="mb-4 items-start">
-      <View className="bg-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
-        <View className="flex-row items-center space-x-1">
-          <Animated.View
-            style={{
-              opacity: typingAnimation,
-              transform: [{ scale: typingAnimation }],
-            }}
-            className="w-2 h-2 bg-gray-600 rounded-full"
-          />
-          <Animated.View
-            style={{
-              opacity: typingAnimation,
-              transform: [{ scale: typingAnimation }],
-            }}
-            className="w-2 h-2 bg-gray-600 rounded-full"
-          />
-          <Animated.View
-            style={{
-              opacity: typingAnimation,
-              transform: [{ scale: typingAnimation }],
-            }}
-            className="w-2 h-2 bg-gray-600 rounded-full"
-          />
-        </View>
+    <View className="mb-6 pl-4">
+      <View className="bg-gray-100 rounded-3xl rounded-bl-2xl px-5 py-3.5 flex-row items-center gap-x-1.5 w-20">
+        <Animated.View 
+          style={{ opacity: typingOpacity }}
+          className="w-2 h-2 bg-gray-500 rounded-full" 
+        />
+        <Animated.View 
+          style={{ opacity: typingOpacity }}
+          className="w-2 h-2 bg-gray-500 rounded-full" 
+        />
+        <Animated.View 
+          style={{ opacity: typingOpacity }}
+          className="w-2 h-2 bg-gray-500 rounded-full" 
+        />
       </View>
     </View>
   );
 
-  const renderMessage = useCallback(
-    ({ item }: { item: Message }) => <ChatMessage item={item} />, []
+  const renderMessage = useCallback(({ item }: { item: Message }) => (
+    <ChatMessage item={item} />
+  ), []);
+
+  const MessageSkeletonBubble = ({ isSent, width: w }: { isSent: boolean; width: number }) => {
+    const pulseAnim = useRef(new Animated.Value(0.4)).current;
+    useEffect(() => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.9, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }, []);
+
+    return (
+      <View style={{ alignItems: isSent ? 'flex-end' : 'flex-start', marginBottom: 14, paddingHorizontal: 16 }}>
+        <Animated.View
+          style={{
+            opacity: pulseAnim,
+            height: 44,
+            width: w,
+            borderRadius: 22,
+            backgroundColor: isSent ? '#fde8e8' : '#e2e8f0',
+          }}
+        />
+        <Animated.View
+          style={{
+            opacity: pulseAnim,
+            height: 10,
+            width: w * 0.45,
+            borderRadius: 8,
+            backgroundColor: '#e2e8f0',
+            marginTop: 4,
+            alignSelf: isSent ? 'flex-end' : 'flex-start',
+          }}
+        />
+      </View>
+    );
+  };
+
+  const ChatSkeleton = () => (
+    <View style={{ flex: 1, paddingTop: 16, paddingBottom: 100 }}>
+      <MessageSkeletonBubble isSent={false} width={220} />
+      <MessageSkeletonBubble isSent={true}  width={160} />
+      <MessageSkeletonBubble isSent={false} width={260} />
+      <MessageSkeletonBubble isSent={true}  width={200} />
+      <MessageSkeletonBubble isSent={false} width={190} />
+      <MessageSkeletonBubble isSent={true}  width={240} />
+    </View>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={["top"]}>
         <View style={{ flex: 1 }}>
-          {/* Header */}
-          <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm">
-            <BackArrowBtn />
-            <View className="flex-1 items-center">
-              <Text className="text-lg font-NunitoBold text-gray-900">Message</Text>
-              <Text className="text-xs text-gray-500 font-NunitoMedium">{headerSubtitle}</Text>
-            </View>
-            <TouchableOpacity
-              onPress={handleCall}
-              className="w-10 h-10 bg-primary-100 rounded-full items-center justify-center"
-            >
-              <PhoneIcon size={20} color="#D30309" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Participant Info */}
-          <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
-            <View className="relative mr-4">
-              <View className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-100">
-                {typeof participant.avatar === "string" ? (
-                  <Image
-                    source={{ uri: participant.avatar }}
-                    className="w-full h-full"
-                    resizeMode="cover"
-                  />
-                ) : typeof participant.avatar === "function" ? (
-                  React.createElement(participant.avatar, { width: 64, height: 64 })
-                ) : (
-                  <UserIcon width={64} height={64} color="#9CA3AF" />
-                )}
-              </View>
-              {participant.isOnline && (
-                <View className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white items-center justify-center">
-                  <View className="w-2 h-2 bg-white rounded-full" />
+          {/* Unified Header - Kept outside KeyboardAvoidingView for stability */}
+          <View className="bg-white border-b border-gray-100 shadow-sm">
+            <View className="flex-row items-center px-4 py-3">
+              <BackArrowBtn />
+              
+              <View className="flex-1 flex-row items-center ml-2">
+                {/* Avatar with Status indicator */}
+                <View className="relative">
+                  <View className="w-11 h-11 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm">
+                    {/* ... Avatar render logic ... */}
+                    {typeof participant.avatar === "string" ? (
+                      <Image
+                        source={{ uri: participant.avatar }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : typeof participant.avatar === "number" ? (
+                      <Image
+                        source={participant.avatar}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : participant.avatar ? (
+                      React.createElement(participant.avatar, { width: 44, height: 44 })
+                    ) : (
+                      <View className="w-full h-full bg-gray-100 items-center justify-center">
+                        <UserIcon size={24} color="#64748b" />
+                      </View>
+                    )}
+                  </View>
+                  {participant.isOnline && (
+                    <View className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white" />
+                  )}
                 </View>
+
+                {/* Info Column */}
+                <View className="ml-3 flex-1">
+                  <Text className="text-base font-bold text-gray-900 leading-tight" numberOfLines={1}>
+                    {participant.name}
+                  </Text>
+                  <View className="flex-row items-center mt-0.5">
+                    {isTyping ? (
+                      <Animated.Text 
+                        style={{ opacity: typingOpacity }}
+                        className="text-[11px] font-bold text-emerald-600"
+                      >
+                        is typing...
+                      </Animated.Text>
+                    ) : (
+                      <Text className={`text-[11px] font-semibold ${participant.isOnline ? "text-emerald-600" : "text-gray-500"}`}>
+                        {participant.isOnline ? "• Online" : (participant.lastSeen ? `Last seen ${participant.lastSeen}` : headerSubtitle)}
+                      </Text>
+                    )}
+                    {!participant.isOnline && participant.phone && (
+                      <>
+                        <Text className="text-[11px] text-gray-300 mx-1">|</Text>
+                        <Text className="text-[11px] text-gray-500 font-medium">{participant.phone}</Text>
+                      </>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              {onCall && (
+                <TouchableOpacity 
+                  onPress={onCall}
+                  className="w-10 h-10 bg-green-50 rounded-full items-center justify-center active:bg-green-100"
+                >
+                  <PhoneIcon size={20} color="#10b981" />
+                </TouchableOpacity>
               )}
             </View>
-
-            <View className="flex-1">
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                {participant.name}
-              </Text>
-              <View className="flex-row items-center">
-                <PhoneIcon size={14} color="#6B7280" />
-                <Text className="text-sm text-gray-600 ml-1 font-NunitoMedium">
-                  {participant.phone}
-                </Text>
-              </View>
-              <Text className="text-xs text-green-600 font-NunitoMedium mt-1">
-                {participant.isOnline ? "Online" : `Last seen ${participant.lastSeen}`}
-              </Text>
-            </View>
           </View>
 
-          {/* Messages */}
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={item => item.id.toString()}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-            contentContainerStyle={{
-              padding: 20,
-              paddingBottom: 100,
-            }}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            ListFooterComponent={isTyping ? renderTypingIndicator : null}
-            keyboardShouldPersistTaps="handled"
-          />
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+          >
 
-          {/* Message Input */}
-          <View className="px-5 pt-4 pb-[2rem] bg-white border-t border-gray-100">
-            <View className="flex-row items-center gap-1 space-x-3">
+          {/* Messages Area */}
+          {isLoadingHistory && messages.length === 0 ? (
+            <ChatSkeleton />
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id.toString()}
+              style={{ flex: 1, backgroundColor: "#f8fafc" }}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingTop: 16,
+                paddingBottom: 100,
+              }}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={12}
+              maxToRenderPerBatch={8}
+              windowSize={10}
+              removeClippedSubviews={true}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              ListFooterComponent={isTyping ? renderTypingIndicator : <View style={{ height: 30 }} />}
+            />
+          )}
+
+          {/* Input Area - Modern & Smooth */}
+          <View 
+            className="bg-white border-t border-gray-100 px-4 pt-3"
+            style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+          >
+            <View className="flex-row items-end gap-x-3">
               {/* Attachment Button */}
               {showAttachmentButton && (
                 <TouchableOpacity
                   onPress={handleAttachment}
-                  className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+                  className="w-11 h-11 bg-gray-100 rounded-2xl items-center justify-center active:bg-gray-200 transition-colors"
+                  activeOpacity={0.7}
                 >
-                  <PaperClipIcon size={20} color="#6B7280" />
+                  <PaperClipIcon size={22} color="#64748b" />
                 </TouchableOpacity>
               )}
 
-              {/* Input Field */}
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: '#f3f4f6',
-                  borderRadius: 9999,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  minHeight: 44,
-                  maxHeight: 100,
-                  justifyContent: 'center',
-                }}
-              >
+              {/* Message Input */}
+              <View className="flex-1">
                 <TextInput
+                  ref={inputRef}
                   value={inputText}
-                  onChangeText={setInputText}
+                  onChangeText={handleTyping}
                   placeholder="Type a message..."
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#94a3b8"
                   multiline
                   maxLength={1000}
-                  textAlignVertical="center"
                   style={{
-                    color: '#000',
+                    backgroundColor: "#f1f5f9",
+                    borderRadius: 24,
+                    paddingHorizontal: 18,
+                    paddingVertical: 12,
                     fontSize: 16,
-                    paddingVertical: 0,
-                    minHeight: 40,
-                    // iOS-specific tweak:
-                    paddingTop: Platform.OS === 'ios' ? 6 : 0,
+                    lineHeight: 22,
+                    maxHeight: 130,
+                    minHeight: 48,
+                    color: "#0f172a",
                   }}
+                  autoCapitalize="sentences"
+                  autoCorrect={true}
                 />
               </View>
 
-              {/* Send Button */}
-              <TouchableOpacity
-                onPress={handleSendMessage}
-                className={`w-10 h-10 rounded-full items-center justify-center ${
-                  inputText.trim() ? "bg-primary-500" : "bg-gray-200"
-                }`}
-                disabled={!inputText.trim()}
-              >
-                <PaperAirplaneIcon
-                  size={18}
-                  color={inputText.trim() ? "#FFFFFF" : "#9CA3AF"}
-                />
-              </TouchableOpacity>
+              {/* Send Button with Scale Animation */}
+              <Animated.View style={{ transform: [{ scale: sendButtonScale }] }}>
+                <TouchableOpacity
+                  onPress={handleSendMessage}
+                  disabled={!inputText.trim()}
+                  className="w-11 h-11 rounded-2xl items-center justify-center"
+                  style={{
+                    backgroundColor: inputText.trim() ? "#D30309" : "#e2e8f0",
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <PaperAirplaneIcon
+                    size={20}
+                    color={inputText.trim() ? "#fff" : "#94a3b8"}
+                    style={{ transform: [{ rotate: "-35deg" }] }}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 };
 
-export default ChatScreen; 
+export default ChatScreen;

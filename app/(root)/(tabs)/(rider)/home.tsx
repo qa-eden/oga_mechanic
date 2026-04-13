@@ -14,6 +14,7 @@ import KYCBanner from '@/components/KYCBanner';
 import { useRef, useEffect } from 'react';
 import { FadeInUp, FadeInRight, FadeInDown, Layout } from 'react-native-reanimated';
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
+import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 
 const Home = () => {
   const [selectedLocation, setSelectedLocation] = useState("No 5, Agbondodo str, Ijai...");
@@ -248,6 +249,9 @@ const Home = () => {
               isPending={isPendingApproval} 
             />
           </View>
+
+          {/* Add Bidding Carousel */}
+          <BiddingCarousel />
 
           {/* Map Section */}
           <View className="h-64 mx-5 rounded-xl mb-4 overflow-hidden">

@@ -28,7 +28,7 @@ export const ENV_CONFIG = {
   MAPBOX_PLACES_ENDPOINT: process.env.EXPO_PUBLIC_MAPBOX_PLACES_ENDPOINT || 'https://api.mapbox.com/geocoding/v5/mapbox.places',
   
   // WebSocket Configuration
-  WEBSOCKET_URL: process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'wss://api.ogamechanic.com/ws',
+  WEBSOCKET_URL: process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'wss://api.ogamechanic.org/ws',
   
   // File Upload Configuration
   MAX_FILE_SIZE: parseInt(process.env.EXPO_PUBLIC_MAX_FILE_SIZE || '10485760'),

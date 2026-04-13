@@ -166,8 +166,12 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
     const userRoleNames = userRoles.map(role => role.name);
 
     // Filter out developer and admin roles, and the active role
+    // For now, also remove driver and rider roles
     const filteredRoles = allRoles.filter(role => {
-      const isNotExcluded = role.name !== 'developer' && role.name !== 'admin';
+      const isNotExcluded = role.name !== 'developer' &&
+        role.name !== 'admin' &&
+        role.name !== 'driver' &&
+        role.name !== 'rider';
       const isNotActive = role.name !== activeRole?.name;
       return isNotExcluded && isNotActive;
     });
@@ -196,11 +200,11 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
       // First priority: registered roles (hasAccess: true) come before unregistered
       if (a.hasAccess && !b.hasAccess) return -1;
       if (!a.hasAccess && b.hasAccess) return 1;
-      
+
       // Second priority: within same access level, primary_user comes first
       if (a.roleName === 'primary_user' && b.roleName !== 'primary_user') return -1;
       if (b.roleName === 'primary_user' && a.roleName !== 'primary_user') return 1;
-      
+
       // Third priority: alphabetical order
       return a.name.localeCompare(b.name);
     });
@@ -216,38 +220,38 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
     if (selectedUser) {
       // Find the selected option to check if user has access
       const selectedOption = userOptions.find(option => option.id === selectedUser);
-      const roleName = (selectedOption?.roleName || selectedUser) as string; 
+      const roleName = (selectedOption?.roleName || selectedUser) as string;
       const roleId = selectedOption?.roleId;
 
       if (roleId) {
         try {
           setIsSwitching(true);
-          
+
           // Switch role (API automatically adds role if user doesn't have it)
           await switchRoleMutation.mutateAsync(roleName);
-          
+
           const addRoles = !selectedOption?.hasAccess ? [roleId] : undefined;
-          
+
           // Store the new active role for fallback purposes
           await AsyncStorage.setItem('current_active_role', roleName);
-          
+
           // Wait a moment for cache invalidation (handled by mutation) to propagate
           await new Promise(resolve => setTimeout(resolve, 300));
-          
+
           // Log them in directly
           onSwitchUser(roleName);
           // Flag that we just switched roles to trigger the 3s delay
           setIsNewSwitch(true);
 
           if (addRoles) {
-             showToast.success(`Switched to ${selectedOption?.name || roleName}`);
+            showToast.success(`Switched to ${selectedOption?.name || roleName}`);
           }
-          
+
           // Check if profile is complete for non-primary roles
           if (roleName !== 'primary_user') {
             try {
               let profileResponse: any;
-              
+
               // Fetch role-specific profile
               switch (roleName) {
                 case 'mechanic':
@@ -275,30 +279,30 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                 // Check for KYC object (Mechanic/Driver pattern)
                 if (profileResponse.data.kyc && typeof profileResponse.data.kyc.is_complete !== 'undefined') {
                   isComplete = profileResponse.data.kyc.is_complete;
-                  
+
                   // Check for approval if complete
                   if (isComplete) {
                     const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 'driver_profile';
                     isPending = !profileResponse.data[profileKey]?.is_approved;
                   }
-                } 
+                }
                 // Check for has_profile (Merchant pattern)
                 else if (typeof profileResponse.data.has_profile !== 'undefined') {
                   isComplete = profileResponse.data.has_profile;
-                  
+
                   // Check for approval if complete
                   if (isComplete) {
-                      isPending = !profileResponse.data.merchant_profile?.is_approved;
+                    isPending = !profileResponse.data.merchant_profile?.is_approved;
                   }
                 }
               }
-              
+
               setIsPendingApproval(isPending);
 
               if (!isComplete) {
                 // Update global state
                 setIsProfileComplete(false);
-                
+
                 // Set role but don't show modal immediately
                 setCurrentRole(roleName);
               } else {
@@ -308,7 +312,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
               console.error('❌ Profile check failed:', profileError);
             }
           }
-          
+
           // Navigate to role-specific home page
           let targetRoute: string = routes?.userHome;
           switch (roleName) {
@@ -316,27 +320,27 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
             case 'driver': targetRoute = routes?.driverHome; break;
             case 'mechanic': targetRoute = routes?.mechanicHome; break;
             case 'rider': targetRoute = routes?.riderHome; break;
-            case 'merchant': 
-            case 'seller': 
-              targetRoute = sellerRoutes.home; 
+            case 'merchant':
+            case 'seller':
+              targetRoute = sellerRoutes.home;
               break;
             default: targetRoute = routes?.userHome;
           }
           router.replace(targetRoute as any);
-          
+
           // Small delay to show the animation before closing
           setTimeout(() => {
             onClose();
           }, 100);
         } catch (error: any) {
-             console.error("Switch Role Error", error);
-             const errorMessage = error.response?.data?.message || "Failed to switch role. Please try again.";
-             showError("Switch Failed", errorMessage);
+          console.error("Switch Role Error", error);
+          const errorMessage = error.response?.data?.message || "Failed to switch role. Please try again.";
+          showError("Switch Failed", errorMessage);
         } finally {
           setIsSwitching(false);
         }
       } else {
-         showError("Error", "Invalid role configuration");
+        showError("Error", "Invalid role configuration");
       }
     }
   };
@@ -458,13 +462,13 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                   isSwitching
                     ? "Switching..."
                     : selectedUser
-                    ? (() => {
+                      ? (() => {
                         const selectedOption = userOptions.find(u => u.id === selectedUser);
                         const hasAccess = selectedOption?.hasAccess || false;
                         const roleName = selectedOption?.name || selectedUser;
                         return hasAccess ? `Switch to ${roleName}` : `Sign up for ${roleName}`;
                       })()
-                    : "Select a Role"
+                      : "Select a Role"
                 }
                 onPress={handleConfirm}
                 disabled={!selectedUser || isLoadingUserRoles || isLoadingAllRoles || isSwitching}
@@ -485,7 +489,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
           </Animated.View>
         </View>
       </TouchableOpacity>
-      
+
       {/* Custom Alert for role signup */}
       <CustomAlert
         visible={visible}
@@ -493,7 +497,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
         message={alertConfig?.message || ""}
         onClose={hideAlert}
         onButtonPress={hideAlert}
-        type={ "info"}
+        type={"info"}
         buttonText="Close"
       />
 

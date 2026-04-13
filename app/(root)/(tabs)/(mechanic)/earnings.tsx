@@ -11,22 +11,68 @@ import WithdrawFundsModal from "@/components/modals/WithdrawFundsModal";
 import { router } from "expo-router";
 import { mechanicRoutes, routes } from "@/constants/routes";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
+import { useWallet, useEarnings } from "@/hooks/useUserProfile";
+import { WalletTransaction } from "@/lib/api/user";
+import { RefreshControl, ActivityIndicator } from "react-native";
+import { format } from "date-fns";
 
 const MechanicEarnings = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  
+  const { 
+    data: walletResponse, 
+    isLoading: isWalletLoading, 
+    refetch: refetchWallet, 
+    isRefetching: isWalletRefetching 
+  } = useWallet();
 
-  // TODO: Replace with actual API data when available
-  const earningsData: { id: string; date: string; amount: number }[] = [];
-  const yesterdayEarnings: { id: string; date: string; amount: number }[] = [];
-  const totalBalance = 0;
+  const {
+    data: earningsResponse,
+    isLoading: isEarningsLoading,
+    refetch: refetchEarnings,
+    isRefetching: isEarningsRefetching
+  } = useEarnings();
+
+  const walletData = walletResponse?.data;
+  const totalBalance = typeof walletData?.balance === 'string' ? parseFloat(walletData.balance) : (walletData?.balance || 0);
+  const transactions: WalletTransaction[] = walletData?.transactions || [];
+
+  const mechanicEarnings = earningsResponse?.data?.mechanic_earnings;
+  const totalEarned = parseFloat(mechanicEarnings?.total_earnings || "0");
+  const pendingEarned = parseFloat(mechanicEarnings?.pending_earnings || "0");
+  const completedTasks = mechanicEarnings?.completed_tasks || 0;
+
+  const isLoading = isWalletLoading || isEarningsLoading;
+  const isRefetching = isWalletRefetching || isEarningsRefetching;
+
+  const refetch = async () => {
+    await Promise.all([refetchWallet(), refetchEarnings()]);
+  };
+
+  // Categorize transactions
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  const todayTransactions = transactions.filter((t: WalletTransaction) => new Date(t.created_at).toDateString() === today);
+  const yesterdayTransactions = transactions.filter((t: WalletTransaction) => new Date(t.created_at).toDateString() === yesterday);
+  const otherTransactions = transactions.filter((t: WalletTransaction) => {
+    const d = new Date(t.created_at).toDateString();
+    return d !== today && d !== yesterday;
+  });
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
       <AnimatedPageContainer animationType="fadeInDown" duration={500}>
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className="flex-1" 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#B91C1C" />
+          }
+        >
           {/* Header */}
           <View className="px-5 py-4 bg-white">
             <Text className="text-xl font-NunitoBold text-gray-900 text-center">
@@ -41,12 +87,12 @@ const MechanicEarnings = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ borderRadius: 16 }}
-              className="rounded-2xl py-10 mb-6"
+              className="rounded-2xl py-8 mb-6"
             >
               <Text className="text-white text-sm font-NunitoMedium mb-2 mt-4 text-center">
-                Your balance
+                Available balance
               </Text>
-              <View className="flex-row items-center justify-center mb-4">
+              <View className="flex-row items-center justify-center mb-6">
                 {showBalance ? (
                   <NairaCurrency
                     value={totalBalance}
@@ -68,23 +114,31 @@ const MechanicEarnings = () => {
                   )}
                 </TouchableOpacity>
               </View>
-              <View className="flex-row items-center justify-center w-full gap-4 px-6">
-                <TouchableOpacity
-                  onPress={() => router.push(routes?.bankTransfer)}
-                  className="flex-row items-center justify-center mb-6 w-[50%] bg-white border border-white rounded-[.3rem] py-2"
-                >
-                  <Text className="text-[#991B1B] font-NunitoBold mr-2">Fund wallet</Text>
-                  <Text className="text-[#991B1B]">→</Text>
-                </TouchableOpacity>
+              
+              <View className="flex-row items-center justify-center w-full px-6 mb-4">
                 <TouchableOpacity
                   onPress={() => setShowWithdrawModal(true)}
-                  className="flex-row items-center justify-center mb-6 w-[50%] border border-white rounded-lg py-2 rounded-[.3rem]"
+                  className="flex-row items-center justify-center w-full border border-white rounded-[.3rem] py-2"
                 >
-                  <Text className="text-white font-NunitoBold mr-2">Withdraw</Text>
-                  <Text className="text-white">→</Text>
+                  <Text className="text-white font-NunitoBold text-xs">Withdraw</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
+
+            {/* Summary Cards */}
+            <View className="flex-row justify-between mb-6">
+              <View className="bg-white p-4 rounded-xl border border-gray-100 w-[48%] shadow-sm">
+                <Text className="text-gray-500 text-xs font-NunitoMedium mb-1">Pending Earnings</Text>
+                <NairaCurrency 
+                  value={pendingEarned} 
+                  className="text-gray-900 text-lg font-NunitoBold" 
+                />
+              </View>
+              <View className="bg-white p-4 rounded-xl border border-gray-100 w-[48%] shadow-sm">
+                <Text className="text-gray-500 text-xs font-NunitoMedium mb-1">Completed Jobs</Text>
+                <Text className="text-gray-900 text-lg font-NunitoBold">{completedTasks}</Text>
+              </View>
+            </View>
 
             {/* Earnings Header */}
             <View className="flex-row items-center justify-between my-4">
@@ -99,7 +153,7 @@ const MechanicEarnings = () => {
             </View>
 
             {/* Earnings List */}
-            {earningsData.length === 0 && yesterdayEarnings.length === 0 ? (
+            {transactions.length === 0 && !isLoading ? (
               <View className="items-center justify-center py-12">
                 <Text className="text-gray-500 font-NunitoMedium text-center">
                   No earnings yet
@@ -111,26 +165,26 @@ const MechanicEarnings = () => {
             ) : (
               <>
                 {/* Today Section */}
-                {earningsData.length > 0 && (
+                {todayTransactions.length > 0 && (
                   <>
                     <Text className="text-base font-NunitoBold text-gray-900 mb-4">
                       Today
                     </Text>
-                    {earningsData.map((earning, index) => (
+                    {todayTransactions.map((earning, index) => (
                       <View
-                        key={`today-${index}`}
+                        key={`today-${earning.id || index}`}
                         className="flex-row items-center justify-between py-4 border-b border-gray-100"
                       >
                         <View className="flex-1">
                           <Text className="font-NunitoBold text-gray-900 mb-1">
-                            {earning.id}
+                            {earning.description || earning.reference || `Ref: ${earning.id.slice(0, 8)}`}
                           </Text>
                           <Text className="text-sm text-gray-600 font-NunitoMedium">
-                            {earning.date}
+                            {format(new Date(earning.created_at), "MMM dd, yyyy - h:mm a")}
                           </Text>
                         </View>
                         <NairaCurrency
-                          value={earning.amount}
+                          value={typeof earning.amount === 'string' ? parseFloat(earning.amount) : earning.amount}
                           className="text-lg font-NunitoBold text-gray-900"
                         />
                       </View>
@@ -139,31 +193,65 @@ const MechanicEarnings = () => {
                 )}
 
                 {/* Yesterday Section */}
-                {yesterdayEarnings.length > 0 && (
+                {yesterdayTransactions.length > 0 && (
                   <>
                     <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
                       Yesterday
                     </Text>
-                    {yesterdayEarnings.map((earning, index) => (
+                    {yesterdayTransactions.map((earning, index) => (
                       <View
-                        key={`yesterday-${index}`}
+                        key={`yesterday-${earning.id || index}`}
                         className="flex-row items-center justify-between py-4 border-b border-gray-100"
                       >
                         <View className="flex-1">
                           <Text className="font-NunitoBold text-gray-900 mb-1">
-                            {earning.id}
+                            {earning.description || earning.reference || `Ref: ${earning.id.slice(0, 8)}`}
                           </Text>
                           <Text className="text-sm text-gray-600 font-NunitoMedium">
-                            {earning.date}
+                            {format(new Date(earning.created_at), "MMM dd, yyyy - h:mm a")}
                           </Text>
                         </View>
                         <NairaCurrency
-                          value={earning.amount}
+                          value={typeof earning.amount === 'string' ? parseFloat(earning.amount) : earning.amount}
                           className="text-lg font-NunitoBold text-gray-900"
                         />
                       </View>
                     ))}
                   </>
+                )}
+
+                {/* Older Transactions Section */}
+                {otherTransactions.length > 0 && (
+                  <>
+                    <Text className="text-base font-NunitoBold text-gray-900 mb-4 mt-6">
+                      Previous
+                    </Text>
+                    {otherTransactions.map((earning, index) => (
+                      <View
+                        key={`other-${earning.id || index}`}
+                        className="flex-row items-center justify-between py-4 border-b border-gray-100"
+                      >
+                        <View className="flex-1">
+                          <Text className="font-NunitoBold text-gray-900 mb-1">
+                            {earning.description || earning.reference || `Ref: ${earning.id.slice(0, 8)}`}
+                          </Text>
+                          <Text className="text-sm text-gray-600 font-NunitoMedium">
+                            {format(new Date(earning.created_at), "MMM dd, yyyy - h:mm a")}
+                          </Text>
+                        </View>
+                        <NairaCurrency
+                          value={typeof earning.amount === 'string' ? parseFloat(earning.amount) : earning.amount}
+                          className="text-lg font-NunitoBold text-gray-900"
+                        />
+                      </View>
+                    ))}
+                  </>
+                )}
+
+                {isLoading && (
+                  <View className="py-10">
+                    <ActivityIndicator size="small" color="#B91C1C" />
+                  </View>
                 )}
               </>
             )}

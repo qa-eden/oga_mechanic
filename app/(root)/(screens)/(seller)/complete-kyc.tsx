@@ -36,6 +36,7 @@ import { useSubmitMerchantKYC } from "@/hooks/useUserProfile";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import { sellerRoutes } from "@/constants/routes";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
@@ -267,21 +268,29 @@ const CompleteKYC = () => {
       if (values.lga) formData.append('lga', values.lga);
       formData.append('cac_number', values.cac_number);
 
-      // Append files
+      // Helper function to handle image upload if it's a local URI
+      const getImageUrl = async (image: any) => {
+        if (!image || !image.uri) return "";
+        // If it's already a URL (e.g. from Cloudinary), return it
+        if (image.uri.startsWith('http')) return image.uri;
+        
+        try {
+          return await uploadToCloudinary(image.uri);
+        } catch (error) {
+          console.error("Cloudinary upload failed:", error);
+          throw new Error("Failed to upload image to Cloudinary. Please check your internet connection.");
+        }
+      };
+
+      // Append files (now as Cloudinary URLs)
       if (cacDocument) {
-        formData.append('cac_document', {
-          uri: cacDocument.uri,
-          name: `cac_document_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const url = await getImageUrl(cacDocument);
+        if (url) formData.append('cac_document', url);
       }
 
       if (selfie) {
-        formData.append('selfie', {
-          uri: selfie.uri,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const url = await getImageUrl(selfie);
+        if (url) formData.append('selfie', url);
       }
 
       await submitKYCMutation.mutateAsync(formData);

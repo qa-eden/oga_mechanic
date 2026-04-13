@@ -393,6 +393,21 @@ const SellerProfileDetails = () => {
   const handleSectionSave = async (values: any, { setSubmitting }: any) => {
     try {
       setSubmitting(true);
+      
+      const getFileObject = (uri: string, fieldName: string) => {
+        if (!uri) return null;
+        if (uri.startsWith('http')) return uri;
+        return {
+          uri,
+          name: `${fieldName}_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const profilePicFile = getFileObject(values.profile_picture, 'profile_picture');
+      const selfieFile = getFileObject(values.selfie, 'selfie');
+      const cacDocFile = getFileObject(values.cac_document, 'cac_document');
+
       const formData = new FormData();
       formData.append('requestType', 'inbound');
 
@@ -405,7 +420,7 @@ const SellerProfileDetails = () => {
       };
 
       Object.entries(fullValues).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture') {
+        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture' && key !== 'selfie' && key !== 'cac_document') {
           formData.append(key, val as string);
         }
       });
@@ -423,29 +438,11 @@ const SellerProfileDetails = () => {
         }
       }
 
-      if (values.profile_picture && values.profile_picture.startsWith('data:')) {
-        formData.append('selfie', {
-          uri: values.profile_picture,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-      }
-
-      if (values.selfie && values.selfie.startsWith('data:')) {
-        formData.append('selfie', {
-          uri: values.selfie,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-      }
-
-      if (values.cac_document && values.cac_document.startsWith('data:')) {
-        formData.append('cac_document', {
-          uri: values.cac_document,
-          name: `cac_document_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-      }
+      // Append Files (now as file objects or existing URLs)
+      if (profilePicFile) formData.append('selfie', profilePicFile);
+      else if (selfieFile) formData.append('selfie', selfieFile);
+      
+      if (cacDocFile) formData.append('cac_document', cacDocFile);
 
       await submitKYCMutation.mutateAsync(formData);
       showToast.success("Profile updated successfully");

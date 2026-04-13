@@ -147,3 +147,85 @@ export const useFavoriteProducts = () => {
   });
 };
 
+export const useActiveBiddingProducts = () => {
+  return useQuery<ProductListAPIResponse, Error>({
+    queryKey: [...productKeys.all, 'bidding', 'active'] as const,
+    queryFn: () => productsAPI.getActiveBiddingProducts(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+export const useProductBids = (biddingWindowId: string) => {
+  return useQuery<any, Error>({
+    queryKey: ['bidding', biddingWindowId, 'bids'] as const,
+    queryFn: () => productsAPI.getProductBids(biddingWindowId),
+    enabled: !!biddingWindowId,
+    staleTime: 1 * 60 * 1000, // 1 minute, bids change fast
+  });
+}
+
+export const useSubmitBid = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productId, biddingWindow, amount }: { productId: string, biddingWindow: string, amount: number }) =>
+      productsAPI.submitBid(biddingWindow, { 
+        requestType: 'inbound', 
+        bidding_window: biddingWindow,
+        amount: amount,
+        data: { bidding_window: biddingWindow, amount } 
+      }),
+    onSuccess: (_, { productId, biddingWindow }) => {
+      // Refresh both the product details and the specific bids list
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({ queryKey: ['bidding', biddingWindow, 'bids'] });
+    },
+    onError: (error) => {
+      console.error('Submit bid error:', error);
+    },
+  });
+};
+
+export const useMyBids = () => {
+  return useQuery<any, Error>({
+    queryKey: [...productKeys.all, 'bidding', 'my-bids'] as const,
+    queryFn: () => productsAPI.getMyBids(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+export const useUpdateBid = (biddingWindowId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bidId, payload }: { bidId: string; payload: { status?: string; amount?: string; bidding_window?: string } }) =>
+      productsAPI.updateBid(bidId, payload),
+    onSuccess: () => {
+      // Invalidate the specific products bids list
+      queryClient.invalidateQueries({ queryKey: ['bidding', biddingWindowId, 'bids'] });
+    },
+    onError: (error) => {
+      console.error('Update bid error:', error);
+    },
+  });
+};
+
+export const useDeleteBid = (biddingWindowId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (bidId: string) => productsAPI.deleteBid(bidId),
+    onSuccess: () => {
+      // Invalidate my bids list
+      queryClient.invalidateQueries({ queryKey: [...productKeys.all, 'bidding', 'my-bids'] });
+      
+      // Invalidate the specific product's bids if window ID is provided
+      if (biddingWindowId) {
+        queryClient.invalidateQueries({ queryKey: ['bidding', biddingWindowId, 'bids'] });
+      }
+    },
+    onError: (error) => {
+      console.error('Delete bid error:', error);
+    },
+  });
+};

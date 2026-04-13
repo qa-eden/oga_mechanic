@@ -6,17 +6,24 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { images } from "@/constants";
+import { routes } from "@/constants/routes";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { userAPI } from "@/lib/api/user";
+import {
+  userAPI,
+  getUserVehiclePrimaryImageUrl,
+  getUserVehicleGalleryUrls,
+} from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   CalendarIcon,
+  PencilSquareIcon,
   TrashIcon,
   CogIcon,
   DocumentTextIcon,
@@ -31,24 +38,52 @@ import {
 } from "react-native-heroicons/outline";
 import { CheckIcon } from "react-native-heroicons/solid";
 import { LinearGradient } from "expo-linear-gradient";
-import DeactivateCarModal from "@/components/modals/DeactivateCarModal";
 import SuccessModal from "@/components/modals/SuccessModal";
 import DeleteCarModal from "@/components/modals/DeleteCarModal";
 
+function formatApiDate(iso?: string | null): string | null {
+  if (!iso || typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function normalizeVehicleStatus(status: unknown): "Active" | "Inactive" {
+  const s = status != null ? String(status).toLowerCase() : "";
+  if (s === "inactive" || s === "deactivated") return "Inactive";
+  return "Active";
+}
+
+function dashIfEmpty(value: string | null | undefined): string {
+  if (value == null || String(value).trim() === "") return "—";
+  return String(value).trim();
+}
+
 interface CarDetails {
-  id: number;
+  id: string;
   name: string;
+  make: string;
+  model: string;
   year: number;
   plateNumber: string;
   vin: string;
   status: "Active" | "Inactive";
   image: any;
+  /** Primary vehicle image URL from API (prefers front_ when present) */
+  imageUri?: string | null;
+  /** All gallery URLs, ordered by image id */
+  galleryUris?: string[];
   color: string;
-  mileage: number;
-  fuelType: string;
+  mileage: number | null;
+  fuelType: string | null;
   lastService: string;
   nextService: string;
-  location: string;
+  location: string | null;
+  createdAtLabel: string | null;
+  updatedAtLabel: string | null;
   insurance: {
     provider: string;
     policyNumber: string;
@@ -73,7 +108,6 @@ const CarDetail = () => {
   const carId = params.carId as string;
   const queryClient = useQueryClient();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successConfig, setSuccessConfig] = useState({
     title: "",
@@ -93,73 +127,139 @@ const CarDetail = () => {
     retry: 2,
   });
 
-  // Transform API response to CarDetails format
-  const carData: CarDetails | null = carDataResponse
-    ? {
-        id: carDataResponse.id || parseInt(carId),
-        name: carDataResponse.car_make && carDataResponse.car_model
-          ? `${carDataResponse.car_make} ${carDataResponse.car_model}`
-          : carDataResponse.name || "Unknown Car",
-        year: carDataResponse.car_year || carDataResponse.year || new Date().getFullYear(),
-        plateNumber: carDataResponse.license_plate || carDataResponse.plateNumber || "N/A",
-        vin: carDataResponse.vin || "N/A",
-        status: carDataResponse.status || "Active",
-        image: images?.brabus, // Default image, can be updated if API provides image
-        color: carDataResponse.color || "#1F2937",
-        mileage: carDataResponse.mileage || 0,
-        fuelType: carDataResponse.fuel_type || carDataResponse.fuelType || "N/A",
-        lastService: carDataResponse.last_service || carDataResponse.lastService || "N/A",
-        nextService: carDataResponse.next_service || carDataResponse.nextService || "N/A",
-        location: carDataResponse.location || "N/A",
-        insurance: {
-          provider: carDataResponse.insurance?.provider || "N/A",
-          policyNumber: carDataResponse.insurance?.policy_number || carDataResponse.insurance?.policyNumber || "N/A",
-          expiryDate: carDataResponse.insurance?.expiry_date || carDataResponse.insurance?.expiryDate || "N/A",
-          status: carDataResponse.insurance?.status || "Active",
-        },
-        subscription: {
-          plan: carDataResponse.subscription?.plan || "N/A",
-          price: carDataResponse.subscription?.price || 0,
-          status: carDataResponse.subscription?.status || "Inactive",
-          nextRenewal: carDataResponse.subscription?.next_renewal || carDataResponse.subscription?.nextRenewal || "N/A",
-          paymentMethod: carDataResponse.subscription?.payment_method || carDataResponse.subscription?.paymentMethod || "N/A",
-        },
-        contact: {
-          phone: carDataResponse.contact?.phone || "+234 801 234 5678",
-          email: carDataResponse.contact?.email || "support@ogamechanic.com",
-        },
-      }
+  // Transform API (GET …/my-vehicles/:id/ returns envelope; getCarById unwraps to the vehicle object)
+  const raw = carDataResponse as Record<string, any> | undefined;
+  const carData: CarDetails | null = raw
+    ? (() => {
+        const make = String(raw.make ?? raw.car_make ?? "").trim();
+        const model = String(raw.model ?? raw.car_model ?? "").trim();
+        const name =
+          make && model
+            ? `${make} ${model}`
+            : String(raw.name ?? "Unknown Car").trim() || "Unknown Car";
+        const year =
+          typeof raw.year === "number"
+            ? raw.year
+            : typeof raw.car_year === "number"
+              ? raw.car_year
+              : parseInt(String(raw.year ?? raw.car_year ?? ""), 10) ||
+                new Date().getFullYear();
+        const plateRaw =
+          raw.license_plate != null && String(raw.license_plate).trim() !== ""
+            ? String(raw.license_plate).trim()
+            : raw.plateNumber;
+        const vinRaw =
+          raw.vin != null && String(raw.vin).trim() !== ""
+            ? String(raw.vin).trim()
+            : null;
+        const mileageOk =
+          typeof raw.mileage === "number" && !Number.isNaN(raw.mileage)
+            ? raw.mileage
+            : null;
+        const fuel =
+          raw.fuel_type || raw.fuelType
+            ? String(raw.fuel_type || raw.fuelType).trim()
+            : null;
+        const loc =
+          raw.location != null && String(raw.location).trim() !== ""
+            ? String(raw.location).trim()
+            : null;
+
+        return {
+          id: String(raw.id ?? carId),
+          name,
+          make: make || "—",
+          model: model || "—",
+          year,
+          plateNumber:
+            plateRaw != null && String(plateRaw).trim() !== ""
+              ? String(plateRaw).trim()
+              : "N/A",
+          vin: vinRaw ?? "N/A",
+          status: normalizeVehicleStatus(raw.status),
+          image: images?.brabus,
+          imageUri:
+            getUserVehiclePrimaryImageUrl(raw) ||
+            (typeof raw.image === "string" && raw.image.startsWith("http")
+              ? raw.image
+              : null),
+          galleryUris: getUserVehicleGalleryUrls(raw),
+          color: raw.color || "#1F2937",
+          mileage: mileageOk,
+          fuelType: fuel,
+          lastService: raw.last_service || raw.lastService || "N/A",
+          nextService: raw.next_service || raw.nextService || "N/A",
+          location: loc,
+          createdAtLabel: formatApiDate(raw.created_at),
+          updatedAtLabel: formatApiDate(raw.updated_at),
+          insurance: {
+            provider: raw.insurance?.provider || "N/A",
+            policyNumber:
+              raw.insurance?.policy_number ||
+              raw.insurance?.policyNumber ||
+              "N/A",
+            expiryDate:
+              raw.insurance?.expiry_date ||
+              raw.insurance?.expiryDate ||
+              "N/A",
+            status: raw.insurance?.status || "Active",
+          },
+          subscription: {
+            plan: raw.subscription?.plan || "N/A",
+            price: raw.subscription?.price ?? 0,
+            status: raw.subscription?.status || "Inactive",
+            nextRenewal:
+              raw.subscription?.next_renewal ||
+              raw.subscription?.nextRenewal ||
+              "N/A",
+            paymentMethod:
+              raw.subscription?.payment_method ||
+              raw.subscription?.paymentMethod ||
+              "N/A",
+          },
+          contact: {
+            phone: raw.contact?.phone || "",
+            email: raw.contact?.email || "",
+          },
+        };
+      })()
     : null;
 
-  const handleDeactivate = () => {
-    setShowDeactivateModal(true);
-  };
-
-  const deactivateMutation = useMutation({
-    mutationFn: (carId: string) => userAPI.updateCar(carId, { status: "Inactive" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userCar", carId] });
-      queryClient.invalidateQueries({ queryKey: ["userCars"] });
-      setSuccessConfig({
-        title: "Success!",
-        message: `Car has been deactivated successfully.`,
-      });
-      setShowSuccessModal(true);
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message || "Failed to deactivate car. Please try again.";
-      setSuccessConfig({
-        title: "Error",
-        message: errorMessage,
-      });
-      setShowSuccessModal(true);
-    },
-  });
-
-  const handleConfirmDeactivate = () => {
-    if (carId && carData) {
-      deactivateMutation.mutate(carId);
+  const [heroUri, setHeroUri] = useState<string | null>(null);
+  const galleryKey = carData?.galleryUris?.join("|") ?? "";
+  useEffect(() => {
+    if (!carData) {
+      setHeroUri(null);
+      return;
     }
+    setHeroUri(carData.imageUri ?? carData.galleryUris?.[0] ?? null);
+  }, [carId, carData?.imageUri, galleryKey]);
+
+  const showServiceSection = !!(
+    raw?.last_service ||
+    raw?.next_service ||
+    raw?.lastService ||
+    raw?.nextService
+  );
+  const showInsuranceSection = !!(
+    raw?.insurance && typeof raw.insurance === "object"
+  );
+  const showSubscriptionSection = !!(
+    raw?.subscription && typeof raw.subscription === "object"
+  );
+  const showContactSection = !!(
+    raw?.contact &&
+    typeof raw.contact === "object" &&
+    (String(raw.contact.phone ?? "").trim() !== "" ||
+      String(raw.contact.email ?? "").trim() !== "")
+  );
+
+  const handleEditCar = () => {
+    if (!carId) return;
+    router.push({
+      pathname: routes.addCar,
+      params: { carId: String(carId) },
+    });
   };
 
   const handleDelete = () => {
@@ -210,6 +310,7 @@ const CarDetail = () => {
   };
 
   const { width: screenWidth } = Dimensions.get("window");
+  const FallbackCarSvg = carData?.image || images.brabus;
 
   // Show loading state
   if (isLoading) {
@@ -280,7 +381,15 @@ const CarDetail = () => {
               className="w-full h-72 rounded-2xl items-center justify-center overflow-hidden"
               style={{ backgroundColor: carData.color + "20" }}
             >
-              <carData.image width={screenWidth * 0.8} height={200} />
+              {heroUri ?? carData.imageUri ? (
+                <Image
+                  source={{ uri: (heroUri ?? carData.imageUri) as string }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <FallbackCarSvg width={screenWidth * 0.8} height={200} />
+              )}
             </View>
             {/* Status Badge */}
             <View className="absolute top-4 right-4 z-20">
@@ -302,6 +411,34 @@ const CarDetail = () => {
               />
             </View>
           </View>
+          {carData.galleryUris && carData.galleryUris.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mt-3"
+              contentContainerStyle={{ gap: 10, paddingVertical: 4 }}
+            >
+              {carData.galleryUris.map((uri) => {
+                const active = (heroUri ?? carData.imageUri) === uri;
+                return (
+                  <TouchableOpacity
+                    key={uri}
+                    onPress={() => setHeroUri(uri)}
+                    activeOpacity={0.85}
+                    className={`rounded-xl border-2 overflow-hidden ${
+                      active ? "border-primary-500" : "border-gray-200"
+                    }`}
+                  >
+                    <Image
+                      source={{ uri }}
+                      className="w-16 h-16"
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : null}
         </View>
 
         {/* Enhanced Quick Actions */}
@@ -311,21 +448,19 @@ const CarDetail = () => {
           </Text>
           <View className="flex-row gap-4">
             <TouchableOpacity
-              onPress={handleDeactivate}
-              className="flex-1 bg-primary-500 py-4 px-6 rounded-xl flex-row items-center justify-center shadow-lg"
-              disabled={carData.status === "Inactive"}
+              onPress={handleEditCar}
+              className="flex-1 bg-blue-600 py-4 px-6 rounded-xl flex-row items-center justify-center shadow-lg"
               style={{
-                opacity: carData.status === "Inactive" ? 0.5 : 1,
-                shadowColor: "#D30309",
+                shadowColor: "#2563EB",
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
+                shadowOpacity: 0.25,
                 shadowRadius: 8,
                 elevation: 8,
               }}
             >
-              <CalendarIcon size={20} color="#FFFFFF" />
+              <PencilSquareIcon size={20} color="#FFFFFF" />
               <Text className="text-white font-NunitoBold text-base ml-2">
-                {carData.status === "Active" ? "Deactivate" : "Deactivated"}
+                Edit Car
               </Text>
             </TouchableOpacity>
 
@@ -373,12 +508,35 @@ const CarDetail = () => {
                   </Text>
                 </View>
                 <Text className="text-gray-700 font-NunitoMedium">
-                  Car Name
+                  Vehicle
                 </Text>
               </View>
-              <Text className="text-gray-900 font-NunitoBold">
+              <Text
+                className="text-gray-900 font-NunitoBold text-right flex-1 ml-3"
+                numberOfLines={2}
+              >
                 {carData.name}
               </Text>
+            </View>
+
+            <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 bg-slate-100 rounded-lg mr-3 items-center justify-center">
+                  <Text className="text-slate-600 text-xs font-NunitoBold">M</Text>
+                </View>
+                <Text className="text-gray-700 font-NunitoMedium">Make</Text>
+              </View>
+              <Text className="text-gray-900 font-NunitoBold">{carData.make}</Text>
+            </View>
+
+            <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 bg-slate-100 rounded-lg mr-3 items-center justify-center">
+                  <Text className="text-slate-600 text-xs font-NunitoBold">D</Text>
+                </View>
+                <Text className="text-gray-700 font-NunitoMedium">Model</Text>
+              </View>
+              <Text className="text-gray-900 font-NunitoBold">{carData.model}</Text>
             </View>
 
             <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
@@ -389,7 +547,7 @@ const CarDetail = () => {
                   </Text>
                 </View>
                 <Text className="text-gray-700 font-NunitoMedium">
-                  Model Year
+                  Year
                 </Text>
               </View>
               <Text className="text-gray-900 font-NunitoBold">
@@ -405,7 +563,7 @@ const CarDetail = () => {
                   </Text>
                 </View>
                 <Text className="text-gray-700 font-NunitoMedium">
-                  Plate Number
+                  License plate
                 </Text>
               </View>
               <Text className="text-gray-900 font-NunitoBold">
@@ -422,10 +580,41 @@ const CarDetail = () => {
                 </View>
                 <Text className="text-gray-700 font-NunitoMedium">VIN</Text>
               </View>
-              <Text className="text-gray-900 font-NunitoBold text-sm">
+              <Text
+                className="text-gray-900 font-NunitoBold text-sm text-right flex-1 ml-2"
+                numberOfLines={2}
+              >
                 {carData.vin}
               </Text>
             </View>
+
+            {carData.createdAtLabel ? (
+              <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+                <View className="flex-row items-center">
+                  <View className="w-8 h-8 bg-cyan-100 rounded-lg mr-3 items-center justify-center">
+                    <ClockIcon size={16} color="#0891B2" />
+                  </View>
+                  <Text className="text-gray-700 font-NunitoMedium">Added</Text>
+                </View>
+                <Text className="text-gray-900 font-NunitoBold text-xs text-right flex-1 ml-2">
+                  {carData.createdAtLabel}
+                </Text>
+              </View>
+            ) : null}
+
+            {carData.updatedAtLabel ? (
+              <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+                <View className="flex-row items-center">
+                  <View className="w-8 h-8 bg-teal-100 rounded-lg mr-3 items-center justify-center">
+                    <ClockIcon size={16} color="#0D9488" />
+                  </View>
+                  <Text className="text-gray-700 font-NunitoMedium">Last updated</Text>
+                </View>
+                <Text className="text-gray-900 font-NunitoBold text-xs text-right flex-1 ml-2">
+                  {carData.updatedAtLabel}
+                </Text>
+              </View>
+            ) : null}
 
             <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
               <View className="flex-row items-center">
@@ -437,7 +626,9 @@ const CarDetail = () => {
                 <Text className="text-gray-700 font-NunitoMedium">Mileage</Text>
               </View>
               <Text className="text-gray-900 font-NunitoBold">
-                {carData.mileage.toLocaleString()} km
+                {carData.mileage != null
+                  ? `${Number(carData.mileage).toLocaleString()} km`
+                  : "—"}
               </Text>
             </View>
 
@@ -451,7 +642,7 @@ const CarDetail = () => {
                 </Text>
               </View>
               <Text className="text-gray-900 font-NunitoBold">
-                {carData.fuelType}
+                {dashIfEmpty(carData.fuelType)}
               </Text>
             </View>
 
@@ -464,8 +655,8 @@ const CarDetail = () => {
                   Location
                 </Text>
               </View>
-              <Text className="text-gray-900 font-NunitoBold">
-                {carData.location}
+              <Text className="text-gray-900 font-NunitoBold text-right flex-1 ml-2">
+                {dashIfEmpty(carData.location)}
               </Text>
             </View>
 
@@ -495,7 +686,7 @@ const CarDetail = () => {
           </View>
         </View>
 
-        {/* Service Information */}
+        {showServiceSection ? (
         <View className="mx-5 mb-6 bg-white rounded-2xl p-6 shadow-lg">
           <View className="flex-row items-center mb-6">
             <View className="w-10 h-10 bg-blue-100 rounded-xl mr-4 items-center justify-center">
@@ -541,8 +732,9 @@ const CarDetail = () => {
             </View>
           </View>
         </View>
+        ) : null}
 
-        {/* Insurance Information */}
+        {showInsuranceSection ? (
         <View className="mx-5 mb-6 bg-white rounded-2xl p-6 shadow-lg">
           <View className="flex-row items-center mb-6">
             <View className="w-10 h-10 bg-emerald-100 rounded-xl mr-4 items-center justify-center">
@@ -632,8 +824,9 @@ const CarDetail = () => {
             </View>
           </View>
         </View>
+        ) : null}
 
-        {/* Enhanced Subscription Details */}
+        {showSubscriptionSection ? (
         <View className="mx-5 mb-6 bg-white rounded-2xl p-6 shadow-lg">
           <View className="flex-row items-center mb-6">
             <View className="w-10 h-10 bg-primary-100 rounded-xl mr-4 items-center justify-center">
@@ -719,8 +912,9 @@ const CarDetail = () => {
             </View>
           </View>
         </View>
+        ) : null}
 
-        {/* Contact Information */}
+        {showContactSection ? (
         <View className="mx-5 mb-6 bg-white rounded-2xl p-6 shadow-lg">
           <View className="flex-row items-center mb-6">
             <View className="w-10 h-10 bg-indigo-100 rounded-xl mr-4 items-center justify-center">
@@ -762,37 +956,40 @@ const CarDetail = () => {
             </TouchableOpacity>
           </View>
         </View>
+        ) : null}
 
         {/* Enhanced Actions */}
-        <View className="mx-5 mb-8">
+        {/* <View className="mx-5 mb-8">
           <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-            Quick Actions
+            More
           </Text>
 
           <View className="space-y-3">
-            <TouchableOpacity
-              onPress={handleManageSubscription}
-              className="flex-row items-center justify-between py-4 px-4 bg-primary-50 rounded-xl border border-primary-200"
-            >
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-primary-100 rounded-lg mr-4 items-center justify-center">
-                  <CogIcon size={20} color="#D30309" />
+            {showSubscriptionSection ? (
+              <TouchableOpacity
+                onPress={handleManageSubscription}
+                className="flex-row items-center justify-between py-4 px-4 bg-primary-50 rounded-xl border border-primary-200"
+              >
+                <View className="flex-row items-center">
+                  <View className="w-10 h-10 bg-primary-100 rounded-lg mr-4 items-center justify-center">
+                    <CogIcon size={20} color="#D30309" />
+                  </View>
+                  <View>
+                    <Text className="text-gray-900 font-NunitoBold text-base">
+                      Manage Subscription
+                    </Text>
+                    <Text className="text-gray-500 font-NunitoMedium text-sm">
+                      Update plan or payment method
+                    </Text>
+                  </View>
                 </View>
-                <View>
-                  <Text className="text-gray-900 font-NunitoBold text-base">
-                    Manage Subscription
-                  </Text>
-                  <Text className="text-gray-500 font-NunitoMedium text-sm">
-                    Update plan or payment method
+                <View className="w-6 h-6 bg-primary-100 rounded-full items-center justify-center">
+                  <Text className="text-primary-600 text-xs font-NunitoBold">
+                    →
                   </Text>
                 </View>
-              </View>
-              <View className="w-6 h-6 bg-primary-100 rounded-full items-center justify-center">
-                <Text className="text-primary-600 text-xs font-NunitoBold">
-                  →
-                </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity
               onPress={handleViewPaymentHistory}
@@ -816,7 +1013,7 @@ const CarDetail = () => {
               </View>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
         {/* Bottom spacing */}
         <View className="h-20" />
@@ -828,15 +1025,6 @@ const CarDetail = () => {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDelete}
         carName={carData.name}
-      />
-
-      {/* Deactivate Confirmation Modal */}
-      <DeactivateCarModal
-        isVisible={showDeactivateModal}
-        onClose={() => setShowDeactivateModal(false)}
-        onConfirm={handleConfirmDeactivate}
-        carName={carData.name}
-        isActive={carData.status === "Active"}
       />
 
       {/* Success Modal */}

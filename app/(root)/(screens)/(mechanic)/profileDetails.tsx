@@ -371,8 +371,26 @@ const ProfileDetails = () => {
   const handleSectionSave = async (values: any, { setSubmitting }: any) => {
     try {
       setSubmitting(true);
+      
       const formData = new FormData();
       formData.append('requestType', 'inbound');
+
+      const getFileObject = (uri: string) => {
+        if (!uri) return null;
+        if (uri.startsWith('http')) return uri;
+        return {
+          uri,
+          name: `profile_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      if (values.profile_picture && (values.profile_picture.startsWith('file://') || values.profile_picture.startsWith('content://') || values.profile_picture.startsWith('data:'))) {
+        const profileFile = getFileObject(values.profile_picture);
+        if (profileFile) {
+          formData.append('selfie', profileFile);
+        }
+      }
       
       const fullValues = {
         bio: mechanicProfile?.bio || "",
@@ -403,13 +421,6 @@ const ProfileDetails = () => {
          }
       }
 
-      if (values.profile_picture && values.profile_picture.startsWith('data:')) {
-        formData.append('selfie', {
-            uri: values.profile_picture,
-            name: `selfie_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-        } as any);
-      }
 
       await userAPI.submitMechanicKYC(formData);
       queryClient.invalidateQueries({ queryKey: userProfileKeys.all });

@@ -79,29 +79,28 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
         />
       </View>
 
-      {/* Vehicle Model & Year Row */}
-      <View className="flex-row gap-3 mb-1">
-        <View className="flex-1">
-          <SelectField
-            name="vehicleModel"
-            label="Model"
-            placeholder={vehicleMake ? "Select model" : "Select make first"}
-            options={vehicleModelOptions}
-            value={vehicleModel}
-            onValueChange={setVehicleModel}
-          />
-        </View>
+      {/* Vehicle Model */}
+      <View className="mb-3">
+        <SelectField
+          name="vehicleModel"
+          label="Model"
+          placeholder={vehicleMake ? "Select model" : "Select make first"}
+          options={vehicleModelOptions}
+          value={vehicleModel}
+          onValueChange={setVehicleModel}
+        />
+      </View>
 
-        <View className="flex-1">
-          <SelectField
-            name="vehicleYear"
-            label="Year"
-            placeholder="Select year"
-            options={vehicleYearOptions}
-            value={vehicleYear}
-            onValueChange={setVehicleYear}
-          />
-        </View>
+      {/* Vehicle Year */}
+      <View className="mb-1">
+        <SelectField
+          name="vehicleYear"
+          label="Year"
+          placeholder="Select year"
+          options={vehicleYearOptions}
+          value={vehicleYear}
+          onValueChange={setVehicleYear}
+        />
       </View>
     </View>
   );

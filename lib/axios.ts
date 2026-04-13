@@ -28,12 +28,23 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Add requestType: "inbound" only to POST/PUT/PATCH requests
+      // Add requestType: "inbound" only to POST/PUT/PATCH requests (skip object-spread on FormData)
       if (['post', 'put', 'patch'].includes(config.method?.toLowerCase() || '')) {
-        config.data = {
-          ...config.data,
-          requestType: 'inbound',
-        };
+        if (config.data instanceof FormData) {
+          config.data.append('requestType', 'inbound');
+        } else if (
+          config.data !== undefined &&
+          config.data !== null &&
+          typeof config.data === 'object' &&
+          !Array.isArray(config.data)
+        ) {
+          config.data = {
+            ...config.data,
+            requestType: 'inbound',
+          };
+        } else {
+          config.data = { requestType: 'inbound' };
+        }
       }
 
       return config;

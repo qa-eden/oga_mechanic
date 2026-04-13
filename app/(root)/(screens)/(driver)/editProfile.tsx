@@ -240,6 +240,33 @@ const EditDriverProfile = () => {
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
       setSubmitting(true);
+
+      // Helper function to handle image upload if it's a local URI or base64
+      const getFileObject = (imageUri: string, fieldName: string) => {
+        if (!imageUri) return undefined;
+        // If it's already a URL, return it
+        if (imageUri.startsWith('http')) return imageUri;
+        
+        return {
+          uri: imageUri,
+          name: `${fieldName}_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const documentFields = [
+        { field: 'profile_picture', name: 'selfie' },
+        { field: 'license_front_image', name: 'license_front_image' },
+        { field: 'license_back_image', name: 'license_back_image' },
+        { field: 'government_id_front', name: 'government_id_front' },
+        { field: 'government_id_back', name: 'government_id_back' },
+        { field: 'vehicle_photo_front', name: 'vehicle_photo_front' },
+        { field: 'vehicle_photo_back', name: 'vehicle_photo_back' },
+        { field: 'vehicle_photo_right', name: 'vehicle_photo_right' },
+        { field: 'vehicle_photo_left', name: 'vehicle_photo_left' },
+        { field: 'insurance_document', name: 'insurance_document' }
+      ];
+
       const formData = new FormData();
       formData.append('requestType', 'inbound');
       
@@ -263,30 +290,11 @@ const EditDriverProfile = () => {
       formData.append('bank_name', values.bank_name);
       formData.append('account_number', values.account_number);
 
-      if (values.profile_picture && values.profile_picture.startsWith('data:')) {
-        formData.append('selfie', {
-            uri: values.profile_picture,
-            name: `selfie_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-        } as any);
-      }
-
-      // Append documents if they are newly chosen (base64)
-      const documents = [
-        'license_front_image', 'license_back_image', 
-        'government_id_front', 'government_id_back',
-        'vehicle_photo_front', 'vehicle_photo_back', 
-        'vehicle_photo_right', 'vehicle_photo_left',
-        'insurance_document'
-      ];
-
-      documents.forEach(doc => {
-        if (values[doc] && values[doc].startsWith('data:')) {
-          formData.append(doc, {
-            uri: values[doc],
-            name: `${doc}_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-          } as any);
+      // Append Files (now as file objects or existing URLs)
+      documentFields.forEach(({ field, name }) => {
+        const file = getFileObject(values[field], name);
+        if (file) {
+          formData.append(name, file);
         }
       });
 

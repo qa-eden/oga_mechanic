@@ -98,6 +98,26 @@ const EditMechanicProfile = () => {
     try {
       setSubmitting(true);
       
+      // Helper function to handle image upload if it's a local URI or base64
+      const getFileObject = (imageUri: string, fieldName: string) => {
+        if (!imageUri) return undefined;
+        // If it's already a URL, return it
+        if (imageUri.startsWith('http')) return imageUri;
+        
+        return {
+          uri: imageUri,
+          name: `${fieldName}_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const documentFields = [
+        { field: 'selfie', name: 'selfie' },
+        { field: 'cac_document', name: 'cac_document' },
+        { field: 'government_id_front', name: 'government_id_front' },
+        { field: 'government_id_back', name: 'government_id_back' }
+      ];
+
       const payload: any = {
         first_name: values.first_name,
         last_name: values.last_name,
@@ -114,6 +134,8 @@ const EditMechanicProfile = () => {
         location: values.location,
         specialization: values.specialization,
         years_of_experience: values.years_of_experience,
+        cac_number: values.cac_number,
+        govt_id_type: values.govt_id_type,
       };
 
       Object.entries(mechanicPayload).forEach(([key, val]) => {
@@ -122,27 +144,11 @@ const EditMechanicProfile = () => {
         }
       });
 
-      // Handle CAC Number and ID Type
-      if (values.cac_number) formData.append('cac_number', values.cac_number);
-      if (values.govt_id_type) formData.append('govt_id_type', values.govt_id_type);
-      
-      if (values.selfie && values.selfie.startsWith('data:')) {
-        formData.append('selfie', {
-            uri: values.selfie,
-            name: `selfie_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-        } as any);
-      }
-
-      // Append documents if they are newly chosen (base64)
-      const documents = ['cac_document', 'government_id_front', 'government_id_back'];
-      documents.forEach(doc => {
-        if (values[doc] && values[doc].startsWith('data:')) {
-          formData.append(doc, {
-            uri: values[doc],
-            name: `${doc}_${Date.now()}.jpg`,
-            type: 'image/jpeg'
-          } as any);
+      // Append Files (now as file objects or existing URLs)
+      documentFields.forEach(({ field, name }) => {
+        const file = getFileObject(values[field], name);
+        if (file) {
+          formData.append(name, file);
         }
       });
       

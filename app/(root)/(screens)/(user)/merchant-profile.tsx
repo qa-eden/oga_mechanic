@@ -122,7 +122,7 @@ const MerchantProfile = () => {
   }
 
   const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
+    return Array.from({ length: 5 }, (_: any, i: number) => (
       <Text key={i} className={`${i < Math.floor(rating) ? 'text-yellow-400' : 'text-gray-300'}`}>★</Text>
     ))
   }

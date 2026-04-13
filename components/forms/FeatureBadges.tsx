@@ -11,15 +11,19 @@ const FeatureBadge: React.FC<FeatureBadgeProps> = ({ label, isSelected, onPress 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`px-4 py-3 rounded-lg border mr-3 mb-3 ${
+      className={`flex-row items-center justify-center px-4 py-2.5 rounded-full border mr-2.5 mb-3 ${
         isSelected 
-          ? 'bg-orange-500 border-orange-500' 
-          : 'bg-white border-gray-200'
+          ? 'bg-[#FCF3F2] border-[#D30309]/20' 
+          : 'bg-white border-[#E5E7EB]'
       }`}
       activeOpacity={0.7}
+      style={isSelected ? { shadowColor: '#D30309', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 0 } : {}}
     >
-      <Text className={`text-sm font-NunitoSemiBold text-center ${
-        isSelected ? 'text-white' : 'text-gray-700'
+      {isSelected && (
+        <View className="w-1.5 h-1.5 rounded-full bg-[#D30309] mr-2" />
+      )}
+      <Text className={`text-[13px] font-NunitoSemiBold ${
+        isSelected ? 'text-[#D30309]' : 'text-[#6B7280]'
       }`}>
         {label}
       </Text>
@@ -38,16 +42,15 @@ const FeatureBadges: React.FC<FeatureBadgesProps> = ({
   features,
   selectedFeatures,
   onFeatureToggle,
-  label = "Features"
+  label
 }) => {
   return (
-    <View className="mb-4">
-      <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-        {label}
-      </Text>
-      <Text className="text-sm text-gray-500 font-NunitoMedium mb-4">
-        Select all features that apply to your car
-      </Text>
+    <View className="mb-2">
+      {label && (
+        <Text className="text-[13px] text-gray-500 font-NunitoMedium mb-4 pl-1">
+          {label}
+        </Text>
+      )}
       <View className="flex-row flex-wrap">
         {features.map((feature) => (
           <FeatureBadge

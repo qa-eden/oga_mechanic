@@ -288,37 +288,38 @@ const CompleteKYC = () => {
       formData.append('cac_number', values.cac_number);
       formData.append('govt_id_type', values.govt_id_type);
 
-      // Append files
+      // Helper function to handle image upload if it's a local URI
+      const getFileObject = (image: any) => {
+        if (!image || !image.uri) return null;
+        // If it's already a URL, we don't need to wrap it as a file object
+        if (image.uri.startsWith('http')) return image.uri;
+        
+        return {
+          uri: image.uri,
+          name: image.name || `file_${Date.now()}.jpg`,
+          type: image.type || 'image/jpeg'
+        } as any;
+      };
+
+      // Append files (now as file objects or existing URLs)
       if (cacDocument) {
-        formData.append('cac_document', {
-          uri: cacDocument.uri,
-          name: `cac_document_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(cacDocument);
+        if (file) formData.append('cac_document', file);
       }
 
       if (selfie) {
-        formData.append('selfie', {
-          uri: selfie.uri,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(selfie);
+        if (file) formData.append('selfie', file);
       }
 
       if (governmentIdFront) {
-        formData.append('government_id_front', {
-          uri: governmentIdFront.uri,
-          name: `id_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(governmentIdFront);
+        if (file) formData.append('government_id_front', file);
       }
 
       if (governmentIdBack) {
-        formData.append('government_id_back', {
-          uri: governmentIdBack.uri,
-          name: `id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(governmentIdBack);
+        if (file) formData.append('government_id_back', file);
       }
 
       console.log('🚀 Submitting Mechanic KYC via Mutation...');

@@ -1,11 +1,11 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '@/components/CustomButton';
 import BackArrowBtn from '@/components/BackArrowBtn';
 import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
-import { serviceTypeOptions } from '@/constants/data';
+import { useServiceTypes } from '@/hooks/useServiceTypes';
 import { getErrorMessage } from '@/utils/errorMessages';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
@@ -18,6 +18,7 @@ import { OrderFormFields } from '@/components/mechanic/OrderFormFields';
 import { SuccessModal } from '@/components/mechanic/SuccessModal';
 import { useFindMechanicForm } from '@/hooks/mechanic/useFindMechanicForm';
 import { useCarList } from '@/hooks/mechanic/useCarList';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useVehicleOptions } from '@/hooks/mechanic/useVehicleOptions';
 
 const getCurrentTimeSlot = () => {
@@ -29,12 +30,14 @@ const getCurrentTimeSlot = () => {
 
 const FindMechanic = () => {
   // Hooks
-  const { carList, hasCarList, carOptions, selectedCarData } = useCarList();
-  const formState = useFindMechanicForm(hasCarList);
+  const { hasCarList, carOptions, selectedCarData, isLoading: carsLoading } = useCarList();
+  const carsReady = !carsLoading;
+  const formState = useFindMechanicForm(hasCarList, carsReady);
   const { data: vehicleMakes, loading: vehicleMakesLoading } = useVehicleMakes();
   const { vehicleMakeOptions, vehicleModelOptions, vehicleYearOptions } = useVehicleOptions(
     formState.vehicleMake
   );
+  const { serviceTypes, loading: serviceTypesLoading, error: serviceTypesError } = useServiceTypes();
   const { mutate: createRepairRequest, isPending, error } = useCreateRepairRequest();
 
   const timeSlotOptions = useMemo(
@@ -129,6 +132,7 @@ const FindMechanic = () => {
   }, [vehicleMakes, formState]);
 
   const handleProceed = () => {
+    Keyboard.dismiss();
     // Determine if we're using car list selection or manual entry
     const isUsingCarList = hasCarList && formState.carSelection === 'Yes';
 
@@ -136,17 +140,29 @@ const FindMechanic = () => {
       // Validate for existing car selection - all required fields
       if (
         !formState.selectedCar ||
-        !formState.serviceType ||
+        formState.serviceTypes.length === 0 ||
         !formState.problemDescription.trim() ||
         !formState.serviceAddress.trim() ||
         (formState.isScheduled && (!formState.preferredDate || !formState.preferredTimeSlot))
       ) {
+        const missing: string[] = [];
+        if (!formState.selectedCar) missing.push('Vehicle');
+        if (formState.serviceTypes.length === 0) missing.push('Service type');
+        if (!formState.serviceAddress.trim()) missing.push('Service location');
+        if (!formState.problemDescription.trim()) missing.push('Problem description');
+        if (formState.isScheduled && !formState.preferredDate) missing.push('Preferred date');
+        if (formState.isScheduled && !formState.preferredTimeSlot) missing.push('Preferred time slot');
+
+        Alert.alert(
+          'Missing information',
+          missing.length ? `Please fill: ${missing.join(', ')}` : 'Please complete the form.'
+        );
         return;
       }
     } else {
       // Validate for new car details - all required fields from order-mechanic
       if (
-        !formState.serviceType ||
+        formState.serviceTypes.length === 0 ||
         !formState.vehicleMake ||
         !formState.vehicleModel ||
         !formState.vehicleYear ||
@@ -154,7 +170,20 @@ const FindMechanic = () => {
         !formState.serviceAddress.trim() ||
         (formState.isScheduled && (!formState.preferredDate || !formState.preferredTimeSlot))
       ) {
-        console.log('Please fill in all required fields before proceeding.');
+        const missing: string[] = [];
+        if (formState.serviceTypes.length === 0) missing.push('Service type');
+        if (!formState.serviceAddress.trim()) missing.push('Service location');
+        if (!formState.problemDescription.trim()) missing.push('Problem description');
+        if (!formState.vehicleMake) missing.push('Vehicle make');
+        if (!formState.vehicleModel) missing.push('Vehicle model');
+        if (!formState.vehicleYear) missing.push('Vehicle year');
+        if (formState.isScheduled && !formState.preferredDate) missing.push('Preferred date');
+        if (formState.isScheduled && !formState.preferredTimeSlot) missing.push('Preferred time slot');
+
+        Alert.alert(
+          'Missing information',
+          missing.length ? `Please fill: ${missing.join(', ')}` : 'Please complete the form.'
+        );
         return;
       }
     }
@@ -204,24 +233,37 @@ const FindMechanic = () => {
       finalTimeSlot = getCurrentTimeSlot();
     }
 
-    // Prepare payload matching order-mechanic.tsx structure (without mechanic_id)
+    // Prepare payload for RepairRequest.
+    // If user selected a saved car, send user_vehicle UUID to use backend vehicle linkage.
+    const payloadData = {
+      ...(formState.serviceTypes.length === 1
+        ? { service_type: formState.serviceTypes[0] }
+        : { service_categories: formState.serviceTypes }),
+      // Always send make/model/year so backend + clients can rely on them,
+      // even when user_vehicle is provided.
+      vehicle_make: finalVehicleMake,
+      vehicle_model: finalVehicleModel,
+      vehicle_year: vehicleYearNumber,
+      // VIN is only available in manual / VIN lookup flow today.
+      ...(formState.vehicleVin ? { vehicle_vin: formState.vehicleVin } : {}),
+      ...(isUsingCarList && formState.selectedCar
+        ? {
+            user_vehicle: formState.selectedCar,
+          }
+        : {}),
+      problem_description: formState.problemDescription.trim(),
+      service_address: formState.serviceAddress.trim(),
+      service_latitude: formState.serviceLatitude ? parseFloat(formState.serviceLatitude.toFixed(7)) : undefined,
+      service_longitude: formState.serviceLongitude ? parseFloat(formState.serviceLongitude.toFixed(7)) : undefined,
+      schedule: formState.isScheduled,
+      ...(formState.isScheduled && {
+        preferred_date: finalDate?.toISOString().split('T')[0],
+        preferred_time_slot: finalTimeSlot,
+      }),
+    };
+
     const payload = {
-      data: {
-        service_type: formState.serviceType,
-        vehicle_make: finalVehicleMake,
-        vehicle_model: finalVehicleModel,
-        vehicle_year: vehicleYearNumber,
-        vehicle_vin: formState.vehicleVin || undefined,
-        problem_description: formState.problemDescription.trim(),
-        service_address: formState.serviceAddress.trim(),
-        service_latitude: formState.serviceLatitude ? parseFloat(formState.serviceLatitude.toFixed(7)) : undefined,
-        service_longitude: formState.serviceLongitude ? parseFloat(formState.serviceLongitude.toFixed(7)) : undefined,
-        schedule: formState.isScheduled,
-        ...(formState.isScheduled && {
-          preferred_date: finalDate?.toISOString().split('T')[0],
-          preferred_time_slot: finalTimeSlot,
-        }),
-      } as any,
+      data: payloadData,
       requestType: 'inbound',
     };
 
@@ -270,6 +312,23 @@ const FindMechanic = () => {
     formState.setShowSuccessModal(false);
     router.replace(routes.home);
   };
+
+  if (carsLoading) {
+    return (
+      <SafeAreaView className="bg-white flex-1">
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+          <BackArrowBtn />
+          <Text className="text-xl font-NunitoBold text-gray-900">Find mechanic</Text>
+          <View className="w-10" />
+        </View>
+        <LoadingSpinner
+          message="Loading your vehicles…"
+          subMessage="One moment"
+          size="medium"
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="bg-white flex-1">
@@ -342,8 +401,8 @@ const FindMechanic = () => {
               setSelectedCar={formState.setSelectedCar}
               hasCarList={hasCarList}
               carOptions={carOptions}
-              serviceType={formState.serviceType}
-              setServiceType={formState.setServiceType}
+              serviceTypes={formState.serviceTypes}
+              setServiceTypes={formState.setServiceTypes}
               problemDescription={formState.problemDescription}
               setProblemDescription={formState.setProblemDescription}
               serviceAddress={formState.serviceAddress}
@@ -352,7 +411,7 @@ const FindMechanic = () => {
               setServiceLatitude={formState.setServiceLatitude}
               serviceLongitude={formState.serviceLongitude}
               setServiceLongitude={formState.setServiceLongitude}
-              serviceTypeOptions={serviceTypeOptions}
+              serviceTypeOptions={serviceTypes}
               vehicleMake={formState.vehicleMake}
               setVehicleMake={formState.setVehicleMake}
               vehicleModel={formState.vehicleModel}

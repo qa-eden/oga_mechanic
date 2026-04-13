@@ -1,7 +1,7 @@
 // Shared types and helpers for chat screens
 
 export interface Message {
-  id: number;
+  id: string | number;
   text: string;
   isSent: boolean;
   timestamp: string;
@@ -10,6 +10,8 @@ export interface Message {
   isVoiceMessage?: boolean;
   voiceDuration?: number;
   voiceUri?: string;
+  fileUrl?: string;
+  messageType?: string;
 }
 
 export function formatTime(seconds: number) {

@@ -10,8 +10,12 @@ import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal
 import { sellerRoutes } from '@/constants/routes'
 import { productsAPI } from '@/lib/api/products'
 import { useVehicleMakes } from '@/hooks/useVehicleMakes'
+import { useProductBids } from '@/hooks/useProducts'
+import { formatDistanceToNow } from 'date-fns'
 import CustomButton from '@/components/CustomButton'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import { useUpdateBid } from '@/hooks/useProducts'
+import MerchantBidActionModal from '@/components/modals/MerchantBidActionModal'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -32,9 +36,32 @@ const ProductDetailsDetailed = () => {
   const [imageCache, setImageCache] = useState<Map<number, any>>(new Map());
   const [showDeleteDrawer, setShowDeleteDrawer] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedBid, setSelectedBid] = useState<any>(null);
+  const [showBidActionModal, setShowBidActionModal] = useState(false);
+
+  // Fetch bids if auction is active
+  const { data: bidsData } = useProductBids(productData?.bidding_window?.id || '');
+  const bids = bidsData?.data || [];
   
   // Fetch vehicle makes for name lookup
   const { data: vehicleMakes } = useVehicleMakes();
+
+  // Bid update mutation
+  const updateBidMutation = useUpdateBid(productData?.bidding_window?.id || '');
+
+  const handleBidClick = (bid: any) => {
+    setSelectedBid(bid);
+    setShowBidActionModal(true);
+  };
+
+  const handleBidStatusUpdate = async (status: 'accepted' | 'rejected') => {
+    if (!selectedBid) return;
+    
+    return updateBidMutation.mutateAsync({
+      bidId: selectedBid.id,
+      payload: { status }
+    });
+  };
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -642,7 +669,6 @@ const ProductDetailsDetailed = () => {
           </View>
         </Animated.View>
 
-
         {/* Important Product Details */}
         <Animated.View 
           style={{ 
@@ -1050,6 +1076,134 @@ const ProductDetailsDetailed = () => {
           </TouchableOpacity>
         </Animated.View>
 
+        {/* Bidding Information */}
+        {productData.bidding_window && (
+          <Animated.View 
+            style={{ 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="mx-4 mb-4"
+          >
+            <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+              style={{ 
+                shadowColor: '#000', 
+                shadowOffset: { width: 0, height: 2 }, 
+                shadowOpacity: 0.05, 
+                shadowRadius: 10, 
+                elevation: 5 
+              }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Bidding Information
+                </Text>
+                <View className={`${productData.bidding_window.is_active && !productData.bidding_window.is_closed ? 'bg-red-50' : 'bg-gray-50'} px-3 py-1 rounded-full border ${productData.bidding_window.is_active && !productData.bidding_window.is_closed ? 'border-red-100' : 'border-gray-100'}`}>
+                  <Text className={`${productData.bidding_window.is_active && !productData.bidding_window.is_closed ? 'text-red-700' : 'text-gray-500'} text-[10px] font-NunitoExtraBold uppercase tracking-wider`}>
+                    {productData.bidding_window.is_active && !productData.bidding_window.is_closed ? 'LIVE AUCTION' : 'CLOSED'}
+                  </Text>
+                </View>
+              </View>
+              
+              <View className="space-y-3">
+                <View className="flex-row justify-between items-center py-2 border-b border-gray-50">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Auction Start</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">
+                    {new Date(productData.bidding_window.start_time).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2 border-b border-gray-50">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Auction End</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">
+                    {new Date(productData.bidding_window.end_time).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </Text>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-sm text-gray-600 font-NunitoMedium">Duration</Text>
+                  <Text className="text-sm font-NunitoBold text-gray-900">{productData.bidding_window.duration_days} Days</Text>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Bid History Section */}
+        {productData.bidding_window && bids.length > 0 && (
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="mx-4 mb-4"
+          >
+            <View className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 5
+              }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Bid History
+                </Text>
+                <View className="bg-blue-50 px-3 py-1 rounded-full">
+                  <Text className="text-blue-700 text-xs font-NunitoBold">{bids.length} Bids</Text>
+                </View>
+              </View>
+
+              <View className="space-y-4">
+                {bids.map((bid: any) => (
+                  <TouchableOpacity 
+                    key={bid.id} 
+                    onPress={() => handleBidClick(bid)}
+                    className="flex-row items-center justify-between py-3 border-b border-gray-50 last:border-0"
+                    activeOpacity={0.7}
+                  >
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-3">
+                        <Text className="text-gray-600 font-NunitoBold text-xs uppercase">
+                          {bid.bidder?.first_name?.[0] || 'U'}{bid.bidder?.last_name?.[0] || 'S'}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text className="text-sm font-NunitoBold text-gray-900">
+                          {bid.bidder?.first_name} {bid.bidder?.last_name}
+                        </Text>
+                        <Text className="text-[10px] text-gray-400 font-NunitoMedium">
+                          {formatDistanceToNow(new Date(bid.created_at), { addSuffix: true })}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="items-end">
+                      <NairaCurrency
+                        value={parseFloat(bid.amount)}
+                        className="text-sm font-NunitoExtraBold text-gray-900"
+                      />
+                      <View className="flex-row items-center mt-1">
+                        <View className={`w-1.5 h-1.5 rounded-full mr-1 ${bid.status === 'pending' ? 'bg-yellow-500' : bid.status === 'accepted' ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <Text className={`text-[10px] font-NunitoBold capitalize ${bid.status === 'pending' ? 'text-yellow-600' : bid.status === 'accepted' ? 'text-green-600' : 'text-red-600'}`}>
+                          {bid.status}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Bottom spacing for fixed buttons */}
         <View className="h-32 pb-4" />
       </ScrollView>
@@ -1143,6 +1297,15 @@ const ProductDetailsDetailed = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Merchant Bid Action Modal */}
+      <MerchantBidActionModal
+        visible={showBidActionModal}
+        onClose={() => setShowBidActionModal(false)}
+        onAction={handleBidStatusUpdate}
+        isLoading={updateBidMutation.isPending}
+        bid={selectedBid}
+      />
     </SafeAreaView>
   )
 }

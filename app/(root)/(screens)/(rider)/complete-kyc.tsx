@@ -239,6 +239,19 @@ const RiderKYC = () => {
 
     setIsSubmitting(true);
     try {
+      // Helper function to handle image upload if it's a local URI
+      const getFileObject = (image: any) => {
+        if (!image || !image.uri) return null;
+        // If it's already a URL, we don't need to wrap it as a file object
+        if (image.uri.startsWith('http')) return image.uri;
+        
+        return {
+          uri: image.uri,
+          name: image.name || `file_${Date.now()}.jpg`,
+          type: image.type || 'image/jpeg'
+        } as any;
+      };
+
       const formData = new FormData();
       formData.append('requestType', 'inbound');
 
@@ -266,52 +279,34 @@ const RiderKYC = () => {
       formData.append('government_id', values.government_id);
       formData.append('id_number', values.id_number);
 
-      // Append Files
+      // Append Files (now as file objects or existing URLs)
       if (govtIdFront) {
-        formData.append('government_id_front', {
-          uri: govtIdFront.uri,
-          name: `govt_id_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdFront);
+        if (file) formData.append('government_id_front', file);
       }
 
       if (govtIdBack) {
-        formData.append('government_id_back', {
-          uri: govtIdBack.uri,
-          name: `govt_id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdBack);
+        if (file) formData.append('government_id_back', file);
       } else if (values.government_id === 'passport' && govtIdFront) {
         // If passport, use front image for back payload
-        formData.append('government_id_back', {
-          uri: govtIdFront.uri,
-          name: `govt_id_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(govtIdFront);
+        if (file) formData.append('government_id_back', file);
       }
 
       if (rideFront) {
-        formData.append('ride_photo_front', {
-          uri: rideFront.uri,
-          name: `ride_front_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(rideFront);
+        if (file) formData.append('ride_photo_front', file);
       }
 
       if (rideBack) {
-        formData.append('ride_photo_back', {
-          uri: rideBack.uri,
-          name: `ride_back_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(rideBack);
+        if (file) formData.append('ride_photo_back', file);
       }
 
       if (selfie) {
-        formData.append('selfie', {
-          uri: selfie.uri,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
+        const file = getFileObject(selfie);
+        if (file) formData.append('selfie', file);
       }
 
       await userAPI.submitRiderKYC(formData);

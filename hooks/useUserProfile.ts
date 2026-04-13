@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse } from '@/lib/api/user';
+import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse, WalletResponse, UserEarningsResponse, WithdrawalResponse, WithdrawalFilters, WithdrawalRequestData, UserBankAccountsResponse } from '@/lib/api/user';
 import { useMechanicStore } from '@/stores/mechanicStore';
 
 // Query key factory
@@ -16,6 +16,9 @@ export const userProfileKeys = {
   mechanic: () => [...userProfileKeys.all, 'mechanic'] as const,
   driver: () => [...userProfileKeys.all, 'driver'] as const,
   rider: () => [...userProfileKeys.all, 'rider'] as const,
+  wallet: () => [...userProfileKeys.all, 'wallet'] as const,
+  earnings: () => [...userProfileKeys.all, 'earnings'] as const,
+  withdrawals: () => [...userProfileKeys.all, 'withdrawals'] as const,
 };
 
 // Hook to get primary user profile
@@ -430,6 +433,57 @@ export const useBankAccount = (id: number | string, enabled: boolean = true) => 
     staleTime: 30 * 1000, // 5 minutes
     retry: 2,
     enabled: enabled && !!id,
+  });
+};
+
+// Hook to get wallet details
+export const useWallet = (enabled: boolean = true) => {
+  return useQuery<WalletResponse>({
+    queryKey: userProfileKeys.wallet(),
+    queryFn: userAPI.getWallet,
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to get consolidated earnings
+export const useEarnings = (enabled: boolean = true) => {
+  return useQuery<UserEarningsResponse>({
+    queryKey: userProfileKeys.earnings(),
+    queryFn: userAPI.getEarnings,
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to get withdrawal history
+export const useWithdrawals = (filters?: WithdrawalFilters, enabled: boolean = true) => {
+  return useQuery<WithdrawalResponse>({
+    queryKey: [...userProfileKeys.withdrawals(), filters],
+    queryFn: () => userAPI.getWithdrawals(filters),
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    enabled: enabled,
+  });
+};
+
+// Hook to perform a withdrawal
+export const useWithdrawFunds = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: WithdrawalRequestData) => userAPI.withdrawFunds(data),
+    onSuccess: () => {
+      // Invalidate both wallet and withdrawals history to refetch latest data
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.wallet() });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.withdrawals() });
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.earnings() });
+    },
+    onError: (error) => {
+      console.error('❌ Error withdrawing funds:', error);
+    },
   });
 };
 

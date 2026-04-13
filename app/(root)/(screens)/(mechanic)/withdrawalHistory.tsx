@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,74 +13,39 @@ import { router } from "expo-router";
 import { ArrowLeftIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 
+import { useWithdrawals } from "@/hooks/useUserProfile";
+import { groupTransactionsByMonth } from "@/utils/dateFormatter";
+import { RefreshControl, ActivityIndicator } from "react-native";
+import WithdrawalFilterBar from "@/components/WithdrawalFilterBar";
+import { WithdrawalFilters } from "@/lib/api/user";
+
 const WithdrawalHistory = () => {
-  const withdrawalHistory = [
-    // January 2025
-    {
-      id: "C079DB3D",
-      month: "JANUARY 2025",
-      withdrawals: [
-        {
-          id: "C079DB3D",
-          amount: 50000,
-          date: "Jan 15, 2025",
-        },
-        {
-          id: "C079DB3D", 
-          amount: 50000,
-          date: "Jan 10, 2025",
-        },
-      ],
-    },
-    // February 2024
-    {
-      id: "FEB2024",
-      month: "FEBRUARY 2024",
-      withdrawals: [
-        {
-          id: "C079DB3D",
-          amount: 75000,
-          date: "Feb 28, 2024",
-        },
-        {
-          id: "C079DB3D",
-          amount: 30000,
-          date: "Feb 15, 2024",
-        },
-      ],
-    },
-    // March 2024
-    {
-      id: "MAR2024",
-      month: "MARCH 2024",
-      withdrawals: [
-        {
-          id: "C079DB3D",
-          amount: 30000,
-          date: "Mar 25, 2024",
-        },
-        {
-          id: "C079DB3D",
-          amount: 175000,
-          date: "Mar 20, 2024",
-        },
-        {
-          id: "C079DB3D",
-          amount: 15000,
-          date: "Mar 15, 2024",
-        },
-        {
-          id: "C079DB3D",
-          amount: 7000,
-          date: "Mar 5, 2024",
-        },
-      ],
-    },
-  ];
+  const [filters, setFilters] = useState<WithdrawalFilters>({});
+
+  const { data: response, isLoading, refetch, isRefetching } = useWithdrawals(filters);
+  const withdrawals = response?.data || [];
+
+  const groupedWithdrawals = groupTransactionsByMonth(withdrawals);
+  const months = Object.keys(groupedWithdrawals).sort((a, b) => {
+    // Basic sort descending for months (simplest for now)
+    return new Date(b).getTime() - new Date(a).getTime();
+  });
 
   const handleGoBack = () => {
     router.back();
   };
+
+  const handleFilterChange = (newFilters: WithdrawalFilters) => {
+    setFilters(newFilters);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#B91C1C" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -101,40 +66,57 @@ const WithdrawalHistory = () => {
         <View className="w-10" />
       </View>
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        {withdrawalHistory.map((monthGroup) => (
-          <View key={monthGroup.id} className="mb-6">
-            {/* Month Header */}
-            <View className="items-center py-6">
-              <Text className="text-sm text-gray-500 font-NunitoMedium tracking-wider">
-                {monthGroup.month}
-              </Text>
-            </View>
+      <WithdrawalFilterBar 
+        onFilterChange={handleFilterChange} 
+        activeFilters={filters}
+      />
 
-            {/* Withdrawals for this month */}
-            {monthGroup.withdrawals.map((withdrawal, index) => (
-              <View
-                key={`${withdrawal.id}-${index}`}
-                className="flex-row items-center justify-between py-4 border-b border-gray-100"
-              >
-                <View className="flex-1">
-                  <Text className="font-NunitoBold text-gray-900 mb-1">
-                    Withdraw to bank
-                  </Text>
-                  <Text className="text-sm text-gray-600 font-NunitoMedium">
-                    Reference ID: {withdrawal.id}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <NairaCurrency
-                    value={withdrawal.amount}
-                    className="text-lg font-NunitoBold text-red-600"
-                  />
-                </View>
-              </View>
-            ))}
+      <ScrollView 
+        className="flex-1 px-5" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#B91C1C" />
+        }
+      >
+        {months.length === 0 && !isLoading ? (
+          <View className="items-center justify-center py-20">
+            <Text className="text-gray-400 font-NunitoMedium">No withdrawal history found</Text>
           </View>
-        ))}
+        ) : (
+          months.map((monthYear) => (
+            <View key={monthYear} className="mb-6">
+              {/* Month Header */}
+              <View className="items-center py-6">
+                <Text className="text-sm text-gray-500 font-NunitoMedium tracking-wider">
+                  {monthYear}
+                </Text>
+              </View>
+
+              {/* Withdrawals for this month */}
+              {groupedWithdrawals[monthYear].map((withdrawal, index) => (
+                <View
+                  key={`${withdrawal.id}-${index}`}
+                  className="flex-row items-center justify-between py-4 border-b border-gray-100"
+                >
+                  <View className="flex-1">
+                    <Text className="font-NunitoBold text-gray-900 mb-1">
+                      {withdrawal.description || "Withdraw to bank"}
+                    </Text>
+                    <Text className="text-sm text-gray-600 font-NunitoMedium">
+                      Reference ID: {withdrawal.reference || String(withdrawal.id).slice(0, 8)}
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <NairaCurrency
+                      value={typeof withdrawal.amount === 'string' ? parseFloat(withdrawal.amount) : withdrawal.amount}
+                      className="text-lg font-NunitoBold text-red-600"
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))
+        )}
 
         {/* Bottom spacing */}
         <View className="h-20" />

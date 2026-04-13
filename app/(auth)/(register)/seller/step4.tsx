@@ -69,20 +69,21 @@ export default function SellerStep4() {
         setIsSubmitting(true);
 
         try {
-            // Validate files exist and get their info
-            const validateFile = async (uri: string, name: string): Promise<string> => {
-                const fileInfo = await FileSystem.getInfoAsync(uri);
-                if (!fileInfo.exists) {
-                    throw new Error(`File not found: ${name}`);
-                }
-                if (fileInfo.size > 5 * 1024 * 1024) { // 5MB limit
-                    throw new Error(`${name} file is too large (max 5MB)`);
-                }
-                return uri;
+            // Helper function to handle image upload if it's a local URI
+            const getFileObject = (uri: string, type: string) => {
+                if (!uri) return null;
+                // If it's already a URL, we don't need to wrap it as a file object
+                if (uri.startsWith('http')) return uri;
+                
+                return {
+                    uri,
+                    name: `${type}_${Date.now()}.jpg`,
+                    type: 'image/jpeg'
+                } as any;
             };
 
-            const cacDocumentUri = await validateFile(params.cacDocumentUri as string, 'CAC Document');
-            const selfieUri = await validateFile(capturedPhoto, 'Selfie');
+            const cacDocumentFile = getFileObject(params.cacDocumentUri as string, 'cac');
+            const selfieFile = getFileObject(capturedPhoto, 'selfie');
 
             const token = await AsyncStorage.getItem('auth_token');
 
@@ -92,18 +93,9 @@ export default function SellerStep4() {
             formData.append('lga', params.lga as string);
             formData.append('cac_number', params.cacNumber as string);
 
-            //   Add files as proper file objects
-              formData.append('cac_document', {
-                uri: cacDocumentUri,
-                name: `cac_document_${Date.now()}.jpg`,
-                type: 'image/jpeg'
-              } as any);
-
-              formData.append('selfie', {
-                uri: selfieUri,
-                name: `selfie_${Date.now()}.jpg`,
-                type: 'image/jpeg'
-              } as any);
+            // Append Files (now as file objects or existing URLs)
+            if (cacDocumentFile) formData.append('cac_document', cacDocumentFile);
+            if (selfieFile) formData.append('selfie', selfieFile);
 
             // Use direct fetch to bypass axios interceptor that converts FormData to JSON
             const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/register/step/4/`, {

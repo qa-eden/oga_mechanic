@@ -152,6 +152,7 @@ const ProductActionBar: React.FC<ProductActionBarProps> = ({
             />
           )}
         </View>
+
       </View>
 
       <AndroidNavBarSpacer backgroundColor="white" extraHeight={4} />

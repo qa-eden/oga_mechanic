@@ -28,6 +28,59 @@ export interface HomeProductsResponse {
   referenceId?: string;
 }
 
+export interface RepairResolution {
+  id: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepairHistoryItem {
+  id: string;
+  customer?: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+  };
+  mechanic?: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+  } | null;
+  service_type: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  vehicle_year: number;
+  vehicle_vin: string;
+  problem_description: string;
+  problem_resolutions: RepairResolution[];
+  service_address: string;
+  service_latitude: string;
+  service_longitude: string;
+  status: string;
+  priority: string;
+  requested_at: string;
+  accepted_at: string | null;
+  completed_at: string | null;
+  is_active: boolean;
+}
+
+export interface BiddingWindow {
+  id: string;
+  product: string;
+  bids: any[];
+  start_time: string;
+  duration_days: number;
+  is_closed: boolean;
+  is_active: boolean;
+  end_time: string;
+  created_at: string;
+}
+
 export interface ProductDetailResponse {
   id: string;
   merchant_id: string;
@@ -93,6 +146,20 @@ export interface ProductDetailResponse {
   is_in_favorite_list: boolean;
   created_at: string;
   updated_at: string;
+  vin?: string;
+  repair_history?: RepairHistoryItem[];
+  is_bidding?: boolean;
+  bidding_window?: BiddingWindow;
+}
+
+export interface SubmitBidRequest {
+  requestType: string;
+  bidding_window: string;
+  amount: number;
+  data: {
+    bidding_window: string;
+    amount: number;
+  }
 }
 
 // Complete API response wrapper
@@ -151,12 +218,13 @@ export interface ProductListAPIResponse {
     next: string | null;
     previous: string | null;
     results: ProductListResponse[];
-  };
+  } | ProductListResponse[]; // Allow data to be a direct array
   message: string;
   referenceId: string;
   requestTime: string;
   requestType: string;
   status: boolean;
+  results?: ProductListResponse[]; // for API variations that return results at the root
 }
 
 // Category Response
@@ -731,9 +799,61 @@ export const productsAPI = {
   },
 
 
+  // Initiate a subscription payment for merchant
+  initiatePayment: async (payload: {
+    requestType: string;
+    data: {
+      amount: number;
+      currency: string;
+      description: string;
+      callback_url: string;
+    };
+  }): Promise<{ status: boolean; message: string; data?: { payment_url: string; reference: string } }> => {
+    const response = await api.post(
+      MERCHANT_ENDPOINTS.SUBSCRIPTION,
+      payload
+    );
+    return response.data;
+  },
+
   // Create product review
   createProductReview: async (productId: string, payload: { data: { rating: number; comment: string }; requestType: string }): Promise<any> => {
     const response = await api.post(SERVICE_ENDPOINTS.PRODUCT_REVIEWS(productId), payload);
+    return response.data;
+  },
+
+  // Get active bidding products
+  getActiveBiddingProducts: async (): Promise<ProductListAPIResponse> => {
+    const response = await api.get<ProductListAPIResponse>(SERVICE_ENDPOINTS.ACTIVE_BIDDING_PRODUCTS);
+    return response.data;
+  },
+
+  // Get product bids by bidding window ID
+  getProductBids: async (biddingWindowId: string): Promise<any> => {
+    const response = await api.get(SERVICE_ENDPOINTS.PRODUCT_BIDS(biddingWindowId));
+    return response.data;
+  },
+
+  // Get current user's bids
+  getMyBids: async (): Promise<any> => {
+    const response = await api.get(SERVICE_ENDPOINTS.MY_BIDS);
+    return response.data;
+  },
+
+  // Submit a bid by bidding window ID for the URL
+  submitBid: async (biddingWindowId: string, payload: SubmitBidRequest): Promise<any> => {
+    const response = await api.post(SERVICE_ENDPOINTS.PRODUCT_BIDS(biddingWindowId), payload);
+    return response.data;
+  },
+
+  // Update a bid (Accept/Reject for merchant, amount update for bidder)
+  updateBid: async (bidId: string, payload: { status?: string; amount?: string; bidding_window?: string }): Promise<any> => {
+    const response = await api.patch(SERVICE_ENDPOINTS.PATCH_BID(bidId), payload);
+    return response.data;
+  },
+
+  deleteBid: async (bidId: string): Promise<any> => {
+    const response = await api.delete(SERVICE_ENDPOINTS.DELETE_BID(bidId));
     return response.data;
   },
 };

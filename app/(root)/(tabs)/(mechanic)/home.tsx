@@ -28,6 +28,7 @@ import { useVehicleMakes } from "@/hooks/useVehicleMakes";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
+import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 
 // Metric Card Skeleton Loader
 const MetricCardSkeleton = () => {
@@ -451,6 +452,9 @@ const MechanicHome = () => {
 
           <View className="py-4">
           <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="mechanic" isPending={isPendingApproval} />
+
+          {/* Add Bidding Carousel */}
+          <BiddingCarousel containerPadding={20} />
 
           {/* Let's fix some cars card */}
           {/* <View className="rounded-2xl mb-6 overflow-hidden">

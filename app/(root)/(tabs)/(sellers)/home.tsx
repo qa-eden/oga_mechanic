@@ -30,6 +30,7 @@ import { useMerchantOrders } from "@/hooks/useOrders";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
+import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
@@ -224,6 +225,9 @@ const SellerHome = () => {
             role="seller" 
             isPending={isPendingApproval}
           />
+
+          {/* Add Bidding Carousel */}
+          <BiddingCarousel containerPadding={20} />
 
           {/* Total Sales Section */}
           <View className=" mb-2 mt-2">

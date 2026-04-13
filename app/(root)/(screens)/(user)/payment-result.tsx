@@ -108,7 +108,7 @@ const STATUS_MAP: Record<StatusKey, StatusConfig> = {
 
 const DashedDivider = ({ color }: { color: string }) => (
   <View style={styles.dashedRow}>
-    {Array.from({ length: 28 }).map((_, i) => (
+    {Array.from({ length: 28 }).map((_: any, i: number) => (
       <View key={i} style={[styles.dot, { backgroundColor: color }]} />
     ))}
   </View>

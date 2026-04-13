@@ -76,13 +76,25 @@ const EditProfile = () => {
     try {
       setSubmitting(true);
       
+      const getFileObject = (uri: string) => {
+        if (!uri) return null;
+        if (uri.startsWith('http')) return uri;
+        return {
+          uri,
+          name: `profile_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const selfieFile = getFileObject(values.selfie);
+      
       const payload: any = {
         first_name: values.first_name,
         last_name: values.last_name,
         phone_number: values.phone_number,
         dob: values.dob,
         gender: values.gender,
-        selfie: values.selfie,
+        selfie: selfieFile,
       };
 
       await userAPI.updateProfile(payload);

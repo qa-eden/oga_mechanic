@@ -17,41 +17,80 @@ import { MagnifyingGlassIcon, PlusIcon, ArrowLeftIcon, FunnelIcon } from "react-
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { useQuery } from "@tanstack/react-query";
-import { userAPI } from "@/lib/api/user";
+import { userAPI, getUserVehiclePrimaryImageUrl } from "@/lib/api/user";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { StatusBar } from "expo-status-bar";
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
-const CarCard = ({ item, onPress }: { item: any, onPress: (car: any) => void }) => (
-  <TouchableOpacity
-    activeOpacity={0.9}
-    onPress={() => onPress(item)}
-    className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 mb-4 flex-row items-center"
-  >
-    <View className="w-16 h-16 bg-primary-50 rounded-2xl items-center justify-center mr-4">
-      {item.image ? (
-        <Image source={{ uri: item.image }} className="w-full h-full rounded-2xl" resizeMode="cover" />
-      ) : (
-        <icons.car width={32} height={32} color="#D30309" />
-      )}
-    </View>
-    <View className="flex-1">
-      <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-1">
-        {item.name}
-      </Text>
-      <View className="flex-row items-center">
-         <View className="bg-gray-100 px-2 py-0.5 rounded mr-2">
-            <Text className="text-xs font-NunitoBold text-gray-600">{item.year || 'N/A'}</Text>
-         </View>
-         <Text className="text-sm text-gray-400 font-NunitoMedium">
-           {item.license_plate || 'No Plate'}
-         </Text>
+const carDisplayName = (car: any) =>
+  (car?.name as string)?.trim() ||
+  [car?.make, car?.model].filter(Boolean).join(" ").trim() ||
+  "Vehicle";
+
+const carThumbUri = (car: any) =>
+  (typeof car?.image === "string" && car.image.startsWith("http") ? car.image : null) ||
+  getUserVehiclePrimaryImageUrl(car) ||
+  null;
+
+const CarCard = ({ item, onPress }: { item: any; onPress: (car: any) => void }) => {
+  const thumb = carThumbUri(item);
+  const title = carDisplayName(item);
+  const yearLabel =
+    item.year != null && item.year !== "" ? String(item.year) : "N/A";
+  const plate =
+    item.license_plate != null && String(item.license_plate).trim() !== ""
+      ? String(item.license_plate).trim()
+      : "No plate";
+  const vin = item.vin != null && String(item.vin).trim() !== "" ? String(item.vin).trim() : null;
+  const statusRaw = item.status != null ? String(item.status).toLowerCase() : "";
+  const isActive = statusRaw === "" || statusRaw === "active";
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => onPress(item)}
+      className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 mb-4 flex-row items-center"
+    >
+      <View className="w-16 h-16 bg-primary-50 rounded-2xl items-center justify-center mr-4 shrink-0">
+        {thumb ? (
+          <Image
+            source={{ uri: thumb }}
+            className="w-full h-full rounded-2xl"
+            resizeMode="cover"
+          />
+        ) : (
+          <icons.car width={32} height={32} color="#D30309" />
+        )}
       </View>
-    </View>
-    <View className={`w-3 h-3 rounded-full ${item.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`} />
-  </TouchableOpacity>
-);
+      <View className="flex-1 min-w-0 pr-2">
+        <Text
+          className="text-lg font-NunitoExtraBold text-gray-900 mb-1"
+          numberOfLines={2}
+        >
+          {title}
+        </Text>
+        <View className="flex-row items-center flex-wrap gap-y-1">
+          <View className="bg-gray-100 px-2 py-0.5 rounded mr-2">
+            <Text className="text-xs font-NunitoBold text-gray-600">{yearLabel}</Text>
+          </View>
+          <Text className="text-sm text-gray-600 font-NunitoSemiBold">{plate}</Text>
+        </View>
+        {vin ? (
+          <Text
+            className="text-xs text-gray-400 font-NunitoMedium mt-1.5"
+            numberOfLines={1}
+          >
+            VIN {vin}
+          </Text>
+        ) : null}
+      </View>
+      <View
+        className={`w-3 h-3 rounded-full shrink-0 ${isActive ? "bg-green-500" : "bg-gray-300"}`}
+      />
+    </TouchableOpacity>
+  );
+};
 
 const Cars = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,7 +106,7 @@ const Cars = () => {
     refetch,
   } = useQuery({
     queryKey: ["userCars"],
-    queryFn: userAPI.getCars,
+    queryFn: () => userAPI.getCars(),
     staleTime: 5 * 60 * 1000, 
     retry: 2,
   });
@@ -78,10 +117,8 @@ const Cars = () => {
     setRefreshing(false);
   };
 
-  // Handle both array response and wrapped response
-  const cars = Array.isArray(carsData) 
-    ? carsData 
-    : ((carsData as any)?.data || []);
+  // getCars() normalizes to an array (raw list, paginated { results }, or envelope)
+  const cars = Array.isArray(carsData) ? carsData : [];
 
   // Animation values for modal
   const slideY = useSharedValue(300);
@@ -113,11 +150,17 @@ const Cars = () => {
   ];
 
   const filteredCars = cars.filter((car: any) => {
+    const q = searchQuery.toLowerCase();
+    const label = carDisplayName(car).toLowerCase();
     const matchesSearch =
-      car?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      car?.vin?.includes(searchQuery);
+      label.includes(q) ||
+      (car?.vin && String(car.vin).toLowerCase().includes(q)) ||
+      (car?.license_plate && String(car.license_plate).toLowerCase().includes(q));
+    const st = car?.status != null ? String(car.status).toLowerCase() : "";
     const matchesFilter =
-      selectedFilter === "All" || car?.status === selectedFilter;
+      selectedFilter === "All" ||
+      (selectedFilter === "Active" && (st === "" || st === "active")) ||
+      (selectedFilter === "Inactive" && st === "inactive");
     return matchesSearch && matchesFilter;
   });
 
@@ -131,13 +174,12 @@ const Cars = () => {
   };
 
   const handleCarPress = (car: any) => {
-    // Navigate to car detail screen
     router.push({
       pathname: routes?.carDetails,
       params: {
-        carId: car.id,
-        carName: car.name,
-        carYear: car.year,
+        carId: String(car.id),
+        carName: carDisplayName(car),
+        carYear: String(car.year ?? ""),
       },
     });
   };
@@ -311,11 +353,7 @@ const Cars = () => {
           <FlatList
             data={filteredCars}
             renderItem={renderCarCard}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            columnWrapperStyle={{
-              justifyContent: "space-between",
-            }}
+            keyExtractor={(item) => String(item.id)}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               paddingBottom: 100,

@@ -176,11 +176,18 @@ declare interface HeaderAndDescTextCenterProps {
 }
 
 declare interface AdsProps {
+  id?: string | number
   image: ImageSourcePropType
   title?: string
   description?: string
   containerStyle?: string
   onPress?: () => void
+  price?: string | number
+  currency?: string
+  vin?: string
+  year?: number | string
+  repairHistoryCount?: number
+  isBidding?: boolean
 }
 
 declare interface ServicesProps {

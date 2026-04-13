@@ -3,20 +3,28 @@ import { TouchableOpacity, Text, View } from "react-native";
 import { HeadphonesIcon } from "./icons/HeadphonesIcon";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
+import { useSupportCount } from "@/hooks/useSupport";
 
 interface SpecialistIconBtnProps {
-  count?: number;
+  // count prop is now optional as we fetch it internally, 
+  // but we keep it for flexibility if needed
+  count?: number; 
 }
 
-const SpecialistIconBtn = ({ count = 3 }: SpecialistIconBtnProps) => {
+const SpecialistIconBtn = ({ count: manualCount }: SpecialistIconBtnProps) => {
+  const activeSupportCount = useSupportCount();
+  
+  // Use manual count if provided, otherwise use the live count from API
+  const displayCount = manualCount !== undefined ? manualCount : activeSupportCount;
+
   return (
     <View>
       <TouchableOpacity 
-        onPress={() => router.push(routes.chatSeller)} 
+        onPress={() => router.push(routes.supportSuggestions)} 
         className="w-[45px] h-[45px] bg-gray-100 flex justify-center items-center rounded-full relative"
       >
         <HeadphonesIcon size={24} color={"#000"} />
-        {count > 0 && (
+        {displayCount > 0 && (
           <View
             style={{
               position: "absolute",
@@ -38,7 +46,7 @@ const SpecialistIconBtn = ({ count = 3 }: SpecialistIconBtnProps) => {
               fontWeight: "bold",
               fontFamily: "Nunito-Bold"
             }}>
-              {count > 99 ? "99+" : count}
+              {displayCount > 99 ? "99+" : displayCount}
             </Text>
           </View>
         )}

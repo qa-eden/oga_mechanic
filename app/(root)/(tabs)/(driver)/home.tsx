@@ -23,6 +23,7 @@ import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal';
 import KYCBanner from '@/components/KYCBanner';
 import AnimatedPageContainer from '@/components/AnimatedPageContainer';
 import Navbar from '@/components/Navbar';
+import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 
 const Home = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -238,6 +239,9 @@ const Home = () => {
         <View className="px-5 mb-1 mt-4">
           <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="driver" isPending={isPendingApproval} />
         </View>
+
+        {/* Add Bidding Carousel */}
+        <BiddingCarousel />
 
         {/* Daily Performance Metrics */}
         <View className="px-5 mb-6">

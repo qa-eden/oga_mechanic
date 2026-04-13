@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native'
 import EditSuccessDrawer from '@/components/modals/EditSuccessDrawer'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -13,6 +13,8 @@ import FormikTextArea from '@/components/forms/FormikTextArea'
 import SelectField from '@/components/forms/SelectField'
 import FormikButton from '@/components/forms/FormikButton'
 import FeatureBadges from '@/components/forms/FeatureBadges'
+import VINInput from '@/components/VINInput'
+import { decodeVINWithImage } from '@/utils/vinDecoder'
 import { sellerRoutes } from '@/constants/routes'
 import { useCategories } from '@/hooks/useProducts'
 import { useVehicleMakes } from '@/hooks/useVehicleMakes'
@@ -28,6 +30,28 @@ import {
 } from '@/constants/data'
 import CustomButton from '@/components/CustomButton'
 
+const PRIMARY = '#D30309';
+
+const SectionCard = ({ children, title, subtitle, icon, accentColor }: any) => (
+  <View
+    className="bg-white rounded-[16px] p-5 mb-5 border border-gray-100"
+    style={{ borderTopWidth: 3, borderTopColor: accentColor, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}
+  >
+    <View className="flex-row items-center mb-5 gap-3">
+      <View style={{ backgroundColor: `${accentColor}1A` }} className="w-10 h-10 rounded-xl items-center justify-center">
+        <Text className="text-[20px]">{icon}</Text>
+      </View>
+      <View className="flex-1">
+        <Text style={{ color: '#111827' }} className="text-[15px] font-NunitoBold mb-0.5">{title}</Text>
+        <Text className="text-[12px] text-gray-500 font-NunitoMedium">{subtitle}</Text>
+      </View>
+    </View>
+    <View className="gap-4">
+      {children}
+    </View>
+  </View>
+);
+
 // Dedicated edit page for updating existing car products
 // This page only handles editing - no creation logic
 const EditProduct = () => {
@@ -35,6 +59,7 @@ const EditProduct = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successDrawerVisible, setSuccessDrawerVisible] = useState(false)
   const [updatedProductData, setUpdatedProductData] = useState<any>(null)
+  const [biddingWindow, setBiddingWindow] = useState<any>(null)
   const featuresInitialized = useRef(false)
 
   const { productId, productData: productDataParam } = useLocalSearchParams<{
@@ -49,6 +74,32 @@ const EditProduct = () => {
   const { data: categories } = useCategories();
   const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
   const carCategoryId = carCategory?.id || 0;
+
+  // Fetch bidding window configuration
+  useEffect(() => {
+    const fetchBidding = async () => {
+      if (!productId) return;
+      try {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/bidding/`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
+            'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Assuming successful response returns the BiddingWindow object payload
+          if (data) {
+            setBiddingWindow(data);
+          }
+        }
+      } catch (err) {
+        console.log("No bidding window found or error fetching", err);
+      }
+    };
+    fetchBidding();
+  }, [productId]);
 
   // Fetch vehicle makes from API
   const { data: vehicleMakes, loading: vehicleMakesLoading, error: vehicleMakesError } = useVehicleMakes();
@@ -89,6 +140,13 @@ const EditProduct = () => {
     stock: Yup.string(),
     availability: Yup.string(),
     delivery_option: Yup.string(),
+    vin: Yup.string(),
+    enable_bidding: Yup.boolean(),
+    duration_days: Yup.number().when('enable_bidding', {
+      is: true,
+      then: schema => schema.required('Duration is required when bidding is enabled').min(1, 'Minimum duration is 1 day'),
+      otherwise: schema => schema.notRequired()
+    })
   })
 
   // Initialize selected features based on product data
@@ -134,6 +192,43 @@ const EditProduct = () => {
     setSuccessDrawerVisible(false);
     setUpdatedProductData(null);
   };
+
+  const handleVINLookup = useCallback(async (vin: string, setFieldValue: any) => {
+    try {
+      const info = await decodeVINWithImage(vin);
+      if (!info) return;
+
+      const matchedMake = vehicleMakes?.find(m =>
+        m.name.toLowerCase() === info.make.toLowerCase()
+      );
+
+      if (matchedMake) {
+        setFieldValue('make', matchedMake.id.toString());
+
+        const nhtsaModel = info.model.toLowerCase();
+        const makeName = info.make.toLowerCase();
+        const cleanModelName = nhtsaModel.startsWith(makeName)
+          ? nhtsaModel.replace(makeName, '').trim()
+          : nhtsaModel;
+
+        const matchedModel = matchedMake.models.find(m =>
+          m.name.toLowerCase() === cleanModelName || m.name.toLowerCase() === nhtsaModel
+        );
+
+        if (matchedModel) {
+          setFieldValue('model', matchedModel.id.toString());
+        }
+      }
+
+      if (info.modelYear) {
+        setFieldValue('year', info.modelYear);
+      }
+
+      Alert.alert("Success", `Vehicle details found: ${info.make} ${info.model} (${info.modelYear})`);
+    } catch (error) {
+      console.error("VIN Lookup error:", error);
+    }
+  }, [vehicleMakes]);
 
   const handleFeatureToggle = (feature: string) => {
     setSelectedFeatures(prev =>
@@ -211,13 +306,14 @@ const EditProduct = () => {
           lane_assist: features.lane_assist,
           blind_spot_monitor: features.blind_spot_monitor,
           delivery_option: values.delivery_option,
+          vin: values.vin,
         },
         requestType: "inbound"
       }
 
       // Call the products API endpoint for update
       const endpoint = `${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/`;
-    
+
 
       const response = await fetch(endpoint, {
         method: 'PUT',
@@ -234,6 +330,62 @@ const EditProduct = () => {
       }
 
       const responseData = await response.json()
+
+      // Process bidding window state updates
+      try {
+        if (values.enable_bidding && productId) {
+          if (biddingWindow) {
+            // PATCH an existing bidding window to update duration or reopen
+            const patchRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/bidding/`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
+                'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+              },
+              body: JSON.stringify({
+                duration_days: parseInt(values.duration_days.toString(), 10),
+                is_closed: false,
+              }),
+            });
+            if (!patchRes.ok) throw new Error('Failed to patch bidding window');
+          } else {
+            // POST a brand new bidding window
+            const postRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/bidding/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
+                'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+              },
+              body: JSON.stringify({
+                product: productId,
+                start_time: new Date().toISOString(),
+                duration_days: parseInt(values.duration_days.toString(), 10),
+                is_closed: false,
+              }),
+            });
+            if (!postRes.ok) throw new Error('Failed to post bidding window');
+          }
+        } else if (!values.enable_bidding && biddingWindow && !biddingWindow.is_closed) {
+          // PATCH to close bidding window since user turned it off
+          const patchCloseRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/bidding/`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
+              'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+            },
+            body: JSON.stringify({
+              is_closed: true,
+            }),
+          });
+          if (!patchCloseRes.ok) throw new Error('Failed to close bidding window');
+        }
+      } catch (err) {
+        console.error('Bidding operation failed:', err);
+        Alert.alert('Notice', 'Car updated, but failed to sync bidding configurations.');
+      }
 
       // Store updated product data and show success drawer
       setUpdatedProductData(responseData.data || productData);
@@ -290,6 +442,9 @@ const EditProduct = () => {
     delivery_option: productData.delivery_option || 'pickup',
     negotiable: productData.negotiable || false,
     is_rental: productData.is_rental || false,
+    vin: productData.vin || '',
+    enable_bidding: biddingWindow && !biddingWindow.is_closed ? true : false,
+    duration_days: biddingWindow?.duration_days ? biddingWindow.duration_days.toString() : '',
   }
 
   return (
@@ -340,23 +495,20 @@ const EditProduct = () => {
             enableReinitialize={true}
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting: formikIsSubmitting, setFieldValue }) => {
-             
+
               return (
                 <View className="space-y-6">
                   {/* Basic Information */}
-                  <View className="bg-white rounded-2xl p-5 my-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">1</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Basic Information</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Update only the fields you want to change
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="📋" title="Basic Information" subtitle="Update only the fields you want to change">
 
+                    {/* VIN */}
+                    <VINInput
+                      name="vin"
+                      label="VIN"
+                      placeholder="Vehicle Identification Number"
+                      onVINLookup={handleVINLookup}
+                    />
+                    
                     {/* Name of car */}
                     <FormikInput
                       name="name"
@@ -416,21 +568,10 @@ const EditProduct = () => {
                       error={errors.condition as string}
                       touched={touched.condition as boolean}
                     />
-                  </View>
+                  </SectionCard>
 
                   {/* Vehicle Details */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-green-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">2</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Details</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          All fields optional - update what you need
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="🚗" title="Vehicle Details" subtitle="All fields optional - update what you need">
 
                     {/* Body type */}
                     <SelectField
@@ -532,21 +673,10 @@ const EditProduct = () => {
                       error={errors.engine_size as string}
                       touched={touched.engine_size as boolean}
                     />
-                  </View>
+                  </SectionCard>
 
                   {/* Appearance */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-purple-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">3</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Appearance</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Colors and styling (all optional)
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="✨" title="Appearance" subtitle="Colors and styling (all optional)">
 
                     {/* Exterior color */}
                     <FormikInput
@@ -585,21 +715,10 @@ const EditProduct = () => {
                         />
                       </View>
                     </View>
-                  </View>
+                  </SectionCard>
 
                   {/* Features */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-orange-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">4</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Features</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Select/deselect features (optional)
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="💎" title="Features" subtitle="Select/deselect features (optional)">
 
                     <FeatureBadges
                       features={featureOptions}
@@ -607,21 +726,10 @@ const EditProduct = () => {
                       onFeatureToggle={handleFeatureToggle}
                       label="Car Features"
                     />
-                  </View>
+                  </SectionCard>
 
                   {/* Description */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-indigo-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">5</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Update description (optional)
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="📝" title="Description" subtitle="Update description (optional)">
 
                     <FormikTextArea
                       name="description"
@@ -631,74 +739,19 @@ const EditProduct = () => {
                       maxLength={500}
                       helperText="Describe your car's condition, features, and what makes it special"
                     />
-                  </View>
+                  </SectionCard>
 
                   {/* Pricing & Availability */}
-                  <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-8 h-8 bg-emerald-500 rounded-lg items-center justify-center mr-3">
-                        <Text className="text-white font-NunitoBold text-sm">6</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-NunitoBold text-gray-900">Pricing & Availability</Text>
-                        <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Update price and availability (all optional)
-                        </Text>
-                      </View>
-                    </View>
+                  <SectionCard accentColor={PRIMARY} icon="💰" title="Pricing & Availability" subtitle="Update price and availability (all optional)">
 
-                    {/* Price and Currency */}
-                    <View className="mb-4">
-                      <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                        Price
-                      </Text>
-                      <View className="flex-row gap-3">
-                        <View className="flex-1">
-                          <FormikInput
-                            name="price"
-                            label=""
-                            placeholder="e.g., 2,500,000"
-                            keyboardType="numeric"
-                            type="text"
-                          />
-                        </View>
-                        <View className="w-32">
-                          <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                            Currency
-                          </Text>
-                          <View className="flex-row bg-gray-100 rounded-lg p-1">
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('currency', 'NGN')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                ₦
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('currency', 'USD')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                $
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
+                    {/* Price */}
+                    <FormikInput
+                      name="price"
+                      label="Price (₦)"
+                      placeholder="e.g., 2,500,000"
+                      keyboardType="numeric"
+                      type="text"
+                    />
 
                     {/* Stock */}
                     <FormikInput
@@ -732,10 +785,38 @@ const EditProduct = () => {
                       error={errors.delivery_option as string}
                       touched={touched.delivery_option as boolean}
                     />
-                  </View>
+                  </SectionCard>
+
+                  {/* Bidding */}
+                  <SectionCard accentColor={PRIMARY} icon="⚖️" title="Bidding" subtitle="Let buyers compete">
+
+                    <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+                      <View className="flex-1">
+                        <Text className="text-sm font-NunitoSemiBold text-gray-900">Enable Bidding</Text>
+                        <Text className="text-xs font-NunitoMedium text-gray-500 mt-1">Allow customers to place bids on this car</Text>
+                      </View>
+                      <Switch
+                        value={values.enable_bidding as boolean}
+                        onValueChange={v => void setFieldValue('enable_bidding', v)}
+                        trackColor={{ false: '#E5E7EB', true: '#D30309' }}
+                        thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : values.enable_bidding ? '#FFFFFF' : '#F3F4F6'}
+                      />
+                    </View>
+                    {values.enable_bidding && (
+                      <View className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200">
+                        <FormikInput
+                          name="duration_days"
+                          label="Bidding Duration (Days)"
+                          placeholder="e.g. 7"
+                          keyboardType="numeric"
+                          type="text"
+                        />
+                      </View>
+                    )}
+                  </SectionCard>
 
                   {/* Action Buttons */}
-                  <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
+                  <View className="bg-white rounded-[16px] p-5 mb-2 border border-gray-100 shadow-sm">
                     <FormikButton
                       title="Update Car Details"
                       type="submit"

@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react'
 import { View, Text, TouchableOpacity, Image, ScrollView, Modal, Pressable, FlatList, Dimensions, RefreshControl } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { PlusIcon } from 'react-native-heroicons/outline'
+import { PlusIcon, LockClosedIcon } from 'react-native-heroicons/outline'
+import { SparklesIcon } from 'react-native-heroicons/solid'
 import { icons } from '@/constants'
 import { router } from 'expo-router'
 import { sellerRoutes } from '@/constants/routes'
@@ -31,6 +32,8 @@ const Product = () => {
   const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
+  const FREE_UPLOAD_LIMIT = 2;
+
   // Fetch primary profile data
   const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
 
@@ -39,6 +42,9 @@ const Product = () => {
 
   // Fetch specific merchant profile to check KYC status
   const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+
+  // Subscription check: uses data.merchant_profile.is_subscribed from the API response
+  const isSubscribed = Boolean(merchantProfileQuery.data?.data?.merchant_profile?.is_subscribed);
 
   // Extract merchant ID safely from different profile structures
   const profileData = primaryProfileData;
@@ -116,7 +122,9 @@ const Product = () => {
         undefined, // limit
         merchantId  // merchantId
       )
-      return response.data.results || []
+      
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
     },
     enabled: !!merchantId,
     staleTime: 0,
@@ -144,7 +152,9 @@ const Product = () => {
         merchantId, // merchantId
         false // isRental - fetch non-rental cars only
       )
-      return response.data.results || []
+      
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
     },
     enabled: !!merchantId,
     staleTime: 0,
@@ -171,7 +181,9 @@ const Product = () => {
         undefined, // limit
         merchantId  // merchantId
       )
-      return response.data.results || []
+      
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
     },
     enabled: !!merchantId,
     staleTime: 0,
@@ -199,7 +211,9 @@ const Product = () => {
         merchantId, // merchantId
         true // isRental - fetch rental cars only
       )
-      return response.data.results || []
+      
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
     },
     enabled: !!merchantId,
     staleTime: 0,
@@ -270,14 +284,32 @@ const Product = () => {
     return stars
   }
 
+  // Helper to check if a product has an active bidding window
+  const isActiveAuction = (item: any) => {
+    return (
+      item.bidding_window && 
+      !item.bidding_window.is_closed && 
+      item.bidding_window.is_active
+    );
+  };
+
+  // Live Pulsating Indicator
+  const LiveIndicator = () => (
+    <View className="flex-row items-center bg-red-600 px-2 py-1 rounded-lg absolute top-2 right-2 z-10 shadow-sm border border-red-500/50">
+      <View className="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-pulse" />
+      <Text className="text-[9px] font-NunitoExtraBold text-white uppercase tracking-widest">Live Auction</Text>
+    </View>
+  );
+
   // FlatList render functions
   const renderSparePartItem = useCallback(({ item }: { item: any }) => {
     const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
+    const isAuction = isActiveAuction(item);
     
     return (
       <View style={{ width: CARD_WIDTH }}>
             <TouchableOpacity 
-              className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden"
+              className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden relative shadow-sm"
               onPress={() => {
                 router.push({
                   pathname: sellerRoutes.productDetailsDetailed as any,
@@ -288,6 +320,7 @@ const Product = () => {
                 });
               }}
             >
+          {isAuction && <LiveIndicator />}
           <View className="w-full h-[140px] bg-gray-200">
             {productImage ? (
               <Image 
@@ -321,11 +354,12 @@ const Product = () => {
 
   const renderCarItem = useCallback(({ item }: { item: any }) => {
     const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
+    const isAuction = isActiveAuction(item);
     
     return (
       <View style={{ width: CARD_WIDTH }}>
             <TouchableOpacity 
-              className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden"
+              className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden relative shadow-sm"
               onPress={() => {
                 router.push({
                   pathname: sellerRoutes.productDetailsDetailed as any,
@@ -336,6 +370,7 @@ const Product = () => {
                 });
               }}
             >
+          {isAuction && <LiveIndicator />}
           <View className="w-full h-[140px] bg-gray-200">
             {productImage ? (
               <Image 
@@ -371,11 +406,12 @@ const Product = () => {
 
   const renderRentedCarItem = useCallback(({ item }: { item: any }) => {
     const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
+    const isAuction = isActiveAuction(item);
     
     return (
       <View style={{ width: CARD_WIDTH }}>
         <TouchableOpacity 
-          className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden"
+          className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden relative shadow-sm"
           onPress={() => {
             router.push({
               pathname: sellerRoutes.productDetails as any,
@@ -386,6 +422,7 @@ const Product = () => {
             });
           }}
         >
+          {isAuction && <LiveIndicator />}
           <View className="w-full h-[140px] bg-gray-200">
             {productImage ? (
               <Image 
@@ -452,6 +489,14 @@ const Product = () => {
               setShowProfileModal(true);
               return;
             }
+            // Subscription gate: allow if subscribed or under free upload limit
+            if (!isSubscribed && allProducts.length >= FREE_UPLOAD_LIMIT) {
+              router.push({
+                pathname: sellerRoutes.subscription as any,
+                params: { usedFreeUploads: String(allProducts.length) },
+              });
+              return;
+            }
             setShowModal(true);
           }}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
@@ -497,6 +542,32 @@ const Product = () => {
             paddingBottom: 0,
           }}
         >
+          {/* Subscription Status Banner */}
+          {isSubscribed ? (
+            <View className="flex-row items-center bg-primary-50 border border-primary-200 rounded-2xl px-4 py-3 mt-3 mb-1">
+              <SparklesIcon size={16} color="#D30309" />
+              <Text className="ml-2 text-sm font-NunitoBold text-primary-700">
+                Pro Subscription Active — Unlimited uploads 🎉
+              </Text>
+            </View>
+          ) : allProducts.length >= FREE_UPLOAD_LIMIT ? (
+            <View className="flex-row items-center bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mt-3 mb-1">
+              <LockClosedIcon size={16} color="#DC2626" />
+              <View className="ml-2 flex-1">
+                <Text className="text-sm font-NunitoBold text-red-700">Free uploads used</Text>
+                <Text className="text-[10px] font-NunitoMedium text-red-500">
+                  Subscribe for ₦15,000/mo to upload more products
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View className="flex-row items-center bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 mt-3 mb-1">
+              <LockClosedIcon size={16} color="#3B82F6" />
+              <Text className="ml-2 text-xs font-NunitoSemiBold text-blue-700">
+                {FREE_UPLOAD_LIMIT - allProducts.length} free upload{FREE_UPLOAD_LIMIT - allProducts.length !== 1 ? 's' : ''} remaining
+              </Text>
+            </View>
+          )}
           {/* Spare Parts Section */}
           <View className="py-4">
             <View className="flex-row items-center justify-between">

@@ -64,6 +64,23 @@ export interface RegisterStep3VehicleData {
   color?: string;
 }
 
+/** Local image file for multipart upload (React Native) */
+export interface AddVehicleImageFile {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+/** POST /users/my-vehicles/ (multipart/form-data) */
+export interface AddVehiclePayload {
+  vin?: string;
+  make: string;
+  model: string;
+  year: number;
+  license_plate?: string;
+  images?: AddVehicleImageFile[];
+}
+
 export interface RegisterStep3Data {
   password: string;
   password_confirm: string;
@@ -277,6 +294,7 @@ export interface MerchantProfile {
   latitude?: string | null;
   longitude?: string | null;
   is_approved: boolean;
+  is_subscribed?: boolean;
   created_at: string;
   updated_at: string;
   is_following?: boolean;
@@ -413,11 +431,239 @@ export interface AddBankAccountRequest {
   };
 }
 
+export interface WalletTransaction {
+  id: string;
+  amount: string | number;
+  type: 'credit' | 'debit';
+  status: string;
+  description?: string;
+  created_at: string;
+  reference?: string;
+}
+
+export interface WalletData {
+  id: string;
+  user: string;
+  balance: string | number;
+  currency: string;
+  is_active: boolean;
+  transactions?: WalletTransaction[];
+}
+
+export interface UserEarnings {
+  total_combined_earnings: string;
+  merchant_earnings: {
+    total_earnings: string;
+    pending_earnings: string;
+    completed_tasks: number;
+  };
+  mechanic_earnings: {
+    total_earnings: string;
+    pending_earnings: string;
+    completed_tasks: number;
+  };
+  driver_earnings: {
+    total_earnings: string;
+    pending_earnings: string;
+    completed_tasks: number;
+  };
+  currency: string;
+}
+
+export interface UserEarningsResponse {
+  requestTime: string;
+  requestType: string;
+  referenceId: string;
+  status: boolean;
+  message: string;
+  data: UserEarnings;
+}
+
+export interface WithdrawalRecord {
+  id: number | string;
+  amount: string;
+  transaction_type: string;
+  transaction_type_display: string;
+  reference: string;
+  description: string;
+  status: string;
+  status_display: string;
+  fee: string;
+  created_at: string;
+  bank_name?: string;
+  account_number?: string;
+}
+
+export interface WithdrawalFilters {
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface WithdrawalRequestData {
+  amount: string | number;
+  bank_account_id: string;
+  description?: string;
+}
+
+export interface WithdrawalResponse {
+  requestTime: string;
+  requestType: string;
+  referenceId: string;
+  status: boolean;
+  message: string;
+  data: WithdrawalRecord[];
+}
+
+/** Single vehicle from GET /users/my-vehicles/ (and related). */
+export interface UserVehicleImage {
+  id: number | string;
+  image: string;
+  created_at?: string;
+}
+
+export interface UserVehicle {
+  id: string;
+  user: string;
+  vin: string | null;
+  make: string;
+  model: string;
+  year: number;
+  license_plate: string | null;
+  created_at?: string;
+  updated_at?: string;
+  images?: UserVehicleImage[];
+}
+
+function sortVehicleImagesById(
+  imgs: UserVehicleImage[]
+): UserVehicleImage[] {
+  return [...imgs].sort((a, b) => {
+    const na =
+      typeof a.id === "number" ? a.id : parseInt(String(a.id), 10) || 0;
+    const nb =
+      typeof b.id === "number" ? b.id : parseInt(String(b.id), 10) || 0;
+    return na - nb;
+  });
+}
+
+/**
+ * Best thumbnail / hero URL: prefer filename hints (e.g. front_), else lowest image id.
+ * List order from API is not guaranteed to be front-first.
+ */
+export function getUserVehiclePrimaryImageUrl(
+  v: Pick<UserVehicle, "images">
+): string | null {
+  const imgs = v.images;
+  if (!Array.isArray(imgs) || imgs.length === 0) return null;
+  const valid = imgs.filter(
+    (x) => x && typeof x.image === "string" && x.image.startsWith("http")
+  );
+  if (valid.length === 0) return null;
+  const front = valid.find((x) => /front[_.]/i.test(x.image));
+  if (front) return front.image;
+  return sortVehicleImagesById(valid)[0]?.image ?? null;
+}
+
+/** All vehicle photo URLs, ordered by image id (stable for gallery). */
+export function getUserVehicleGalleryUrls(
+  v: Pick<UserVehicle, "images">
+): string[] {
+  const imgs = v.images;
+  if (!Array.isArray(imgs) || imgs.length === 0) return [];
+  const urls = sortVehicleImagesById(
+    imgs.filter(
+      (x) => x && typeof x.image === "string" && x.image.startsWith("http")
+    )
+  ).map((x) => x.image);
+  return [...new Set(urls)];
+}
+
+/**
+ * Standard list envelope, e.g. `{ status, message, data: UserVehicle[] }`.
+ * GET /users/my-vehicles/ returns this shape (plus optional `page` pagination fields).
+ */
+export interface UserVehiclesListEnvelope {
+  requestTime: string;
+  requestType: string;
+  referenceId: string;
+  status: boolean;
+  message: string;
+  data: UserVehicle[];
+}
+
+/** GET /users/my-vehicles/ — raw array, DRF `{ results }`, or envelope `{ data: [...] }`. */
+function normalizeUserVehiclesListResponse(body: unknown): UserVehicle[] {
+  if (body == null) return [];
+  if (Array.isArray(body)) return body as UserVehicle[];
+  if (typeof body !== 'object') return [];
+  const o = body as Record<string, unknown>;
+  if (Array.isArray(o.results)) return o.results as UserVehicle[];
+  if (Array.isArray(o.data)) return o.data as UserVehicle[];
+  if (o.data && typeof o.data === 'object' && !Array.isArray(o.data)) {
+    const inner = o.data as Record<string, unknown>;
+    if (Array.isArray(inner.results)) return inner.results as UserVehicle[];
+  }
+  return [];
+}
+
+function buildVehicleMultipartFormData(payload: AddVehiclePayload): FormData {
+  const formData = new FormData();
+  const vin = payload.vin?.replace(/\s/g, '').toUpperCase();
+  if (vin) {
+    formData.append('vin', vin);
+  }
+  formData.append('make', payload.make.trim());
+  formData.append('model', payload.model.trim());
+  formData.append('year', String(Math.trunc(payload.year)));
+  const plate = payload.license_plate?.trim();
+  if (plate) {
+    formData.append('license_plate', plate);
+  }
+  for (const file of payload.images ?? []) {
+    if (file?.uri) {
+      formData.append('uploaded_images', file as any);
+    }
+  }
+  return formData;
+}
+
 // API Functions
 export const userAPI = {
   // Change Password
   changePassword: async (passwordData: ChangePasswordData): Promise<ChangePasswordResponse> => {
     const response = await api.post('/users/password/change/', passwordData);
+    return response.data;
+  },
+
+  // Get Wallet details
+  getWallet: async (): Promise<WalletResponse> => {
+    const response = await api.get(USER_ENDPOINTS.WALLET);
+    return response.data;
+  },
+
+  // Get consolidated Earnings
+  getEarnings: async (): Promise<UserEarningsResponse> => {
+    const response = await api.get(USER_ENDPOINTS.EARNINGS);
+    return response.data;
+  },
+
+  // Get withdrawal history
+  getWithdrawals: async (filters?: WithdrawalFilters): Promise<WithdrawalResponse> => {
+    const response = await api.get(USER_ENDPOINTS.WITHDRAWALS, { params: filters });
+    return response.data;
+  },
+
+  // Withdraw funds from wallet
+  withdrawFunds: async (data: WithdrawalRequestData): Promise<any> => {
+    const payload = {
+      requestType: "inbound", // Following common pattern in this API
+      data: {
+        ...data,
+        amount: String(data.amount).replace(/,/g, "") // Ensure it's a clean string
+      }
+    };
+    const response = await api.post(USER_ENDPOINTS.WITHDRAW_WALLET, payload);
     return response.data;
   },
 
@@ -727,28 +973,68 @@ export const userAPI = {
     return response.data;
   },
 
-  // Get user cars
-  getCars: async (): Promise<any[]> => {
-    const response = await api.get(USER_ENDPOINTS.CARS);
-    return response.data;
+  // Get user cars (GET /users/my-vehicles/?page=… — normalizes array | paginated | envelope)
+  getCars: async (params?: { page?: number }): Promise<UserVehicle[]> => {
+    const response = await api.get<UserVehiclesListEnvelope | UserVehicle[]>(
+      USER_ENDPOINTS.CARS,
+      {
+        params:
+          params?.page != null && params.page > 0 ? { page: params.page } : undefined,
+      }
+    );
+    return normalizeUserVehiclesListResponse(response.data);
   },
 
   // Get single car by ID
-  getCarById: async (carId: string): Promise<any> => {
-    const response = await api.get(`${USER_ENDPOINTS.CARS}/${carId}`);
+  getCarById: async (carId: string): Promise<UserVehicle> => {
+    const response = await api.get(`${USER_ENDPOINTS.CARS}${carId}/`);
+    const d = response.data;
+    if (
+      d &&
+      typeof d === 'object' &&
+      !Array.isArray(d) &&
+      'data' in d &&
+      (d as any).data != null &&
+      typeof (d as any).data === 'object' &&
+      !Array.isArray((d as any).data)
+    ) {
+      return (d as { data: unknown }).data;
+    }
+    return d;
+  },
+
+  // Add new car (multipart: make, model, year, optional vin, license_plate, uploaded_images)
+  addCar: async (payload: AddVehiclePayload): Promise<any> => {
+    const formData = buildVehicleMultipartFormData(payload);
+    const response = await api.post(USER_ENDPOINTS.ADD_CAR, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
-  // Add new car
-  addCar: async (carData: any): Promise<any> => {
-    const response = await api.post(USER_ENDPOINTS.ADD_CAR, carData);
-    return response.data;
-  },
-
-  // Update car
-  updateCar: async (carId: string, carData: any): Promise<any> => {
-    const response = await api.put(USER_ENDPOINTS.UPDATE_CAR(carId), carData);
-    return response.data;
+  // Update car — PUT multipart (same fields as POST)
+  updateCar: async (carId: string, payload: AddVehiclePayload): Promise<any> => {
+    const formData = buildVehicleMultipartFormData(payload);
+    const response = await api.put(USER_ENDPOINTS.UPDATE_CAR(carId), formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const d = response.data;
+    if (
+      d &&
+      typeof d === 'object' &&
+      !Array.isArray(d) &&
+      'data' in d &&
+      (d as any).data != null &&
+      typeof (d as any).data === 'object' &&
+      !Array.isArray((d as any).data)
+    ) {
+      return (d as { data: unknown }).data;
+    }
+    return d;
   },
 
   // Delete car
@@ -911,5 +1197,15 @@ export const userAPI = {
     }
     
     return await response.json();
+  },
+
+  // Subscribe merchant
+  subscribeMerchant: async (data: { payment_reference: string; payment_url: string; amount: number }): Promise<any> => {
+    try {
+      const response = await api.post('users/profile/merchant/subscribe/', data);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
   },
 };

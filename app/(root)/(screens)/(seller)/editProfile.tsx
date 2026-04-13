@@ -90,6 +90,20 @@ const EditSellerProfile = () => {
     try {
       setSubmitting(true);
       
+      // Helper function to handle image upload if it's a local URI or base64
+      const getFileObject = (uri: string, fieldName: string) => {
+        if (!uri) return null;
+        if (uri.startsWith('http')) return uri;
+        return {
+          uri,
+          name: `${fieldName}_${Date.now()}.jpg`,
+          type: 'image/jpeg'
+        } as any;
+      };
+
+      const selfieFile = getFileObject(values.selfie, 'selfie');
+      const cacDocFile = getFileObject(values.cac_document, 'cac_document');
+
       const formData = new FormData();
       formData.append('requestType', 'inbound');
       
@@ -105,22 +119,9 @@ const EditSellerProfile = () => {
       if (values.lga) formData.append('lga', values.lga);
       if (values.cac_number) formData.append('cac_number', values.cac_number);
 
-      // Handle Images
-      if (values.selfie && values.selfie.startsWith('data:')) {
-        formData.append('selfie', {
-          uri: values.selfie,
-          name: `selfie_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-      }
-
-      if (values.cac_document && values.cac_document.startsWith('data:')) {
-        formData.append('cac_document', {
-          uri: values.cac_document,
-          name: `cac_document_${Date.now()}.jpg`,
-          type: 'image/jpeg'
-        } as any);
-      }
+      // Append Files (now as file objects or existing URLs)
+      if (selfieFile) formData.append('selfie', selfieFile);
+      if (cacDocFile) formData.append('cac_document', cacDocFile);
 
       await submitKYCMutation.mutateAsync(formData);
       

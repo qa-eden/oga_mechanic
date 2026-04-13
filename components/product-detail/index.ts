@@ -6,4 +6,4 @@ export { default as ProductSpecifications } from "./ProductSpecifications";
 export { default as ProductFeatures } from "./ProductFeatures";
 export { default as ProductActionBar } from "./ProductActionBar";
 export { default as ProductReviews } from "./ProductReviews";
-
+export { default as ProductRepairHistory } from "./ProductRepairHistory";

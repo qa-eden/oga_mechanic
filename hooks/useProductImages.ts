@@ -81,13 +81,22 @@ export const useProductImages = ({ productId, merchantId }: UseProductImagesProp
     mutationFn: async (imageUri: string) => {
       
       const authToken = await AsyncStorage.getItem('auth_token');
+      
       const formData = new FormData();
       
-      formData.append('images', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: `car_image_${Date.now()}.jpg`,
-      } as any);
+      if (imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('content://') || imageUri.startsWith('data:'))) {
+        const uriParts = imageUri.split('.');
+        const fileExtension = uriParts[uriParts.length - 1].toLowerCase();
+        const fileName = `image_${Date.now()}.${fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'jpg' : fileExtension}`;
+        
+        formData.append('images', {
+          uri: imageUri,
+          type: `image/${fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'jpeg' : fileExtension}`,
+          name: fileName,
+        } as any);
+      } else {
+        formData.append('images', imageUri);
+      }
 
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_URL}/products/products/${productId}/images/upload/`,
@@ -210,13 +219,22 @@ export const useProductImages = ({ productId, merchantId }: UseProductImagesProp
     }) => {
       
       const authToken = await AsyncStorage.getItem('auth_token');
+      
       const formData = new FormData();
       
-      formData.append('image', {
-        uri: newImageUri,
-        type: 'image/jpeg',
-        name: `replacement_image_${Date.now()}.jpg`,
-      } as any);
+      if (newImageUri && (newImageUri.startsWith('file://') || newImageUri.startsWith('content://') || newImageUri.startsWith('data:'))) {
+        const uriParts = newImageUri.split('.');
+        const fileExtension = uriParts[uriParts.length - 1].toLowerCase();
+        const fileName = `image_${Date.now()}.${fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'jpg' : fileExtension}`;
+        
+        formData.append('image', {
+          uri: newImageUri,
+          type: `image/${fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'jpeg' : fileExtension}`,
+          name: fileName,
+        } as any);
+      } else {
+        formData.append('image', newImageUri);
+      }
       
       formData.append(
         'updates',
