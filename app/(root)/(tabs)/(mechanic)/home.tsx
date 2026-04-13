@@ -312,6 +312,7 @@ const MechanicHome = () => {
           phoneNumber: phoneNumber,
           carType: carType,
           carIssue: request.problem_description || request.issue_description || 'Repair needed',
+          estimatedCost: request.estimated_cost ?? null,
           status: mapStatus(request.status || 'pending'),
           apiStatus: request.status || 'pending', // Actual API status for display
         };

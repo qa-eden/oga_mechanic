@@ -155,6 +155,7 @@ const MechanicOrder = () => {
           phoneNumber: request.customer?.phone_number || 'N/A',
           carType: carType,
           carIssue: request.problem_description || request.issue_description || 'Repair needed',
+          estimatedCost: request.estimated_cost ?? null,
           status: mapStatus(request.status || 'pending'),
           apiStatus: request.status || 'pending', // Actual API status for display and filtering
         };
@@ -344,53 +345,53 @@ const MechanicOrder = () => {
                 {/* Title */}
                 <Text className="text-xl font-NunitoBold text-gray-900 text-center mb-2">
                   {activeTab === 'all'
-                  ? 'No Orders Yet'
-                  : activeTab === 'pending'
-                    ? 'No Pending Orders'
-                    : activeTab === 'accepted'
-                      ? 'No Accepted Orders'
-                      : activeTab === 'in_transit'
-                        ? 'No Orders In Transit'
-                        : activeTab === 'arrived'
-                          ? 'No Arrived Orders'
-                          : activeTab === 'in_progress'
-                            ? 'No Orders In Progress'
-                            : activeTab === 'completed'
-                              ? 'No Completed Orders'
-                              : activeTab === 'cancelled'
-                                ? 'No Cancelled Orders'
-                                : activeTab === 'rejected'
-                                  ? 'No Rejected Orders'
-                                  : 'No Orders Found'}
+                    ? 'No Orders Yet'
+                    : activeTab === 'pending'
+                      ? 'No Pending Orders'
+                      : activeTab === 'accepted'
+                        ? 'No Accepted Orders'
+                        : activeTab === 'in_transit'
+                          ? 'No Orders In Transit'
+                          : activeTab === 'arrived'
+                            ? 'No Arrived Orders'
+                            : activeTab === 'in_progress'
+                              ? 'No Orders In Progress'
+                              : activeTab === 'completed'
+                                ? 'No Completed Orders'
+                                : activeTab === 'cancelled'
+                                  ? 'No Cancelled Orders'
+                                  : activeTab === 'rejected'
+                                    ? 'No Rejected Orders'
+                                    : 'No Orders Found'}
                 </Text>
 
                 {/* Description */}
                 <Text className="text-gray-500 font-NunitoMedium text-center text-base leading-6 max-w-xs">
                   {activeTab === 'all'
-                  ? "You don't have any repair requests at the moment. New orders will appear here when customers request your services."
-                  : activeTab === 'pending'
-                    ? "There are no pending repair requests waiting for your response. Check back later for new orders."
-                    : activeTab === 'accepted'
-                      ? "You haven't accepted any orders yet. Accept pending requests to see them here."
-                      : activeTab === 'in_transit'
-                        ? "You don't have any orders in transit right now."
-                        : activeTab === 'arrived'
-                          ? "No orders have been marked as arrived yet."
-                          : activeTab === 'in_progress'
-                            ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
-                            : activeTab === 'completed'
-                              ? "You haven't completed any orders yet. Mark orders as completed to see them here."
-                              : activeTab === 'cancelled'
-                                ? "No cancelled orders found. Cancelled requests will appear here."
-                                : activeTab === 'rejected'
-                                  ? "No rejected orders found. Declined requests will appear here."
-                                  : "No orders match this filter."}
+                    ? "You don't have any repair requests at the moment. New orders will appear here when customers request your services."
+                    : activeTab === 'pending'
+                      ? "There are no pending repair requests waiting for your response. Check back later for new orders."
+                      : activeTab === 'accepted'
+                        ? "You haven't accepted any orders yet. Accept pending requests to see them here."
+                        : activeTab === 'in_transit'
+                          ? "You don't have any orders in transit right now."
+                          : activeTab === 'arrived'
+                            ? "No orders have been marked as arrived yet."
+                            : activeTab === 'in_progress'
+                              ? "You don't have any orders in progress right now. Start working on accepted orders to track them here."
+                              : activeTab === 'completed'
+                                ? "You haven't completed any orders yet. Mark orders as completed to see them here."
+                                : activeTab === 'cancelled'
+                                  ? "No cancelled orders found. Cancelled requests will appear here."
+                                  : activeTab === 'rejected'
+                                    ? "No rejected orders found. Declined requests will appear here."
+                                    : "No orders match this filter."}
                 </Text>
               </View>
             </View>
           )}
         </ScrollView>
-        
+
         {/* Action Confirmation Modal */}
         <MechanicActionConfirmationModal
           visible={actionModalVisible}

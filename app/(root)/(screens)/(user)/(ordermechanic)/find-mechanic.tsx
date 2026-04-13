@@ -271,10 +271,17 @@ const FindMechanic = () => {
     createRepairRequest(payload, {
       onSuccess: (response: any) => {
         const orderId = response?.data?.id || response?.id;
+        const estimatedCost =
+          response?.data?.estimated_cost ??
+          response?.estimated_cost ??
+          null;
         
         if (orderId) {
           formState.setSuccessOrderId(orderId.toString());
           formState.setSuccessMessage(response?.message || null);
+          formState.setSuccessEstimatedCost(
+            estimatedCost != null ? String(estimatedCost) : null
+          );
           formState.setShowSuccessModal(true);
         } else {
           Alert.alert(
@@ -310,6 +317,7 @@ const FindMechanic = () => {
 
   const handleGoHome = () => {
     formState.setShowSuccessModal(false);
+    formState.setSuccessEstimatedCost(null);
     router.replace(routes.home);
   };
 
@@ -459,6 +467,7 @@ const FindMechanic = () => {
         visible={formState.showSuccessModal}
         orderId={formState.successOrderId}
         message={formState.successMessage}
+        estimatedCost={formState.successEstimatedCost}
         onTrackOrder={handleTrackOrder}
         onGoHome={handleGoHome}
       />

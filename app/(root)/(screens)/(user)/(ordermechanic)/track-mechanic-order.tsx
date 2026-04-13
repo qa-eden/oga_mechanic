@@ -351,6 +351,7 @@ const TrackMechanicOrder = () => {
       status: request.status || 'pending',
       schedule: !!request.schedule,
       notes: request.notes || '',
+      estimated_cost: request.estimated_cost ?? null,
       // Status timestamps
       requested_at: request.requested_at || null,
       accepted_at: request.accepted_at || null,
@@ -815,6 +816,19 @@ const TrackMechanicOrder = () => {
           <Text className="text-lg font-NunitoBold text-gray-900">
             {order.service_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}
           </Text>
+          {(order as any).estimated_cost != null && !Number.isNaN(Number((order as any).estimated_cost)) && (
+            <View className="mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-NunitoBold text-red-700 uppercase tracking-wide">Estimated Cost</Text>
+                <View className="px-2 py-0.5 rounded-full bg-red-600">
+                  <Text className="text-[10px] font-NunitoBold text-white">BUDGET</Text>
+                </View>
+              </View>
+              <Text className="text-[22px] font-NunitoExtraBold text-red-700 mt-1">
+                ₦{Number((order as any).estimated_cost).toLocaleString()}
+              </Text>
+            </View>
+          )}
           {order.problem_description && (
             <View className="mt-3 p-3 bg-gray-50 rounded-lg">
               <Text className="text-sm font-NunitoMedium text-gray-600 leading-5">

@@ -48,6 +48,8 @@ interface UseFindMechanicFormReturn {
   setSuccessOrderId: (value: string | null) => void;
   successMessage: string | null;
   setSuccessMessage: (value: string | null) => void;
+  successEstimatedCost: string | null;
+  setSuccessEstimatedCost: (value: string | null) => void;
 
   // Step management
   currentStep: 1 | 2;
@@ -92,6 +94,7 @@ export const useFindMechanicForm = (
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successEstimatedCost, setSuccessEstimatedCost] = useState<string | null>(null);
 
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
@@ -139,6 +142,8 @@ export const useFindMechanicForm = (
     setSuccessOrderId,
     successMessage,
     setSuccessMessage,
+    successEstimatedCost,
+    setSuccessEstimatedCost,
     currentStep,
     setCurrentStep,
   };

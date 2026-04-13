@@ -87,6 +87,7 @@ const MyMechanicOrders = () => {
           createdAt: request.requested_at || request.created_at || request.createdAt || '',
           schedule: !!request.schedule,
           notes: request.notes || undefined,
+          estimatedCost: request.estimated_cost ?? null,
         };
       });
     } catch (error) {

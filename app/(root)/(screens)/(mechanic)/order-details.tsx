@@ -1172,42 +1172,46 @@ const MechanicOrderDetails = () => {
           </View>
 
           {/* Cost Information */}
-          {(request.estimated_cost || request.actual_cost) && (
-            <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-              <View className="flex-row items-center mb-4">
-                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                  <Text className="text-lg">₦</Text>
-                </View>
-                <Text className="text-lg font-NunitoBold text-gray-900">
-                  Earnings
-                </Text>
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
+            <View className="flex-row items-center mb-4">
+              <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center mr-3">
+                <Text className="text-lg">₦</Text>
               </View>
-
-              <View className="flex-row gap-3">
-                {request.estimated_cost && (
-                  <View className="flex-1 bg-gray-50 rounded-xl p-3">
-                    <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider">
-                      Estimated
-                    </Text>
-                    <Text className="text-lg font-NunitoBold text-gray-900 mt-1">
-                      ₦{parseFloat(request.estimated_cost).toLocaleString()}
-                    </Text>
-                  </View>
-                )}
-
-                {request.actual_cost && (
-                  <View className="flex-1 bg-gray-100 rounded-xl p-3">
-                    <Text className="text-xs font-NunitoMedium text-gray-600 uppercase tracking-wider">
-                      Final Amount
-                    </Text>
-                    <Text className="text-lg font-NunitoBold text-gray-900 mt-1">
-                      ₦{parseFloat(request.actual_cost).toLocaleString()}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              <Text className="text-lg font-NunitoBold text-gray-900">
+                Cost Information
+              </Text>
             </View>
-          )}
+
+            <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+              <Text className="text-xs font-NunitoMedium text-red-700 uppercase tracking-wider">
+                Estimated Cost
+              </Text>
+              {request.estimated_cost ? (
+                <Text className="text-2xl font-NunitoExtraBold text-red-700 mt-1">
+                  ₦{parseFloat(request.estimated_cost).toLocaleString()}
+                </Text>
+              ) : (
+                <Text className="text-sm font-NunitoBold text-red-600 mt-1">
+                  Awaiting estimate
+                </Text>
+              )}
+            </View>
+
+            <View className="bg-gray-100 rounded-xl p-3">
+              <Text className="text-xs font-NunitoMedium text-gray-600 uppercase tracking-wider">
+                Final Amount
+              </Text>
+              {request.actual_cost ? (
+                <Text className="text-lg font-NunitoBold text-gray-900 mt-1">
+                  ₦{parseFloat(request.actual_cost).toLocaleString()}
+                </Text>
+              ) : (
+                <Text className="text-sm font-NunitoBold text-gray-500 mt-1">
+                  Not set yet
+                </Text>
+              )}
+            </View>
+          </View>
 
           {/* Cancellation Reason - keeping red since it's important status */}
           {request.cancellation_reason && (

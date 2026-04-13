@@ -7,6 +7,7 @@ interface SuccessModalProps {
   visible: boolean;
   orderId: string | null;
   message?: string | null;
+  estimatedCost?: string | number | null;
   onTrackOrder: () => void;
   onGoHome: () => void;
 }
@@ -19,9 +20,15 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   visible,
   orderId,
   message,
+  estimatedCost,
   onTrackOrder,
   onGoHome,
 }) => {
+  const amount =
+    estimatedCost != null && !Number.isNaN(Number(estimatedCost))
+      ? Number(estimatedCost)
+      : null;
+
   return (
     <Modal
       animationType="fade"
@@ -59,6 +66,17 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
               {/* Decorative ticket punches */}
               <View className="absolute top-1/2 -left-3 w-6 h-6 rounded-full bg-white border-r-2 border-gray-100 -translate-y-3" />
               <View className="absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-white border-l-2 border-gray-100 -translate-y-3" />
+            </View>
+          )}
+
+          {amount != null && (
+            <View className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4">
+              <Text className="text-xs text-red-700 font-NunitoExtraBold uppercase tracking-[1.5px] text-center mb-1">
+                Estimated Cost
+              </Text>
+              <Text className="text-3xl font-NunitoExtraBold text-red-700 text-center">
+                ₦{amount.toLocaleString()}
+              </Text>
             </View>
           )}
 
