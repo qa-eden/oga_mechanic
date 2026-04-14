@@ -1,10 +1,5 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import Mapbox, { Camera, PointAnnotation, MarkerView, Callout as MapboxCallout } from '@rnmapbox/maps';
-import { ENV_CONFIG } from '@/config/env';
-import { StyleSheet, View } from 'react-native';
-
-// Set access token globally
-Mapbox.setAccessToken(ENV_CONFIG.MAPBOX_ACCESS_TOKEN);
+import React, { forwardRef, useImperativeHandle } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 
 export interface MapRegion {
   latitude: number;
@@ -27,68 +22,43 @@ export interface MapViewProps {
 }
 
 const MapView = forwardRef<MapViewRef, MapViewProps>((props, ref) => {
-  const cameraRef = useRef<Camera>(null);
-  const { children, style, initialRegion, showsUserLocation, onRegionChangeComplete, ...rest } = props;
+  const { children, style, ...rest } = props;
 
   useImperativeHandle(ref, () => ({
     animateToRegion: (region: MapRegion, duration: number = 1000) => {
-      cameraRef.current?.setCamera({
-        centerCoordinate: [region.longitude, region.latitude],
-        zoomLevel: 14, // Approximate zoom from deltas
-        animationDuration: duration,
-      });
+      // Mocked for now since map is disconnected
     },
   }));
 
-  const handleRegionChange = (feature: any) => {
-    if (onRegionChangeComplete) {
-      const { geometry } = feature;
-      onRegionChangeComplete({
-        latitude: geometry.coordinates[1],
-        longitude: geometry.coordinates[0],
-        latitudeDelta: 0.015, // Mock deltas as Mapbox uses zoomLevel
-        longitudeDelta: 0.0121,
-      });
-    }
-  };
-
   return (
-    <Mapbox.MapView
-      style={[styles.map, style]}
-      styleURL={Mapbox.StyleURL.Street}
-      onRegionDidChange={handleRegionChange}
-      {...rest}
-    >
-      <Camera
-        ref={cameraRef}
-        defaultSettings={{
-          centerCoordinate: initialRegion ? [initialRegion.longitude, initialRegion.latitude] : [3.3792, 6.5244],
-          zoomLevel: 12,
-        }}
-      />
-      {showsUserLocation && <Mapbox.UserLocation />}
+    <View style={[styles.map, style, styles.placeholderContainer]}>
+      <Text style={styles.placeholderText}>Map View is temporarily disabled.</Text>
       {children}
-    </Mapbox.MapView>
+    </View>
   );
 });
 
 export const Marker = ({ coordinate, children, rotation, ...props }: any) => (
-  <MarkerView 
-    coordinate={[coordinate.longitude, coordinate.latitude]} 
-    {...props}
-  >
-    <View style={rotation ? { transform: [{ rotate: `${rotation}deg` }] } : undefined}>
-      {children || <View style={styles.defaultMarker} />}
-    </View>
-  </MarkerView>
+  <View style={rotation ? { transform: [{ rotate: `${rotation}deg` }] } : undefined}>
+    {children || <View style={styles.defaultMarker} />}
+  </View>
 );
 
-export const Callout = MapboxCallout;
-export const PROVIDER_DEFAULT = 'mapbox';
+export const Callout = ({ children }: any) => <View>{children}</View>;
+export const PROVIDER_DEFAULT = 'none';
 
 const styles = StyleSheet.create({
   map: {
     flex: 1,
+  },
+  placeholderContainer: {
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#6b7280',
+    fontFamily: 'Nunito-Medium',
   },
   defaultMarker: {
     width: 20,

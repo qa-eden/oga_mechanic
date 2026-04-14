@@ -1,10 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
-import Mapbox, { Camera, MarkerView, UserLocation, ShapeSource, LineLayer } from '@rnmapbox/maps';
-import { ENV_CONFIG } from '@/config/env';
-
-// Set access token
-Mapbox.setAccessToken(ENV_CONFIG.MAPBOX_ACCESS_TOKEN);
 
 interface Location {
   latitude: number;
@@ -47,77 +42,21 @@ const CustomMapView: React.FC<CustomMapViewProps> = ({
   region,
   markers = [],
   polylines = [],
-  showUserLocation = false,
   style,
   className,
-  ...props
 }) => {
-  const [CustomMapViewNative, setCustomMapViewNative] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      import('./MapViewNative').then((module) => {
-        setCustomMapViewNative(() => module.default);
-        setIsLoading(false);
-      }).catch((err) => {
-        console.error('Failed to load MapViewNative:', err);
-        setIsLoading(false);
-      });
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, style]} className={className}>
-        <View style={styles.webFallback}>
-          <Text style={styles.webFallbackText}>Loading Map...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Web fallback
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[styles.container, style]} className={className}>
-        <View style={styles.webFallback}>
-          <Text style={styles.webFallbackText}>Map View (Web limited)</Text>
-          <View style={styles.webFallbackInfo}>
-            <Text style={styles.webFallbackInfoText}>
-              Region: {region ? `${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}` : 'Default'}
-            </Text>
-            <Text style={styles.webFallbackInfoText}>
-              Markers: {markers.length}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  // Use native map component for mobile platforms
-  if (CustomMapViewNative) {
-    return (
-      <CustomMapViewNative
-        region={region}
-        markers={markers}
-        polylines={polylines}
-        showUserLocation={showUserLocation}
-        style={style}
-        className={className}
-        {...props}
-      />
-    );
-  }
-
   return (
     <View style={[styles.container, style]} className={className}>
       <View style={styles.webFallback}>
-        <Text style={styles.webFallbackText}>Map not available</Text>
+        <Text style={styles.webFallbackText}>Map Features Disabled</Text>
+        <View style={styles.webFallbackInfo}>
+          <Text style={styles.webFallbackInfoText}>
+            Region: {region ? `${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}` : 'Default'}
+          </Text>
+          <Text style={styles.webFallbackInfoText}>
+            Markers: {markers.length}
+          </Text>
+        </View>
       </View>
     </View>
   );
