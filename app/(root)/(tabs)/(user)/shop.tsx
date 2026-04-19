@@ -265,8 +265,7 @@ const Shop = () => {
       entering={FadeInDown.delay(index * 50).duration(400).springify()}
       style={{ width: (LAYOUT.SCREEN_WIDTH - 24 - 12) / 2 }}
     >
-      <Card1
-        Images={item.images?.[0]?.image || "sparePart"}
+        Images={item.images?.[0]?.image}
         rating={item.rating || 0}
         name={item.name}
         reviewCount={0}
@@ -287,7 +286,7 @@ const Shop = () => {
             name: item.name,
             price: parseFloat(item.price),
             stock: item.stock || 10,
-            image: item.images?.[0]?.image || "sparePart",
+            image: item.images?.[0]?.image,
         })}
         onRemoveFromCart={() => removeFromCart(item.id)}
       />

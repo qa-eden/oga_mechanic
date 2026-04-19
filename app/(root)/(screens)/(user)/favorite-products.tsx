@@ -75,7 +75,7 @@ const FavoriteProducts = () => {
             name: product.name,
             price: parseFloat(product.price),
             stock: product.stock,
-            image: product.images?.[0]?.image || 'sparePart'
+            image: product.images?.[0]?.image
           })}
           onRemoveFromCart={() => removeFromCart(product.id.toString())}
           

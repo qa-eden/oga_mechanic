@@ -19,13 +19,6 @@ const mockUsers: Record<string, MockUserData> = {
     last_name: 'Doe',
     role: 'primary_user'
   },
-  driver: {
-    id: 'driver-123',
-    email: 'driver@example.com',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    role: 'driver'
-  },
   mechanic: {
     id: 'mechanic-123',
     email: 'mechanic@example.com',
@@ -33,17 +26,10 @@ const mockUsers: Record<string, MockUserData> = {
     last_name: 'Johnson',
     role: 'mechanic'
   },
-  rider: {
-    id: 'rider-123',
-    email: 'rider@example.com',
-    first_name: 'Sarah',
-    last_name: 'Wilson',
-    role: 'rider'
-  }
 };
 
 // Direct login to specific role (for testing/development)
-export const loginAsRole = async (role: 'user' | 'driver' | 'mechanic' | 'rider') => {
+export const loginAsRole = async (role: 'user' | 'mechanic') => {
   try {
     const userData = mockUsers[role];
     const mockTokens = {
@@ -63,7 +49,7 @@ export const loginAsRole = async (role: 'user' | 'driver' | 'mechanic' | 'rider'
 
     // Navigate to role-specific home
     const targetRoute = getRoleHomeRoute(role);
-    router.replace(targetRoute);
+    router.replace(targetRoute as any);
     
     return { success: true, userData };
   } catch (error) {
@@ -78,12 +64,8 @@ export const getRoleHomeRoute = (role: string): string => {
     case 'primary_user':
     case 'user':
       return routes?.userHome || '/(root)/(tabs)/(user)/home';
-    case 'driver':
-      return routes?.driverHome || '/(root)/(tabs)/(driver)/home';
     case 'mechanic':
       return routes?.mechanicHome || '/(root)/(tabs)/(mechanic)/home';
-    case 'rider':
-      return routes?.riderHome || '/(root)/(tabs)/(rider)/home';
     case 'merchant':
     case 'seller':
       return '/(root)/(tabs)/(sellers)/home';

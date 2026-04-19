@@ -331,7 +331,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         stock: item.product?.stock || item.stock || 10,
         image: item.product?.images?.[0]?.image || 
                item.images?.[0]?.image || 
-               item.image || 'sparePart',
+               item.image,
         productId: (item.product?.id || item.product_id)?.toString(),
       }));
   }, []);
