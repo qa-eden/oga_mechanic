@@ -29,7 +29,7 @@ import eyeClosed from "@/assets/icons/EyeClosed.png";
 import eyeOpen from "@/assets/icons/eyeOpen.png";
 import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
-import courage from "@/assets/icons/courage.svg";
+import empty from "@/assets/icons/empty.svg";
 import empty from "@/assets/icons/empty.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
@@ -51,10 +51,10 @@ import linkedIn from "@/assets/icons/profile/linkedIn.svg";
 import email from "@/assets/icons/profile/email.svg";
 
 //services icons
-import orderRide from "@/assets/icons/orderRide.svg";
+import sparePartIcon from "@/assets/icons/sparePart.svg";
 import sparePartIcon from "@/assets/icons/sparePart.svg";
 import buycar from "@/assets/icons/buycar.svg";
-import carTow from "@/assets/icons/carTow.svg";
+import buycar from "@/assets/icons/buycar.svg";
 import { HeadphonesIcon } from "@/components/icons/HeadphonesIcon";
 
 //tabs icons
@@ -76,16 +76,12 @@ import activeProductTab from "@/assets/icons/activeProductTab.svg";
 import orderIcon2 from "@/assets/icons/orderIcon2.svg";
 import activeOrderIcon2 from "@/assets/icons/activeOrderIcon2.svg";
 
-//driver icons
-import trip from "@/assets/icons/trip.svg";
-import round from "@/assets/icons/round.svg";
-
 //roles images
 import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
 import driver from "@/assets/icons/driver.svg";
-import { driverRoutes, mechanicRoutes, routes, sellerRoutes, riderRoutes, generalRoutes } from "./routes";
+import { mechanicRoutes, routes, sellerRoutes, generalRoutes } from "./routes";
 
 export const images = {
   onboarding1,
@@ -192,15 +188,6 @@ export const Roles = [
     backgroundColor: "#ECE2D6",
     route: mechanicRoutes?.step1,
   },
-  {
-    id: 6,
-    title: "Driver",
-    description: "I am a driver",
-    image: icons.driver,
-    border: "#FF9292",
-    backgroundColor: "#FFE9E9",
-    route: driverRoutes?.chooseOptions,
-  },
 ];
 
 export const Ads = [
@@ -241,14 +228,6 @@ export const Services: ServicesProps[] = [
     bgColor: "#FEF2F2",
     border: "#FCA5A5",
   },
-  // {
-  //   id: 1,
-  //   name: "Order a Ride",
-  //   description: "Book a ride to your destination",
-  //   image: orderRide,
-  //   bgColor: "#F3F2FE",
-  //   border: "#ACA6FF",
-  // },
   {
     id: 3,
     name: "Buy a Car",
@@ -265,14 +244,6 @@ export const Services: ServicesProps[] = [
     bgColor: "#FFF8F5",
     border: " #5A4F49",
   },
-  // {
-  //   id: 4,
-  //   name: "Tow your car",
-  //   description: "Get your car towed",
-  //   image: carTow,
-  //   bgColor: "#F3FFF1",
-  //   border: "#189804",
-  // },
   {
     id: 5,
     name: "Rent a car",
@@ -289,28 +260,6 @@ export const Services: ServicesProps[] = [
     bgColor: "#F8FFD8",
     border: "#F6B80D",
   },
-];
-
-export const OrderRideOptions = [
-  {
-    id: 1,
-    name: "Ride",
-    image: orderRide,
-    time: "5 min",
-    price: "$15.00",
-  },
-  {
-    id: 2,
-    name: "Courier",
-    image: courage,
-    time: "10 min",
-    price: "$10.00",
-  },
-  // {
-  //   id: 3,
-  //   name: "Pick Up",
-  //   image: pickUp,
-  // },
 ];
 
 export const userInfo = {
@@ -404,54 +353,6 @@ export const MechanicProfileSettings = {
   ],
 };
 
-export const DriverProfileSettings = {
-  name: "Profile settings",
-  options: [
-    {
-      id: 1,
-      name: "My Profile",
-      image: UserCircle,
-      route: driverRoutes.profileDetails,
-    },
-    {
-      id: 2,
-      name: "My Trips",
-      image: trip,
-      route: "notifications",
-    },
-    // {
-    //   id: 3,
-    //   name: "Wallet",
-    //   image: savingWallet,
-    //   route: routes.notifications,
-    // },
-    {
-      id: 4,
-      name: "Change Password",
-      image: padlock,
-      route: routes.changePassword,
-    },
-    {
-      id: 5,
-      name: "Bank Details",
-      image: addBank,
-      route: generalRoutes.bankInfo,
-    },
-    {
-      id: 6,
-      name: "Switch Role",
-      image: switch1,
-      route: "Switch Role",
-    },
-    {
-      id: 8,
-      name: "My Bids",
-      image: savingWallet,
-      route: routes.myBids,
-    },
-  ],
-};
-
 export const SellerProfileSettings = {
   name: "Profile settings",
   options: [
@@ -487,48 +388,6 @@ export const SellerProfileSettings = {
     },
     {
       id: 6,
-      name: "My Bids",
-      image: savingWallet,
-      route: routes.myBids,
-    },
-  ],
-};
-
-export const RiderProfileSettings = {
-  name: "Profile settings",
-  options: [
-    {
-      id: 1,
-      name: "My Profile",
-      image: UserCircle,
-      route: riderRoutes.profileDetails,
-    },
-    {
-      id: 2,
-      name: "Vehicle Information",
-      image: car,
-      route: "vehicleInfo",
-    },
-    {
-      id: 3,
-      name: "Bank Details",
-      image: bankIcon,
-      route: generalRoutes.bankInfo,
-    },
-    {
-      id: 4,
-      name: "Change Password",
-      image: padlock,
-      route: routes.changePassword,
-    },
-    {
-      id: 5,
-      name: "Switch Role",
-      image: switch1,
-      route: "Switch Role",
-    },
-    {
-      id: 9,
       name: "My Bids",
       image: savingWallet,
       route: routes.myBids,

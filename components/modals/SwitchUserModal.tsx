@@ -16,7 +16,7 @@ import CustomButton from "../CustomButton";
 import { useUserRoles, userProfileKeys, useSwitchRole } from "@/hooks/useUserProfile";
 import { useRoles } from "@/hooks/useRoles";
 import { router } from "expo-router";
-import { routes, mechanicRoutes, driverRoutes, sellerRoutes } from "@/constants/routes";
+import { routes, mechanicRoutes, sellerRoutes } from "@/constants/routes";
 import CustomAlert from "../CustomAlert";
 import { useCustomAlert } from "@/hooks/useCustomAlert";
 import { userAPI } from "@/lib/api/user";
@@ -121,18 +121,6 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
   // Map role names to icons and descriptions
   const getRoleInfo = (roleName: string) => {
     const roleMap: Record<string, { icon: React.ComponentType<any>, iconName?: string, description: string, displayName: string }> = {
-      driver: {
-        icon: MaterialIcons,
-        iconName: "local-taxi",
-        description: "Drive and earn money",
-        displayName: "Driver"
-      },
-      rider: {
-        icon: MaterialIcons,
-        iconName: "pedal-bike",
-        description: "Book rides and travel",
-        displayName: "Rider"
-      },
       mechanic: {
         icon: WrenchScrewdriverIcon,
         description: "Provide repair services",
@@ -166,12 +154,9 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
     const userRoleNames = userRoles.map(role => role.name);
 
     // Filter out developer and admin roles, and the active role
-    // For now, also remove driver and rider roles
     const filteredRoles = allRoles.filter(role => {
       const isNotExcluded = role.name !== 'developer' &&
-        role.name !== 'admin' &&
-        role.name !== 'driver' &&
-        role.name !== 'rider';
+        role.name !== 'admin';
       const isNotActive = role.name !== activeRole?.name;
       return isNotExcluded && isNotActive;
     });
@@ -257,12 +242,6 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                 case 'mechanic':
                   profileResponse = await userAPI.getMechanicProfile();
                   break;
-                case 'driver':
-                  profileResponse = await userAPI.getDriverProfile();
-                  break;
-                case 'rider':
-                  profileResponse = await userAPI.getRiderProfile();
-                  break;
                 case 'merchant':
                 case 'seller':
                   profileResponse = await userAPI.getMerchantProfile();
@@ -317,9 +296,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
           let targetRoute: string = routes?.userHome;
           switch (roleName) {
             case 'primary_user': targetRoute = routes?.userHome; break;
-            case 'driver': targetRoute = routes?.driverHome; break;
             case 'mechanic': targetRoute = routes?.mechanicHome; break;
-            case 'rider': targetRoute = routes?.riderHome; break;
             case 'merchant':
             case 'seller':
               targetRoute = sellerRoutes.home;

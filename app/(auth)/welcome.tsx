@@ -56,25 +56,14 @@ const overlayImgHeight = Math.round(screenHeight * 0.32); // 32% of screen heigh
 const slides = [
   {
     key: "1",
-    header: "DRIVE, EARN & REPEAT",
-    text: "Turn your Car into an Income Stream by giving People Safe, Reliable Rides Whenever suits You.",
-  },
-  {
-    key: "2",
     header: "KEEP YOUR CAR RUNNING",
     text: "Our Trusted Mechanics are just a tap away offering Reliable Diagnostics, Quick Repairs.",
   },
   {
-    key: "3",
+    key: "2",
     header: "BUY AND SELL CARS",
     text: "Either you’re Buying or Selling, our Platform Connects you with Verified Transparent Prices,",
   },
-  {
-    key: "4",
-    header: "FAST, RELIABLE, DELIVERY",
-    text: "Get your Packages, Meals, and Essentials Delivered without Stress.",
-  },
-  // Add more slides if needed
 ];
 
 // Background slides - duplicate the background image 4 times

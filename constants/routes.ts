@@ -25,9 +25,7 @@ export const routes = {
   // Main app routes
   home: "/(root)/(tabs)/(user)/home",
   userHome: "/(root)/(tabs)/(user)/home",
-  driverHome: "/(root)/(tabs)/(driver)/home",
   mechanicHome: "/(root)/(tabs)/(mechanic)/home",
-  riderHome: "/(root)/(tabs)/(rider)/home",
   cars: "/(root)/(screens)/(user)/cars",
   services: "/(root)/(tabs)/(user)/home",
   profile: "/(root)/(tabs)/(user)/profile",
@@ -67,13 +65,6 @@ export const routes = {
   //calls
   videoCall: "/(root)/(screens)/(calls)/video-call",
   voiceCall: "/(root)/(screens)/(calls)/voice-call",
-
-  // Order ride
-  enterAddressForRide: "/(root)/(screens)/(orderRide)/enterAddressForRide",
-  locationSelection: "/(root)/(screens)/(orderRide)/location-selection",
-  chooseRide: "/(root)/(screens)/(orderRide)/choose-ride",
-  rideTracking: "/(root)/(screens)/(orderRide)/ride-tracking",
-  chatDriver: "/(root)/(screens)/(orderRide)/chat-driver",
 
   // Rent a car
   rentACar: "/(root)/(screens)/(rentCar)/rent-a-car",
@@ -115,57 +106,7 @@ export const mechanicRoutes = {
 export type MechanicRouteKeys = keyof typeof mechanicRoutes;
 export type MechanicRouteValues = (typeof mechanicRoutes)[MechanicRouteKeys];
 
-// driver routes
-export const driverRoutes = {
-  chooseOptions: "/(auth)/(register)/driver/choose-options",
-  welcomeDriver: "/(auth)/(register)/driver/welcome-driver",
-  step1: "/(auth)/(register)/driver/step1",
-  step2: "/(auth)/(register)/driver/step2",
-  step4: "/(auth)/(register)/driver/step4",
-  step5: "/(auth)/(register)/driver/step5",
-  step6: "/(auth)/(register)/driver/step6",
-  step7: "/(auth)/(register)/driver/step7",
-
-  // driver tabs
-  home: "/(root)/(tabs)/(driver)/home",
-  earnings: "/(root)/(tabs)/(driver)/earnings",
-  order: "/(root)/(tabs)/(driver)/order",
-  profile: "/(root)/(tabs)/(driver)/profile",
-
-  ConfirmWithdrawal: "/(root)/(screens)/(driver)/confirmWithdrawal",
-  ConfirmOrder: "/(root)/(screens)/(driver)/confirmOrder",
-  WithdrawalHistory: "/(root)/(screens)/(driver)/withdrawalHistory",
-  EditProfile: "/(root)/(screens)/(driver)/editProfile",
-  profileDetails: "/(root)/(screens)/(driver)/profileDetails",
-  takebookings: "/(root)/(screens)/(driver)/takebookings",
-} as const;
-
-export type DriverRouteKeys = keyof typeof driverRoutes;
-export type DriverRouteValues = (typeof driverRoutes)[DriverRouteKeys];
-
-// rider routes
-export const riderRoutes = {
-  chooseOptions: "/(auth)/(register)/driver/choose-options",
-
-  // rider tabs
-  home: "/(root)/(tabs)/(rider)/home",
-  earnings: "/(root)/(tabs)/(rider)/earnings",
-  order: "/(root)/(tabs)/(rider)/order",
-  profile: "/(root)/(tabs)/(rider)/profile",
-
-  // rider screens
-  ConfirmWithdrawal: "/(root)/(screens)/(rider)/confirmWithdrawal",
-  ConfirmOrder: "/(root)/(screens)/(rider)/confirmOrder",
-  WithdrawalHistory: "/(root)/(screens)/(rider)/withdrawalHistory",
-  EditProfile: "/(root)/(screens)/(rider)/editProfile",
-  takebookings: "/(root)/(screens)/(rider)/takebookings",
-  profileDetails: "/(root)/(screens)/(rider)/profileDetails",
-} as const;
-
-export type RiderRouteKeys = keyof typeof riderRoutes;
-export type RiderRouteValues = (typeof riderRoutes)[RiderRouteKeys];
-
-// seller routes
+  // seller routes
 export const sellerRoutes = {
   step1: "/(auth)/(register)/seller/step1",
   step2: "/(auth)/(register)/seller/step2",
@@ -215,8 +156,6 @@ export const roleKYCRoutes: Record<string, string> = {
   mechanic: "/(root)/(screens)/(mechanic)/complete-kyc",
   merchant: "/(root)/(screens)/(seller)/complete-kyc",
   seller: "/(root)/(screens)/(seller)/complete-kyc",
-  driver: "/(root)/(screens)/(driver)/complete-kyc",
-  rider: "/(root)/(screens)/(rider)/complete-kyc",
 };
 
 // KYC Routes map by role

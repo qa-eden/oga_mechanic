@@ -343,8 +343,6 @@ const Profile = () => {
 
                   if (activeRole === "mechanic") {
                     currentSettings = MechanicProfileSettings.options;
-                  } else if (activeRole === "driver") {
-                    currentSettings = DriverProfileSettings.options;
                   } else {
                     // Filter out subscription for primary users if they are confused
                     // But keeping it as per original ProfileSettings for now, just utilizing role switching

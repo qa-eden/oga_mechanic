@@ -1,4 +1,4 @@
-import { driverRoutes, mechanicRoutes, routes, sellerRoutes } from "@/constants/routes";
+import { mechanicRoutes, routes, sellerRoutes } from "@/constants/routes";
 
 // Mock roles data for development
 export interface Role {
@@ -39,14 +39,6 @@ export const mockRoles: Role[] = [
     color: '#F59E0B',
     route: mechanicRoutes.step1
   },
-  {
-    id: 4,
-    name: 'driver',
-    title: 'Driver',
-    description: 'I want to Drive',
-    icon: 'car',
-    color: '#EF4444',
-    route: driverRoutes.step1
   }
 ];
 

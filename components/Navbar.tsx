@@ -8,7 +8,7 @@ import {
   UserIcon,
 } from "react-native-heroicons/outline";
 import { router, useSegments } from "expo-router";
-import { routes, driverRoutes, mechanicRoutes, riderRoutes, sellerRoutes } from "@/constants/routes";
+import { routes, mechanicRoutes, sellerRoutes } from "@/constants/routes";
 import { useNotifications, useActiveRoleProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,9 +55,7 @@ const Navbar = () => {
   // Derive role from segments as a fallback if activeRole hasn't loaded yet
   const segmentRole = useMemo(() => {
     const segs = segments as string[];
-    if (segs.includes('(driver)')) return 'driver';
     if (segs.includes('(mechanic)')) return 'mechanic';
-    if (segs.includes('(rider)')) return 'rider';
     if (segs.includes('(sellers)')) return 'seller';
     return null;
   }, [segments]);
@@ -89,8 +87,6 @@ const Navbar = () => {
     isLoading: isLoadingProfile, 
     activeRole: hookActiveRole,
     isMechanic,
-    isDriver,
-    isRider,
     isMerchant,
     primaryProfileData
   } = useActiveRoleProfile();
@@ -113,7 +109,6 @@ const Navbar = () => {
 
   // Specific profiles extracted safely
   const mProfile = roleResponseData?.mechanic_profile || (isMechanic ? roleResponseData : null);
-  const dProfile = roleResponseData?.driver_profile || (isDriver ? roleResponseData : null);
   const merchProfile = roleResponseData?.merchant_profile || (isMerchant ? roleResponseData : null);
 
   // Flattened data source for permissive lookup
@@ -124,7 +119,6 @@ const Navbar = () => {
     ...(dProfile || {}),
     ...(merchProfile || {}),
     ...(mProfile?.user || {}),
-    ...(dProfile?.user || {}),
     ...(merchProfile?.user || {}),
   } as any;
 
@@ -160,12 +154,8 @@ const Navbar = () => {
         onPress={() => {
           const roleKey = activeRole || segmentRole || "user";
           const profileRoute =
-            roleKey === "driver"
-              ? driverRoutes.profile
-              : roleKey === "mechanic"
+            roleKey === "mechanic"
               ? mechanicRoutes.profile
-              : roleKey === "rider"
-              ? riderRoutes.profile
               : roleKey === "seller" || roleKey === "merchant"
               ? sellerRoutes.profile
               : routes.profile;
@@ -203,12 +193,8 @@ const Navbar = () => {
           <Text className="text-[12px] text-text-100 pt-[.1rem]">
             {activeRole === 'mechanic' 
               ? 'Manage your jobs and earnings.' 
-              : activeRole === 'driver' 
-              ? 'Drive safely and earn more.' 
               : activeRole === 'seller' || activeRole === 'merchant'
               ? 'Manage your shop and orders.' 
-              : activeRole === 'rider'
-              ? 'Your reliable ride is just a tap away.'
               : 'Everything your car needs is here.'}
           </Text>
         </View>

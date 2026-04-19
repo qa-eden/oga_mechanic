@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import HeaderAndDescTextCenter from "@/components/HeaderAndDescTextCenter";
 import AuthNavigateLink from "@/components/AuthNavigateLink";
 import { loginSchema } from "@/utils/validationSchemas";
-import { riderRoutes, routes, sellerRoutes } from "@/constants/routes";
+import { routes, sellerRoutes } from "@/constants/routes";
 import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import FormikCheckbox from "@/components/forms/FormikCheckbox";

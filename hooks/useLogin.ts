@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { userAPI, LoginCredentials } from '@/lib/api/user';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { driverRoutes, mechanicRoutes, riderRoutes, routes, sellerRoutes } from '@/constants/routes';
+import { mechanicRoutes, routes, sellerRoutes } from '@/constants/routes';
 import { getErrorMessage } from '@/utils/errorMessages';
 
 export const useLogin = () => {
@@ -63,22 +63,16 @@ export const useLogin = () => {
               case 'primary_user':
                 targetRoute = routes?.userHome || '/(root)/(tabs)/(user)/home';
                 break;
-              case 'driver':
-                targetRoute = driverRoutes?.home || '/(root)/(tabs)/(driver)/home';
-                break;
               case 'mechanic':
                 targetRoute = mechanicRoutes?.home || '/(root)/(tabs)/(mechanic)/home';
                 break;
-              case 'rider':
-                targetRoute = riderRoutes?.home || '/(root)/(tabs)/(rider)/home';
-                break;
-              case 'merchant':
+            case 'merchant':
                 targetRoute = sellerRoutes?.home || '/(root)/(tabs)/(sellers)/home';
                 break;
-              case 'seller':
+            case 'seller':
                 targetRoute = sellerRoutes?.home || '/(root)/(tabs)/(sellers)/home';
                 break;
-              default:
+            default:
                 targetRoute = routes?.userHome || '/(root)/(tabs)/(user)/home';
             }
           
@@ -111,15 +105,6 @@ export const useLogin = () => {
               switch (role) {
                 case 'primary_user':
                   targetRoute = routes?.userHome || '/(root)/(tabs)/(user)/home';
-                  break;
-                case 'driver':
-                  targetRoute = driverRoutes?.home || '/(root)/(tabs)/(driver)/home';
-                  break;
-                case 'mechanic':
-                  targetRoute = mechanicRoutes?.home || '/(root)/(tabs)/(mechanic)/home';
-                  break;
-                case 'rider':
-                  targetRoute = riderRoutes?.home || '/(root)/(tabs)/(rider)/home';
                   break;
                 case 'merchant':
                 case 'seller':
