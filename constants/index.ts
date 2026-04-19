@@ -30,7 +30,6 @@ import eyeOpen from "@/assets/icons/eyeOpen.png";
 import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import empty from "@/assets/icons/empty.svg";
-import empty from "@/assets/icons/empty.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
 import rent from "@/assets/icons/rent.svg";
@@ -52,8 +51,6 @@ import email from "@/assets/icons/profile/email.svg";
 
 //services icons
 import sparePartIcon from "@/assets/icons/sparePart.svg";
-import sparePartIcon from "@/assets/icons/sparePart.svg";
-import buycar from "@/assets/icons/buycar.svg";
 import buycar from "@/assets/icons/buycar.svg";
 import { HeadphonesIcon } from "@/components/icons/HeadphonesIcon";
 
@@ -80,7 +77,6 @@ import activeOrderIcon2 from "@/assets/icons/activeOrderIcon2.svg";
 import user from "@/assets/icons/user.svg";
 import merchant from "@/assets/icons/merchant.png";
 import mechanic from "@/assets/icons/mechanic.png";
-import driver from "@/assets/icons/driver.svg";
 import { mechanicRoutes, routes, sellerRoutes, generalRoutes } from "./routes";
 
 export const images = {
@@ -113,7 +109,6 @@ export const icons = {
   user,
   merchant,
   mechanic,
-  driver,
   home,
   earnings,
   activeEarnings,
@@ -137,8 +132,6 @@ export const icons = {
   productTab,
   activeProductTab,
   empty,
-  trip,
-  round,
   orderIcon2,
   activeOrderIcon2,
 };
