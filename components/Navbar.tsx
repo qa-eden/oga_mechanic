@@ -116,7 +116,6 @@ const Navbar = () => {
     ...(primaryData || {}),
     ...(roleResponseData || {}),
     ...(mProfile || {}),
-    ...(dProfile || {}),
     ...(merchProfile || {}),
     ...(mProfile?.user || {}),
     ...(merchProfile?.user || {}),
