@@ -20,10 +20,10 @@ export const CarSelectionStep: React.FC<CarSelectionStepProps> = ({
   return (
     <View>
       <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-        Do you have a car?
+        Select a Vehicle
       </Text>
       <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-        Choose an option to continue
+        Choose a saved vehicle or add a new one
       </Text>
 
       <View className="flex-row gap-4">
@@ -61,14 +61,14 @@ export const CarSelectionStep: React.FC<CarSelectionStepProps> = ({
                 carSelection === 'Yes' ? 'text-white' : 'text-gray-800'
               }`}
             >
-              Yes
+              Saved Cars
             </Text>
             <Text
               className={`text-xs font-NunitoMedium text-center px-2 ${
                 carSelection === 'Yes' ? 'text-white/90' : 'text-gray-600'
               }`}
             >
-              Use my saved cars
+              Choose from your list
             </Text>
           </View>
         </TouchableOpacity>
@@ -107,14 +107,14 @@ export const CarSelectionStep: React.FC<CarSelectionStepProps> = ({
                 carSelection === 'No' ? 'text-white' : 'text-gray-800'
               }`}
             >
-              No
+              Add New
             </Text>
             <Text
               className={`text-xs font-NunitoMedium text-center px-2 ${
                 carSelection === 'No' ? 'text-white/90' : 'text-gray-600'
               }`}
             >
-              Enter manually
+              Enter details manually
             </Text>
           </View>
         </TouchableOpacity>

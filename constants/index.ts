@@ -15,8 +15,6 @@ import carBack from "@/assets/images/carBack.png";
 import carRight from "@/assets/images/carRight.png";
 import carLeft from "@/assets/images/carLeft.png";
 
-import brabus from "@/assets/images/brabus.svg";
-
 //mechanics
 import mechanic1 from "@/assets/images/dummy/mechanic2.svg";
 
@@ -98,7 +96,6 @@ export const images = {
   splashBackgroundCar,
   dummyProfile,
   adsbackground,
-  brabus,
   mechanic1,
 
   carFront,
@@ -224,45 +221,6 @@ export const Ads = [
     title: "Automotive Solutions",
     description: "From Diagnostics to Delivery",
     image: images.adsbackground,
-  },
-];
-
-export const myCars = [
-  {
-    id: 101,
-    name: "Escalade",
-    year: 2024,
-    vin: "267189391",
-    status: "Active",
-    image: brabus,
-    color: "#1F2937",
-  },
-  {
-    id: 102,
-    name: "Toyota Corolla",
-    year: 2023,
-    vin: "345189391",
-    status: "Active",
-    image: brabus,
-    color: "#1E40AF",
-  },
-  {
-    id: 103,
-    name: "Hyundai Elatra",
-    year: 2010,
-    vin: "059943452",
-    status: "Inactive",
-    image: brabus,
-    color: "#DC2626",
-  },
-  {
-    id: 104,
-    name: "Brabus G63",
-    year: 2022,
-    vin: "229974531",
-    status: "Active",
-    image: brabus,
-    color: "#374151",
   },
 ];
 

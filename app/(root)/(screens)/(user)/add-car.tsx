@@ -244,10 +244,6 @@ const AddCar = () => {
         license_plate: values.license_plate?.trim() || undefined,
         images: images.length > 0 ? images : undefined,
       });
-    } catch (error: any) {
-      if (error?.message?.includes?.("Cloudinary")) {
-        Alert.alert("Upload Error", error.message);
-      }
       // Mutation errors are handled in its onError callback
     } finally {
       setSubmitting(false);

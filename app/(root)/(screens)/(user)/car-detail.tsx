@@ -177,7 +177,7 @@ const CarDetail = () => {
               : "N/A",
           vin: vinRaw ?? "N/A",
           status: normalizeVehicleStatus(raw.status),
-          image: images?.brabus,
+          image: null,
           imageUri:
             getUserVehiclePrimaryImageUrl(raw) ||
             (typeof raw.image === "string" && raw.image.startsWith("http")
@@ -310,7 +310,7 @@ const CarDetail = () => {
   };
 
   const { width: screenWidth } = Dimensions.get("window");
-  const FallbackCarSvg = carData?.image || images.brabus;
+  const FallbackCarSvg = images.splashBackgroundCar;
 
   // Show loading state
   if (isLoading) {
