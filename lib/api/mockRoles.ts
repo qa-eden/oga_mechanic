@@ -38,7 +38,6 @@ export const mockRoles: Role[] = [
     icon: 'wrench',
     color: '#F59E0B',
     route: mechanicRoutes.step1
-  },
   }
 ];
 
