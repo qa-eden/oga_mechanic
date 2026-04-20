@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, Alert } from 'react-native';
 import { loginAsRole, clearAuthData } from '@/utils/authUtils';
 
 const DevLoginButtons: React.FC = () => {
-  const handleLogin = async (role: 'user' | 'driver' | 'mechanic' | 'rider') => {
+  const handleLogin = async (role: 'user' | 'mechanic') => {
     const result = await loginAsRole(role);
     if (result.success) {
       Alert.alert('Success', `Logged in as ${role}`);
@@ -28,13 +28,6 @@ const DevLoginButtons: React.FC = () => {
         >
           <Text className="text-white text-center font-medium">Login as User</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity
-          onPress={() => handleLogin('driver')}
-          className="bg-green-500 px-4 py-2 rounded-lg flex-1"
-        >
-          <Text className="text-white text-center font-medium">Login as Driver</Text>
-        </TouchableOpacity>
       </View>
       
       <View className="flex-row flex-wrap gap-2 mb-4">
@@ -43,13 +36,6 @@ const DevLoginButtons: React.FC = () => {
           className="bg-orange-500 px-4 py-2 rounded-lg flex-1"
         >
           <Text className="text-white text-center font-medium">Login as Mechanic</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          onPress={() => handleLogin('rider')}
-          className="bg-purple-500 px-4 py-2 rounded-lg flex-1"
-        >
-          <Text className="text-white text-center font-medium">Login as Rider</Text>
         </TouchableOpacity>
       </View>
       

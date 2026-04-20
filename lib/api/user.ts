@@ -462,11 +462,6 @@ export interface UserEarnings {
     pending_earnings: string;
     completed_tasks: number;
   };
-  driver_earnings: {
-    total_earnings: string;
-    pending_earnings: string;
-    completed_tasks: number;
-  };
   currency: string;
 }
 
@@ -788,25 +783,7 @@ export const userAPI = {
     }
   },
 
-  // Get driver profile
-  getDriverProfile: async (): Promise<any> => {
-    try {
-      const response = await api.get('/users/profile/driver/');
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
-  },
 
-  // Get driver profile
-  getRiderProfile: async (): Promise<any> => {
-    try {
-      const response = await api.get('/users/profile/rider/');
-      return response.data;
-    } catch (error: any) {
-      throw error;
-    }
-  },
 
   // Get merchant profile by UUID
   getMerchantProfileByUuid: async (merchantUuid: string): Promise<MerchantProfileResponse> => {
@@ -1149,55 +1126,7 @@ export const userAPI = {
     return await response.json();
   },
 
-  submitDriverKYC: async (formData: FormData) => {
-    const token = await AsyncStorage.getItem('auth_token');
-    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/profile/driver/`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : '',
-        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
-      },
-      body: formData,
-    });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        throw { response: { data: errorData } };
-    }
-    
-    return await response.json();
-  },
 
-  submitRiderKYC: async (formData: FormData) => {
-    const token = await AsyncStorage.getItem('auth_token');
-    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/profile/rider/`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : '',
-        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
-      },
-      body: formData,
-    });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        throw { response: { data: errorData } };
-    }
-    
-    return await response.json();
-  },
 
   // Subscribe merchant
   subscribeMerchant: async (data: { payment_reference: string; payment_url: string; amount: number }): Promise<any> => {

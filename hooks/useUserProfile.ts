@@ -14,8 +14,6 @@ export const userProfileKeys = {
   banks: () => [...userProfileKeys.all, 'banks'] as const,
   bankAccounts: () => [...userProfileKeys.all, 'bankAccounts'] as const,
   mechanic: () => [...userProfileKeys.all, 'mechanic'] as const,
-  driver: () => [...userProfileKeys.all, 'driver'] as const,
-  rider: () => [...userProfileKeys.all, 'rider'] as const,
   wallet: () => [...userProfileKeys.all, 'wallet'] as const,
   earnings: () => [...userProfileKeys.all, 'earnings'] as const,
   withdrawals: () => [...userProfileKeys.all, 'withdrawals'] as const,
@@ -62,33 +60,7 @@ export const useMechanicProfile = (enabled: boolean = true) => {
   });
 };
 
-// Hook to get driver profile (only when enabled)
-export const useDriverProfile = (enabled: boolean = true) => {
-  return useQuery({
-    queryKey: userProfileKeys.driver(),
-    queryFn: () => userAPI.getDriverProfile(),
-    staleTime: 30 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    enabled: enabled, // Only fetch when enabled
-    retry: 1, // Reduce retries
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
-};
 
-// Hook to get rider profile (only when enabled)
-export const useRiderProfile = (enabled: boolean = true) => {
-  return useQuery({
-    queryKey: userProfileKeys.rider(),
-    queryFn: () => userAPI.getRiderProfile(),
-    staleTime: 30 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    enabled: enabled, // Only fetch when enabled
-    retry: 1, // Reduce retries
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
-};
 
 // Hook to get merchant profile by UUID
 export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean = true) => {
@@ -113,40 +85,28 @@ export const useActiveRoleProfile = () => {
   // Role-specific profile flags
   const isMerchant = activeRole === 'merchant' || activeRole === 'seller';
   const isMechanic = activeRole === 'mechanic' || activeRole === 'Mechanic';
-  const isDriver = activeRole === 'driver';
-  const isRider = activeRole === 'rider';
 
   // Fetch role-specific profiles conditionally
   const merchantProfile = useMerchantProfile(isMerchant);
   const mechanicProfile = useMechanicProfile(isMechanic);
-  const driverProfile = useDriverProfile(isDriver);
-  const riderProfile = useRiderProfile(isRider);
 
   // Determine the consolidated state
   const isFetching = primaryProfile.isFetching || 
     (isMerchant && merchantProfile.isFetching) || 
-    (isMechanic && mechanicProfile.isFetching) || 
-    (isDriver && driverProfile.isFetching) ||
-    (isRider && riderProfile.isFetching);
+    (isMechanic && mechanicProfile.isFetching);
 
   const isLoading = primaryProfile.isLoading || 
     (isMerchant && merchantProfile.isLoading) || 
-    (isMechanic && mechanicProfile.isLoading) || 
-    (isDriver && driverProfile.isLoading) ||
-    (isRider && riderProfile.isLoading);
+    (isMechanic && mechanicProfile.isLoading);
 
   const error = primaryProfile.error || 
     (isMerchant ? merchantProfile.error : 
-    (isMechanic ? mechanicProfile.error : 
-    (isDriver ? driverProfile.error :
-    (isRider ? riderProfile.error : null))));
+    (isMechanic ? mechanicProfile.error : null)));
 
   const refetch = async () => {
     await primaryProfile.refetch();
     if (isMerchant) await merchantProfile.refetch();
     if (isMechanic) await mechanicProfile.refetch();
-    if (isDriver) await driverProfile.refetch();
-    if (isRider) await riderProfile.refetch();
   };
 
   // Return the appropriate profile data based on role
@@ -154,8 +114,6 @@ export const useActiveRoleProfile = () => {
   let data: any = null;
   if (isMerchant && merchantProfile.data) data = merchantProfile.data;
   else if (isMechanic && mechanicProfile.data) data = mechanicProfile.data;
-  else if (isDriver && driverProfile.data) data = driverProfile.data;
-  else if (isRider && riderProfile.data) data = riderProfile.data;
 
   return {
     data,
@@ -165,8 +123,6 @@ export const useActiveRoleProfile = () => {
     activeRole,
     isMerchant,
     isMechanic,
-    isDriver,
-    isRider,
     primaryProfileData: primaryProfile.data,
   };
 };
@@ -254,37 +210,7 @@ export const useSubmitMechanicKYC = () => {
   });
 };
 
-// Hook to submit driver KYC
-export const useSubmitDriverKYC = () => {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: userAPI.submitDriverKYC,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
-      console.log('✅ Driver KYC submitted successfully');
-    },
-    onError: (error) => {
-      console.error('❌ Error submitting driver KYC:', error);
-    },
-  });
-};
-
-// Hook to submit rider KYC
-export const useSubmitRiderKYC = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: userAPI.submitRiderKYC,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
-      console.log('✅ Rider KYC submitted successfully');
-    },
-    onError: (error) => {
-      console.error('❌ Error submitting rider KYC:', error);
-    },
-  });
-};
 
 // Hook to switch user role
 export const useSwitchRole = () => {

@@ -29,21 +29,21 @@ const TermsModal = ({ visible, onClose }: TermsModalProps) => {
           {/* Content */}
           <ScrollView className="flex-1 p-6">
             <Text className="text-lg font-bold text-gray-900 mb-4">
-              Welcome to the Oga Mechanic Driver platform.
+              Welcome to the Oga Mechanic Service Platform.
             </Text>
             
             <Text className="text-base text-gray-700 mb-6 leading-6">
-              These Terms and Conditions ("Agreement") govern your use of the Oga Mechanic Driver app and your relationship with Oga Mechanic. By registering and driving with Oga Mechanic, you agree to comply with all terms set forth below.
+              These Terms and Conditions ("Agreement") govern your use of the Oga Mechanic app and your relationship with Oga Mechanic. By registering and partnering with Oga Mechanic, you agree to comply with all terms set forth below.
             </Text>
 
             {/* Section 1 */}
             <View className="mb-6">
               <Text className="text-lg font-semibold text-gray-900 mb-3">
-                1. Driver Eligibility and Requirements
+                1. Service Provider Eligibility and Requirements
               </Text>
               <View className="ml-4 space-y-2">
                 <Text className="text-base text-gray-700">• You must meet the minimum age and licensing requirements in your jurisdiction.</Text>
-                <Text className="text-base text-gray-700">• You must maintain a valid driver's license, vehicle registration, and insurance as required by law.</Text>
+                <Text className="text-base text-gray-700">• You must maintain valid identifying documents and certifications as required by law.</Text>
                 <Text className="text-base text-gray-700">• You agree to undergo background checks and provide accurate personal information.</Text>
               </View>
             </View>
@@ -55,7 +55,7 @@ const TermsModal = ({ visible, onClose }: TermsModalProps) => {
               </Text>
               <View className="ml-4 space-y-2">
                 <Text className="text-base text-gray-700">• You are an independent contractor, not an employee of Oga Mechanic.</Text>
-                <Text className="text-base text-gray-700">• Oga Mechanic provides a platform to connect drivers with riders but does not guarantee any minimum earnings or rides.</Text>
+                <Text className="text-base text-gray-700">• Oga Mechanic provides a platform to connect service providers with customers but does not guarantee any minimum earnings or bookings.</Text>
                 <Text className="text-base text-gray-700">• You agree to use the app honestly and comply with all applicable laws and Oga Mechanic policies.</Text>
               </View>
             </View>
@@ -63,13 +63,13 @@ const TermsModal = ({ visible, onClose }: TermsModalProps) => {
             {/* Section 3 */}
             <View className="mb-6">
               <Text className="text-lg font-semibold text-gray-900 mb-3">
-                3. Driver Responsibilities
+                3. Service Provider Responsibilities
               </Text>
               <View className="ml-4 space-y-2">
-                <Text className="text-base text-gray-700">• Maintain your vehicle in safe and clean condition.</Text>
-                <Text className="text-base text-gray-700">• Follow all traffic laws and Oga Mechanic's community guidelines.</Text>
-                <Text className="text-base text-gray-700">• Provide professional and courteous service to all riders.</Text>
-                <Text className="text-base text-gray-700">• Report any accidents, violations, or incidents promptly to Oga Mechanic.</Text>
+                <Text className="text-base text-gray-700">• Maintain your professional tools and equipment in safe condition.</Text>
+                <Text className="text-base text-gray-700">• Follow all local laws and Oga Mechanic's community guidelines.</Text>
+                <Text className="text-base text-gray-700">• Provide professional and courteous service to all customers.</Text>
+                <Text className="text-base text-gray-700">• Report any accidents or incidents promptly to Oga Mechanic.</Text>
               </View>
             </View>
 

@@ -156,7 +156,9 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
     // Filter out developer and admin roles, and the active role
     const filteredRoles = allRoles.filter(role => {
       const isNotExcluded = role.name !== 'developer' &&
-        role.name !== 'admin';
+        role.name !== 'admin' &&
+        role.name !== 'driver' &&
+        role.name !== 'rider';
       const isNotActive = role.name !== activeRole?.name;
       return isNotExcluded && isNotActive;
     });
@@ -261,7 +263,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
 
                   // Check for approval if complete
                   if (isComplete) {
-                    const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 'driver_profile';
+                    const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 'merchant_profile';
                     isPending = !profileResponse.data[profileKey]?.is_approved;
                   }
                 }

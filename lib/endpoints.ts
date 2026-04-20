@@ -36,7 +36,6 @@ export const USER_ENDPOINTS = {
   DELETE_CAR: (id: string) => `/users/my-vehicles/${id}/`,
   FIND_MECHANIC: '/user/mechanics/find',
   BOOK_MECHANIC: '/user/mechanics/book',
-  ORDER_RIDE: '/user/rides/order',
   RENT_CAR: '/user/cars/rent',
   BUY_CAR: '/user/cars/buy',
   SHOP_ITEMS: '/user/shop/items',
@@ -81,24 +80,7 @@ export const MECHANIC_ENDPOINTS = {
 } as const;
 
 
-// Driver endpoints (transportation providers)
-export const DRIVER_ENDPOINTS = {
-  PROFILE: '/users/profile/driver/',
-  UPDATE_PROFILE: '/driver/profile',
-  VEHICLE: '/driver/vehicle',
-  UPDATE_VEHICLE: '/driver/vehicle',
-  RIDES: '/driver/rides',
-  ACCEPT_RIDE: (id: string) => `/driver/rides/${id}/accept`,
-  REJECT_RIDE: (id: string) => `/driver/rides/${id}/reject`,
-  START_RIDE: (id: string) => `/driver/rides/${id}/start`,
-  COMPLETE_RIDE: (id: string) => `/driver/rides/${id}/complete`,
-  LOCATION: '/driver/location',
-  UPDATE_LOCATION: '/driver/location',
-  EARNINGS: '/driver/earnings',
-  WITHDRAW: '/driver/earnings/withdraw',
-  AVAILABILITY: '/driver/availability',
-  SET_AVAILABILITY: '/driver/availability',
-} as const;
+
 
 // Merchant endpoints (shop owners)
 export const MERCHANT_ENDPOINTS = {
@@ -130,11 +112,6 @@ export const SERVICE_ENDPOINTS = {
   MECHANIC_PROFILE: (id: string) => `/mechanics/${id}`,
   MECHANIC_DETAIL: (id: string) => `/mechanics/mechanics/${id}/`,
   MECHANIC_REVIEWS: (id: string) => `/mechanics/${id}/reviews`,
-  RIDES_CREATE: '/rides',
-  RIDES_NEARBY_DRIVERS: '/rides/nearby-drivers',
-  RIDES_TRACK: (id: string) => `/rides/${id}/track`,
-  RIDES_CANCEL: (id: string) => `/rides/${id}/cancel`,
-  RIDES_COMPLETE: (id: string) => `/rides/${id}/complete`,
   PAYMENTS_CREATE: '/payments',
   PAYMENTS_VERIFY: (id: string) => `/payments/${id}/verify`,
   PAYMENTS_HISTORY: '/payments/history',
