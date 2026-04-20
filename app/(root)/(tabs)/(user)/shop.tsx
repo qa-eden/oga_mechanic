@@ -265,6 +265,7 @@ const Shop = () => {
       entering={FadeInDown.delay(index * 50).duration(400).springify()}
       style={{ width: (LAYOUT.SCREEN_WIDTH - 24 - 12) / 2 }}
     >
+      <Card1
         Images={item.images?.[0]?.image}
         rating={item.rating || 0}
         name={item.name}
