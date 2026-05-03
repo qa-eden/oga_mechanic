@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LAYOUT } from "@/constants/units";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
 import { router } from "expo-router";
@@ -29,6 +30,11 @@ import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import BiddingCarousel from "@/components/bidding/BiddingCarousel";
+import SpecialistIconBtn from "@/components/SpecialistIconBtn";
+import { useMechanicOrderNotifications } from "@/hooks/useMechanicOrderNotifications";
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
+import { registerForPushNotificationsAsync } from "@/services/notificationService";
+import { NewOrderBanner } from "@/components/NewOrderBanner";
 
 // Metric Card Skeleton Loader
 const MetricCardSkeleton = () => {
@@ -133,11 +139,46 @@ const MechanicHome = () => {
   const profileLoading = mechanicProfile.isLoading && !mechanicProfile.data; // Only show strictly loading if we have no data
   const isMechanic = true;
 
+  // ── Notifications ──────────────────────────────────────────────────────────
+  // Request permission and get push token once on mount
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(async (token) => {
+      if (token) {
+        console.log("🚀 MECHANIC PUSH TOKEN:", token);
+        try {
+          await mechanicAPI.registerPushDevice(token);
+          console.log("✅ Device registered for push notifications");
+        } catch (error) {
+          console.error("❌ Failed to register push device:", error);
+        }
+      }
+    });
+  }, []);
+
+  // ── Real-time Notifications (WebSocket) ──────────────────────────────────
+  useNotificationWebSocket({
+    enabled: isMechanic,
+    onNewOrder: (order) => {
+      console.log("🚀 Real-time order received via WebSocket:", order);
+      setActiveNewOrder({
+        customerName: order.customer_name || (order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'New Customer'),
+        vehicleMake: order.vehicle_make || order.make,
+        vehicleModel: order.vehicle_model || order.model,
+        serviceType: order.service_type,
+      });
+    }
+  });
+
+  // Fallback Polling (Reduced frequency to every 2 minutes)
+  useMechanicOrderNotifications(true); 
+  // ───────────────────────────────────────────────────────────────────────────
+
   const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
   const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
   const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
   const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [activeNewOrder, setActiveNewOrder] = useState<any>(null);
 
   const hasShownModalRef = useRef(false);
   const timerIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -432,10 +473,27 @@ const MechanicHome = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
+      
+      <NewOrderBanner 
+        order={activeNewOrder} 
+        onClose={() => setActiveNewOrder(null)}
+        onView={() => {
+          setActiveNewOrder(null);
+          // Optional: automatically navigate to orders or specific order
+        }}
+      />
+
+      {/* Floating Chat Specialist */}
+      <View style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 1000 }}>
+        <SpecialistIconBtn isFloating={true} />
+      </View>
 
       <ScrollView
         className="flex-1 px-5"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: LAYOUT.SCROLL_PADDING_BOTTOM,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={requestsLoading || analyticsLoading}

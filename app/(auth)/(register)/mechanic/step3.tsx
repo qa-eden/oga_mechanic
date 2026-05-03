@@ -1,6 +1,6 @@
 "use client";
 
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, Platform } from "react-native";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -30,7 +30,7 @@ const validationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
   state: Yup.string().required("Please select your state"),
   lga: Yup.string().required("Please select your LGA"),
-  ccac_document: Yup.string().required("CAC document number is required"),
+  nin_number: Yup.string().required("NIN number is required"),
   govt_id_type: Yup.string().required("Please select government ID type"),
 });
 
@@ -38,7 +38,7 @@ interface FormValues {
   location: string;
   state: string;
   lga: string;
-  ccac_document: string;
+  nin_number: string;
   govt_id_type: string;
 }
 
@@ -64,7 +64,7 @@ interface DocumentFile {
 
 const MechanicStep3 = () => {
   const params = useLocalSearchParams();
-  const [cacDocument, setCacDocument] = useState<DocumentFile | null>(null);
+  const [ninDocument, setNinDocument] = useState<DocumentFile | null>(null);
   const [selfie, setSelfie] = useState<DocumentFile | null>(null);
   const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
   const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
@@ -142,7 +142,7 @@ const MechanicStep3 = () => {
     }));
   };
 
-  const pickDocument = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
+  const pickDocument = async (type: "nin" | "selfie" | "govt_front" | "govt_back") => {
     try {
       // Request permissions
       const { status } =
@@ -179,7 +179,7 @@ const MechanicStep3 = () => {
     }
   };
 
-  const takePhoto = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
+  const takePhoto = async (type: "nin" | "selfie" | "govt_front" | "govt_back") => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
@@ -207,8 +207,8 @@ const MechanicStep3 = () => {
         };
 
         switch (type) {
-          case "cac":
-            setCacDocument(file);
+          case "nin":
+            setNinDocument(file);
             break;
           case "selfie":
             setSelfie(file);
@@ -226,7 +226,7 @@ const MechanicStep3 = () => {
     }
   };
 
-  const pickFromLibrary = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
+  const pickFromLibrary = async (type: "nin" | "selfie" | "govt_front" | "govt_back") => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -255,8 +255,8 @@ const MechanicStep3 = () => {
         }
 
         switch (type) {
-          case "cac":
-            setCacDocument(file);
+          case "nin":
+            setNinDocument(file);
             break;
           case "selfie":
             setSelfie(file);
@@ -276,8 +276,8 @@ const MechanicStep3 = () => {
 
   const handleSubmit = async (values: FormValues) => {
     // Validate required documents
-    if (!cacDocument) {
-      Alert.alert("Missing Document", "Please upload your CAC document.");
+    if (!ninDocument) {
+      Alert.alert("Missing Document", "Please upload your NIN document.");
       return;
     }
     if (!selfie) {
@@ -308,18 +308,18 @@ const MechanicStep3 = () => {
         } as any;
       };
 
-      const cacFile = getFileObject(cacDocument?.uri || "", 'cac');
+      const ninFile = getFileObject(ninDocument?.uri || "", 'nin');
       const selfieFile = getFileObject(selfie?.uri || "", 'selfie');
       const idFrontFile = getFileObject(governmentIdFront?.uri || "", 'govt_front');
       const idBackFile = getFileObject(governmentIdBack?.uri || "", 'govt_back');
 
       const formData = new FormData();
       formData.append('location', values.location);
-      formData.append('cac_number', values.ccac_document);
+      formData.append('nin_number', values.nin_number);
       formData.append('govt_id_type', values.govt_id_type);
       
       // Append Files (now as file objects or existing URLs)
-      if (cacFile) formData.append('cac_document', cacFile);
+      if (ninFile) formData.append('nin_document', ninFile);
       if (selfieFile) formData.append('selfie', selfieFile);
       if (idFrontFile) formData.append('government_id_front', idFrontFile);
       if (idBackFile) formData.append('government_id_back', idBackFile);
@@ -368,7 +368,7 @@ const MechanicStep3 = () => {
         nestedScrollEnabled={true}
         automaticallyAdjustKeyboardInsets={true}
         keyboardDismissMode="interactive"
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 70 : 40 }}
         scrollEnabled={true}
         alwaysBounceVertical={false}
       >
@@ -379,12 +379,12 @@ const MechanicStep3 = () => {
             <ProgressBar step={3} totalSteps={4} />
           </View>
 
-          <Formik
+          <Formik<FormValues>
             initialValues={{
               location: "",
               state: "",
               lga: "",
-              ccac_document: "",
+              nin_number: "",
               govt_id_type: "",
             }}
             validationSchema={validationSchema}
@@ -764,15 +764,15 @@ const MechanicStep3 = () => {
                       Additional Documents
                     </Text>
                     <Text className="text-sm text-gray-600 font-NunitoMedium mb-6">
-                      Upload your CAC document and selfie for verification
+                      Upload your NIN document and selfie for verification
                     </Text>
 
 
                     {/* CAC Document Input */}
                     <FormikInput
-                      name="ccac_document"
-                      label="CAC Document Number"
-                      placeholder="Enter your CAC document number"
+                      name="nin_number"
+                      label="NIN Number"
+                      placeholder="Enter your 11-digit NIN"
                       keyboardType="default"
                       required
                     />
@@ -780,16 +780,16 @@ const MechanicStep3 = () => {
                     {/* CAC Document Upload */}
                     <View className="mb-4">
                       <DocumentUpload
-                        label="CAC Document"
-                        placeholder="Upload CAC Document"
+                        label="NIN Document"
+                        placeholder="Upload NIN Document"
                         maxFileSize="15 MB"
                         acceptedTypes={["pdf", "jpg", "jpeg", "png"]}
-                        value={cacDocument && cacDocument.uri ? cacDocument : null}
+                        value={ninDocument && ninDocument.uri ? ninDocument : null}
                         onChange={(file) => {
                           if (file) {
-                            setCacDocument(file);
+                            setNinDocument(file);
                           } else {
-                            setCacDocument(null);
+                            setNinDocument(null);
                           }
                         }}
                         required={true}
@@ -815,7 +815,7 @@ const MechanicStep3 = () => {
                 <View className="mb-6">
                   <FormikButton
                     title="Proceed"
-                    disabled={!isValid || !cacDocument || !selfie || !governmentIdFront || (values.govt_id_type !== "international_passport" && !governmentIdBack) || selectedMakes.length === 0}
+                    disabled={!isValid || !ninDocument || !selfie || !governmentIdFront || (values.govt_id_type !== "international_passport" && !governmentIdBack) || selectedMakes.length === 0}
                     loading={isSubmitting}
                   />
                 </View>

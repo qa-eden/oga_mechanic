@@ -42,6 +42,13 @@ export default function useWebSocket({
   const onConnectRef = useRef(onConnect);
   const onDisconnectRef = useRef(onDisconnect);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Log connection state changes explicitly
+  useEffect(() => {
+    console.log(`\n=========================================`);
+    console.log(`📡 WebSocket is connected: ${isConnected}`);
+    console.log(`=========================================\n`);
+  }, [isConnected]);
   
   // Use state for local token to handle hydration fallback
   const storeToken = useUserStore((state) => state.accessToken);
@@ -111,7 +118,7 @@ export default function useWebSocket({
     const cleanPath = urlPath.replace(/^\//, "").replace(/\/$/, "");
     const fullPath = `${baseNoProto}/${cleanPath}`.replace(/\/+/g, "/");
     
-    // Construct finalUrl - ensuring trailing slash before query params as required by backend
+    // Construct finalUrl - ensuring no extra slashes before query params
     const finalUrl = `${protocol}://${fullPath}/?token=${storeToken}`;
 
     console.groupCollapsed(`🔌 [WebSocket Connecting] ${urlPath}`);
@@ -136,20 +143,29 @@ export default function useWebSocket({
       };
 
       ws.current.onmessage = (event) => {
-        console.log('🔥 [WS RAW RECEIVE] Data:', event.data);
+        console.log('\n=========================================');
+        console.log('🔥 [WEBSOCKET RAW MESSAGE RECEIVED] 🔥');
+        console.log(`URL Path: ${urlPath}`);
+        console.log('Raw Data String:', event.data);
+        console.log('Raw type String:', event.type);
+        console.log('=========================================\n');
+        
         try {
           const data: WebSocketMessage = JSON.parse(event.data);
-          console.log(`📥 [WebSocket RAW] ${urlPath}:`, JSON.stringify(data));
+          
+          // Log parsed object for easy inspection in devtools
+          console.groupCollapsed(`📥 [WebSocket Parsed JSON] Type: ${data.type || 'UNKNOWN'}`);
+          console.dir(data, { depth: null });
+          console.groupEnd();
           
           const handler = eventHandlersRef.current[data.type];
           if (handler) {
             handler(data);
           } else if (data.type !== 'ping') {
-             console.warn(`No handler for event: ${data.type}`);
+             console.warn(`⚠️ [WebSocket] No handler registered for event type: ${data.type}`);
           }
         } catch (error) {
-          console.error('Failed to parse WebSocket JSON:', error);
-          console.log('Raw message:', event.data);
+          console.error('❌ Failed to parse WebSocket JSON:', error);
         }
       };
 

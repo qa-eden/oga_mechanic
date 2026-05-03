@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, ScrollView, RefreshControl, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { mechanicRoutes } from "@/constants/routes";
@@ -271,6 +272,9 @@ const MechanicOrder = () => {
 
         <ScrollView
           className="flex-1 pt-4 mx-4"
+          contentContainerStyle={{
+            paddingBottom: LAYOUT.SCROLL_PADDING_BOTTOM,
+          }}
           refreshControl={
             <RefreshControl
               refreshing={requestsLoading}

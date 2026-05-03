@@ -8,7 +8,6 @@ import { LAYOUT } from "@/constants/units"
 import SearchBarWithCategories from "@/components/SearchBarWithCategories"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { routes } from "@/constants/routes"
-import CartIconBtn from "@/components/CartIconBtn"
 import SpecialistIconBtn from "@/components/SpecialistIconBtn"
 import { useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
 import { ProductListResponse, ProductListAPIResponse } from "@/lib/api/products"
@@ -20,20 +19,17 @@ import { ShoppingBagIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { StatusBar } from "expo-status-bar"
 import Animated, { FadeInDown } from "react-native-reanimated"
 import AnimatedPageContainer from "@/components/AnimatedPageContainer"
-import { useUserOrders } from "@/hooks/useOrders"
-import { ClipboardDocumentListIcon, ChevronRightIcon } from "react-native-heroicons/outline"
 
 const Shop = () => {
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
   const router = useRouter();
-  const { addToCart, removeFromCart } = useCart();
-  const params = useLocalSearchParams<{ category?: string; categoryId?: string }>();
+  const params = useLocalSearchParams<{ category?: string; categoryId?: string; q?: string }>();
 
   const [selectedCategory, setSelectedCategory] = useState(params.category || "All")
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     params.categoryId ? parseInt(params.categoryId) : null
   )
-  const [inputQuery, setInputQuery] = useState("")
+  const [inputQuery, setInputQuery] = useState(params.q || "")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
@@ -104,15 +100,6 @@ const Shop = () => {
   );
   const { data: categories, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
 
-  // Fetch all orders for the banner
-  const { data: ordersData, refetch: refetchOrders } = useUserOrders();
-  const activeOrdersCount = useMemo(() => {
-    if (!Array.isArray(ordersData?.data)) return 0;
-    // Count orders that are not 'delivered' or 'cancelled'
-    return ordersData.data.filter(order => 
-      !['delivered', 'cancelled', 'completed'].includes(order.status?.toLowerCase())
-    ).length;
-  }, [ordersData]);
 
   // Search functionality - only search when manually triggered
   const [searchTriggered, setSearchTriggered] = useState(false);
@@ -137,7 +124,7 @@ const Shop = () => {
   // Pull to refresh functionality
   const { refreshControl } = usePullToRefresh({
     onRefresh: async () => {
-      const promises = [refetchProducts(), refetchCategories(), refetchOrders()];
+      const promises = [refetchProducts(), refetchCategories()];
       if (searchTriggered) {
         promises.push(refetchSearch() as Promise<any>);
       }
@@ -171,7 +158,10 @@ const Shop = () => {
   const products = useMemo(() => {
     if (!productsData?.pages) return [];
     // Each page is a ProductListAPIResponse with structure: { data: { results: [...] } }
-    return productsData.pages.flatMap((page: ProductListAPIResponse) => page.data.results);
+    return productsData.pages.flatMap((page: ProductListAPIResponse) => {
+      const data = page.data;
+      return Array.isArray(data) ? data : (data?.results || []);
+    });
   }, [productsData]);
 
   // Determine which products to display
@@ -189,7 +179,13 @@ const Shop = () => {
 
     // Default: show all products (no filters applied)
     return products || [];
-  }, [searchTriggered, searchResults, products, searchQuery, searchCategoryId, searchMinPrice, searchMaxPrice, searchLoading, searchError, filtersApplied, appliedCategoryId, appliedMinPrice, appliedMaxPrice]);
+  }, [searchTriggered, searchResults, products,
+    searchQuery, searchCategoryId, searchMinPrice,
+    searchMaxPrice, searchLoading, searchError,
+    filtersApplied,
+    appliedCategoryId, appliedMinPrice,
+    appliedMaxPrice
+  ]);
 
 
   const handleFilterPress = () => {
@@ -272,7 +268,6 @@ const Shop = () => {
         reviewCount={0}
         price={parseFloat(item.price)}
         isFavorite={item.is_in_favorite_list}
-        isInCart={item.is_in_cart}
         productId={item.id}
         showLove={true}
         love={false}
@@ -282,14 +277,6 @@ const Shop = () => {
             params: { productId: item.id },
           });
         }}
-        onAddToCart={() => addToCart({
-            id: item.id,
-            name: item.name,
-            price: parseFloat(item.price),
-            stock: item.stock || 10,
-            image: item.images?.[0]?.image,
-        })}
-        onRemoveFromCart={() => removeFromCart(item.id)}
       />
     </Animated.View>
   )
@@ -327,7 +314,6 @@ const Shop = () => {
               </View>
               <View className="flex-row items-center gap-3">
                 <SpecialistIconBtn />
-                <CartIconBtn />
               </View>
             </View>
           </View>
@@ -367,8 +353,7 @@ const Shop = () => {
                   <Text className="text-red-600 text-xs font-NunitoBold">Clear Filters</Text>
                 </TouchableOpacity>
               )}
-                <SpecialistIconBtn />
-                <CartIconBtn />
+              <SpecialistIconBtn />
             </View>
           </View>
 
@@ -381,36 +366,7 @@ const Shop = () => {
             )}
           </View>
         </View>
-        
-        {/* Your Orders Card */}
-        <Animated.View 
-          entering={FadeInDown.delay(100).duration(500)}
-          className="px-3 mb-4"
-        >
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => router.push(routes.myOrders as any)}
-            className="rounded-2xl flex-row items-center justify-between p-2 border border-gray-200"
-          >
-            <View className="flex-row items-center gap-2">
-              <View className="w-10 h-10 bg-gray-50 rounded-xl items-center justify-center border border-gray-100">
-                <ClipboardDocumentListIcon size={20} color="#111827" />
-              </View>
-              <Text className="text-md font-NunitoBold text-gray-900">Your orders</Text>
-            </View>
-            
-            <View className="flex-row items-center gap-2">
-              {activeOrdersCount > 0 && (
-                <View className="bg-orange-500 px-2.5 py-1 rounded-full">
-                   <Text className="text-white text-[10px] font-NunitoExtraBold uppercase mr-0.5 tracking-wider">
-                    {activeOrdersCount}
-                  </Text>
-                </View>
-              )}
-              <ChevronRightIcon size={20} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
+
 
         <SearchBarWithCategories
           searchQuery={inputQuery}

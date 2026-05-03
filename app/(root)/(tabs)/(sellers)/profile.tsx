@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
-import { sellerRoutes } from "@/constants/routes";
+import { routes, sellerRoutes } from "@/constants/routes";
 import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
@@ -72,7 +72,7 @@ const SellerProfile = () => {
   React.useEffect(() => {
     if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
       const merchantData = merchantProfileQuery.data.data;
-      const hasKycData = !!(merchantData as any).cac_number || !!(merchantData as any).kyc?.is_complete;
+      const hasKycData = !!(merchantData as any).nin_number || !!(merchantData as any).kyc?.is_complete;
       setIsProfileComplete(hasKycData);
       
       // ONLY show automatically if we just switched roles and it's not complete
@@ -203,7 +203,7 @@ const SellerProfile = () => {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: SCROLL_PADDING_BOTTOM,
+          paddingBottom: 40,
         }}
         refreshControl={
           <RefreshControl 
@@ -285,19 +285,6 @@ const SellerProfile = () => {
 
               {/* Stats Row */}
               <View className="flex-row mt-4 pt-4 border-t border-gray-200">
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: sellerRoutes.home as any, params: { tab: 'orders' } })}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    {analyticsData?.order_count || 0}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
-                    <ChevronRightIcon size={12} color="#9CA3AF" />
-                  </View>
-                </TouchableOpacity>
                 
                 <TouchableOpacity 
                   activeOpacity={0.7}
@@ -313,14 +300,6 @@ const SellerProfile = () => {
                   </View>
                 </TouchableOpacity>
 
-                <View className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2">
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    ₦{((analyticsData?.total_sales || 0) / 1000).toFixed(0)}k
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold">Sales</Text>
-                  </View>
-                </View>
               </View>
             </TouchableOpacity>
           </View>
@@ -339,7 +318,7 @@ const SellerProfile = () => {
                   title={item.name}
                   icon={item.image}
                   onPress={() => {
-                    if (item.name === "Switch Role") {
+                    if (item.name === "Service Provider") {
                       setShowSwitchUserModal(true);
                     } else if (item.route) {
                       router.push(item.route as any);
@@ -396,7 +375,7 @@ const SellerProfile = () => {
                   key={item.id}
                   title={item.name}
                   icon={item.image}
-                  onPress={() => {}}
+                  onPress={() => router.push(routes.supportSuggestions as any)}
                 />
               ))}
             </View>

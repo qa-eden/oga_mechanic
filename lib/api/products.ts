@@ -610,6 +610,25 @@ export const productsAPI = {
     }
   },
 
+  // Search products by VIN specifically
+  searchByVin: async (vin: string): Promise<ProductListResponse[]> => {
+    const params = new URLSearchParams();
+    params.append('vin', vin);
+    
+    const response = await api.get<any>(
+      `${SERVICE_ENDPOINTS.PRODUCTS_SEARCH}?${params.toString()}`
+    );
+    
+    // Handle different response structures
+    if (Array.isArray(response.data.data)) {
+      return response.data.data;
+    } else if (response.data.data && Array.isArray(response.data.data.results)) {
+      return response.data.data.results;
+    } else {
+      return [];
+    }
+  },
+
   // Get all categories
   getCategories: async (): Promise<CategoryResponse[]> => {
     const response = await api.get<CategoriesAPIResponse>(SERVICE_ENDPOINTS.PRODUCTS_CATEGORIES);

@@ -94,6 +94,7 @@ export const mechanicRoutes = {
   earnings: "/(root)/(tabs)/(mechanic)/earnings",
   order: "/(root)/(tabs)/(mechanic)/order",
   profile: "/(root)/(tabs)/(mechanic)/profile",
+  shop: "/(root)/(tabs)/(mechanic)/shop",
 
   ConfirmWithdrawal: "/(root)/(screens)/(mechanic)/confirmWithdrawal",
   ConfirmOrder: "/(root)/(screens)/(mechanic)/confirmOrder",

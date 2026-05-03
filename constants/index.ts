@@ -33,6 +33,7 @@ import empty from "@/assets/icons/empty.svg";
 import bankIcon from "@/assets/icons/bank.svg";
 import mechanic2 from "@/assets/icons/mechanic2.svg";
 import rent from "@/assets/icons/rent.svg";
+import round from "@/assets/icons/round.svg";
 
 //profile icons
 import redPhone from "@/assets/icons/redPhone.svg";
@@ -134,6 +135,7 @@ export const icons = {
   empty,
   orderIcon2,
   activeOrderIcon2,
+  round
 };
 
 export const onboarding = [
@@ -213,7 +215,7 @@ export const Services: ServicesProps[] = [
     bgColor: "#F3F2FE",
     border: "#ACA6FF",
   },
-   {
+  {
     id: 8,
     name: "My Mechanic Orders",
     description: "View all your repair requests",
@@ -246,12 +248,20 @@ export const Services: ServicesProps[] = [
     border: "#189804",
   },
   {
-    id: 7,
-    name: "Chat a Specialist",
-    description: "Get expert advice on your car",
-    image: HeadphonesIcon,
-    bgColor: "#F8FFD8",
-    border: "#F6B80D",
+    id: 9,
+    name: "Service Provider",
+    description: "Switch to a different account role",
+    image: round,
+    bgColor: "#E0F2FE",
+    border: "#7DD3FC",
+  },
+  {
+    id: 10,
+    name: "VIN Search",
+    description: "Search car details by VIN",
+    image: car,
+    bgColor: "#F0FDF4",
+    border: "#86EFAC",
   },
 ];
 
@@ -285,9 +295,9 @@ export const ProfileSettings = {
     },
     {
       id: 3,
-      name: "Switch Role",
+      name: "Service Provider",
       image: switch1,
-      route: "Switch Role",
+      route: "Service Provider",
     },
     {
       id: 11,
@@ -333,9 +343,9 @@ export const MechanicProfileSettings = {
     },
     {
       id: 5,
-      name: "Switch Role",
+      name: "Service Provider",
       image: switch1,
-      route: "Switch Role",
+      route: "Service Provider",
     },
     {
       id: 7,
@@ -375,9 +385,9 @@ export const SellerProfileSettings = {
     },
     {
       id: 5,
-      name: "Switch Role",
+      name: "Service Provider",
       image: switch1,
-      route: "Switch Role",
+      route: "Service Provider",
     },
     {
       id: 6,
@@ -395,31 +405,31 @@ export const ProfileSopprt = {
       id: 1,
       name: "+234 70564733811",
       image: phone1,
-      route: "editProfile",
+      route: "supportSuggestions",
     },
     {
       id: 2,
       name: "+234 70564733811",
       image: phone1,
-      route: "notifications",
+      route: "supportSuggestions",
     },
     {
       id: 3,
       name: "@ogamechanic",
       image: x,
-      route: "editProfile",
+      route: "supportSuggestions",
     },
     {
       id: 4,
       name: "Oga mechanic",
       image: linkedIn,
-      route: "notifications",
+      route: "supportSuggestions",
     },
     {
       id: 5,
       name: "help@ogamechanic.com",
       image: email,
-      route: "notifications",
+      route: "supportSuggestions",
     },
   ],
 };

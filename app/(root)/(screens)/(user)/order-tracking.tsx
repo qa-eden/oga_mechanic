@@ -1,6 +1,6 @@
 "use client"
 
-import { View, Text, ScrollView, TouchableOpacity, Animated, Image } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, Animated, Image, Platform } from "react-native"
 import { useEffect, useRef } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useLocalSearchParams, router } from "expo-router"
@@ -144,7 +144,7 @@ const OrderTracking = () => {
         <Text className="text-xl font-NunitoExtraBold text-gray-900">Track Order</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 70 : 40 }}>
         <Animated.View 
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
           className="px-6 py-6"

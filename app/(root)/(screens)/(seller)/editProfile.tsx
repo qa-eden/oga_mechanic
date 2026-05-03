@@ -43,7 +43,7 @@ const editSellerProfileSchema = Yup.object().shape({
   location: Yup.string().nullable(),
   state: Yup.string().nullable(),
   lga: Yup.string().nullable(),
-  cac_number: Yup.string().nullable(),
+  nin_number: Yup.string().nullable(),
 });
 
 const EditSellerProfile = () => {
@@ -60,9 +60,9 @@ const EditSellerProfile = () => {
     location: "",
     state: "",
     lga: "",
-    cac_number: "",
+    nin_number: "",
     selfie: "",
-    cac_document: "",
+    nin_document: "",
   });
 
   const { data: merchantProfileData, isLoading: isLoadingMerchant } = useMerchantProfile();
@@ -79,9 +79,9 @@ const EditSellerProfile = () => {
         location: merchantProfileInfo?.location || "",
         state: merchantProfileInfo?.state || "",
         lga: merchantProfileInfo?.lga || "",
-        cac_number: merchantProfileInfo?.cac_number || "",
+        nin_number: merchantProfileInfo?.nin_number || "",
         selfie: merchantProfileInfo?.selfie || (userData as any)?.profile_picture || "",
-        cac_document: merchantProfileInfo?.cac_document || "",
+        nin_document: merchantProfileInfo?.nin_document || "",
       });
     }
   }, [userData, merchantProfileInfo]);
@@ -102,7 +102,7 @@ const EditSellerProfile = () => {
       };
 
       const selfieFile = getFileObject(values.selfie, 'selfie');
-      const cacDocFile = getFileObject(values.cac_document, 'cac_document');
+      const ninDocFile = getFileObject(values.nin_document, 'nin_document');
 
       const formData = new FormData();
       formData.append('requestType', 'inbound');
@@ -117,11 +117,11 @@ const EditSellerProfile = () => {
       if (values.location) formData.append('location', values.location);
       if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
-      if (values.cac_number) formData.append('cac_number', values.cac_number);
+      if (values.nin_number) formData.append('nin_number', values.nin_number);
 
       // Append Files (now as file objects or existing URLs)
       if (selfieFile) formData.append('selfie', selfieFile);
-      if (cacDocFile) formData.append('cac_document', cacDocFile);
+      if (ninDocFile) formData.append('nin_document', ninDocFile);
 
       await submitKYCMutation.mutateAsync(formData);
       
@@ -376,17 +376,17 @@ const EditSellerProfile = () => {
                 {/* CAC Number */}
                 <View className="mb-3">
                   <FormikInput
-                    name="cac_number"
-                    label="CAC Number"
-                    placeholder="RC1234567"
+                    name="nin_number"
+                    label="NIN Number"
+                    placeholder="Enter your 11-digit NIN"
                   />
                 </View>
 
                 <View className="mt-3">
                   <DocumentPicker 
-                    label="CAC Registration Document" 
-                    field="cac_document" 
-                    value={values.cac_document} 
+                    label="NIN Document" 
+                    field="nin_document" 
+                    value={values.nin_document} 
                     setFieldValue={setFieldValue} 
                   />
                 </View>

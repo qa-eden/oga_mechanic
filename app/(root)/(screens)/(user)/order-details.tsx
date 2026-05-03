@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -220,7 +221,7 @@ const OrderDetails = () => {
         <Text className="text-xl font-NunitoExtraBold text-gray-900">Order Receipt</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 70 : 40 }}>
         
         {/* Status Card */}
         <Animated.View entering={FadeInDown.duration(600)} className="bg-white p-6 mb-4 shadow-sm">

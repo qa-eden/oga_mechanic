@@ -24,15 +24,10 @@ interface Props {
   showLove?: boolean;
   onPress?: () => void;
   onLovePress?: () => void;
-  onAddToCart?: () => Promise<void> | void;
-  onRemoveFromCart?: () => Promise<void> | void;
   isLoading?: boolean;
   containerStyle?: string;
   productId?: number | string;
   isFavorite?: boolean;
-  isInCart?: boolean;
-  showAddToCart?: boolean;
-  stock?: number;
 }
 
 const Card1 = memo(({
@@ -46,29 +41,13 @@ const Card1 = memo(({
   love = false,
   onPress,
   onLovePress,
-  onAddToCart,
-  onRemoveFromCart,
   isLoading = false,
   containerStyle,
   productId,
   isFavorite = false,
-  isInCart = false,
-  showAddToCart = true,
-  stock = 10,
 }: Props) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const heartAnim = useRef(new Animated.Value(1)).current;
-  const cartScaleAnim = useRef(new Animated.Value(1)).current;
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [isAdded, setIsAdded] = useState(isInCart);
-
-  // Cart Context
-  const { addToCart, removeFromCart, isInCart: checkIsInCart } = useCart();
-
-  // Sync internal state with prop or context
-  useEffect(() => {
-    setIsAdded(isInCart || checkIsInCart(productId?.toString() || ''));
-  }, [isInCart, productId, checkIsInCart]);
 
   // Favorite API hook
   const toggleFavoriteMutation = useToggleFavorite();
@@ -285,88 +264,6 @@ const Card1 = memo(({
                 value={price}
                 className="text-lg font-NunitoExtraBold text-primary-600"
               />
-              {showAddToCart && (
-                <TouchableOpacity 
-                  onPress={async () => {
-                    console.log('🛒 Cart button pressed. ProductId:', productId, 'isAdded:', isAdded);
-                    // Start animation
-                    Animated.sequence([
-                      Animated.timing(cartScaleAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
-                      Animated.spring(cartScaleAnim, { toValue: 1, friction: 4, useNativeDriver: true })
-                    ]).start();
-
-                    const currentProductId = productId?.toString();
-                    if (!currentProductId) {
-                      console.log('🛒 No product ID found');
-                      return;
-                    }
-
-                    if (isAdded) {
-                      console.log('🛒 Removing from cart...');
-                      if (onRemoveFromCart) {
-                        console.log('🛒 Using onRemoveFromCart prop');
-                        setIsAddingToCart(true);
-                        await onRemoveFromCart();
-                        setIsAddingToCart(false);
-                        setIsAdded(false);
-                        showToast.success("Removed from cart");
-                      } else {
-                        console.log('🛒 Using fallback removeFromCart from context');
-                        setIsAddingToCart(true);
-                        await removeFromCart(currentProductId);
-                        setIsAddingToCart(false);
-                        setIsAdded(false);
-                      }
-                    } else {
-                      console.log('🛒 Adding to cart...');
-                      if (onAddToCart) {
-                        console.log('🛒 Using onAddToCart prop');
-                        setIsAddingToCart(true);
-                        await onAddToCart();
-                        setIsAddingToCart(false);
-                        setIsAdded(true);
-                      } else {
-                        console.log('🛒 Using fallback addToCart from context');
-                        setIsAddingToCart(true);
-                        try {
-                          await addToCart({
-                            id: currentProductId,
-                            name: name || 'Product',
-                            price: price || 0,
-                            stock: stock,
-                            image: typeof Images === 'string' ? Images : 'sparePart'
-                          });
-                          console.log('🛒 Fallback addToCart call completed');
-                        } catch (err) {
-                          console.error('🛒 Fallback addToCart error:', err);
-                        }
-                        setIsAddingToCart(false);
-                        setIsAdded(true);
-                        
-                        // Animate success pop
-                        Animated.sequence([
-                          Animated.timing(cartScaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
-                          Animated.spring(cartScaleAnim, { toValue: 1, friction: 4, useNativeDriver: true })
-                        ]).start();
-                      }
-                    }
-                  }}
-                  disabled={isAddingToCart}
-                  className={`${isAdded ? 'bg-primary-500/10' : 'bg-gray-100'} p-2 rounded-full w-10 h-10 items-center justify-center transition-colors`}
-                >
-                  <Animated.View style={{ transform: [{ scale: cartScaleAnim }] }}>
-                    {isAddingToCart ? (
-                      <ActivityIndicator size="small" color={isAdded ? "#D30309" : "#111827"} />
-                    ) : (
-                      <ShoppingCartIcon 
-                        size={20} 
-                        color={isAdded ? "#D30309" : "#111827"} 
-                        fill={isAdded ? "#D30309" : "none"}
-                      />
-                    )}
-                  </Animated.View>
-                </TouchableOpacity>
-              )}
             </View>
           )}
 

@@ -19,15 +19,19 @@ import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import Navbar from "@/components/Navbar";
-import FloatingCartButton from "@/components/FloatingCartButton";
 import { LAYOUT } from "@/constants/units";
 import { useHomeProducts, useActiveBiddingProducts } from "@/hooks/useProducts";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import BiddingCarousel from "@/components/bidding/BiddingCarousel";
+import SpecialistIconBtn from "@/components/SpecialistIconBtn";
+import SwitchUserModal from "@/components/modals/SwitchUserModal";
+import VINSearchModal from "@/components/modals/VINSearchModal";
 
 const Home = () => {
 
   const [refreshing, setRefreshing] = useState(false);
+  const [isSwitchRoleVisible, setIsSwitchRoleVisible] = useState(false);
+  const [isVinSearchVisible, setIsVinSearchVisible] = useState(false);
 
   // Fetch home products to get category IDs
   const { data: homeProducts, refetch: refetchHomeProducts } = useHomeProducts();
@@ -61,9 +65,12 @@ const Home = () => {
     console.log("Service pressed:", service.name);
     // Navigate to specific service screen based on service type
     switch (service.name) {
-      case "Order a Ride":
-        router.push(routes.enterAddressForRide);
+      case "Service Provider":
+        setIsSwitchRoleVisible(true);
         break;
+      // case "Order a Ride":
+      //   router.push(routes.enterAddressForRide);
+      //   break;
       case "Buy spare parts":
         if (sparePartCategoryId) {
           router.push({
@@ -93,9 +100,9 @@ const Home = () => {
       case "Rent a car":
         router.push(routes.rentACar);
         break;
-      case "Tow your car":
-        router.push(routes.enterAddressForRide);
-        break;
+      // case "Tow your car":
+      //   router.push(routes.enterAddressForRide);
+      //   break;
       case "Chat a Specialist":
         router.push(routes.supportSuggestions as any);
         break;
@@ -104,6 +111,9 @@ const Home = () => {
         break;
       case "My Mechanic Orders":
         router.push(routes.myMechanicOrders);
+        break;
+      case "VIN Search":
+        setIsVinSearchVisible(true);
         break;
       default:
         console.log("Navigate to:", service.name);
@@ -193,7 +203,11 @@ const Home = () => {
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar />
       {/* Enhanced Header */}
-      <FloatingCartButton bottom={100} right={20} />
+      
+      {/* Floating Chat Specialist */}
+      <View style={{ position: 'absolute', bottom: 170, right: 24, zIndex: 1000 }}>
+        <SpecialistIconBtn isFloating={true} />
+      </View>
       
       {/* Navbar */}
       <View className="px-4">
@@ -239,6 +253,19 @@ const Home = () => {
           </View>
         </AnimatedPageContainer>
       </ScrollView>
+
+      {/* Switch Role Modal */}
+      <SwitchUserModal 
+        isVisible={isSwitchRoleVisible} 
+        onClose={() => setIsSwitchRoleVisible(false)} 
+        onSwitchUser={() => {}}
+      />
+
+      {/* VIN Search Modal */}
+      <VINSearchModal
+        isVisible={isVinSearchVisible}
+        onClose={() => setIsVinSearchVisible(false)}
+      />
     </SafeAreaView>
   );
 };

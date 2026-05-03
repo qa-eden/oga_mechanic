@@ -93,9 +93,9 @@ const ChatSpecialist = () => {
         timestamp: m.created_at
           ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           : "",
-        status: m.sender === "me" 
+        status: (m.sender === "me" 
           ? (m.is_read ? 'read' : 'sent') 
-          : 'read',
+          : 'read') as 'read' | 'sent' | 'sending' | 'delivered',
       }));
 
     // If we have an optimistic first message, prepend/append it appropriately

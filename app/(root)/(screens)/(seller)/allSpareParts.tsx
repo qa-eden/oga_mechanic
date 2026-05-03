@@ -77,8 +77,12 @@ const AllSpareParts = () => {
         undefined, // limit
         merchantId  // merchantId
       )
+      // Handle both array and paginated response formats
+      const data = response.data;
+      const allFetchedProducts = Array.isArray(data) ? data : (data?.results || []);
+
       // Filter for spare parts only
-      const sparePartProducts = (response.data.results || []).filter((product: any) => 
+      const sparePartProducts = allFetchedProducts.filter((product: any) => 
         product.category?.name?.toLowerCase().includes('spare') || 
         product.category?.name?.toLowerCase().includes('part')
       )

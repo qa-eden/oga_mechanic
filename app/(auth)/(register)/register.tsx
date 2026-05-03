@@ -147,6 +147,17 @@ const Register = () => {
               />
             </View>
 
+             {/* Phone Number Input */}
+            <FormikInput
+              name="phone_number"
+              label="Phone Number"
+              placeholder="08000000000"
+              containerStyle=""
+              type="phone"
+              required={true}
+              keyboardType="phone-pad"
+            />
+
             {/* Email Input */}
             <FormikInput
               name="email"
@@ -157,17 +168,6 @@ const Register = () => {
               required={true}
               autoCapitalize="none"
               autoCorrect={false}
-            />
-
-            {/* Phone Number Input */}
-            <FormikInput
-              name="phone_number"
-              label="Phone Number"
-              placeholder="08000000000"
-              containerStyle=""
-              type="phone"
-              required={true}
-              keyboardType="phone-pad"
             />
 
             {/* Password Input */}

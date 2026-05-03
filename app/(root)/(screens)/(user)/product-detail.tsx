@@ -9,6 +9,7 @@ import {
   Dimensions,
   Share,
   Platform,
+  Linking,
 } from "react-native";
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
@@ -17,18 +18,12 @@ import { ShareIcon } from 'react-native-heroicons/outline';
 const { width: screenWidth } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
-import CartIconBtn from "@/components/CartIconBtn";
 import BackArrowBtn from "@/components/BackArrowBtn";
-import { useCart as useCartContext } from "@/contexts/CartContext";
 import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
+import { useMerchantProfileByUuid } from "@/hooks/useUserProfile";
 import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
-import {
-  useCart,
-  useAddToCart,
-  useRemoveFromCart,
-  useUpdateCartItemQuantity,
-} from "@/hooks/useCart";
+import { routes } from "@/constants/routes";
 import {
   ProductImageGallery,
   ProductSellerCard,
@@ -40,22 +35,19 @@ import {
   ProductReviews,
   ProductRepairHistory,
 } from "@/components/product-detail";
+import ContactSelectionModal from "@/components/modals/ContactSelectionModal";
 
 const ProductDetail = () => {
   const params = useLocalSearchParams() as { id?: string; productId?: string };
   const productId = params?.id || params?.productId;
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   const [showFavoriteSuccess, setShowFavoriteSuccess] = useState(false);
-  const { getItemQuantity } = useCartContext();
+  const [isContactModalVisible, setIsContactModalVisible] = useState(false);
 
   // API hooks
   const { data: product, isLoading, error, refetch } = useProductDetail(productId || "");
-  const { refetch: refetchCart } = useCart();
-  const addToCartMutation = useAddToCart();
-  const removeFromCartMutation = useRemoveFromCart();
-  const updateCartItemQuantityMutation = useUpdateCartItemQuantity();
+  const { data: merchantProfileData } = useMerchantProfileByUuid(product?.merchant_id || "", !!product?.merchant_id);
   const toggleFavoriteMutation = useToggleFavorite();
 
   // Refetch on focus
@@ -63,18 +55,11 @@ const ProductDetail = () => {
     useCallback(() => {
       if (productId) {
         refetch();
-        refetchCart();
       }
-    }, [productId, refetch, refetchCart])
+    }, [productId, refetch])
   );
 
-  // Sync quantity with cart
-  useEffect(() => {
-    if (product?.is_in_cart) {
-      const cartQuantity = getItemQuantity(product.id);
-      if (cartQuantity > 0) setQuantity(cartQuantity);
-    }
-  }, [product, getItemQuantity]);
+
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -110,62 +95,69 @@ const ProductDetail = () => {
     return typeof product.price === 'string' ? parseFloat(product.price) : product.price;
   }, [product?.price]);
 
-  // Handlers - must be defined before conditional returns
-  const handleAddToCart = useCallback(async () => {
+  // Handlers - Communication
+  const handleCall = useCallback(() => {
     if (!product) return;
-    try {
-      // Haptic feedback
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      await addToCartMutation.mutateAsync({ productId: product.id, quantity });
-      await Promise.all([refetchCart(), refetch()]);
-    } catch (e) {}
-  }, [product?.id, quantity, addToCartMutation, refetchCart, refetch]);
+    
+    // Prioritize phone number from the full merchant profile we fetched
+    const merchantPhone = merchantProfileData?.data?.merchant_profile?.user?.phone_number;
+    const fallbackPhone = (product as any).merchant?.phone_number || product.contact_info?.phone || "08000000000";
+    
+    if (merchantPhone || fallbackPhone) {
+      setIsContactModalVisible(true);
+    } else {
+      showToast.error("Seller phone number not available");
+    }
+    
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, [product, merchantProfileData]);
 
-  const handleRemoveFromCart = useCallback(async () => {
+  const performVoiceCall = useCallback(() => {
     if (!product) return;
-    try {
-      // Haptic feedback
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      await removeFromCartMutation.mutateAsync(product.id);
-      await Promise.all([refetchCart(), refetch()]);
-    } catch (e) {}
-  }, [product?.id, removeFromCartMutation, refetchCart, refetch]);
+    const merchantPhone = merchantProfileData?.data?.merchant_profile?.user?.phone_number;
+    const fallbackPhone = (product as any).merchant?.phone_number || product.contact_info?.phone || "08000000000";
+    const phoneNumber = merchantPhone || fallbackPhone;
+    Linking.openURL(`tel:${phoneNumber}`);
+  }, [product, merchantProfileData]);
 
-  const handleIncrement = useCallback(async () => {
-    if (!product || quantity >= (product.stock || 10)) return;
-    try {
-      // Haptic feedback
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const performWhatsAppCall = useCallback(() => {
+    if (!product) return;
+    const merchantPhone = merchantProfileData?.data?.merchant_profile?.user?.phone_number;
+    const fallbackPhone = (product as any).merchant?.phone_number || product.contact_info?.phone || "08000000000";
+    const phoneNumber = merchantPhone || fallbackPhone;
+    
+    // Format number: remove leading + and ensure international format
+    const cleanedNumber = phoneNumber.replace(/\D/g, '');
+    const whatsappUrl = `https://wa.me/${cleanedNumber}`;
+    
+    Linking.canOpenURL(whatsappUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        showToast.error("WhatsApp is not installed on this device");
       }
-      await updateCartItemQuantityMutation.mutateAsync({
-        productId: product.id,
-        action: "increment",
-      });
-      setQuantity((prev) => prev + 1);
-      await Promise.all([refetchCart(), refetch()]);
-    } catch (e) {}
-  }, [quantity, product?.stock, product?.id, updateCartItemQuantityMutation, refetchCart, refetch]);
+    });
+  }, [product, merchantProfileData]);
 
-  const handleDecrement = useCallback(async () => {
-    if (!product || quantity <= 1) return;
-    try {
-      // Haptic feedback
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleChat = useCallback(() => {
+    if (!product) return;
+
+    // Navigate to chat with merchant
+    router.push({
+      pathname: routes.chatMechanic, // Reusing mechanics chat for now or generic chat if available
+      params: {
+        mechanicId: product.merchant_id,
+        mechanicName: product.merchant_email.split('@')[0],
+        mechanicImage: product.images?.[0]?.image || "",
       }
-      await updateCartItemQuantityMutation.mutateAsync({
-        productId: product.id,
-        action: "decrement",
-      });
-      setQuantity((prev) => prev - 1);
-      await Promise.all([refetchCart(), refetch()]);
-    } catch (e) {}
-  }, [quantity, product?.id, updateCartItemQuantityMutation, refetchCart, refetch]);
+    });
+
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [product]);
 
   const handleToggleFavorite = useCallback(async () => {
     if (!product) return;
@@ -220,7 +212,6 @@ const ProductDetail = () => {
           <View className="flex-1 items-center">
             <View className="w-32 h-5 bg-gray-200 rounded-lg" />
           </View>
-          <CartIconBtn />
         </View>
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Image Skeleton */}
@@ -257,7 +248,6 @@ const ProductDetail = () => {
           <Text className="text-[1.3rem] font-NunitoBold text-gray-900">
             Product Detail
           </Text>
-          <CartIconBtn />
         </View>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-lg font-NunitoMedium text-red-600 text-center">
@@ -280,7 +270,6 @@ const ProductDetail = () => {
           <Text className="text-[1.3rem] font-NunitoBold text-gray-900">
             Product Detail
           </Text>
-          <CartIconBtn />
         </View>
         <View className="flex-1 items-center justify-center">
           <Text className="text-lg font-NunitoMedium text-gray-600">
@@ -308,7 +297,6 @@ const ProductDetail = () => {
           >
             <ShareIcon size={20} color="#374151" />
           </TouchableOpacity>
-          <CartIconBtn />
         </View>
       </View>
 
@@ -336,6 +324,7 @@ const ProductDetail = () => {
             merchantEmail={product.merchant_email}
             merchantRating={product.merchant_rating ?? undefined}
             purchasedCount={product.purchased_count ?? undefined}
+            merchantProfile={merchantProfileData?.data?.merchant_profile}
           />
         </Animated.View>
 
@@ -415,22 +404,22 @@ const ProductDetail = () => {
         <View className="h-28" />
       </ScrollView>
 
-      {/* Action Bar */}
       <ProductActionBar
-        isInCart={product.is_in_cart}
         isFavorite={product.is_in_favorite_list}
-        quantity={quantity}
-        maxStock={product.stock || 10}
         showFavoriteSuccess={showFavoriteSuccess}
         isTogglingFavorite={toggleFavoriteMutation.isPending}
-        isAddingToCart={addToCartMutation.isPending}
-        isRemovingFromCart={removeFromCartMutation.isPending}
-        isUpdatingQuantity={updateCartItemQuantityMutation.isPending}
         onToggleFavorite={handleToggleFavorite}
-        onAddToCart={handleAddToCart}
-        onRemoveFromCart={handleRemoveFromCart}
-        onIncrement={handleIncrement}
-        onDecrement={handleDecrement}
+        onCall={handleCall}
+        onChat={handleChat}
+      />
+
+      <ContactSelectionModal
+        visible={isContactModalVisible}
+        onClose={() => setIsContactModalVisible(false)}
+        onVoiceCall={performVoiceCall}
+        onWhatsAppCall={performWhatsAppCall}
+        phoneNumber={merchantProfileData?.data?.merchant_profile?.user?.phone_number ?? product?.contact_info?.phone ?? "N/A"}
+        storeName={merchantProfileData?.data?.merchant_profile?.store_name ?? undefined}
       />
     </SafeAreaView>
   );

@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import { router } from "expo-router";
-import { mechanicRoutes } from "@/constants/routes";
+import { mechanicRoutes, routes } from "@/constants/routes";
 import { ChevronRightIcon, ArrowRightOnRectangleIcon } from "react-native-heroicons/solid";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import LogoutModal from "@/components/modals/LogoutModal";
@@ -194,129 +194,131 @@ const MechanicProfile = () => {
         }
       >
         <AnimatedPageContainer animationType="fadeInDown" duration={500}>
-          <View className="px-5 pt-4">
-            {/* Header */}
-            <View className="mb-6">
-              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-                Mechanic Account
-              </Text>
-            </View>
+          {/* Header Section */}
+          <View className="rounded-b-[2.5rem] overflow-hidden shadow-lg mb-6">
+            <View className="bg-white px-5 pt-6 pb-6">
+              {/* Top Bar */}
+              <View className="flex-row justify-between items-center mb-5">
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900">Mechanic Account</Text>
+              </View>
 
-            <View className="mb-4">
-              <KYCBanner 
-                isVisible={!isProfileComplete || isPendingApproval} 
-                role="mechanic" 
-                isPending={isPendingApproval} 
-              />
-            </View>
+              <View className="mb-4">
+                <KYCBanner 
+                  isVisible={!isProfileComplete || isPendingApproval} 
+                  role="mechanic" 
+                  isPending={isPendingApproval} 
+                />
+              </View>
 
-            {/* Profile Card */}
-            <View className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-              <View className="flex-row items-center">
-                {/* Avatar */}
-                <View className="relative mr-4">
-                  {profileImage ? (
-                    <Image
-                      source={{ uri: profileImage }}
-                      className="w-16 h-16 rounded-2xl"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={['#D30309', '#B91C1C']}
-                      className="w-16 h-16 rounded-2xl items-center justify-center"
-                    >
-                      <Text className="text-2xl font-NunitoExtraBold text-white">
-                        {displayName ? displayName.charAt(0).toUpperCase() : 'M'}
-                      </Text>
-                    </LinearGradient>
-                  )}
-                  {isVerified && (
-                    <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
-                      <Text className="text-white text-[10px]">✓</Text>
-                    </View>
-                  )}
-                </View>
+              {/* Profile Card */}
+              <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <View className="flex-row items-center">
+                  {/* Avatar */}
+                  <View className="relative mr-4">
+                    {profileImage ? (
+                      <Image
+                        source={{ uri: profileImage }}
+                        className="w-16 h-16 rounded-2xl"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={['#D30309', '#B91C1C']}
+                        className="w-16 h-16 rounded-2xl items-center justify-center"
+                      >
+                        <Text className="text-2xl font-NunitoExtraBold text-white">
+                          {displayName ? displayName.charAt(0).toUpperCase() : 'M'}
+                        </Text>
+                      </LinearGradient>
+                    )}
+                    {isVerified && (
+                      <View className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white">
+                        <Text className="text-white text-[10px]">✓</Text>
+                      </View>
+                    )}
+                  </View>
 
-                {/* User Info */}
-                <View className="flex-1">
-                  <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">
-                    {displayName || 'Mechanic'}
-                  </Text>
-                  {displayEmail && (
-                    <Text className="text-gray-500 text-sm font-NunitoMedium">
-                      {displayEmail}
+                  {/* User Info */}
+                  <View className="flex-1">
+                    <Text className="text-lg font-NunitoBold text-gray-900 mb-0.5">
+                      {displayName || 'Mechanic'}
                     </Text>
-                  )}
+                    {displayEmail && (
+                      <Text className="text-gray-500 text-sm font-NunitoMedium">
+                        {displayEmail}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Role Badge */}
+                  <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
+                    <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
+                      {activeRole.replace('_', ' ')}
+                    </Text>
+                  </View>
                 </View>
 
-                {/* Role Badge */}
-                <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
-                  <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
-                    {activeRole.replace('_', ' ')}
-                  </Text>
+                {/* Stats Row */}
+                <View className="flex-row mt-4 pt-4 border-t border-gray-200">
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                      {completedJobs}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Completed</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                      {pendingJobs}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Pending</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => router.push(mechanicRoutes.earnings as any)}
+                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
+                  >
+                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
+                      ₦{totalEarnings >= 1000 ? `${(totalEarnings / 1000).toFixed(1)}k` : totalEarnings}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Earnings</Text>
+                      <ChevronRightIcon size={12} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Stats Row */}
-              <View className="flex-row mt-4 pt-4 border-t border-gray-200">
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    {completedJobs}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Completed</Text>
-                    <ChevronRightIcon size={12} color="#9CA3AF" />
-                  </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: mechanicRoutes.home as any, params: { tab: 'order' } })}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    {pendingJobs}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Pending</Text>
-                    <ChevronRightIcon size={12} color="#9CA3AF" />
-                  </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => router.push(mechanicRoutes.earnings as any)}
-                  className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                >
-                  <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">
-                    ₦{totalEarnings >= 1000 ? `${(totalEarnings / 1000).toFixed(1)}k` : totalEarnings}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Earnings</Text>
-                    <ChevronRightIcon size={12} color="#9CA3AF" />
-                  </View>
-                </TouchableOpacity>
               </View>
             </View>
+          </View>
 
-          {/* Account Settings Section */}
-            <View className="bg-white rounded-2xl mt-6 px-4 border border-gray-100 shadow-sm">
-              <View className="py-2">
-                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
-                  Account Settings
-                </Text>
+          <View className="px-5 space-y-5 mt-2">
+
+            {/* Account Settings Section */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase mb-3 ml-1">Account Settings</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
                 {MechanicProfileSettings.options.map((item) => (
                   <MenuItem
                     key={String(item.id)}
                     title={item.name}
                     icon={item.image}
                     onPress={() => {
-                      if (item.name === "Switch Role") {
+                      if (item.name === "Service Provider") {
                         setShowSwitchUserModal(true);
                       } else if (item.route) {
                         router.push(item.route as any);
@@ -327,20 +329,18 @@ const MechanicProfile = () => {
               </View>
             </View>
 
-          {/* Preferences Section */}
-            <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
-              <View className="py-2">
-                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
-                  Preferences
-                </Text>
+            {/* Preferences Section */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">Preferences</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
                 <MenuItem
                   title="Enable Fingerprint/Face ID"
                   icon={icons.faceId}
                   showChevron={false}
                   rightElement={
                     <Switch
-                      trackColor={{ false: "#E5E7EB", true: "#22C55E" }}
-                      thumbColor="white"
+                      trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                      thumbColor={isEnabledFaceId ? "white" : "#F3F4F6"}
                       onValueChange={setIsEnabledFaceId}
                       value={isEnabledFaceId}
                     />
@@ -352,8 +352,8 @@ const MechanicProfile = () => {
                   showChevron={false}
                   rightElement={
                     <Switch
-                      trackColor={{ false: "#E5E7EB", true: "#22C55E" }}
-                      thumbColor="white"
+                      trackColor={{ false: "#E5E7EB", true: "#50BE4E" }}
+                      thumbColor={isEnabledEnablePass ? "white" : "#F3F4F6"}
                       onValueChange={setIsEnabledEnablePass}
                       value={isEnabledEnablePass}
                     />
@@ -362,45 +362,44 @@ const MechanicProfile = () => {
               </View>
             </View>
 
-          {/* Support Section */}
-            <View className="bg-white rounded-2xl mt-4 px-4 border border-gray-100 shadow-sm">
-              <View className="py-2">
-                <Text className="text-xs font-NunitoBold text-gray-400 uppercase tracking-wider pt-3 pb-1">
-                  Support
-                </Text>
+            {/* Support Section */}
+            <View>
+              <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">Support</Text>
+              <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
                 {ProfileSopprt.options.map((item) => (
                   <MenuItem
                     key={String(item.id)}
                     title={item.name}
                     icon={item.image}
+                    onPress={() => router.push(routes.supportSuggestions as any)}
                   />
                 ))}
               </View>
             </View>
 
           {/* Logout Button */}
-            <TouchableOpacity
-              onPress={handleLogout}
-              disabled={isLoggingOut}
-              className={`flex-row items-center justify-center gap-3 bg-red-50 border border-red-100 rounded-2xl py-4 mt-6 ${
-                isLoggingOut ? 'opacity-50' : ''
-              }`}
-            >
-              {isLoggingOut ? (
-                <ActivityIndicator size="small" color="#EF4444" />
-              ) : (
-                <ArrowRightOnRectangleIcon size={22} color="#EF4444" />
-              )}
-              <Text className="text-red-500 text-base font-NunitoBold">
-                {isLoggingOut ? 'Logging out...' : 'Logout'}
-              </Text>
-            </TouchableOpacity>
+            <View className="pt-2">
+              <TouchableOpacity
+                onPress={handleLogout}
+                disabled={isLoggingOut}
+                className={`flex-row items-center justify-center gap-2 bg-white border border-red-100 rounded-3xl py-4 shadow-sm ${
+                  isLoggingOut ? 'opacity-50' : ''
+                }`}
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <ArrowRightOnRectangleIcon size={20} color="#EF4444" />
+                )}
+                <Text className="text-red-500 text-lg font-NunitoBold">
+                  {isLoggingOut ? "Logging out..." : "Log Out"}
+                </Text>
+              </TouchableOpacity>
 
-            {/* Version Info */}
-            <View className="items-center mt-6 mb-4">
-              <Text className="text-gray-400 text-xs font-NunitoMedium">
-                Version 1.0.0
-              </Text>
+              {/* Version Info */}
+              <View className="items-center mt-6 mb-4">
+                <Text className="text-gray-400 text-xs font-NunitoMedium">Version 1.0.0 • Build 142</Text>
+              </View>
             </View>
           </View>
         </AnimatedPageContainer>

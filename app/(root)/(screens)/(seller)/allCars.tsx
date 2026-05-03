@@ -79,8 +79,12 @@ const AllCars = () => {
         undefined, // limit
         merchantId  // merchantId
       )
+      // Handle both array and paginated response formats
+      const data = response.data;
+      const allFetchedProducts = Array.isArray(data) ? data : (data?.results || []);
+
       // Filter for cars only (non-rental)
-      const carProducts = (response.data.results || []).filter((product: any) => 
+      const carProducts = allFetchedProducts.filter((product: any) => 
         product.category?.name?.toLowerCase().includes('car') && 
         !product.is_rental
       )

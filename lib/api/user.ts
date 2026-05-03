@@ -247,6 +247,8 @@ export interface MechanicProfile {
   govt_id_type?: string | null;
   government_id_front?: string | null;
   government_id_back?: string | null;
+  nin_number?: string | null;
+  nin_document?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -293,6 +295,8 @@ export interface MerchantProfile {
   profile_picture?: string | null;
   latitude?: string | null;
   longitude?: string | null;
+  nin_number?: string | null;
+  nin_document?: string | null;
   is_approved: boolean;
   is_subscribed?: boolean;
   created_at: string;

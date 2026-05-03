@@ -356,7 +356,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                 <UsersIcon size={32} color="#EF4444" />
               </View>
               <Text className="text-2xl font-NunitoBold text-gray-900 text-center mb-2">
-                Switch Role
+                Service Provider
               </Text>
               <Text className="text-gray-600 text-center font-NunitoMedium">
                 Seamlessly switch between accounts without logging out

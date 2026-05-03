@@ -9,14 +9,10 @@ import ProductCard from '@/components/cards/ProductCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { routes } from '@/constants/routes';
 
-import { useCart } from '@/contexts/CartContext';
-import FloatingCartButton from '@/components/FloatingCartButton';
-
 const FavoriteProducts = () => {
   const router = useRouter();
   const { data: favoritesData, isLoading, refetch, isRefetching } = useFavoriteProducts();
   const toggleFavoriteMutation = useToggleFavorite();
-  const { addToCart, removeFromCart, isInCart } = useCart();
 
   const handleProductPress = (productId: string) => {
     router.push({
@@ -59,26 +55,12 @@ const FavoriteProducts = () => {
           Images={product.images}
           rating={product.rating}
           reviewCount={product.purchased_count || 0}
-          stock={product.stock}
           isFavorite={true}
           showLove={true}
           love={true}
           // Use product.id for navigation and for removing favorite
           onPress={() => handleProductPress(product.id)}
           onLovePress={() => handleRemoveFavorite(product.id)}
-          
-          // Cart Props
-          showAddToCart={false}
-          isInCart={isInCart(product.id.toString())}
-          onAddToCart={() => addToCart({
-            id: product.id.toString(),
-            name: product.name,
-            price: parseFloat(product.price),
-            stock: product.stock,
-            image: product.images?.[0]?.image
-          })}
-          onRemoveFromCart={() => removeFromCart(product.id.toString())}
-          
           containerStyle="w-full"
         />
       </View>
@@ -149,7 +131,7 @@ const FavoriteProducts = () => {
         ListEmptyComponent={EmptyState}
         columnWrapperStyle={{ justifyContent: 'space-between' }}
       />
-      <FloatingCartButton bottom={100} right={20} />
+
     </SafeAreaView>
   );
 };

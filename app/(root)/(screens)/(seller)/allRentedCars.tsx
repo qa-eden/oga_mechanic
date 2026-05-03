@@ -77,7 +77,8 @@ const AllRentedCars = () => {
         merchantId, // merchantId
         true // isRental - fetch only rental cars
       )
-      return response.data.results || []
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
     },
     enabled: !!merchantId && !!carCategoryId,
     staleTime: 0,

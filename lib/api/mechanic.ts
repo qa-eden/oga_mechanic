@@ -329,7 +329,24 @@ export const mechanicAPI = {
       throw error;
     }
 
+  },
+  
+  // Register device for push notifications
+  registerPushDevice: async (fcmToken: string): Promise<any> => {
+    const response = await api.post('/users/notifications/devices/', {
+      fcm_token: fcmToken
+    });
     return response.data;
-  }
+  },
+
+  getVehicleExpertise: async (): Promise<any> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.VEHICLE_EXPERTISE);
+    return response.data;
+  },
+
+  getServiceTypes: async (): Promise<any> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.SERVICE_TYPES);
+    return response.data;
+  },
 };
 

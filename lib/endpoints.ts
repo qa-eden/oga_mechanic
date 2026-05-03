@@ -77,10 +77,8 @@ export const MECHANIC_ENDPOINTS = {
   VERIFY_OTP: (id: string) => `/mechanics/repair-requests/${id}/verify-otp/`,
   ANALYTICS: '/mechanics/mechanic-analytics/',
   SERVICE_TYPES: '/mechanics/service-types/',
+  VEHICLE_EXPERTISE: '/mechanics/vehicle-expertise/',
 } as const;
-
-
-
 
 // Merchant endpoints (shop owners)
 export const MERCHANT_ENDPOINTS = {
@@ -122,7 +120,7 @@ export const SERVICE_ENDPOINTS = {
   PRODUCTS_HOME: '/products/home/',
   PRODUCTS_LIST: '/products/products/',
   PRODUCTS_BY_MERCHANT: (merchantId: string) => `/products/products/${merchantId}/`,
-  PRODUCTS_SEARCH: '/products/search-product/',
+  PRODUCTS_SEARCH: '/products/search/',
   PRODUCT_DETAIL: (id: string) => `/products/products/${id}/`,
   PRODUCTS_CATEGORIES: '/products/categories/',
   // Cart endpoints

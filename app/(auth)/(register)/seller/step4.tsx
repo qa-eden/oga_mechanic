@@ -82,7 +82,7 @@ export default function SellerStep4() {
                 } as any;
             };
 
-            const cacDocumentFile = getFileObject(params.cacDocumentUri as string, 'cac');
+            const ninDocumentFile = getFileObject(params.ninDocumentUri as string, 'nin');
             const selfieFile = getFileObject(capturedPhoto, 'selfie');
 
             const token = await AsyncStorage.getItem('auth_token');
@@ -91,10 +91,10 @@ export default function SellerStep4() {
             formData.append('requestType', 'inbound');
             formData.append('location', params.state as string);
             formData.append('lga', params.lga as string);
-            formData.append('cac_number', params.cacNumber as string);
+            formData.append('nin_number', params.ninNumber as string);
 
             // Append Files (now as file objects or existing URLs)
-            if (cacDocumentFile) formData.append('cac_document', cacDocumentFile);
+            if (ninDocumentFile) formData.append('nin_document', ninDocumentFile);
             if (selfieFile) formData.append('selfie', selfieFile);
 
             // Use direct fetch to bypass axios interceptor that converts FormData to JSON

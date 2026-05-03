@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native'
-import { MapPinIcon } from 'react-native-heroicons/outline'
+import { MapPinIcon, XMarkIcon } from 'react-native-heroicons/outline'
 import clsx from 'clsx'
 import * as Location from 'expo-location'
 import { ENV_CONFIG } from '@/config/env'
@@ -473,6 +473,21 @@ const AddressInput: React.FC<AddressInputProps> = ({
             <View className="ml-3">
               {isFetchingCurrentLocation ? (
                 <ActivityIndicator size="small" color="#D30309" />
+              ) : inputValue.length > 0 ? (
+                <TouchableOpacity 
+                  className={`p-2 rounded-xl bg-gray-50`}
+                  onPress={() => {
+                    setInputValue('');
+                    setSearchQuery('');
+                    setShowSuggestions(false);
+                    onChangeText?.('');
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
+                    }
+                  }}
+                >
+                  <XMarkIcon size={20} color="#6B7280" />
+                </TouchableOpacity>
               ) : (
                 <View className={`p-2 rounded-xl ${isFocused ? 'bg-primary-50' : 'bg-gray-50'}`}>
                   <MapPinIcon size={20} color={isFocused ? "#D30309" : "#9CA3AF"} />

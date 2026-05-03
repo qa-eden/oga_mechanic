@@ -3,6 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, AUTH_ENDPOINTS } from './endpoints';
 import { ENV_CONFIG } from '../config/env';
 import { authEvents } from './authEvents';
+import { Platform } from 'react-native';
+
+// Force network requests to show up in React Native Debugger / DevTools
+if (__DEV__) {
+  // @ts-ignore
+  global.XMLHttpRequest = global.originalXMLHttpRequest || global.XMLHttpRequest;
+}
 
 // Create axios instance with enhanced security
 const api = axios.create({
@@ -20,6 +27,8 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   async (config) => {
+    // Debug logging for network requests
+    console.log(`🌐 API ${config.method?.toUpperCase()}: ${config.url}`, config.params || "");
     try {
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('auth_token');
@@ -61,10 +70,21 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log(`✅ API Response [${response.status}]: ${response.config.url}`);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
+    console.error(`❌ API Error [${error.response?.status}]: ${originalRequest?.url}`, error.response?.data || error.message);
+
+    if (!error.response) {
+      console.error('🌐 Detailed Network Error Info:', {
+        message: error.message,
+        code: error.code,
+        config: error.config?.url,
+        isAxiosError: error.isAxiosError,
+      });
+    }
 
     // Handle 429 Too Many Requests (Throttling)
     if (error.response?.status === 429) {

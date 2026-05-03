@@ -101,7 +101,7 @@ export const useActiveRoleProfile = () => {
 
   const error = primaryProfile.error || 
     (isMerchant ? merchantProfile.error : 
-    (isMechanic ? mechanicProfile.error : null)));
+    (isMechanic ? mechanicProfile.error : null));
 
   const refetch = async () => {
     await primaryProfile.refetch();

@@ -4,6 +4,7 @@ import {
   View,
   Text,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Formik } from "formik";
@@ -301,7 +302,7 @@ const AddCar = () => {
 
       <KeyboardAwareScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 70 : 40 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

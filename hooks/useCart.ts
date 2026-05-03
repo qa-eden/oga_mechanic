@@ -31,6 +31,7 @@ export const useCart = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     refetchOnMount: false, // Don't refetch on mount if data exists and is fresh
     refetchOnWindowFocus: false, // Disable refetch on window focus
+    enabled: false, // DISABLED: Pivot to Direct Communication (Call/Chat) model
   });
 };
 

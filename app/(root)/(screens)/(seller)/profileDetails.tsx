@@ -71,12 +71,12 @@ const ProfileEditModal = ({
     });
 
     const businessSchema = Yup.object().shape({
-      cac_number: Yup.string().required("CAC number is required"),
+      nin_number: Yup.string().required("NIN number is required"),
     });
 
     const documentationSchema = Yup.object().shape({
       selfie: Yup.string().required("Selfie is required"),
-      cac_document: Yup.string().required("CAC document is required"),
+      nin_document: Yup.string().required("NIN document is required"),
     });
 
     switch (section) {
@@ -114,14 +114,14 @@ const ProfileEditModal = ({
           location: initialLocation,
           state: initialState,
           lga: initialLga,
-          cac_number: merchantProfile?.cac_number || "",
+          nin_number: merchantProfile?.nin_number || "",
           latitude: merchantProfile?.latitude || "",
           longitude: merchantProfile?.longitude || "",
         };
       case "documentation":
         return {
           selfie: merchantProfile?.selfie || "",
-          cac_document: merchantProfile?.cac_document || "",
+          nin_document: merchantProfile?.nin_document || "",
         };
       default:
         return {};
@@ -299,7 +299,7 @@ const ProfileEditModal = ({
                           </View>
                         </View>
 
-                        <FormikInput name="cac_number" placeholder="Enter BN/RC Number" label="CAC Registration Number" required />
+                        <FormikInput name="nin_number" placeholder="Enter 11-digit NIN" label="NIN Number" required />
                       </View>
                     )}
 
@@ -314,10 +314,10 @@ const ProfileEditModal = ({
                         />
 
                         <ImageUpload
-                          label="CAC Registration Document"
-                          onPress={() => handleImagePick(setFieldValue, "cac_document")}
-                          isUploaded={!!values.cac_document}
-                          imageUri={values.cac_document}
+                          label="NIN Document"
+                          onPress={() => handleImagePick(setFieldValue, "nin_document")}
+                          isUploaded={!!values.nin_document}
+                          imageUri={values.nin_document}
                           required
                         />
                       </View>
@@ -406,7 +406,7 @@ const SellerProfileDetails = () => {
 
       const profilePicFile = getFileObject(values.profile_picture, 'profile_picture');
       const selfieFile = getFileObject(values.selfie, 'selfie');
-      const cacDocFile = getFileObject(values.cac_document, 'cac_document');
+      const cacDocFile = getFileObject(values.nin_document, 'nin_document');
 
       const formData = new FormData();
       formData.append('requestType', 'inbound');
@@ -415,12 +415,12 @@ const SellerProfileDetails = () => {
         store_name: merchantProfile?.store_name || "",
         location: merchantProfile?.location || "",
         lga: merchantProfile?.lga || "",
-        cac_number: merchantProfile?.cac_number || "",
+        nin_number: merchantProfile?.nin_number || "",
         ...values
       };
 
       Object.entries(fullValues).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture' && key !== 'selfie' && key !== 'cac_document') {
+        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture' && key !== 'selfie' && key !== 'nin_document') {
           formData.append(key, val as string);
         }
       });
@@ -442,7 +442,7 @@ const SellerProfileDetails = () => {
       if (profilePicFile) formData.append('selfie', profilePicFile);
       else if (selfieFile) formData.append('selfie', selfieFile);
       
-      if (cacDocFile) formData.append('cac_document', cacDocFile);
+      if (cacDocFile) formData.append('nin_document', cacDocFile);
 
       await submitKYCMutation.mutateAsync(formData);
       showToast.success("Profile updated successfully");
@@ -519,7 +519,7 @@ const SellerProfileDetails = () => {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: Platform.OS === 'android' ? 70 : 40 }}
         showsVerticalScrollIndicator={false}
       >
         <AnimatedPageContainer animationType="fadeInUp" duration={600}>
@@ -568,7 +568,7 @@ const SellerProfileDetails = () => {
                 }}
               />
               <ProfileRow label="Business Name" value={merchantProfile?.store_name || ""} />
-              <ProfileRow label="CAC Registration Number" value={merchantProfile?.cac_number || ""} />
+              <ProfileRow label="NIN Number" value={merchantProfile?.nin_number || ""} />
               <ProfileRow label="Business Address" value={merchantProfile?.location || ""} />
               <View className="flex-row items-center justify-start gap-20">
                 <ProfileRow label="State" value={merchantProfile?.state || ""} />
@@ -595,9 +595,9 @@ const SellerProfileDetails = () => {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between py-3">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">CAC Document</Text>
-                <Text className={merchantProfile?.cac_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {merchantProfile?.cac_document ? "Uploaded" : "Pending"}
+                <Text className="text-gray-500 font-NunitoMedium text-sm">NIN Document</Text>
+                <Text className={merchantProfile?.nin_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
+                  {merchantProfile?.nin_document ? "Uploaded" : "Pending"}
                 </Text>
               </View>
             </View>

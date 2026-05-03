@@ -378,7 +378,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const isLoggedIn = await AsyncStorage.getItem('is_logged_in');
         if (isLoggedIn === 'true' && isShopRole) {
-          syncWithServer();
+          // DISABLED: Manual sync disabled for Direct Communication model
+          // syncWithServer();
         }
       } catch (error) {
         console.log('🛒 Skipping cart sync');

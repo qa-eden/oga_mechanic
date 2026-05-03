@@ -9,9 +9,10 @@ interface SpecialistIconBtnProps {
   // count prop is now optional as we fetch it internally, 
   // but we keep it for flexibility if needed
   count?: number; 
+  isFloating?: boolean;
 }
 
-const SpecialistIconBtn = ({ count: manualCount }: SpecialistIconBtnProps) => {
+const SpecialistIconBtn = ({ count: manualCount, isFloating = false }: SpecialistIconBtnProps) => {
   const activeSupportCount = useSupportCount();
   
   // Use manual count if provided, otherwise use the live count from API
@@ -20,28 +21,53 @@ const SpecialistIconBtn = ({ count: manualCount }: SpecialistIconBtnProps) => {
   return (
     <View>
       <TouchableOpacity 
-        onPress={() => router.push(routes.supportSuggestions)} 
-        className="w-[45px] h-[45px] bg-gray-100 flex justify-center items-center rounded-full relative"
+        onPress={() => router.push(routes.supportSuggestions as any)} 
+        style={
+          isFloating 
+            ? {
+                width: 52,
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: "white",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "#D30309",
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4.65,
+                elevation: 8,
+              }
+            : undefined
+        }
+        className={
+          isFloating 
+            ? "relative" 
+            : "w-[45px] h-[45px] bg-gray-100 flex justify-center items-center rounded-full relative"
+        }
       >
-        <HeadphonesIcon size={24} color={"#000"} />
+        <HeadphonesIcon size={24} color={isFloating ? "#D30309" : "#000"} />
         {displayCount > 0 && (
           <View
             style={{
               position: "absolute",
-              top: -2,
-              right: -2,
+              top: -5,
+              right: -5,
               minWidth: 20,
               height: 20,
               borderRadius: 10,
-              backgroundColor: "#FF8C00",
+              backgroundColor: isFloating ? "#fff" : "#FF8C00",
               alignItems: "center",
               justifyContent: "center",
               zIndex: 10,
               paddingHorizontal: 4,
+              borderWidth: isFloating ? 1 : 0,
+              borderColor: "#D30309"
             }}
           >
             <Text style={{ 
-              color: "#fff", 
+              color: isFloating ? "#D30309" : "#fff", 
               fontSize: 11, 
               fontWeight: "bold",
               fontFamily: "Nunito-Bold"

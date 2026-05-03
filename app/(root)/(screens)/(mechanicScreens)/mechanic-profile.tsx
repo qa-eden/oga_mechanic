@@ -29,7 +29,7 @@ interface MechanicProfile {
   isOnline?: boolean;
   isVerified?: boolean;
   phoneNumber?: string;
-  cacNumber?: string;
+  ninNumber?: string;
 }
 
 const MechanicProfile = () => {
@@ -102,7 +102,7 @@ const MechanicProfile = () => {
       isOnline: apiMechanic.is_approved || false,
       isVerified: apiMechanic.is_approved || false,
       phoneNumber: apiMechanic.user?.phone_number || "",
-      cacNumber: apiMechanic.cac_number || "",
+      ninNumber: apiMechanic.nin_number || "",
     };
   })();
 
@@ -333,10 +333,10 @@ const MechanicProfile = () => {
           )}
 
           {/* Business Info */}
-          {mechanic.cacNumber ? (
+          {mechanic.ninNumber ? (
             <InfoSection
-              title="Business Registration"
-              content={`RC: ${mechanic.cacNumber}`}
+              title="Identity Verification"
+              content={`NIN: ${mechanic.ninNumber}`}
             />
           ) : null}
 

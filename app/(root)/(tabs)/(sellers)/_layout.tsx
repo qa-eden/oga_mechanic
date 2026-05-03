@@ -15,11 +15,9 @@ import { useLocalSearchParams } from "expo-router";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 // Import your actual tab screen components
-import SellerEarnings from "./earnings";
 import SellerProduct from "./product";
 import SellerProfile from "./profile";
 import SellerHome from "./home";
-import SellerOrders from "./orders";
 
 export default function Layout() {
   // const router = useRouter();
@@ -54,23 +52,11 @@ export default function Layout() {
         label: "Home",
         component: SellerHome,
       },
-      orders: {
-        icon: <icons.orderIcon2 />,
-        activeIcon: <icons.activeOrderIcon2 />,
-        label: "Orders",
-        component: SellerOrders,
-      },
       products: {
         icon: <icons.productTab />,
         activeIcon: <icons.activeProductTab />,
         label: "Products",
         component: SellerProduct,
-      },
-      earnings: {
-        icon: <icons.earnings />,
-        activeIcon: <icons.activeEarnings />,
-        label: "Earnings",
-        component: SellerEarnings,
       },
       profile: {
         icon: <icons.profile />,
@@ -114,9 +100,7 @@ export default function Layout() {
   const getActiveComponent = () => {
     const tabInfo: Record<string, React.ComponentType> = {
       home: SellerHome,
-      orders: SellerOrders,
       products: SellerProduct,
-      earnings: SellerEarnings,
       profile: SellerProfile,
     };
     const ActiveComponent = tabInfo[activeTab] || SellerHome;

@@ -11,7 +11,6 @@ interface ProductCardProps {
   address?: string;
   reviewCount?: number;
   price?: number;
-  stock?: number;
   love?: boolean;
   showLove?: boolean;
   onPress?: () => void;
@@ -19,11 +18,7 @@ interface ProductCardProps {
   isLoading?: boolean;
   containerStyle?: string;
   productId?: number | string;
-  showAddToCart?: boolean;
   isFavorite?: boolean;
-  onAddToCart?: () => Promise<void> | void;
-  onRemoveFromCart?: () => Promise<void> | void;
-  isInCart?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -33,7 +28,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   address,
   reviewCount,
   price,
-  stock = 0,
   love = false,
   showLove = false,
   onPress,
@@ -41,22 +35,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isLoading = false,
   containerStyle,
   productId,
-  showAddToCart = true,
   isFavorite = false,
-  onAddToCart,
-  onRemoveFromCart,
-  isInCart = false,
 }) => {
-  const cartItem: Omit<CartItem, 'quantity'> = {
-    id: productId?.toString() || '1',
-    name: name || 'Product',
-    price: price || 0,
-    stock,
-    image: 'sparePart', // Default image
-    originalPrice: price ? price : 0,
-    discount: 0,
-  };
-
   return (
     <View className="w-full">
       <Card1
@@ -74,23 +54,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         containerStyle={containerStyle}
         productId={productId}
         isFavorite={isFavorite}
-        onAddToCart={onAddToCart}
-        onRemoveFromCart={onRemoveFromCart}
-        isInCart={isInCart}
-        showAddToCart={showAddToCart}
-        stock={stock}
       />
-      
-      {showAddToCart && price && price > 0 && (
-        <View className="mt-2">
-          <AddToCartButton
-            item={cartItem}
-            size="small"
-            variant="primary"
-            className="w-full"
-          />
-        </View>
-      )}
     </View>
   );
 };

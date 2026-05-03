@@ -45,7 +45,7 @@ const validationSchema = Yup.object().shape({
   longitude: Yup.string(),
   state: Yup.string().required("Please select your state"),
   lga: Yup.string().required("Please select your LGA"),
-  cac_number: Yup.string().required("CAC document number is required"),
+  nin_number: Yup.string().required("NIN number is required"),
 });
 
 interface FormValues {
@@ -55,7 +55,7 @@ interface FormValues {
   longitude: string;
   state: string;
   lga: string;
-  cac_number: string;
+  nin_number: string;
 }
 
 interface DocumentFile {
@@ -66,7 +66,14 @@ interface DocumentFile {
 }
 
 const CompleteKYC = () => {
-  const [cacDocument, setCacDocument] = useState<DocumentFile | null>(null);
+  // Constants
+  const nigerianStates = getStatesByCountry('NG');
+  const states = nigerianStates.map(state => ({
+    label: state.name,
+    value: state.name
+  }));
+
+  const [ninDocument, setNinDocument] = useState<DocumentFile | null>(null);
   const [selfie, setSelfie] = useState<DocumentFile | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,7 +90,7 @@ const CompleteKYC = () => {
     longitude: "",
     state: "",
     lga: "",
-    cac_number: "",
+    nin_number: "",
   });
 
   useEffect(() => {
@@ -93,20 +100,62 @@ const CompleteKYC = () => {
         if (response?.data?.has_merchant_profile) {
           const profile = response.data.merchant_profile;
           
-          setInitialFormValues({
+          const initialValues: FormValues = {
             store_name: profile.store_name || "",
             location: profile.location || "",
             latitude: profile.latitude || "",
             longitude: profile.longitude || "",
             state: profile.state || "",
             lga: profile.lga || "",
-            cac_number: profile.cac_number || "",
-          });
+            nin_number: profile.nin_number || "",
+          };
 
-          if (profile.cac_document) {
-            setCacDocument({
-              uri: profile.cac_document,
-              name: "cac_document.jpg",
+          // If we have a location but no coordinates or state, try to geocode it
+          if (initialValues.location && (!initialValues.latitude || !initialValues.state)) {
+            try {
+              const geocoded = await Location.geocodeAsync(initialValues.location);
+              if (geocoded.length > 0) {
+                initialValues.latitude = String(geocoded[0].latitude);
+                initialValues.longitude = String(geocoded[0].longitude);
+
+                // Now reverse geocode to get State and LGA
+                const reverseGeocoded = await Location.reverseGeocodeAsync({
+                  latitude: geocoded[0].latitude,
+                  longitude: geocoded[0].longitude
+                });
+
+                if (reverseGeocoded.length > 0) {
+                  const addr = reverseGeocoded[0];
+                  if (addr.region && !initialValues.state) {
+                    const matchedState = nigerianStates.find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
+                    if (matchedState) {
+                      initialValues.state = matchedState.name;
+                      
+                      // Try to match LGA
+                      const city = addr.city || addr.subregion;
+                      if (city && !initialValues.lga) {
+                        const availableLGAs = getLGAs(matchedState.name);
+                        const matchedLga = availableLGAs.find(lga => 
+                          lga.toLowerCase() === city.toLowerCase() || 
+                          city.toLowerCase().includes(lga.toLowerCase())
+                        );
+                        if (matchedLga) initialValues.lga = matchedLga;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (geocodeError) {
+              console.warn("Initial location geocoding failed:", geocodeError);
+            }
+          }
+
+          setInitialFormValues(initialValues);
+
+          if (profile.nin_document) {
+            setNinDocument({
+              uri: profile.nin_document,
+              name: "nin_document.jpg",
               type: "image/jpeg",
               size: 0,
             });
@@ -138,15 +187,10 @@ const CompleteKYC = () => {
     );
   }
 
-  // Constants
-  const nigerianStates = getStatesByCountry('NG');
-  const states = nigerianStates.map(state => ({
-    label: state.name,
-    value: state.name
-  }));
+
 
   // Document Picking Logic
-  const pickDocument = async (type: "cac" | "selfie") => {
+  const pickDocument = async (type: "nin" | "selfie") => {
     if (type === 'selfie') {
       setShowLivenessModal(true);
       return;
@@ -174,7 +218,7 @@ const CompleteKYC = () => {
           size: asset.fileSize || 0,
         };
 
-        if (type === "cac") setCacDocument(file);
+        if (type === "nin") setNinDocument(file);
       }
     } catch (error) {
       Alert.alert("Error", "Failed to select document.");
@@ -246,8 +290,8 @@ const CompleteKYC = () => {
 
   // Submission Logic
   const submitForm = async (values: FormValues) => {
-    if (!cacDocument) {
-      setErrorMessage("Please select your CAC document to continue.");
+    if (!ninDocument) {
+      setErrorMessage("Please select your NIN document to continue.");
       setShowErrorModal(true);
       return;
     }
@@ -265,14 +309,16 @@ const CompleteKYC = () => {
       formData.append('location', values.location);
       if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
-      formData.append('cac_number', values.cac_number);
+      formData.append('nin_number', values.nin_number);
+      if (values.latitude) formData.append('latitude', values.latitude);
+      if (values.longitude) formData.append('longitude', values.longitude);
 
       // Append files directly as FormData blobs/files
-      if (cacDocument) {
-        formData.append('cac_document', {
-          uri: cacDocument.uri,
-          name: cacDocument.name,
-          type: cacDocument.type,
+      if (ninDocument) {
+        formData.append('nin_document', {
+          uri: ninDocument.uri,
+          name: ninDocument.name,
+          type: ninDocument.type,
         } as any);
       }
 
@@ -426,21 +472,21 @@ const CompleteKYC = () => {
                   />
 
                   <InputField
-                    label="CAC Registration Number"
-                    placeholder="Enter your CAC number"
-                    value={values.cac_number}
-                    onChangeText={handleChange("cac_number")}
-                    onBlur={handleBlur("cac_number")}
-                    error={errors.cac_number}
-                    touched={touched.cac_number}
+                    label="NIN Number"
+                    placeholder="Enter your 11-digit NIN"
+                    value={values.nin_number}
+                    onChangeText={handleChange("nin_number")}
+                    onBlur={handleBlur("nin_number")}
+                    error={errors.nin_number}
+                    touched={touched.nin_number}
                     required
                   />
                   
                   <ImageUpload
-                    label="CAC Certificate"
-                    onPress={() => pickDocument("cac")}
-                    isUploaded={!!cacDocument}
-                    imageUri={cacDocument?.uri}
+                    label="NIN Document"
+                    onPress={() => pickDocument("nin")}
+                    isUploaded={!!ninDocument}
+                    imageUri={ninDocument?.uri}
                     required
                   />
                 </View>

@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
   contextDot: { width: 6, height: 6, borderRadius: 3 },
   contextText: { flex: 1, fontSize: 12, fontFamily: 'NunitoSemiBold' },
   contextPct: { fontSize: 12, fontFamily: 'NunitoBold' },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: Platform.OS === 'android' ? 70 : 40 },
   stepContent: { gap: 14 },
   sectionCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 18,

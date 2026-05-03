@@ -1,13 +1,16 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
+import { MerchantProfile } from "@/lib/api/user";
+import { StarIcon } from "react-native-heroicons/solid";
 
 interface ProductSellerCardProps {
   merchantId: string;
   merchantEmail?: string;
   merchantRating?: number;
   purchasedCount?: number;
+  merchantProfile?: MerchantProfile;
 }
 
 const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
@@ -15,6 +18,7 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
   merchantEmail,
   merchantRating,
   purchasedCount,
+  merchantProfile,
 }) => {
   const handlePress = () => {
     router.push({
@@ -22,6 +26,11 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
       params: { merchantId },
     });
   };
+
+  const storeName = merchantProfile?.store_name || merchantEmail || "Merchant Store";
+  // The API JSON shows 'selfie' is often used when profile_picture is null
+  const profilePicture = merchantProfile?.profile_picture || merchantProfile?.selfie;
+  const location = merchantProfile?.location;
 
   return (
     <View
@@ -49,10 +58,18 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
         className="flex-row items-center"
         activeOpacity={0.7}
       >
-        <View className="w-12 h-12 rounded-xl bg-primary-50 items-center justify-center mr-3">
-          <Text className="text-lg font-NunitoBold text-primary-600">
-            {merchantEmail?.charAt(0)?.toUpperCase() || "M"}
-          </Text>
+        <View className="w-12 h-12 rounded-xl bg-primary-50 items-center justify-center mr-3 overflow-hidden">
+          {profilePicture ? (
+            <Image
+              source={{ uri: profilePicture }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          ) : (
+            <Text className="text-lg font-NunitoBold text-primary-600">
+              {storeName?.charAt(0)?.toUpperCase() || "M"}
+            </Text>
+          )}
         </View>
 
         <View className="flex-1">
@@ -60,18 +77,28 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
             className="text-base font-NunitoBold text-gray-900 mb-0.5"
             numberOfLines={1}
           >
-            {merchantEmail || "Merchant Store"}
+            {storeName}
           </Text>
 
-          <View className="flex-row items-center space-x-3">
-            <View className="flex-row items-center">
-              <Text className="text-xs text-gray-500">⭐</Text>
+          <View className="flex-row items-center flex-wrap">
+            <View className="flex-row items-center mr-3">
+              <StarIcon size={12} color="#FBBF24" fill="#FBBF24" />
               <Text className="text-xs font-NunitoMedium text-gray-700 ml-1">
                 {merchantRating ? merchantRating.toFixed(1) : "N/A"}
               </Text>
             </View>
+            
+            {location && (
+              <View className="flex-row items-center mr-3">
+                <Text className="text-[10px] text-gray-300 mr-2">•</Text>
+                <Text className="text-xs font-NunitoMedium text-gray-500 max-w-[120px]" numberOfLines={1}>
+                   {location.split(',')[0]}
+                </Text>
+              </View>
+            )}
+
             <View className="flex-row items-center">
-              <Text className="text-xs text-gray-500 ml-2">Sales:</Text>
+              <Text className="text-xs text-gray-500">Sales:</Text>
               <Text className="text-xs font-NunitoBold text-gray-700 ml-1">
                 {purchasedCount || 0}
               </Text>
@@ -79,7 +106,7 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
           </View>
         </View>
 
-        <Text className="text-gray-400 text-lg">›</Text>
+        <Text className="text-gray-400 text-lg ml-2">›</Text>
       </TouchableOpacity>
     </View>
   );

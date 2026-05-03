@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LAYOUT } from "@/constants/units";
 import { LinearGradient } from "expo-linear-gradient";
 import { EyeIcon, EyeSlashIcon } from "react-native-heroicons/outline";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
@@ -69,6 +70,9 @@ const MechanicEarnings = () => {
         <ScrollView 
           className="flex-1" 
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: LAYOUT.SCROLL_PADDING_BOTTOM,
+          }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#B91C1C" />
           }

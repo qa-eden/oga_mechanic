@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -42,7 +43,7 @@ const editMechanicProfileSchema = Yup.object().shape({
   location: Yup.string().nullable(),
   specialization: Yup.string().nullable(),
   years_of_experience: Yup.string().nullable(),
-  cac_number: Yup.string().nullable(),
+  nin_number: Yup.string().nullable(),
   govt_id_type: Yup.string().nullable(),
 });
 
@@ -66,9 +67,9 @@ const EditMechanicProfile = () => {
     specialization: "",
     years_of_experience: "",
     selfie: "",
-    cac_number: "",
+    nin_number: "",
     govt_id_type: "",
-    cac_document: "",
+    nin_document: "",
     government_id_front: "",
     government_id_back: "",
   });
@@ -85,9 +86,9 @@ const EditMechanicProfile = () => {
         specialization: (mechanicProfileInfo as any)?.specialization || "",
         years_of_experience: (mechanicProfileInfo as any)?.years_of_experience?.toString() || "",
         selfie: (mechanicProfileInfo as any)?.selfie || (userData as any)?.profile_picture || "",
-        cac_number: mechanicProfileInfo?.cac_number || "",
+        nin_number: mechanicProfileInfo?.nin_number || "",
         govt_id_type: mechanicProfileInfo?.govt_id_type || "",
-        cac_document: mechanicProfileInfo?.cac_document || "",
+        nin_document: mechanicProfileInfo?.nin_document || "",
         government_id_front: mechanicProfileInfo?.government_id_front || "",
         government_id_back: mechanicProfileInfo?.government_id_back || "",
       });
@@ -113,7 +114,7 @@ const EditMechanicProfile = () => {
 
       const documentFields = [
         { field: 'selfie', name: 'selfie' },
-        { field: 'cac_document', name: 'cac_document' },
+        { field: 'nin_document', name: 'nin_document' },
         { field: 'government_id_front', name: 'government_id_front' },
         { field: 'government_id_back', name: 'government_id_back' }
       ];
@@ -134,7 +135,7 @@ const EditMechanicProfile = () => {
         location: values.location,
         specialization: values.specialization,
         years_of_experience: values.years_of_experience,
-        cac_number: values.cac_number,
+        nin_number: values.nin_number,
         govt_id_type: values.govt_id_type,
       };
 
@@ -261,7 +262,7 @@ const EditMechanicProfile = () => {
 
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: Platform.OS === 'android' ? 70 : 40 }}
         showsVerticalScrollIndicator={false}
         enableOnAndroid={true}
         enableAutomaticScroll={true}
@@ -439,16 +440,16 @@ const EditMechanicProfile = () => {
                 </View>
 
                 <FormikInput 
-                  name="cac_number" 
-                  label="CAC Registration Number" 
-                  placeholder="RC000000" 
+                  name="nin_number" 
+                  label="NIN Number" 
+                  placeholder="Enter 11-digit NIN" 
                 />
 
                 <View className="mt-3">
                   <DocumentPicker 
-                    label="CAC Registration Document" 
-                    field="cac_document" 
-                    value={values.cac_document} 
+                    label="NIN Document" 
+                    field="nin_document" 
+                    value={values.nin_document} 
                     setFieldValue={setFieldValue} 
                   />
                 </View>

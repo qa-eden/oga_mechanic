@@ -546,3 +546,35 @@ export const getServiceTypeOptions = async (): Promise<{ label: string; value: s
     return fallbackServiceTypeOptions;
   }
 };
+
+export const CAR_BRANDS = [
+  { label: 'Toyota', value: 'Toyota' },
+  { label: 'Honda', value: 'Honda' },
+  { label: 'Mercedes-Benz', value: 'Mercedes-Benz' },
+  { label: 'Lexus', value: 'Lexus' },
+  { label: 'Ford', value: 'Ford' },
+  { label: 'Hyundai', value: 'Hyundai' },
+  { label: 'Kia', value: 'Kia' },
+  { label: 'Nissan', value: 'Nissan' },
+  { label: 'BMW', value: 'BMW' },
+  { label: 'Audi', value: 'Audi' },
+  { label: 'Volkswagen', value: 'Volkswagen' },
+  { label: 'Land Rover', value: 'Land Rover' },
+  { label: 'Mazda', value: 'Mazda' },
+  { label: 'Peugeot', value: 'Peugeot' },
+  { label: 'Other', value: 'Other' },
+];
+
+export const MECHANIC_SPECIALIZATIONS = [
+  { label: 'General Mechanic', value: 'General Mechanic' },
+  { label: 'Engine Repair & Rebuild', value: 'Engine Repair & Rebuild' },
+  { label: 'Auto Electrical', value: 'Auto Electrical' },
+  { label: 'AC & Cooling Systems', value: 'AC & Cooling Systems' },
+  { label: 'Transmission & Gearbox', value: 'Transmission & Gearbox' },
+  { label: 'Suspension & Steering', value: 'Suspension & Steering' },
+  { label: 'Brake Systems', value: 'Brake Systems' },
+  { label: 'Panel Beating / Body Work', value: 'Panel Beating / Body Work' },
+  { label: 'Auto Painting', value: 'Auto Painting' },
+  { label: 'Diagnostics & Programming', value: 'Diagnostics & Programming' },
+  { label: 'Tire & Wheel Alignment', value: 'Tire & Wheel Alignment' },
+];

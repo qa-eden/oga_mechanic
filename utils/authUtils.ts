@@ -45,15 +45,12 @@ export const loginAsRole = async (role: 'user' | 'mechanic') => {
       ['is_logged_in', 'true']
     ]);
 
-    console.log(`✅ Logged in as ${role}:`, userData);
-
     // Navigate to role-specific home
     const targetRoute = getRoleHomeRoute(role);
     router.replace(targetRoute as any);
     
     return { success: true, userData };
   } catch (error) {
-    console.error(`❌ Error logging in as ${role}:`, error);
     return { success: false, error };
   }
 };

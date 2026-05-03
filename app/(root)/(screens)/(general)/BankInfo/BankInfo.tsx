@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -103,7 +104,7 @@ const BankInfo = () => {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: Platform.OS === 'android' ? 70 : 40 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

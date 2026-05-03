@@ -91,7 +91,11 @@ const RentACarScreen = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const rentalCarsData = rentalCarsResponse?.data?.results || [];
+  const rentalCarsData = (() => {
+    const data = rentalCarsResponse?.data;
+    if (!data) return [];
+    return Array.isArray(data) ? data : (data?.results || []);
+  })();
 
   // Transform API data to match component interface
   const transformRentalCar = (car: any): RentalCar => ({

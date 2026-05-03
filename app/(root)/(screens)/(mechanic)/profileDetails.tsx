@@ -74,7 +74,7 @@ const ProfileEditModal = ({
     });
 
     const businessSchema = Yup.object().shape({
-      cac_number: Yup.string().required("CAC number is required"),
+      nin_number: Yup.string().required("NIN number is required"),
       govt_id_type: Yup.string().required("ID type is required"),
     });
 
@@ -118,9 +118,9 @@ const ProfileEditModal = ({
         };
       case "business":
         return {
-          cac_number: mechanicProfile?.cac_number || "",
+          nin_number: mechanicProfile?.nin_number || "",
           govt_id_type: mechanicProfile?.govt_id_type || "",
-          cac_document: mechanicProfile?.cac_document || "",
+          nin_document: mechanicProfile?.nin_document || "",
           government_id_front: mechanicProfile?.government_id_front || "",
           government_id_back: mechanicProfile?.government_id_back || "",
         };
@@ -277,7 +277,7 @@ const ProfileEditModal = ({
 
                     {editingSection === "business" && (
                       <View>
-                          <FormikInput name="cac_number" placeholder="Enter BN/RC Number" label="CAC Registration Number" required />
+                          <FormikInput name="nin_number" placeholder="Enter 11-digit NIN" label="NIN Number" required />
                           <View className="mt-2">
                               <SelectField
                                 label="Government ID Type"
@@ -396,14 +396,14 @@ const ProfileDetails = () => {
         bio: mechanicProfile?.bio || "",
         location: mechanicProfile?.location || "",
         lga: mechanicProfile?.lga || "",
-        cac_number: mechanicProfile?.cac_number || "",
+        nin_number: mechanicProfile?.nin_number || "",
         govt_id_type: mechanicProfile?.govt_id_type || "",
         // Merge with form values
         ...values
       };
 
       Object.entries(fullValues).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture') {
+        if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture' && key !== 'nin_document') {
           formData.append(key, val as string);
         }
       });
@@ -498,7 +498,7 @@ const ProfileDetails = () => {
 
       <ScrollView 
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: Platform.OS === 'android' ? 70 : 40 }} 
         showsVerticalScrollIndicator={false}
       >
         <AnimatedPageContainer animationType="fadeInUp" duration={600}>
@@ -568,7 +568,7 @@ const ProfileDetails = () => {
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="CAC Registration Number" value={mechanicProfile?.cac_number} />
+              <ProfileRow label="NIN Number" value={mechanicProfile?.nin_number} />
               <ProfileRow label="Government ID Type" value={mechanicProfile?.govt_id_type?.replace(/_/g, ' ')} />
             </View>
 
@@ -584,9 +584,9 @@ const ProfileDetails = () => {
                 }}
               />
               <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">CAC Document</Text>
-                <Text className={mechanicProfile?.cac_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {mechanicProfile?.cac_document ? "Uploaded" : "Pending"}
+                <Text className="text-gray-500 font-NunitoMedium text-sm">NIN Document</Text>
+                <Text className={mechanicProfile?.nin_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
+                  {mechanicProfile?.nin_document ? "Uploaded" : "Pending"}
                 </Text>
               </View>
               <View className="flex-row items-center justify-between py-3 border-b border-gray-50">

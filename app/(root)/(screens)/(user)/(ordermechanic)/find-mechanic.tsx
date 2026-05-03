@@ -365,7 +365,7 @@ const FindMechanic = () => {
           showsVerticalScrollIndicator={true}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingBottom: 20,
+            paddingBottom: Platform.OS === 'android' ? 80 : 30,
           }}
         >
         {/* Step Indicator */}

@@ -28,6 +28,7 @@ import {
 
 import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
+import MultiSelectField from "@/components/forms/MultiSelectField";
 import InputField from "@/components/InputField";
 import TextArea from "@/components/forms/TextArea";
 import ImageUpload from "@/components/ImageUpload";
@@ -36,10 +37,9 @@ import SuccessModal from "@/components/modals/SuccessModal";
 import ErrorModal from "@/components/modals/ErrorModal";
 import SelfieUpload from "@/components/SelfieUpload";
 import { userAPI } from "@/lib/api/user";
+import { mechanicAPI } from "@/lib/api/mechanic";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import { useSubmitMechanicKYC } from "@/hooks/useUserProfile";
-import { getStatesByCountry } from "@/constants/locationData";
-import { getLGAs } from "@/constants/nigeriaData";
 import { mechanicRoutes } from "@/constants/routes";
 
 // Validation Schema
@@ -47,22 +47,20 @@ const validationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
   latitude: Yup.string(),
   longitude: Yup.string(),
-  state: Yup.string().required("Please select your state"),
-  lga: Yup.string().required("Please select your LGA"),
   bio: Yup.string().required("Please tell us about your experience"),
-  cac_number: Yup.string().required("CAC document number is required"),
-  govt_id_type: Yup.string().required("Please select government ID type"),
+  nin_number: Yup.string().required("NIN is required"),
+  specializations: Yup.array().min(1, "Select at least one specialization").required("Specializations are required"),
+  vehicle_expertise: Yup.array().min(1, "Select at least one vehicle expertise").required("Vehicle expertise is required"),
 });
 
 interface FormValues {
   location: string;
   latitude: string;
   longitude: string;
-  state: string;
-  lga: string;
   bio: string;
-  cac_number: string;
-  govt_id_type: string;
+  nin_number: string;
+  specializations: string[];
+  vehicle_expertise: string[];
 }
 
 interface DocumentFile {
@@ -73,10 +71,9 @@ interface DocumentFile {
 }
 
 const CompleteKYC = () => {
-  const [cacDocument, setCacDocument] = useState<DocumentFile | null>(null);
+  const [ninDocument, setNinDocument] = useState<DocumentFile | null>(null);
   const [selfie, setSelfie] = useState<DocumentFile | null>(null);
-  const [governmentIdFront, setGovernmentIdFront] = useState<DocumentFile | null>(null);
-  const [governmentIdBack, setGovernmentIdBack] = useState<DocumentFile | null>(null);
+  const [certificateOfLearning, setCertificateOfLearning] = useState<DocumentFile | null>(null);
 
   const submitKYCMutation = useSubmitMechanicKYC();
   const isSubmitting = submitKYCMutation.isPending;
@@ -85,41 +82,65 @@ const CompleteKYC = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  
+  // Dynamic Dropdown Options
+  const [specializationsOptions, setSpecializationsOptions] = useState<{label: string, value: string}[]>([]);
+  const [carBrandsOptions, setCarBrandsOptions] = useState<{label: string, value: string}[]>([]);
+
   const [initialFormValues, setInitialFormValues] = useState<FormValues>({
     location: "",
     latitude: "",
     longitude: "",
-    state: "",
-    lga: "",
     bio: "",
-    cac_number: "",
-    govt_id_type: "",
+    nin_number: "",
+    specializations: [],
+    vehicle_expertise: [],
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndOptions = async () => {
       try {
-        const response = await userAPI.getMechanicProfile();
-        if (response?.data?.has_mechanic_profile) {
-          const profile = response.data.mechanic_profile;
+        // Fetch Profile
+        const profileResponse = await userAPI.getMechanicProfile();
+        if (profileResponse?.data?.has_mechanic_profile) {
+          const profile = profileResponse.data.mechanic_profile;
           setInitialFormValues({
             location: profile.location || "",
             latitude: profile.latitude || "",
             longitude: profile.longitude || "",
-            state: "", 
-            lga: profile.lga || "",
             bio: profile.bio || "",
-            cac_number: profile.cac_number || "",
-            govt_id_type: profile.govt_id_type || "",
+            nin_number: profile.nin_number || "",
+            specializations: Array.isArray(profile.specializations) ? profile.specializations.map(String) : [],
+            vehicle_expertise: Array.isArray(profile.vehicle_expertise) ? profile.vehicle_expertise.map(String) : [],
           });
         }
+
+        // Fetch Dropdown Options
+        try {
+          const servicesResponse = await mechanicAPI.getServiceTypes();
+          const services = servicesResponse?.results || servicesResponse?.data || servicesResponse || [];
+          setSpecializationsOptions(services.map((item: any) => ({
+            label: item.name || String(item.id),
+            value: String(item.id)
+          })));
+
+          const expertiseResponse = await mechanicAPI.getVehicleExpertise();
+          const expertises = expertiseResponse?.results || expertiseResponse?.data || expertiseResponse || [];
+          setCarBrandsOptions(expertises.map((item: any) => ({
+            label: item.vehicle_make?.name || item.name || String(item.id),
+            value: String(item.vehicle_make?.id || item.id)
+          })));
+        } catch (optionsError) {
+          console.warn("Failed to fetch dropdown options:", optionsError);
+        }
+
       } catch (error) {
         console.log("Error prefilling mechanic profile:", error);
       } finally {
         setIsLoadingProfile(false);
       }
     };
-    fetchProfile();
+    fetchProfileAndOptions();
   }, []);
 
   if (isLoadingProfile) {
@@ -130,23 +151,8 @@ const CompleteKYC = () => {
     );
   }
 
-  // Constants
-  const nigerianStates = getStatesByCountry('NG');
-  const states = nigerianStates.map(state => ({
-    label: state.name,
-    value: state.name.toLowerCase().replace(/\s+/g, '_')
-  }));
-
-  const govtIdTypes = [
-    { label: "NIN", value: "NIN" },
-    { label: "Drivers license", value: "drivers_license" },
-    { label: "Voters card", value: "voters_card" },
-    { label: "International passport", value: "international_passport" },
-    { label: "Permanent voter's card", value: "permanent_voters_card" },
-  ];
-
   // Document Picking Logic
-  const pickDocument = async (type: "cac" | "selfie" | "govt_front" | "govt_back") => {
+  const pickDocument = async (type: "nin_document" | "selfie" | "certificate_of_learning") => {
     // Alert.alert("Debug", `Button clicked for: ${type}`);
     if (type === 'selfie') {
       setShowLivenessModal(true);
@@ -176,10 +182,8 @@ const CompleteKYC = () => {
         };
 
         switch (type) {
-          case "cac": setCacDocument(file); break;
-          // case "selfie": setSelfie(file); break; // Handled by liveness
-          case "govt_front": setGovernmentIdFront(file); break;
-          case "govt_back": setGovernmentIdBack(file); break;
+          case "nin_document": setNinDocument(file); break;
+          case "certificate_of_learning": setCertificateOfLearning(file); break;
         }
       }
     } catch (error) {
@@ -205,75 +209,18 @@ const CompleteKYC = () => {
     if (loc.latitude && loc.longitude) {
       setFieldValue("latitude", String(loc.latitude));
       setFieldValue("longitude", String(loc.longitude));
-      
-      try {
-        const reverseGeocoded = await Location.reverseGeocodeAsync({
-          latitude: loc.latitude,
-          longitude: loc.longitude
-        });
-
-        if (reverseGeocoded.length > 0) {
-          const address = reverseGeocoded[0];
-          const region = address.region; // State
-          const city = address.city || address.subregion; // LGA/City
-
-          if (region) {
-            // Find matching state
-            const matchedState = states.find(s => s.label.toLowerCase() === region.toLowerCase());
-            if (matchedState) {
-              setFieldValue("state", matchedState.value);
-
-              // Try to match LGA
-              // reverseGeocodeAsync returns: city, district, subregion, street, region, country
-              // LGA usually maps to city or subregion in Nigeria for Mapbox/Google
-              const potentialLGAs = [city, address.subregion, address.district].filter(Boolean);
-
-              if (potentialLGAs.length > 0) {
-                const availableLGAs = getLGAs(matchedState.label);
-
-                // Try to find a match in the available LGAs
-                const matchedLGA = availableLGAs.find(lga => {
-                  const lgaLower = lga.toLowerCase();
-                  return potentialLGAs.some(candidate => {
-                    const candidateLower = candidate?.toLowerCase() || '';
-                    return candidateLower === lgaLower ||
-                      candidateLower.includes(lgaLower) ||
-                      lgaLower.includes(candidateLower);
-                  });
-                });
-
-                if (matchedLGA) {
-                  setFieldValue("lga", matchedLGA);
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.log("Auto-fill location failed", error);
-      }
     }
   };
 
   // Submission Logic
   const handleSubmit = async (values: FormValues) => {
-    if (!cacDocument) {
-      setErrorMessage("Please select your CAC document to continue.");
+    if (!ninDocument) {
+      setErrorMessage("Please upload your NIN document.");
       setShowErrorModal(true);
       return;
     }
     if (!selfie) {
       setErrorMessage("Please capture your selfie to continue.");
-      setShowErrorModal(true);
-      return;
-    }
-    if (!governmentIdFront) {
-      setErrorMessage("Please upload the front of your government ID.");
-      setShowErrorModal(true);
-      return;
-    }
-    if (values.govt_id_type !== "international_passport" && !governmentIdBack) {
-      setErrorMessage("Please upload the back of your government ID.");
       setShowErrorModal(true);
       return;
     }
@@ -285,8 +232,9 @@ const CompleteKYC = () => {
       if (values.latitude) formData.append('latitude', values.latitude);
       if (values.longitude) formData.append('longitude', values.longitude);
       formData.append('bio', values.bio);
-      formData.append('cac_number', values.cac_number);
-      formData.append('govt_id_type', values.govt_id_type);
+      formData.append('nin_number', values.nin_number);
+      formData.append('specializations', JSON.stringify(values.specializations));
+      formData.append('vehicle_expertise', JSON.stringify(values.vehicle_expertise));
 
       // Helper function to handle image upload if it's a local URI
       const getFileObject = (image: any) => {
@@ -302,9 +250,9 @@ const CompleteKYC = () => {
       };
 
       // Append files (now as file objects or existing URLs)
-      if (cacDocument) {
-        const file = getFileObject(cacDocument);
-        if (file) formData.append('cac_document', file);
+      if (ninDocument) {
+        const file = getFileObject(ninDocument);
+        if (file) formData.append('nin_document', file);
       }
 
       if (selfie) {
@@ -312,14 +260,9 @@ const CompleteKYC = () => {
         if (file) formData.append('selfie', file);
       }
 
-      if (governmentIdFront) {
-        const file = getFileObject(governmentIdFront);
-        if (file) formData.append('government_id_front', file);
-      }
-
-      if (governmentIdBack) {
-        const file = getFileObject(governmentIdBack);
-        if (file) formData.append('government_id_back', file);
+      if (certificateOfLearning) {
+        const file = getFileObject(certificateOfLearning);
+        if (file) formData.append('certificate_of_learning', file);
       }
 
       console.log('🚀 Submitting Mechanic KYC via Mutation...');
@@ -439,107 +382,69 @@ const CompleteKYC = () => {
                     showCurrentLocationButton={true}
                   />
                 </View>
-
-                <View className="flex-row gap-x-3">
-                  <View className="flex-1">
-                    <SelectField
-                      label="State"
-                      name="state"
-                      placeholder="Select State"
-                      options={states}
-                      value={values.state}
-                      onValueChange={(val) => setFieldValue("state", val)}
-                      error={errors.state}
-                      touched={touched.state}
-                      required
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <SelectField
-                      label="LGA"
-                      name="lga"
-                      placeholder="LGA"
-                      options={(() => {
-                        const selectedState = states.find(s => s.value === values.state);
-                        const stateLabel = selectedState ? selectedState.label : values.state;
-                        return getLGAs(stateLabel).map((l: string) => ({ label: l, value: l }));
-                      })()}
-                      value={values.lga}
-                      onValueChange={(val) => setFieldValue("lga", val)}
-                      error={errors.lga}
-                      touched={touched.lga}
-                      required
-                    />
-                  </View>
-                </View>
               </View>
 
-              {/* Card: Business Information */}
+              {/* Card: Identity & Expertise */}
               <View className="bg-white p-5 rounded-2xl mb-5 border border-gray-100 shadow-sm">
-                <SectionHeader icon={BriefcaseIcon} title="Business Verification" />
+                <SectionHeader icon={BriefcaseIcon} title="Identity & Expertise" />
 
                 <View className="mb-5">
                   <InputField
-                    label="CAC Registration Number"
-                    placeholder="Enter BN/RC Number"
-                    value={values.cac_number}
-                    onChangeText={handleChange("cac_number")}
-                    error={errors.cac_number}
-                    touched={touched.cac_number}
+                    label="NIN Number"
+                    placeholder="Enter your 11-digit NIN"
+                    value={values.nin_number}
+                    onChangeText={handleChange("nin_number")}
+                    error={errors.nin_number}
+                    touched={touched.nin_number}
                     required
                   />
                 </View>
 
                 <View className="mb-5">
                   <ImageUpload
-                    label="Upload CAC Document"
-                    isUploaded={!!cacDocument}
-                    imageUri={cacDocument?.uri}
-                    onPress={() => pickDocument("cac")}
+                    label="Upload NIN Document"
+                    isUploaded={!!ninDocument}
+                    imageUri={ninDocument?.uri}
+                    onPress={() => pickDocument("nin_document")}
                     required
                   />
                 </View>
 
-              </View>
-
-              {/* Card: Identity Verification */}
-              <View className="bg-white p-5 rounded-2xl mb-6 border border-gray-100 shadow-sm">
-                <SectionHeader icon={IdentificationIcon} title="Identity Verification" />
-
-                <View className="mb-3">
-                  <SelectField
-                    label="Government ID Type"
-                    name="govt_id_type"
-                    placeholder="Select ID Type"
-                    options={govtIdTypes}
-                    value={values.govt_id_type}
-                    onValueChange={(val) => setFieldValue("govt_id_type", val)}
-                    error={errors.govt_id_type}
-                    touched={touched.govt_id_type}
-                    required
+                <View className="mb-5">
+                  <MultiSelectField
+                    label="Areas of Specialization"
+                    name="specializations"
+                    placeholder="Select specializations"
+                    options={specializationsOptions}
+                    value={values.specializations}
+                    onValueChange={(val) => setFieldValue("specializations", val)}
                   />
-                </View>
-
-                <View className="space-y-4">
-                  <ImageUpload
-                    label="Government ID (Front)"
-                    isUploaded={!!governmentIdFront}
-                    imageUri={governmentIdFront?.uri}
-                    onPress={() => pickDocument("govt_front")}
-                    required
-                  />
-
-                 <View className="mt-5">
-                  {values.govt_id_type !== "international_passport" && (
-                    <ImageUpload
-                      label="Government ID (Back)"
-                      isUploaded={!!governmentIdBack}
-                      imageUri={governmentIdBack?.uri}
-                      onPress={() => pickDocument("govt_back")}
-                      required
-                    />
+                  {touched.specializations && errors.specializations && (
+                    <Text className="text-red-500 text-xs mt-1 ml-1">{errors.specializations as string}</Text>
                   )}
-                 </View>
+                </View>
+
+                <View className="mb-5">
+                  <MultiSelectField
+                    label="Vehicle Brands Expertise"
+                    name="vehicle_expertise"
+                    placeholder="Select car brands"
+                    options={carBrandsOptions}
+                    value={values.vehicle_expertise}
+                    onValueChange={(val) => setFieldValue("vehicle_expertise", val)}
+                  />
+                  {touched.vehicle_expertise && errors.vehicle_expertise && (
+                    <Text className="text-red-500 text-xs mt-1 ml-1">{errors.vehicle_expertise as string}</Text>
+                  )}
+                </View>
+                
+                <View className="mb-2">
+                  <ImageUpload
+                    label="Certificate of Learning (Optional)"
+                    isUploaded={!!certificateOfLearning}
+                    imageUri={certificateOfLearning?.uri}
+                    onPress={() => pickDocument("certificate_of_learning")}
+                  />
                 </View>
               </View>
 

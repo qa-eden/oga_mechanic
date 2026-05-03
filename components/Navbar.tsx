@@ -193,7 +193,7 @@ const Navbar = () => {
             {activeRole === 'mechanic' 
               ? 'Manage your jobs and earnings.' 
               : activeRole === 'seller' || activeRole === 'merchant'
-              ? 'Manage your shop and orders.' 
+              ? 'Manage your shop and products.' 
               : 'Everything your car needs is here.'}
           </Text>
         </View>

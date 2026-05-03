@@ -67,7 +67,7 @@ const Product = () => {
   React.useEffect(() => {
     if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
       const merchantData = merchantProfileQuery.data.data;
-      const hasKycData = !!(merchantData as any).cac_number || !!(merchantData as any).kyc?.is_complete;
+      const hasKycData = !!(merchantData as any).nin_number || !!(merchantData as any).kyc?.is_complete;
       setIsProfileComplete(hasKycData);
       
       // ONLY show automatically if we just switched roles and it's not complete

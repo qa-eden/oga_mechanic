@@ -395,9 +395,9 @@ const Welcome = () => {
               ],
               width: "100%",
               paddingHorizontal: 30,
-              paddingBottom: 10,
+              paddingBottom: 30,
             }}
-            className={"bg-[#fafafa] p-4"}
+            className={"bg-[#fafafa] pt-4"}
           >
             <CustomButton
               title={isSigningUp ? "Loading..." : "Sign up"}

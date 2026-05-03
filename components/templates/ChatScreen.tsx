@@ -209,7 +209,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={["top", "bottom"]}>
         <View style={{ flex: 1 }}>
           {/* Unified Header - Kept outside KeyboardAvoidingView for stability */}
           <View className="bg-white border-b border-gray-100 shadow-sm">
@@ -287,8 +287,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
           <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
           >
 
           {/* Messages Area */}
@@ -319,8 +319,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
           {/* Input Area - Modern & Smooth */}
           <View 
-            className="bg-white border-t border-gray-100 px-4 pt-3"
-            style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+            className="bg-white border-t border-gray-100 px-4 pt-3 pb-8"
+            style={{ marginBottom: Platform.OS === 'android' ? 10 : 0 }}
           >
             <View className="flex-row items-end gap-x-3">
               {/* Attachment Button */}

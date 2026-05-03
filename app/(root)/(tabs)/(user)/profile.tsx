@@ -3,7 +3,7 @@ import {
   icons,
   ProfileSettings,
   MechanicProfileSettings,
-  DriverProfileSettings,
+  // DriverProfileSettings,
   ProfileSopprt,
 } from "@/constants";
 import React, { useState } from "react";
@@ -36,7 +36,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFavoriteProducts } from "@/hooks/useProducts";
-import { useUserOrders } from "@/hooks/useOrders";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 
 const Profile = () => {
@@ -66,14 +65,7 @@ const Profile = () => {
     refetch: refetchFollowedMerchants
   } = useFollowedMerchants();
 
-  // Fetch orders count
-  const {
-      data: ordersData,
-      refetch: refetchOrders
-  } = useUserOrders();
-  
   const followedMerchantsCount = Array.isArray(followedMerchantsData?.data) ? followedMerchantsData.data.length : 0;
-  const ordersCount = Array.isArray(ordersData?.data) ? ordersData.data.length : 0;
 
   const { visible, alertConfig, hideAlert } = useCustomAlert();
   const logoutMutation = useLogout();
@@ -84,8 +76,7 @@ const Profile = () => {
       await Promise.all([
         refetch(), 
         refetchFavorites(), 
-        refetchFollowedMerchants(),
-        refetchOrders()
+        refetchFollowedMerchants()
       ]);
     }
   });
@@ -254,17 +245,6 @@ const Profile = () => {
 
                 {/* Stats Row */}
                 <View className="flex-row mt-4 pt-4 border-t border-gray-200">
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => router.push(routes.myOrders as any)}
-                    className="flex-1 items-center justify-center py-2 bg-gray-50 rounded-xl mx-2"
-                  >
-                    <Text className="text-gray-900 text-lg font-NunitoBold mb-0.5">{ordersCount}</Text>
-                    <View className="flex-row items-center">
-                      <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Orders</Text>
-                      <ChevronRightIcon size={12} color="#9CA3AF" />
-                    </View>
-                  </TouchableOpacity>
 
                   <TouchableOpacity
                     activeOpacity={0.7}
@@ -355,7 +335,7 @@ const Profile = () => {
                       title={item.name}
                       icon={item.image}
                       onPress={() => {
-                        if (item.name === "Switch Role") {
+                        if (item.name === "Service Provider") {
                           setShowSwitchUserModal(true);
                         } else if (item.route) {
                           router.push(item.route as any);
@@ -405,7 +385,7 @@ const Profile = () => {
               <Text className="text-sm font-NunitoBold text-gray-500 uppercase my-3 ml-1">Support</Text>
               <View className="bg-white rounded-3xl px-5 py-2 shadow-sm border border-gray-100/50">
                 {ProfileSopprt.options.map((item) => (
-                  <MenuItem key={item.id} title={item.name} icon={item.image} onPress={() => {}} />
+                  <MenuItem key={item.id} title={item.name} icon={item.image} onPress={() => router.push(routes.supportSuggestions as any)} />
                 ))}
               </View>
             </View>

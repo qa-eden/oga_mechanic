@@ -107,7 +107,8 @@ const CarRentalDetail = () => {
         undefined, // merchantId - get from all merchants
         true // isRental - fetch rental cars only
       );
-      setRentalCarsData(response.data.results || []);
+      const data = response.data;
+      setRentalCarsData(Array.isArray(data) ? data : (data?.results || []));
     } catch (err) {
     }
   }, []);
@@ -153,8 +154,9 @@ const CarRentalDetail = () => {
 
           // Combine basic merchant info from product with full profile data
           // The API response structure: merchantResponse.data.user contains user info
-          const userData: any = merchantResponse.data?.user || {};
-          const merchantProfileData: any = merchantResponse.data || {};
+          const profileData = merchantResponse.data?.merchant_profile;
+          const userData: any = profileData?.user || {};
+          const merchantProfileData: any = profileData || {};
 
           const fullMerchantInfo = {
             // Basic info from product
@@ -163,7 +165,7 @@ const CarRentalDetail = () => {
             rating: productData.merchant_rating,
             // Full profile data from merchant API
             business_address: merchantProfileData.business_address,
-            cac_number: merchantProfileData.cac_number,
+            nin_number: merchantProfileData.nin_number,
             location: merchantProfileData.location,
             lga: merchantProfileData.lga,
             is_approved: merchantProfileData.is_approved,

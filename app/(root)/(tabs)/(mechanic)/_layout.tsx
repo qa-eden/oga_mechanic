@@ -1,146 +1,164 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   View,
   TouchableOpacity,
+  Animated,
   Text,
   StyleSheet,
   Platform,
 } from "react-native";
-import { useRouter, useSegments } from "expo-router";
+import { CurvedBottomBarExpo } from "react-native-curved-bottom-bar";
+import { useRouter } from "expo-router";
 import { icons } from "@/constants";
-// import { Dimensions } from "react-native";
-// import { routes } from "@/constants/routes";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Dimensions } from "react-native";
+import { mechanicRoutes } from "@/constants/routes";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 
 // Import your actual tab screen components
-import MechanicEarnings from "./earnings";
-import MechanicOrder from "./order";
-import MechanicProfile from "./profile";
 import MechanicHome from "./home";
+import MechanicOrder from "./order";
+import MechanicEarnings from "./earnings";
+import MechanicProfile from "./profile";
+import MechanicShop from "./shop";
 
 export default function Layout() {
   const router = useRouter();
-  const segments = useSegments();
-  const insets = useSafeAreaInsets();
-  
-  // Sync activeTab with current route segments
-  const getTabFromSegments = () => {
-    const segs = segments as string[];
-    if (segs.includes('earnings')) return 'earnings';
-    if (segs.includes('order')) return 'consultation';
-    if (segs.includes('profile')) return 'profile';
-    return 'home';
-  };
-
-  const [activeTab, setActiveTab] = useState(getTabFromSegments());
-
-  // Update activeTab when segments change (e.g. on external navigation)
-  useEffect(() => {
-    const currentTab = getTabFromSegments();
-    if (currentTab !== activeTab) {
-      setActiveTab(currentTab);
-    }
-  }, [segments]);
+  const { width } = Dimensions.get("window");
 
   // Function to render tab icons with labels
-  const renderTabBar = () => {
-    // Define the icon and label for each tab  order,
-  // activeOrder,
+  const renderTabBar = ({
+    routeName,
+    selectedTab,
+  }: {
+    routeName: string;
+    selectedTab: string;
+  }) => {
+    // Define the icon and label for each tab
     const tabInfo: Record<
       string,
       {
         icon: React.ReactElement;
         activeIcon: React.ReactElement;
         label: string;
-        component: React.ComponentType;
       }
     > = {
       home: {
-        icon: <icons.home />,
-        activeIcon: <icons.activeHome />,
+        icon: <icons.home width={28} height={28} />,
+        activeIcon: <icons.activeHome width={32} height={32} />,
         label: "Home",
-        component: MechanicHome,
       },
-      consultation: {
-        icon: <icons.order />,
-        activeIcon: <icons.activeOrder />,
+      order: {
+        icon: <icons.order width={28} height={28} />,
+        activeIcon: <icons.activeOrder width={32} height={32} />,
         label: "Orders",
-        component: MechanicOrder,
       },
       earnings: {
-        icon: <icons.earnings />,
-        activeIcon: <icons.activeEarnings />,
+        icon: <icons.earnings width={28} height={28} />,
+        activeIcon: <icons.activeEarnings width={32} height={32} />,
         label: "Earnings",
-        component: MechanicEarnings,
       },
       profile: {
-        icon: <icons.profile />,
-        activeIcon: <icons.activeProfile />,
+        icon: <icons.profile width={28} height={28} />,
+        activeIcon: <icons.activeProfile width={32} height={32} />,
         label: "Profile",
-        component: MechanicProfile,
       },
     };
 
-    return (
-      <View
-        style={[
-          styles.bottomBar,
-          // Platform.OS === "android" && { paddingBottom: insets.bottom },
-        ]}
-      >
-        {Object.keys(tabInfo).map((routeName) => {
-          const isActive = routeName === activeTab;
-          return (
-            <TouchableOpacity
-              key={routeName}
-              onPress={() => {
-                setActiveTab(routeName);
-                // Update the URL to match the tab for consistency
-                const tabRoute = 
-                  routeName === 'home' ? './home' :
-                  routeName === 'consultation' ? './order' :
-                  routeName === 'earnings' ? './earnings' :
-                  './profile';
-                router.replace(tabRoute as any);
-              }}
-              style={styles.tabBarItem}
-            >
-              {isActive
-                ? tabInfo[routeName]?.activeIcon
-                : tabInfo[routeName]?.icon}
-              <Text
-                style={[styles.tabLabel, isActive && styles.activeTabLabel]}
-              >
-                {tabInfo[routeName]?.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  };
+    const isActive = routeName === selectedTab;
 
-  // Get the active component
-  const getActiveComponent = () => {
-    const tabInfo: Record<string, React.ComponentType> = {
-      home: MechanicHome,
-      consultation: MechanicOrder,
-      earnings: MechanicEarnings,
-      profile: MechanicProfile,
-    };
-    const ActiveComponent = tabInfo[activeTab] || MechanicHome;
-    return <ActiveComponent />;
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          const routeMap: Record<string, any> = {
+            home: mechanicRoutes.home,
+            order: mechanicRoutes.order,
+            earnings: mechanicRoutes.earnings,
+            profile: mechanicRoutes.profile,
+          };
+          router.push(routeMap[routeName] || mechanicRoutes.home);
+        }}
+        style={styles.tabBarItem}
+      >
+        {isActive ? tabInfo[routeName]?.activeIcon : tabInfo[routeName]?.icon}
+        <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
+          {tabInfo[routeName]?.label}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
     <View style={{ flex: 1, position: "relative" }}>
-      {/* Main Content */}
-      <View style={{ flex: 1 }}>{getActiveComponent()}</View>
+      <CurvedBottomBarExpo.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+        type="DOWN"
+        style={[styles.bottomBar]}
+        height={Platform.OS === "android" ? 75 : 80}
+        width={width}
+        borderColor="transparent"
+        borderWidth={0}
+        id="curved-bottom-bar"
+        circleWidth={100}
+        bgColor="white"
+        borderTopLeftRight={false}
+        initialRouteName={"home"}
+        tabBar={renderTabBar}
+        renderCircle={() => (
+          <Animated.View
+            style={[
+              styles.shopTabContainer,
+              Platform.OS === "android" && { paddingBottom: 24 },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.shopButton}
+              onPress={() => router.push(mechanicRoutes?.shop as any)}
+            >
+              <icons.shopTab />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+        circlePosition="CENTER"
+        shadowStyle={{
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 6,
+        }}
+        backBehavior="initialRoute"
+      >
+        <CurvedBottomBarExpo.Screen
+          name="home"
+          position="LEFT"
+          component={MechanicHome}
+        />
+        <CurvedBottomBarExpo.Screen
+          name="order"
+          position="LEFT"
+          component={MechanicOrder}
+        />
+        
+        <CurvedBottomBarExpo.Screen
+          name="shop"
+          position="CENTER"
+          component={MechanicShop}
+        />
 
-      {/* Custom Bottom Tab Bar */}
-      {renderTabBar()}
-
+        <CurvedBottomBarExpo.Screen
+          name="earnings"
+          position="RIGHT"
+          component={MechanicEarnings}
+        />
+        <CurvedBottomBarExpo.Screen
+          name="profile"
+          position="RIGHT"
+          component={MechanicProfile}
+        />
+      </CurvedBottomBarExpo.Navigator>
+      
       {/* Android Navigation Bar Spacer */}
       <AndroidNavBarSpacer />
     </View>
@@ -149,13 +167,15 @@ export default function Layout() {
 
 const styles = StyleSheet.create({
   bottomBar: {
-    backgroundColor: "white",
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    backgroundColor: "transparent",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 10,
   },
@@ -163,18 +183,37 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    minHeight: 90,
+    paddingBottom: 14,
   },
   tabLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#888",
     marginTop: 4,
-    fontFamily: "Nunito-Regular",
   },
   activeTabLabel: {
     color: "#D30309",
-    fontFamily: "Nunito-Bold",
+    fontWeight: "bold",
+  },
+  shopTabContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    bottom: Platform.OS === "ios" ? 30 : 20,
+  },
+  shopButton: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: "#D30309",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
   },
 });

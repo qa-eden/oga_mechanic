@@ -36,14 +36,14 @@ const validationSchema = Yup.object().shape({
         .trim()
         .required('Address is required')
         .min(10, 'Address must be at least 10 characters'),
-    cacNumber: Yup.string()
+    ninNumber: Yup.string()
         .trim()
-        .required('CAC number is required')
-        .min(5, 'CAC number must be at least 5 characters'),
-    cacDocument: Yup.mixed()
+        .required('NIN number is required')
+        .min(11, 'NIN number must be at least 11 characters'),
+    ninDocument: Yup.mixed()
         .nullable()
-        .required('CAC document is required')
-})
+        .required('NIN document is required')
+});
 
 const Step3 = () => {
     const params = useLocalSearchParams()
@@ -79,8 +79,8 @@ const Step3 = () => {
         state: '',
         lga: '',
         address: '',
-        cacNumber: '',
-        cacDocument: null as any
+        ninNumber: '',
+        ninDocument: null as any
     }
 
     const handleSubmit = async (values: typeof initialValues) => {
@@ -102,9 +102,9 @@ const Step3 = () => {
                 state: values.state,
                 lga: values.lga,
                 address: values.address,
-                cacNumber: values.cacNumber,
+                ninNumber: values.ninNumber,
                 // Only pass the URI string, not the entire object
-                cacDocumentUri: values.cacDocument?.uri || values.cacDocument?.path || null
+                ninDocumentUri: values.ninDocument?.uri || values.ninDocument?.path || null
             };
 
 
@@ -133,8 +133,8 @@ const Step3 = () => {
 
     const handleDocumentUpload = async (setFieldValue: any) => {
         Alert.alert(
-            'Upload CAC Document',
-            'Choose how you want to upload your CAC document',
+            'Upload NIN Document',
+            'Choose how you want to upload your NIN document',
             [
                 {
                     text: 'Camera',
@@ -157,9 +157,9 @@ const Step3 = () => {
 
                             if (!result.canceled && result.assets[0]) {
                                 const asset = result.assets[0]
-                                setFieldValue('cacDocument', {
+                                setFieldValue('ninDocument', {
                                     uri: asset.uri,
-                                    name: `cac_document_${Date.now()}.jpg`,
+                                    name: `nin_document_${Date.now()}.jpg`,
                                     type: 'image/jpeg',
                                     size: asset.fileSize || 0
                                 })
@@ -190,9 +190,9 @@ const Step3 = () => {
 
                             if (!result.canceled && result.assets[0]) {
                                 const asset = result.assets[0]
-                                setFieldValue('cacDocument', {
+                                setFieldValue('ninDocument', {
                                     uri: asset.uri,
-                                    name: `cac_document_${Date.now()}.jpg`,
+                                    name: `nin_document_${Date.now()}.jpg`,
                                     type: 'image/jpeg',
                                     size: asset.fileSize || 0
                                 })
@@ -214,7 +214,7 @@ const Step3 = () => {
 
                             if (!result.canceled && result.assets[0]) {
                                 const asset = result.assets[0]
-                                setFieldValue('cacDocument', {
+                                setFieldValue('ninDocument', {
                                     uri: asset.uri,
                                     name: asset.name,
                                     type: asset.mimeType || 'application/pdf',
@@ -261,8 +261,8 @@ const Step3 = () => {
                     {/* Main Content */}
                     <View className="px-6">
                         <HeaderAndDescTextCenter
-                            header="Add other details"
-                            text1="Kindly input your other details to continue"
+                            header="Business details"
+                            text1="Kindly input your business details to continue"
                             containerStyle="!px-0 !pb-2"
                         />
 
@@ -356,21 +356,21 @@ const Step3 = () => {
 
                                         {/* CAC Number */}
                                         <FormikInput
-                                            name="cacNumber"
-                                            label="CAC number"
-                                            placeholder="Enter your CAC number"
+                                            name="ninNumber"
+                                            label="NIN number"
+                                            placeholder="Enter your 11-digit NIN"
                                             type="text"
                                         />
 
                                         {/* CAC Document Upload */}
                                         <ImageUpload
-                                            label="CAC document"
-                                            isUploaded={!!values.cacDocument}
+                                            label="NIN document"
+                                            isUploaded={!!values.ninDocument}
                                             onPress={() => handleDocumentUpload(setFieldValue)}
-                                            uploadedText="CAC Document Uploaded"
+                                            uploadedText="NIN Document Uploaded"
                                             maxFileSize="15 MB"
                                             required
-                                            imageUri={values.cacDocument?.uri}
+                                            imageUri={values.ninDocument?.uri}
                                         />
 
                                         {/* Bottom Actions */}
