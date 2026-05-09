@@ -12,7 +12,7 @@ import { LAYOUT } from '@/constants/units'
 import { productsAPI } from '@/lib/api/products'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useQuery } from '@tanstack/react-query'
-import { usePrimaryUserProfile, useMerchantProfile } from '@/hooks/useUserProfile'
+import { usePrimaryUserProfile, useMerchantProfile, useVehicleRentalProfile } from '@/hooks/useUserProfile'
 import { useCategories } from '@/hooks/useProducts'
 import AndroidNavBarSpacer from '@/components/AndroidNavBarSpacer'
 import { useProfileStore } from '@/hooks/useProfileStore'
@@ -38,23 +38,29 @@ const Product = () => {
   const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
 
   // Extract active role with fallback
-  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+  const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const isVehicleRental = activeRole === 'vehicle_rental';
+  const isSeller = activeRole === 'merchant' || activeRole === 'seller';
 
-  // Fetch specific merchant profile to check KYC status
-  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+  // Fetch specific profile to check KYC status
+  const merchantProfileQuery = useMerchantProfile(isSeller);
+  const vehicleRentalProfileQuery = useVehicleRentalProfile(isVehicleRental);
+  
+  const activeProfileQuery = isVehicleRental ? vehicleRentalProfileQuery : merchantProfileQuery;
 
-  // Subscription check: uses data.merchant_profile.is_subscribed from the API response
-  const isSubscribed = Boolean(merchantProfileQuery.data?.data?.merchant_profile?.is_subscribed);
+  // Subscription check
+  const isSubscribed = Boolean((activeProfileQuery.data?.data as any)?.merchant_profile?.is_subscribed || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_subscribed);
 
   // Extract merchant ID safely from different profile structures
   const profileData = primaryProfileData;
-  const merchantId = activeRole === 'merchant' 
+  const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
   const isPendingApproval = Boolean(
-    merchantProfileQuery.data?.data?.kyc?.is_complete && 
-    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+    activeProfileQuery.data?.data?.kyc?.is_complete && 
+    !((activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved)
   );
 
   const hasShownModalRef = React.useRef(false);
@@ -65,13 +71,13 @@ const Product = () => {
 
   // Check profile status
   React.useEffect(() => {
-    if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
-      const merchantData = merchantProfileQuery.data.data;
-      const hasKycData = !!(merchantData as any).nin_number || !!(merchantData as any).kyc?.is_complete;
+    if (!activeProfileQuery.isLoading && activeProfileQuery.data?.data) {
+      const activeData = activeProfileQuery.data.data;
+      const hasKycData = !!(activeData as any).nin_number || !!(activeData as any).kyc?.is_complete;
       setIsProfileComplete(hasKycData);
       
       // ONLY show automatically if we just switched roles and it's not complete
-      if (isNewSwitch && !hasKycData && !hasShownModalRef.current) {
+      if (isNewSwitch && !hasKycData && !activeProfileQuery.isLoading && !isProfileLoading && !hasShownModalRef.current) {
         // Start timer only if not already started
         if (!timerIdRef.current) {
           timerIdRef.current = setTimeout(() => {
@@ -96,7 +102,7 @@ const Product = () => {
         timerIdRef.current = null;
       }
     };
-  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
+  }, [activeProfileQuery.data, activeProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
 
   // Use specific category IDs as provided
   const SPARE_PARTS_CATEGORY_ID = 24;
@@ -238,30 +244,34 @@ const Product = () => {
 
 
   const options = [
-    {
-      id: 1,
-      title: 'Upload Spare Parts',
-      onPress: () => {
-        setShowModal(false)
-        router.push(sellerRoutes.uploadSpareParts)
+    ...(isSeller ? [
+      {
+        id: 1,
+        title: 'Upload Spare Parts',
+        onPress: () => {
+          setShowModal(false)
+          router.push(sellerRoutes.uploadSpareParts)
+        }
+      },
+      {
+        id: 2,
+        title: 'Upload Cars',
+        onPress: () => {
+          setShowModal(false)
+          router.push(sellerRoutes.uploadProducts)
+        }
       }
-    },
-    {
-      id: 2,
-      title: 'Upload Cars',
-      onPress: () => {
-        setShowModal(false)
-        router.push(sellerRoutes.uploadProducts)
+    ] : []),
+    ...(isVehicleRental ? [
+      {
+        id: 3,
+        title: 'Rent out Cars',
+        onPress: () => {
+          setShowModal(false)
+          router.push(sellerRoutes.uploadCarToRent)
+        }
       }
-    },
-    {
-      id: 3,
-      title: 'Rent out Cars',
-      onPress: () => {
-        setShowModal(false)
-        router.push(sellerRoutes.uploadCarToRent)
-      }
-    }
+    ] : [])
   ]
 
   const renderStars = (rating: number) => {
@@ -467,7 +477,7 @@ const Product = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      await Promise.all([refetchAll(), refetchCars(), refetchSpareParts(), refetchRentalCars()])
+      await Promise.all([refetchAll(), refetchCars(), refetchSpareParts(), refetchRentalCars(), activeProfileQuery.refetch()])
     } catch (error) {
       console.error('❌ Error refreshing:', error);
     } finally {
@@ -482,7 +492,9 @@ const Product = () => {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-100">
         <View className="w-8" />
-        <Text className="text-xl font-NunitoBold text-gray-900">Uploaded Products</Text>
+        <Text className="text-xl font-NunitoBold text-gray-900">
+          {isVehicleRental ? "My Rental Fleet" : "Uploaded Products"}
+        </Text>
         <TouchableOpacity 
           onPress={() => {
             if (!isProfileComplete || isPendingApproval) {
@@ -569,106 +581,112 @@ const Product = () => {
             </View>
           )}
           {/* Spare Parts Section */}
-          <View className="py-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-NunitoBold text-gray-900">All Uploaded Spare Parts</Text>
-              <TouchableOpacity onPress={() => router.push(sellerRoutes.allSpareParts as any)}>
-                <Text className="text-blue-500 font-NunitoMedium">See All</Text>
-              </TouchableOpacity>
+          {isSeller && (
+            <View className="py-4">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-NunitoBold text-gray-900">All Uploaded Spare Parts</Text>
+                <TouchableOpacity onPress={() => router.push(sellerRoutes.allSpareParts as any)}>
+                  <Text className="text-blue-500 font-NunitoMedium">See All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {spareParts.length > 0 ? (
+                <FlatList
+                  data={spareParts}
+                  renderItem={renderSparePartItem}
+                  keyExtractor={(item) => String(item.id)}
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  snapToAlignment="start"
+                  snapToInterval={CARD_WIDTH + CARD_GAP}
+                  decelerationRate="fast"
+                  contentContainerStyle={{
+                    paddingHorizontal: CARD_PADDING,
+                    gap: CARD_GAP,
+                  }}
+                  initialNumToRender={4}
+                  maxToRenderPerBatch={2}
+                  windowSize={3}
+                  removeClippedSubviews={true}
+                  updateCellsBatchingPeriod={100}
+                />
+              ) : (
+                renderEmptyState("You do not have any Uploaded Spare Parts.")
+              )}
             </View>
-            
-            {spareParts.length > 0 ? (
-              <FlatList
-                data={spareParts}
-                renderItem={renderSparePartItem}
-                keyExtractor={(item) => String(item.id)}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                snapToAlignment="start"
-                snapToInterval={CARD_WIDTH + CARD_GAP}
-                decelerationRate="fast"
-                contentContainerStyle={{
-                  paddingHorizontal: CARD_PADDING,
-                  gap: CARD_GAP,
-                }}
-                initialNumToRender={4}
-                maxToRenderPerBatch={2}
-                windowSize={3}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={100}
-              />
-            ) : (
-              renderEmptyState("You do not have any Uploaded Spare Parts.")
-            )}
-          </View>
+          )}
 
           {/* Uploaded Cars Section */}
-          <View className="py-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-NunitoBold text-gray-900">All Uploaded Cars</Text>
-              <TouchableOpacity onPress={() => router.push(sellerRoutes.allCars as any)}>
-                <Text className="text-blue-500 font-NunitoMedium">See All</Text>
-              </TouchableOpacity>
+          {isSeller && (
+            <View className="py-4">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-NunitoBold text-gray-900">All Uploaded Cars</Text>
+                <TouchableOpacity onPress={() => router.push(sellerRoutes.allCars as any)}>
+                  <Text className="text-blue-500 font-NunitoMedium">See All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {cars.length > 0 ? (
+                <FlatList
+                  data={cars}
+                  renderItem={renderCarItem}
+                  keyExtractor={(item) => String(item.id)}
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  snapToAlignment="start"
+                  snapToInterval={CARD_WIDTH + CARD_GAP}
+                  decelerationRate="fast"
+                  contentContainerStyle={{
+                    paddingHorizontal: CARD_PADDING,
+                    gap: CARD_GAP,
+                  }}
+                  initialNumToRender={4}
+                  maxToRenderPerBatch={2}
+                  windowSize={3}
+                  removeClippedSubviews={true}
+                  updateCellsBatchingPeriod={100}
+                />
+              ) : (
+                renderEmptyState("You do not have any Uploaded Cars.")
+              )}
             </View>
-            
-            {cars.length > 0 ? (
-              <FlatList
-                data={cars}
-                renderItem={renderCarItem}
-                keyExtractor={(item) => String(item.id)}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                snapToAlignment="start"
-                snapToInterval={CARD_WIDTH + CARD_GAP}
-                decelerationRate="fast"
-                contentContainerStyle={{
-                  paddingHorizontal: CARD_PADDING,
-                  gap: CARD_GAP,
-                }}
-                initialNumToRender={4}
-                maxToRenderPerBatch={2}
-                windowSize={3}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={100}
-              />
-            ) : (
-              renderEmptyState("You do not have any Uploaded Cars.")
-            )}
-          </View>
+          )}
 
           {/* Rented Cars Section */}
-          <View className="py-6 pb-10">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-NunitoBold text-gray-900">All Rented Cars</Text>
-              <TouchableOpacity onPress={() => router.push(sellerRoutes.allRentedCars as any)}>
-                <Text className="text-blue-500 font-NunitoMedium">See All</Text>
-              </TouchableOpacity>
+          {isVehicleRental && (
+            <View className="py-6 pb-10">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-NunitoBold text-gray-900">All Rented Cars</Text>
+                <TouchableOpacity onPress={() => router.push(sellerRoutes.allRentedCars as any)}>
+                  <Text className="text-blue-500 font-NunitoMedium">See All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {rentedCars.length > 0 ? (
+                <FlatList
+                  data={rentedCars}
+                  renderItem={renderRentedCarItem}
+                  keyExtractor={(item) => String(item.id)}
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  snapToAlignment="start"
+                  snapToInterval={CARD_WIDTH + CARD_GAP}
+                  decelerationRate="fast"
+                  contentContainerStyle={{
+                    paddingHorizontal: CARD_PADDING,
+                    gap: CARD_GAP,
+                  }}
+                  initialNumToRender={4}
+                  maxToRenderPerBatch={2}
+                  windowSize={3}
+                  removeClippedSubviews={true}
+                  updateCellsBatchingPeriod={100}
+                />
+              ) : (
+                renderEmptyState("You do not have any Cars Rented Out.")
+              )}
             </View>
-            
-            {rentedCars.length > 0 ? (
-              <FlatList
-                data={rentedCars}
-                renderItem={renderRentedCarItem}
-                keyExtractor={(item) => String(item.id)}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                snapToAlignment="start"
-                snapToInterval={CARD_WIDTH + CARD_GAP}
-                decelerationRate="fast"
-                contentContainerStyle={{
-                  paddingHorizontal: CARD_PADDING,
-                  gap: CARD_GAP,
-                }}
-                initialNumToRender={4}
-                maxToRenderPerBatch={2}
-                windowSize={3}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={100}
-              />
-            ) : (
-              renderEmptyState("You do not have any Cars Rented Out.")
-            )}
-          </View>
+          )}
         </ScrollView>
       )}
 
@@ -733,7 +751,7 @@ const Product = () => {
 
       <ProfileCompletionModal
         isVisible={showProfileModal}
-        roleName="seller"
+        roleName={isVehicleRental ? "vehicle_rental" : "seller"}
         onComplete={() => setShowProfileModal(false)}
         onClose={() => setShowProfileModal(false)}
         isPending={isPendingApproval}

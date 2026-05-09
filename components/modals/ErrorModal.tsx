@@ -15,7 +15,7 @@ interface ErrorModalProps {
 
 const ErrorModal = ({ isVisible, onClose, title, message, buttonText = "Try Again" }: ErrorModalProps) => {
   // Sanitize the message so we don't show raw server errors (like "Error 500" or HTML)
-  const lowerMsg = message?.toLowerCase() || "";
+  const lowerMsg = String(message || "").toLowerCase();
   const isServerError = 
     lowerMsg.includes("500") || 
     lowerMsg.includes("502") || 
@@ -30,7 +30,9 @@ const ErrorModal = ({ isVisible, onClose, title, message, buttonText = "Try Agai
     
   const displayMessage = isServerError 
     ? "There was an issue connecting to our servers. Please try again later."
-    : message;
+    : typeof message === 'string' 
+      ? message 
+      : JSON.stringify(message);
   const scaleAnim = useRef(new Animated.Value(0)).current
   const fadeAnim = useRef(new Animated.Value(0)).current
   const pulseAnim = useRef(new Animated.Value(1)).current

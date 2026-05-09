@@ -6,44 +6,115 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
   Modal,
-  Animated,
-  PermissionsAndroid,
-  Platform,
   ActivityIndicator,
+  Animated,
 } from "react-native";
-import { LAYOUT } from "@/constants/units";
-import { useRef, useEffect, useState, useCallback } from "react";
-import CategoryTab from "@/components/cards/CategoryTab";
-import SearchSuggestion from "@/components/cards/SearchSuggestion";
-import { MagnifyingGlassIcon } from "react-native-heroicons/outline";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import {
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  AdjustmentsHorizontalIcon,
+  ChevronRightIcon,
+} from "react-native-heroicons/outline";
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+interface CategoryOption {
+  name: string;
+  id: number | null;
+  sub_categories?: Array<{ name: string; id: number }>;
+}
 
 interface SearchBarWithCategoriesProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedCategory: string;
-  setSelectedCategory: (category: string) => void;
-  categories: Array<{ name: string; id: number | null }>;
+  setSelectedCategory: (category: string, categoryId?: number | null) => void;
+  categories: CategoryOption[];
   onFilterPress?: () => void;
   minPrice?: string;
   maxPrice?: string;
-  onPriceChange?: (field: 'min' | 'max', value: string) => void;
+  onPriceChange?: (field: "min" | "max", value: string) => void;
   onApplySearch?: (categoryId?: number | null) => void;
   onResetSearch?: () => void;
   isSearching?: boolean;
 }
 
-// No dummy data - use real search functionality
+// ─────────────────────────────────────────────
+// Chip helpers
+// ─────────────────────────────────────────────
+const ACTIVE_COLOR = "#D30309";
+const ACTIVE_TEXT = "#fff";
+const IDLE_BG = "#F3F4F6";
+const IDLE_TEXT = "#374151";
+const PARENT_IDLE_BG = "#EFF6FF"; // light-blue tint for parents that have children
+const PARENT_IDLE_TEXT = "#1D4ED8";
 
+const Chip = ({
+  label,
+  isSelected,
+  isParent,
+  hasChildren,
+  onPress,
+}: {
+  label: string;
+  isSelected: boolean;
+  isParent?: boolean;
+  hasChildren?: boolean;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.75}
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginRight: 8,
+      backgroundColor: isSelected
+        ? ACTIVE_COLOR
+        : isParent && hasChildren
+        ? PARENT_IDLE_BG
+        : IDLE_BG,
+    }}
+  >
+    <Text
+      style={{
+        fontSize: 13,
+        fontFamily: isSelected ? "Nunito-Bold" : "Nunito-SemiBold",
+        color: isSelected
+          ? ACTIVE_TEXT
+          : isParent && hasChildren
+          ? PARENT_IDLE_TEXT
+          : IDLE_TEXT,
+        marginRight: hasChildren ? 3 : 0,
+      }}
+    >
+      {label}
+    </Text>
+    {hasChildren && (
+      <ChevronRightIcon
+        size={12}
+        color={isSelected ? ACTIVE_TEXT : PARENT_IDLE_TEXT}
+        style={{ transform: [{ rotate: isSelected ? "90deg" : "0deg" }] }}
+      />
+    )}
+  </TouchableOpacity>
+);
+
+// ─────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────
 const SearchBarWithCategories = ({
   searchQuery,
   setSearchQuery,
   selectedCategory,
   setSelectedCategory,
   categories,
-  onFilterPress,
   minPrice = "",
   maxPrice = "",
   onPriceChange,
@@ -51,787 +122,455 @@ const SearchBarWithCategories = ({
   onResetSearch,
   isSearching = false,
 }: SearchBarWithCategoriesProps) => {
-  const flatListRef = useRef<FlatList>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [currentScrollX, setCurrentScrollX] = useState(0);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [filterButtonLayout, setFilterButtonLayout] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
-  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
-  const [isSelectingSuggestion, setIsSelectingSuggestion] = useState(false);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [currentAutoSuggestionIndex, setCurrentAutoSuggestionIndex] =
-    useState(0);
-  const [isInputFocused, setIsInputFocused] = useState(false);
+  // ── Filter modal ──
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [localMin, setLocalMin] = useState(minPrice);
+  const [localMax, setLocalMax] = useState(maxPrice);
 
-  // Animation values for dropdown
-  const slideAnim = useRef(new Animated.Value(-300)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  // ── Which parent is expanded (to show sub-category row) ──
+  const [expandedParent, setExpandedParent] = useState<string | null>(null);
 
-  // Animation values for search suggestions
-  const searchSlideAnim = useRef(new Animated.Value(-200)).current;
-  const searchFadeAnim = useRef(new Animated.Value(0)).current;
+  // ── Animate sub-category row in/out ──
+  const subRowHeight = useRef(new Animated.Value(0)).current;
+  const subRowOpacity = useRef(new Animated.Value(0)).current;
 
-  // Animation values for auto-suggestions
-  const placeholderFadeAnim = useRef(new Animated.Value(1)).current;
-  const placeholderSlideAnim = useRef(new Animated.Value(0)).current;
-  const [isAutoSuggestionReady, setIsAutoSuggestionReady] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showSearchHistory, setShowSearchHistory] = useState(false);
-  const [advancedFilters, setAdvancedFilters] = useState({
-    brand: "",
-    condition: "",
-  });
-  
-  // Enhanced search features
-  const [popularSearches] = useState([
-    "Engine Oil", "Brake Pads", "Air Filter", "Spark Plugs", "Battery",
-    "Tires", "Headlights", "Windshield Wipers", "Oil Filter", "Transmission Fluid"
-  ]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [showPopularSearches, setShowPopularSearches] = useState(false);
-  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const activeSubCategories = useMemo(() => {
+    if (!expandedParent) return [];
+    const parent = categories.find((c) => c.name === expandedParent);
+    return parent?.sub_categories ?? [];
+  }, [expandedParent, categories]);
 
-  // Track if value was set by auto-suggestion
-  const [isAutoSuggestionSelected, setIsAutoSuggestionSelected] = useState(false);
-
-  // Debounce search query
+  // ── Auto-expand parent if selectedCategory is a sub-category ──
   useEffect(() => {
-    if (isSelectingSuggestion) {
-      return;
-    }
+    if (!selectedCategory || selectedCategory === "All") return;
 
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300); // 300ms debounce delay
+    // Check if current selection is a child of any parent
+    const parent = categories.find(cat => 
+      cat.sub_categories?.some(sub => sub.name === selectedCategory)
+    );
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, isSelectingSuggestion]);
-
-  // Generate intelligent search suggestions
-  useEffect(() => {
-    if (debouncedSearchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
-      setShowSearchSuggestions(true);
-      
-      // Generate smart suggestions based on query
-      const query = debouncedSearchQuery.toLowerCase();
-      const suggestions = popularSearches
-        .filter(item => item.toLowerCase().includes(query))
-        .slice(0, 5);
-      
-      // Add recent searches that match
-      const recentMatches = recentSearches
-        .filter(item => item.toLowerCase().includes(query))
-        .slice(0, 3);
-      
-      setSearchSuggestions([...recentMatches, ...suggestions]);
+    if (parent) {
+      setExpandedParent(parent.name);
     } else {
-      setShowSearchSuggestions(false);
-      setSearchSuggestions([]);
+      // If the selected category itself has children (is a parent), expand it too
+      const selfIsParent = categories.find(cat => 
+        cat.name === selectedCategory && (cat.sub_categories?.length ?? 0) > 0
+      );
+      if (selfIsParent) {
+        setExpandedParent(selfIsParent.name);
+      }
     }
-  }, [debouncedSearchQuery, isAutoSuggestionSelected, popularSearches, recentSearches]);
+  }, [selectedCategory, categories]);
 
-  // Animate search suggestions
   useEffect(() => {
-    if (showSearchSuggestions) {
-      Animated.parallel([
-        Animated.timing(searchSlideAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(searchFadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(searchSlideAnim, {
-          toValue: -200,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(searchFadeAnim, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [showSearchSuggestions]);
+    const hasChildren = activeSubCategories.length > 0;
+    Animated.parallel([
+      Animated.timing(subRowHeight, {
+        toValue: hasChildren ? 48 : 0,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+      Animated.timing(subRowOpacity, {
+        toValue: hasChildren ? 1 : 0,
+        duration: 180,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [activeSubCategories]);
 
-  // Debug: Monitor searchQuery changes
-  useEffect(() => {
-    // Search query changed
-  }, [searchQuery]);
+  const hasPriceFilter = !!minPrice || !!maxPrice;
 
-  // No auto-rotating suggestions - use real search
+  // ── Category press handlers ──
+  const handleMainCategoryPress = useCallback(
+    (cat: CategoryOption) => {
+      const hasSubs = (cat.sub_categories?.length ?? 0) > 0;
 
-  // Auto-scroll animation disabled per user request
-  // useEffect(() => {
-  //   if (!isUserScrolling && containerWidth && selectedCategory) {
-  //     const selectedIndex = categories.findIndex(cat => cat.name === selectedCategory);
-  //     if (selectedIndex !== -1) {
-  //       const itemWidth = 100;
-  //       const gap = 0;
-  //       const totalItemWidth = itemWidth + gap;
-  //       const itemStartX = selectedIndex * totalItemWidth;
+      if (cat.name === "All") {
+        setExpandedParent(null);
+        setSelectedCategory("All", null);
+        onApplySearch?.(null);
+        return;
+      }
 
-  //       // Calculate the target scroll position to center the item
-  //       const targetScrollX = Math.max(
-  //         0,
-  //         itemStartX - (containerWidth - itemWidth) / 2
-  //       );
+      if (hasSubs) {
+        if (expandedParent === cat.name) {
+          // Collapse — go back to "All"
+          setExpandedParent(null);
+          setSelectedCategory("All", null);
+          onApplySearch?.(null);
+        } else {
+          // Expand this parent; filter by parent ID so products update
+          setExpandedParent(cat.name);
+          setSelectedCategory(cat.name, cat.id);
+          onApplySearch?.(cat.id);
+        }
+      } else {
+        setExpandedParent(null);
+        setSelectedCategory(cat.name, cat.id);
+        onApplySearch?.(cat.id);
+      }
+    },
+    [expandedParent, setSelectedCategory, onApplySearch]
+  );
 
-  //       // Only scroll if the item is not properly centered and we're not currently scrolling
-  //       const tolerance = 10; // 10px tolerance
-  //       if (Math.abs(currentScrollX - targetScrollX) > tolerance) {
-  //         // Add a small delay to prevent interference with manual scrolling
-  //         setTimeout(() => {
-  //           if (!isUserScrolling) {
-  //             flatListRef.current?.scrollToOffset({
-  //               offset: targetScrollX,
-  //               animated: false,
-  //             });
-  //           }
-  //         }, 100);
-  //       }
-  //     }
-  //   }
-  // }, [selectedCategory, containerWidth, categories, isUserScrolling]);
+  const handleSubCategoryPress = useCallback(
+    (sub: { name: string; id: number }) => {
+      setSelectedCategory(sub.name, sub.id);
+      onApplySearch?.(sub.id);
+    },
+    [setSelectedCategory, onApplySearch]
+  );
 
-  // Animate dropdown
-  useEffect(() => {
-    if (showFilterDropdown) {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [showFilterDropdown]);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setCurrentScrollX(event.nativeEvent.contentOffset.x);
+  // ── Filter modal handlers ──
+  const handleOpenFilter = () => {
+    setLocalMin(minPrice);
+    setLocalMax(maxPrice);
+    setShowFilterModal(true);
   };
 
-  const handleScrollBeginDrag = () => setIsUserScrolling(true);
-  const handleScrollEnd = () => {
-    setTimeout(() => {
-      setIsUserScrolling(false);
-    }, 200); // Increased delay to prevent auto-scroll interference
-  };
-
-  const brandOptions = ["Toyota", "Honda", "BMW", "Mercedes", "Ford"];
-  const conditionOptions = ["New", "Used", "Certified"];
-
-  const handleFilterPress = () => {
-    setShowFilterDropdown(true);
-  };
-
-  const applyAdvancedFilters = () => {
-    setShowFilterDropdown(false);
-    // Call the main Apply function from parent
+  const handleApplyFilter = () => {
+    onPriceChange?.("min", localMin);
+    onPriceChange?.("max", localMax);
+    setShowFilterModal(false);
     onApplySearch?.();
   };
 
-  const resetFilters = () => {
-    setAdvancedFilters({
-      brand: "",
-      condition: "",
-    });
-    onPriceChange?.('min', '');
-    onPriceChange?.('max', '');
-    // Call the main Reset function from parent
+  const handleResetFilter = () => {
+    setLocalMin("");
+    setLocalMax("");
+    onPriceChange?.("min", "");
+    onPriceChange?.("max", "");
+    setShowFilterModal(false);
     onResetSearch?.();
   };
 
-  const handleSuggestionSelect = (suggestion: string) => {
-
-    // Set flag to prevent filtering interference
-    setIsSelectingSuggestion(true);
-
-    // Update search query with the selected suggestion
-    setSearchQuery(suggestion);
-
-    // Also update debounced query immediately
-    setDebouncedSearchQuery(suggestion);
-
-    // Add to recent searches
-    addToRecentSearches(suggestion);
-
-    // Hide suggestions immediately
-    setShowSearchSuggestions(false);
-    setShowSearchHistory(false);
-    setShowPopularSearches(false);
-
-    // Reset the flag after a short delay
-    setTimeout(() => {
-      setIsSelectingSuggestion(false);
-    }, 200);
-  };
-
-  const addToSearchHistory = (query: string) => {
-    if (query.trim().length > 0) {
-      setSearchHistory((prev) => {
-        const filtered = prev.filter((item) => item !== query);
-        return [query, ...filtered].slice(0, 10); // Keep only last 10 searches
-      });
-    }
-  };
-
-  const addToRecentSearches = (query: string) => {
-    if (query.trim().length > 0) {
-      setRecentSearches((prev) => {
-        const filtered = prev.filter((item) => item !== query);
-        return [query, ...filtered].slice(0, 5); // Keep only last 5 recent searches
-      });
-    }
-  };
-
-  const clearSearchHistory = () => {
-    setSearchHistory([]);
-    setShowSearchHistory(false);
-  };
-
-  const handleHistorySelect = (historyItem: string) => {
-    setSearchQuery(historyItem);
-    setDebouncedSearchQuery(historyItem);
-    addToSearchHistory(historyItem);
-    setShowSearchHistory(false);
-    // Prevent suggestions from showing after selecting history
-    setShowSearchSuggestions(false);
-  };
-
-  const requestMicrophonePermission = async () => {
-    if (Platform.OS === "android") {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          {
-            title: "Microphone Permission",
-            message:
-              "This app needs access to your microphone for voice search.",
-            buttonNeutral: "Ask Me Later",
-            buttonNegative: "Cancel",
-            buttonPositive: "OK",
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true; // iOS handles permissions differently
-  };
-
-  const handleSearchFocus = () => {
-    setIsInputFocused(true);
-
-    // If input is empty, show popular searches or search history
-    if (searchQuery.trim().length === 0) {
-      if (recentSearches.length > 0) {
-        setShowSearchHistory(true);
-      } else {
-        setShowPopularSearches(true);
-      }
-    } else {
-      // Show suggestions if user is typing
-      if (searchQuery.trim().length > 0 && !isAutoSuggestionSelected) {
-        setShowSearchSuggestions(true);
-      }
-    }
-  };
-
-  const handleSearchBlur = () => {
-    setIsInputFocused(false);
-    // Delay hiding to allow for suggestion selection
-    setTimeout(() => {
-      setShowSearchSuggestions(false);
-      setShowSearchHistory(false);
-      setShowPopularSearches(false);
-    }, 200);
-  };
-
-  // When user types, reset auto-suggestion flag
-  const handleInputChange = (text: string) => {
-    setIsAutoSuggestionSelected(false);
-    setSearchQuery(text);
-  };
-
-  const renderCategoryTab = useCallback(
-    ({ item }: { item: { name: string; id: number | null } }) => (
-      <CategoryTab 
-        item={item} 
-        selectedCategory={selectedCategory} 
-        onSelect={(categoryName, categoryId) => {
-          setSelectedCategory(categoryName);
-          // Call a special handler that applies the category filter immediately
-          onApplySearch?.(categoryId);
-        }} 
-      />
-    ),
-    [selectedCategory, onApplySearch]
+  // ── Render helpers ──
+  const renderMainCat = useCallback(
+    ({ item }: { item: CategoryOption }) => {
+      const hasSubs = (item.sub_categories?.length ?? 0) > 0;
+      const isSelected =
+        selectedCategory === item.name ||
+        (expandedParent === item.name);
+      return (
+        <Chip
+          label={item.name}
+          isSelected={isSelected}
+          isParent={hasSubs}
+          hasChildren={hasSubs}
+          onPress={() => handleMainCategoryPress(item)}
+        />
+      );
+    },
+    [selectedCategory, expandedParent, handleMainCategoryPress]
   );
 
-  const renderSearchSuggestion = useCallback(
-    ({ item }: { item: any }) => (
-      <SearchSuggestion item={item} onSelect={handleSuggestionSelect} />
-    ),
-    [handleSuggestionSelect]
+  const renderSubCat = useCallback(
+    ({ item }: { item: { name: string; id: number } }) => {
+      const isSelected = selectedCategory === item.name;
+      return (
+        <Chip
+          label={item.name}
+          isSelected={isSelected}
+          onPress={() => handleSubCategoryPress(item)}
+        />
+      );
+    },
+    [selectedCategory, handleSubCategoryPress]
   );
-
-  const renderSearchHistory = useCallback(() => (
-    <View className="bg-white rounded-xl mt-2 shadow-2xl p-4">
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="font-NunitoBold text-lg text-gray-900">
-          Recent Searches
-        </Text>
-        <TouchableOpacity onPress={clearSearchHistory} className="p-2">
-          <Text className="text-primary-500 font-NunitoMedium">Clear All</Text>
-        </TouchableOpacity>
-      </View>
-      {searchHistory.length > 0 ? (
-        searchHistory.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => handleHistorySelect(item)}
-            className="flex-row items-center py-3 border-b border-gray-100"
-            activeOpacity={0.7}
-          >
-            <View className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center mr-3">
-              <Text className="text-gray-600">🕒</Text>
-            </View>
-            <Text className="font-NunitoMedium text-gray-900 flex-1">
-              {item}
-            </Text>
-            <Text className="text-gray-400">→</Text>
-          </TouchableOpacity>
-        ))
-      ) : (
-        <Text className="text-gray-500 text-center py-4">
-          No recent searches
-        </Text>
-      )}
-    </View>
-  ), [searchHistory, clearSearchHistory, handleHistorySelect]);
-
-  const { CONTAINER_PADDING } = LAYOUT;
 
   return (
-    <View>
-      <View className={`${CONTAINER_PADDING} mb-3`}>
+    <View style={{ marginBottom: 8 }}>
+      {/* ── Search bar ── */}
+      <View style={{ paddingHorizontal: 12, marginBottom: 10 }}>
         <View
-          className="flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-200"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "#F9FAFB",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#E5E7EB",
+            paddingHorizontal: 14,
+            paddingVertical: 11,
+          }}
         >
-          <View className="mr-4">
-            {isSearching ? (
-              <ActivityIndicator size="small" color="#3B82F6" />
-            ) : (
-              <MagnifyingGlassIcon/>
-            )}
-          </View>
-
-          <View className="flex-1 relative">
-            <TextInput
-              placeholder={
-                !isAutoSuggestionReady ? "Search cars, spare parts..." : ""
-              }
-              value={searchQuery}
-              onChangeText={handleInputChange}
-              onFocus={handleSearchFocus}
-              onBlur={handleSearchBlur}
-              className="text-base font-NunitoMedium text-gray-900"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
+          {isSearching ? (
+            <ActivityIndicator
+              size="small"
+              color={ACTIVE_COLOR}
+              style={{ marginRight: 10 }}
             />
+          ) : (
+            <MagnifyingGlassIcon
+              size={20}
+              color="#9CA3AF"
+              style={{ marginRight: 10 }}
+            />
+          )}
 
-            {/* Animated Auto-Suggestion Overlay */}
-            {searchQuery.trim().length === 0 &&
-              !isInputFocused &&
-              isAutoSuggestionReady && (
-                <Animated.View
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    justifyContent: "center", // This will center the text vertically
-                    opacity: placeholderFadeAnim,
-                    transform: [{ translateX: placeholderSlideAnim }],
-                    pointerEvents: "none",
-                  }}
-                  className="bg-transparent"
-                >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      lineHeight: 22,
-                      color: "#9CA3AF",
-                      paddingVertical: 0,
-                      textAlignVertical: "center",
-                    }}
-                    className="font-NunitoMedium"
-                  >
-                    Search for products...
-                  </Text>
-                </Animated.View>
-              )}
-          </View>
+          <TextInput
+            style={{
+              flex: 1,
+              fontSize: 15,
+              color: "#111827",
+              fontFamily: "Nunito-Medium",
+            }}
+            placeholder="Search cars, spare parts…"
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-          {/* Clear Button */}
           {searchQuery.length > 0 && (
             <TouchableOpacity
-              onPress={() => {
-                setSearchQuery("");
-                setDebouncedSearchQuery("");
-                setShowSearchSuggestions(false);
-                setFilteredSuggestions([]);
-              }}
-              className="mr-2 p-1"
+              onPress={() => setSearchQuery("")}
               activeOpacity={0.7}
+              style={{ marginRight: 8 }}
             >
-              <View className="w-5 h-5 bg-gray-300 rounded-full items-center justify-center">
-                <Text className="text-gray-600 text-xs font-NunitoBold">×</Text>
-              </View>
+              <XMarkIcon size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
 
-          <View className="border-l border-gray-300 ml-2 pl-3">
-            <TouchableOpacity
-              onPress={handleFilterPress}
-              onLayout={(event) => {
-                const { x, y, width, height } = event.nativeEvent.layout;
-                setFilterButtonLayout({ x, y, width, height });
+          {/* Filter button */}
+          <TouchableOpacity
+            onPress={handleOpenFilter}
+            activeOpacity={0.7}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              backgroundColor: hasPriceFilter ? ACTIVE_COLOR : "#F3F4F6",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <AdjustmentsHorizontalIcon
+              size={18}
+              color={hasPriceFilter ? "#fff" : "#6B7280"}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Main category row ── */}
+      <FlatList
+        data={categories}
+        renderItem={renderMainCat}
+        keyExtractor={(item) => item.id?.toString() ?? item.name}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 2 }}
+        initialNumToRender={10}
+      />
+
+      {/* ── Sub-category row (animated) ── */}
+      <Animated.View
+        style={{
+          height: subRowHeight,
+          opacity: subRowOpacity,
+          overflow: "hidden",
+          marginTop: 6,
+          paddingHorizontal: 12,
+          backgroundColor: "#F0F9FF",
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: "#BFDBFE",
+          justifyContent: "center",
+        }}
+      >
+        <FlatList
+          data={activeSubCategories}
+          renderItem={renderSubCat}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingVertical: 6 }}
+          initialNumToRender={10}
+        />
+      </Animated.View>
+
+      {/* ── Active price filter pill ── */}
+      {hasPriceFilter && (
+        <View style={{ paddingHorizontal: 12, marginTop: 8 }}>
+          <TouchableOpacity
+            onPress={handleResetFilter}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-start",
+              backgroundColor: "#FEF2F2",
+              borderRadius: 20,
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderWidth: 1,
+              borderColor: "#FCA5A5",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                color: "#DC2626",
+                fontFamily: "Nunito-Bold",
+                marginRight: 4,
               }}
-              className="p-1"
-              activeOpacity={0.7}
             >
-               <View className="w-5 h-5 flex-col justify-between py-1">
-                <View className="w-full h-0.5 bg-gray-500 rounded-full" />
-                <View className="w-3 h-0.5 bg-gray-500 rounded-full self-end" />
-                <View className="w-full h-0.5 bg-gray-500 rounded-full" />
-              </View>
-            </TouchableOpacity>
-            
-          </View>
+              Price: {minPrice ? `₦${minPrice}` : "any"} –{" "}
+              {maxPrice ? `₦${maxPrice}` : "any"}
+            </Text>
+            <XMarkIcon size={13} color="#DC2626" />
+          </TouchableOpacity>
         </View>
+      )}
 
-        {/* Search History Dropdown */}
-        {showSearchHistory && searchQuery.trim().length === 0 && (
-          <Animated.View
-            style={{
-              transform: [{ translateY: searchSlideAnim }],
-              opacity: searchFadeAnim,
-            }}
-            className="absolute top-full left-0 right-0 z-50"
-          >
-            {renderSearchHistory()}
-          </Animated.View>
-        )}
-
-        {/* Popular Searches Dropdown */}
-        {showPopularSearches && searchQuery.trim().length === 0 && (
-          <Animated.View
-            style={{
-              transform: [{ translateY: searchSlideAnim }],
-              opacity: searchFadeAnim,
-            }}
-            className="absolute top-full left-0 right-0 z-50"
-          >
-            <View className="bg-white rounded-xl mt-2 shadow-2xl p-4">
-              <Text className="font-NunitoBold text-lg text-gray-900 mb-3">
-                Popular Searches
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {popularSearches.slice(0, 8).map((search, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleSuggestionSelect(search)}
-                    className="px-3 py-2 bg-gray-100 rounded-full"
-                    activeOpacity={0.7}
-                  >
-                    <Text className="text-gray-700 font-NunitoMedium text-sm">
-                      {search}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Search Suggestions Dropdown */}
-        {showSearchSuggestions && (
-          <Animated.View
-            style={{
-              transform: [{ translateY: searchSlideAnim }],
-              opacity: searchFadeAnim,
-            }}
-            className="absolute top-full left-0 right-0 bg-white rounded-xl mt-2 shadow-2xl z-50 max-h-80"
-          >
-            {isSearching ? (
-              <View className="py-6 px-4 flex-row items-center justify-center">
-                <ActivityIndicator size="small" color="#3B82F6" />
-                <Text className="text-gray-500 font-NunitoMedium ml-2">
-                  Searching for "{searchQuery}"...
-                </Text>
-              </View>
-            ) : searchSuggestions.length > 0 ? (
-              <View className="py-2">
-                <Text className="px-4 py-2 text-sm font-NunitoBold text-gray-600">
-                  Suggestions
-                </Text>
-                {searchSuggestions.map((suggestion, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleSuggestionSelect(suggestion)}
-                    className="flex-row items-center px-4 py-3 border-b border-gray-100"
-                    activeOpacity={0.7}
-                  >
-                    <View className="w-6 h-6 bg-blue-100 rounded-full items-center justify-center mr-3">
-                      <Text className="text-blue-600 text-xs">🔍</Text>
-                    </View>
-                    <Text className="font-NunitoMedium text-gray-900 flex-1">
-                      {suggestion}
-                    </Text>
-                    <Text className="text-gray-400">→</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <View className="py-6 px-4">
-                <Text className="text-center text-gray-500 font-NunitoMedium">
-                  No suggestions found for "{searchQuery}"
-                </Text>
-                <Text className="text-center text-gray-400 text-sm mt-1">
-                  Try different keywords
-                </Text>
-              </View>
-            )}
-          </Animated.View>
-        )}
-      </View>
-
-      <View className="mb-3">
-        <Text
-          className={`text-xl font-NunitoExtraBold text-gray-900 ${CONTAINER_PADDING} mb-1`}
-        >
-          Categories
-        </Text>
-        <View
-          className="bg-[#F2F4F7] border border-gray-300 p-1 rounded-[.5rem] mx-3"
-          onLayout={(event) =>
-            setContainerWidth(event.nativeEvent.layout.width)
-          }
-        >
-          <FlatList
-            ref={flatListRef}
-            data={categories}
-            renderItem={renderCategoryTab}
-            keyExtractor={(item) => item.id?.toString() || item.name}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEnd}
-            onMomentumScrollEnd={handleScrollEnd}
-            scrollEventThrottle={16}
-            decelerationRate="normal"
-            contentContainerStyle={{ paddingHorizontal: 1, paddingVertical: 0 }}
-            ItemSeparatorComponent={() => <View style={{ width: 0 }} />}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={7}
-            removeClippedSubviews={true}
-          />
-        </View>
-      </View>
-
-      {/* Enhanced Filter Dropdown Modal */}
+      {/* ── Price filter bottom-sheet modal ── */}
       <Modal
-        visible={showFilterDropdown}
-        transparent={true}
-        animationType="none"
-        onRequestClose={() => setShowFilterDropdown(false)}
+        visible={showFilterModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }}
           activeOpacity={1}
-          onPress={() => setShowFilterDropdown(false)}
+          onPress={() => setShowFilterModal(false)}
+        />
+        <View
+          style={{
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: 24,
+            paddingBottom: 40,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }}
         >
-          <View className="flex-1 justify-start items-end pt-20 pr-5">
-            <Animated.View
-              style={{
-                transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-                opacity: fadeAnim,
-              }}
-              className="bg-white rounded-2xl p-1 w-72 shadow-2xl"
-            >
-              {/* Advanced Filter Options */}
-                <View className="py-2">
-                  {/* Price Range */}
-                  <View className="mb-4 px-4">
-                    <Text className="font-NunitoBold text-gray-700 mb-2">
-                      Price Range
-                    </Text>
-                    <View className="flex-col gap-2">
-                      <Text className="text-gray-500">Min Price</Text>
-                      <TextInput
-                        value={minPrice}
-                        onChangeText={(text) => onPriceChange?.('min', text)}
-                        className="flex-1 w-full border border-gray-300 rounded-[.4rem] px-3 py-6"
-                        placeholder="Min Price"
-                        keyboardType="numeric"
-                      />
-                      <Text className="text-gray-500">Max Price</Text>
-                      <TextInput
-                        value={maxPrice}
-                        onChangeText={(text) => onPriceChange?.('max', text)}
-                        className="flex-1 w-full border border-gray-300 rounded-[.4rem] px-3 py-6 mb-[3rem]"
-                        placeholder="Max Price"
-                        keyboardType="numeric"
-                      />
-                    </View>
-                  </View>
+          {/* Handle */}
+          <View
+            style={{
+              width: 40,
+              height: 4,
+              backgroundColor: "#E5E7EB",
+              borderRadius: 2,
+              alignSelf: "center",
+              marginBottom: 20,
+            }}
+          />
 
-                  {/* Brand Filter */}
-                  {/* <View className="mb-4 px-4">
-                    <Text className="font-NunitoBold text-gray-700 mb-2">
-                      Brand
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      {brandOptions.map((brand) => (
-                        <TouchableOpacity
-                          key={brand}
-                          onPress={() =>
-                            setAdvancedFilters((prev) => ({
-                              ...prev,
-                              brand: prev.brand === brand ? "" : brand,
-                            }))
-                          }
-                          className={`px-3 py-2 rounded-full border ${
-                            advancedFilters.brand === brand
-                              ? "bg-primary-500 border-primary-500"
-                              : "bg-gray-100 border-gray-300"
-                          }`}
-                        >
-                          <Text
-                            className={`font-NunitoMedium ${
-                              advancedFilters.brand === brand
-                                ? "text-white"
-                                : "text-gray-700"
-                            }`}
-                          >
-                            {brand}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View> */}
+          <Text
+            style={{
+              fontSize: 18,
+              fontFamily: "Nunito-ExtraBold",
+              color: "#111827",
+              marginBottom: 20,
+            }}
+          >
+            Filter by Price
+          </Text>
 
-                  {/* Condition Filter */}
-                  {/* <View className="mb-4 px-4">
-                    <Text className="font-NunitoBold text-gray-700 mb-2">
-                      Condition
-                    </Text>
-                    <View className="flex-row gap-2">
-                      {conditionOptions.map((condition) => (
-                        <TouchableOpacity
-                          key={condition}
-                          onPress={() =>
-                            setAdvancedFilters((prev) => ({
-                              ...prev,
-                              condition:
-                                prev.condition === condition ? "" : condition,
-                            }))
-                          }
-                          className={`px-3 py-2 rounded-full border ${
-                            advancedFilters.condition === condition
-                              ? "bg-primary-500 border-primary-500"
-                              : "bg-gray-100 border-gray-300"
-                          }`}
-                        >
-                          <Text
-                            className={`font-NunitoMedium ${
-                              advancedFilters.condition === condition
-                                ? "text-white"
-                                : "text-gray-700"
-                            }`}
-                          >
-                            {condition}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View> */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#6B7280",
+                  fontFamily: "Nunito-SemiBold",
+                  marginBottom: 6,
+                }}
+              >
+                Min Price (₦)
+              </Text>
+              <TextInput
+                value={localMin}
+                onChangeText={setLocalMin}
+                placeholder="e.g. 5000"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 15,
+                  color: "#111827",
+                  backgroundColor: "#F9FAFB",
+                }}
+              />
+            </View>
 
-                  {/* Action Buttons */}
-                  <View className="flex-row gap-3 px-4">
-                    <TouchableOpacity
-                      onPress={resetFilters}
-                      className="flex-1 py-3 border border-gray-300 rounded-[.4rem] items-center"
-                      activeOpacity={0.7}
-                    >
-                      <Text className="text-gray-700 font-NunitoBold">
-                        Reset
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={applyAdvancedFilters}
-                      className="flex-1 py-3 bg-primary-500 rounded-[.4rem] items-center"
-                      activeOpacity={0.7}
-                    >
-                      <Text className="text-white font-NunitoBold">Apply</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-            </Animated.View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#6B7280",
+                  fontFamily: "Nunito-SemiBold",
+                  marginBottom: 6,
+                }}
+              >
+                Max Price (₦)
+              </Text>
+              <TextInput
+                value={localMax}
+                onChangeText={setLocalMax}
+                placeholder="e.g. 500000"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  fontSize: 15,
+                  color: "#111827",
+                  backgroundColor: "#F9FAFB",
+                }}
+              />
+            </View>
           </View>
-        </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <TouchableOpacity
+              onPress={handleResetFilter}
+              activeOpacity={0.8}
+              style={{
+                flex: 1,
+                paddingVertical: 14,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontFamily: "Nunito-Bold", color: "#374151" }}>
+                Reset
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleApplyFilter}
+              activeOpacity={0.8}
+              style={{
+                flex: 1,
+                paddingVertical: 14,
+                borderRadius: 14,
+                backgroundColor: ACTIVE_COLOR,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontFamily: "Nunito-Bold", color: "#fff" }}>
+                Apply
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );

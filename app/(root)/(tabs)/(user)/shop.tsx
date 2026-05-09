@@ -1,12 +1,12 @@
 "use client"
 
-import { View, FlatList, Text, RefreshControl, ScrollView, TouchableOpacity } from "react-native"
+import { View, FlatList, Text, RefreshControl, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Card1 from "@/components/cards/Card1"
 import { LAYOUT } from "@/constants/units"
 import SearchBarWithCategories from "@/components/SearchBarWithCategories"
-import { useRouter, useLocalSearchParams } from "expo-router"
+import { useRouter, useLocalSearchParams, useGlobalSearchParams } from "expo-router"
 import { routes } from "@/constants/routes"
 import SpecialistIconBtn from "@/components/SpecialistIconBtn"
 import { useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
@@ -19,46 +19,79 @@ import { ShoppingBagIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { StatusBar } from "expo-status-bar"
 import Animated, { FadeInDown } from "react-native-reanimated"
 import AnimatedPageContainer from "@/components/AnimatedPageContainer"
+import { usePrimaryUserProfile, useUserCars } from "@/hooks/useUserProfile"
 
 const Shop = () => {
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
   const router = useRouter();
-  const params = useLocalSearchParams<{ category?: string; categoryId?: string; q?: string }>();
+  const params = useGlobalSearchParams<{ category?: string; categoryId?: string; q?: string }>();
 
   const [selectedCategory, setSelectedCategory] = useState(params.category || "All")
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     params.categoryId ? parseInt(params.categoryId) : null
   )
+  const { data: profileResponse } = usePrimaryUserProfile();
+  const { data: vehicles } = useUserCars();
+  
+  const userCarMakes = useMemo(() => {
+    const makes = [];
+    // From primary profile - normalized for PrimaryUserProfileResponse structure
+    const user = (profileResponse as any)?.data || (profileResponse as any)?.user;
+    const primaryMake = user?.car_make;
+    if (primaryMake) makes.push(primaryMake.toLowerCase());
+    
+    // From vehicle list
+    vehicles?.forEach(v => {
+      if (v.make) makes.push(v.make.toLowerCase());
+    });
+    
+    return [...new Set(makes)]; // Unique makes
+  }, [profileResponse, vehicles]);
+
   const [inputQuery, setInputQuery] = useState(params.q || "")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
 
-  // Manual filtering - only trigger when Apply button is clicked
-  // Initialize from params if they exist (for navigation from home page)
-  const [filtersApplied, setFiltersApplied] = useState(!!(params.categoryId && params.category));
-  const [appliedCategoryId, setAppliedCategoryId] = useState<number | null>(
-    params.categoryId ? parseInt(params.categoryId) : null
-  );
+  // User-driven overrides are stored in these states and take precedence after first interaction
+  const [manualCategoryId, setManualCategoryId] = useState<number | null | undefined>(undefined);
   const [appliedMinPrice, setAppliedMinPrice] = useState("");
   const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
 
-  // Apply category filter from URL params on mount or when params change
-  useEffect(() => {
-    if (params.categoryId && params.category) {
-      const categoryId = parseInt(params.categoryId);
+  // appliedCategoryId: prefer user-driven selection (manualCategoryId), else fall back to URL params
+  const appliedCategoryId = useMemo(() => {
+    if (manualCategoryId !== undefined && manualCategoryId !== null) {
+      return manualCategoryId;
+    }
+    
+    // If manualCategoryId is null, it means user clicked "All" or "Clear"
+    if (manualCategoryId === null) return null;
 
-      // Update both selected and applied states
-      setSelectedCategory(params.category);
-      setSelectedCategoryId(categoryId);
-      setAppliedCategoryId(categoryId);
-      setFiltersApplied(true);
-    } else if (!params.categoryId && !params.category) {
-      // If params are cleared, reset filters
-      setFiltersApplied(false);
-      setAppliedCategoryId(null);
+    // Fall back to params
+    const cid = Array.isArray(params.categoryId) ? params.categoryId[0] : params.categoryId;
+    if (cid) {
+      const parsed = parseInt(cid, 10);
+      return isNaN(parsed) ? null : parsed;
+    }
+    
+    return null;
+  }, [manualCategoryId, params.categoryId]);
+
+  useEffect(() => {
+    const cid = Array.isArray(params.categoryId) ? params.categoryId[0] : params.categoryId;
+    const cat = Array.isArray(params.category) ? params.category[0] : params.category;
+    
+    console.log("Shop Params Changed:", { cid, cat });
+    
+    if (cid && cat) {
+      setSelectedCategory(cat);
+      setSelectedCategoryId(parseInt(cid, 10));
+      // Reset manual override so params take effect on navigation
+      setManualCategoryId(undefined);
     }
   }, [params.categoryId, params.category]);
+
+  const filtersApplied = appliedCategoryId !== null || !!appliedMinPrice || !!appliedMaxPrice;
 
   // Debounce search query
   useEffect(() => {
@@ -86,6 +119,7 @@ const Shop = () => {
   const {
     data: productsData,
     isLoading: productsLoading,
+    isFetching: productsFetching,
     error: productsError,
     refetch: refetchProducts,
     fetchNextPage,
@@ -132,14 +166,31 @@ const Shop = () => {
     }
   });
 
-  // Prepare categories for the search bar (add "All" at the beginning)
+
+  // Build hierarchical category options:
+  // 1. Find all IDs that appear as sub-categories (to exclude them from top-level)
+  // 2. Top-level = categories not in any parent's sub_categories list
+  // 3. Each top-level entry carries its own sub_categories array
   const categoryOptions = useMemo(() => {
-    if (!categories) return [{ name: "All", id: null }];
-    const options = [
-      { name: "All", id: null },
-      ...categories.map(cat => ({ name: cat.name, id: cat.id }))
+    if (!categories) return [{ name: "All", id: null as number | null, sub_categories: [] as Array<{ name: string; id: number }> }];
+
+    // Collect all sub-category IDs
+    const subCategoryIds = new Set<number>();
+    categories.forEach(cat => {
+      cat.sub_categories?.forEach(sub => subCategoryIds.add(sub.id));
+    });
+
+    // Top-level = not a sub-category of someone else
+    const topLevel = categories.filter(cat => !subCategoryIds.has(cat.id));
+
+    return [
+      { name: "All", id: null as number | null, sub_categories: [] as Array<{ name: string; id: number }> },
+      ...topLevel.map(cat => ({
+        name: cat.name,
+        id: cat.id as number | null,
+        sub_categories: (cat.sub_categories ?? []).map(sub => ({ name: sub.name, id: sub.id })),
+      })),
     ];
-    return options;
   }, [categories]);
 
   // Sync category name from categories list when categories are loaded
@@ -166,43 +217,40 @@ const Shop = () => {
 
   // Determine which products to display
   const displayProducts = useMemo(() => {
+    let baseList = [];
     // If search was triggered, use search results
     if (searchTriggered) {
-
-      return (searchResults as ProductListResponse[]) || [];
+      baseList = (searchResults as any[]) || [];
+    } else {
+      // If filters were applied or default: show products from main API
+      baseList = products || [];
     }
 
-    // If filters were applied, show products from main API
-    if (filtersApplied) {
-      return products || [];
-    }
+    // Sort to bring "Verified Sellers" (rating > 4.5) to the top
+    // This happens entirely on the client (phone) and is super fast for this list size
+    return [...baseList].sort((a, b) => {
+      const aRating = parseFloat(a.merchant_rating || a.rating || 0);
+      const bRating = parseFloat(b.merchant_rating || b.rating || 0);
+      
+      const aIsVerified = aRating > 4.5;
+      const bIsVerified = bRating > 4.5;
 
-    // Default: show all products (no filters applied)
-    return products || [];
-  }, [searchTriggered, searchResults, products,
-    searchQuery, searchCategoryId, searchMinPrice,
-    searchMaxPrice, searchLoading, searchError,
-    filtersApplied,
-    appliedCategoryId, appliedMinPrice,
-    appliedMaxPrice
-  ]);
+      if (aIsVerified && !bIsVerified) return -1; // a comes first
+      if (!aIsVerified && bIsVerified) return 1;  // b comes first
+      return 0; // maintain original order otherwise
+    });
+  }, [searchTriggered, searchResults, products, filtersApplied]);
 
-
-  const handleFilterPress = () => {
-    // Handle filter functionality
-  }
 
   const handleApplySearch = (categoryId?: number | null) => {
-    // Use provided categoryId or current selectedCategoryId
     const targetCategoryId = categoryId !== undefined ? categoryId : selectedCategoryId;
 
-    // Apply filters to main API
-    setAppliedCategoryId(targetCategoryId);
+    // Store as manual override so params don't overwrite it
+    setManualCategoryId(targetCategoryId);
     setAppliedMinPrice(minPrice);
     setAppliedMaxPrice(maxPrice);
-    setFiltersApplied(true);
 
-    // Also trigger search if there's a query
+    // Also trigger search if there's a text query
     if (debouncedSearchQuery.trim()) {
       setSearchQuery(debouncedSearchQuery);
       setSearchCategoryId(targetCategoryId);
@@ -212,18 +260,16 @@ const Shop = () => {
     } else {
       setSearchTriggered(false);
     }
-
   }
 
   const handleResetSearch = () => {
-    // Reset everything and show all products
     setSearchTriggered(false);
-    setFiltersApplied(false);
     setSearchQuery("");
     setSearchCategoryId(null);
     setSearchMinPrice("");
     setSearchMaxPrice("");
-    setAppliedCategoryId(null);
+    // Clear manual override — URL params will take over again (or null if none)
+    setManualCategoryId(null);
     setAppliedMinPrice("");
     setAppliedMaxPrice("");
     setInputQuery("");
@@ -271,6 +317,7 @@ const Shop = () => {
         productId={item.id}
         showLove={true}
         love={false}
+        userCarMakes={userCarMakes}
         onPress={() => {
           router.push({
             pathname: routes.ProductDetail,
@@ -338,35 +385,23 @@ const Shop = () => {
       <StatusBar style="dark" />
       <View className="flex-1">
         {/* Header */}
-        <View className="px-3 pt-2 ">
-          <View className="flex-row items-center justify-between mb-4">
+        <View className="px-3 pt-3 pb-1">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-3xl font-NunitoExtraBold text-gray-900">Shop</Text>
             <View className="flex-row items-center gap-2">
-              <Text className="text-3xl font-NunitoExtraBold text-gray-900">Shop</Text>
-            </View>
-            <View className="flex-row items-center gap-3">
               {filtersApplied && (
                 <TouchableOpacity
                   onPress={handleResetSearch}
                   className="bg-red-50 px-3 py-1.5 rounded-full flex-row items-center gap-1"
                 >
-                  <XMarkIcon size={14} color="#DC2626" />
-                  <Text className="text-red-600 text-xs font-NunitoBold">Clear Filters</Text>
+                  <XMarkIcon size={13} color="#DC2626" />
+                  <Text className="text-red-600 text-xs font-NunitoBold">Clear all</Text>
                 </TouchableOpacity>
               )}
               <SpecialistIconBtn />
             </View>
           </View>
-
-          {/* Results Info */}
-          <View className="flex-row items-center justify-between">
-            {selectedCategory !== "All" && (
-              <View className="bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
-                <Text className="text-primary-600 text-xs font-NunitoBold">{selectedCategory}</Text>
-              </View>
-            )}
-          </View>
         </View>
-
 
         <SearchBarWithCategories
           searchQuery={inputQuery}
@@ -374,7 +409,6 @@ const Shop = () => {
           selectedCategory={selectedCategory}
           setSelectedCategory={handleCategoryChange}
           categories={categoryOptions}
-          onFilterPress={handleFilterPress}
           minPrice={minPrice}
           maxPrice={maxPrice}
           onPriceChange={handlePriceChange}
@@ -382,6 +416,13 @@ const Shop = () => {
           onResetSearch={handleResetSearch}
           isSearching={searchLoading}
         />
+
+        {/* Background loading indicator */}
+        {productsFetching && !isInitialLoad && (
+          <View className="absolute top-36 right-5 z-10 bg-white/80 rounded-full p-2 shadow-sm border border-gray-100">
+            <ActivityIndicator size="small" color="#D30309" />
+          </View>
+        )}
 
         {/* Products Grid */}
         <AnimatedPageContainer animationType="fadeInDown" duration={500} style={{ flex: 1 }}>

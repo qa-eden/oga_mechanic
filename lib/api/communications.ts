@@ -27,11 +27,13 @@ export interface ChatRoom {
 }
 
 export interface ChatRoomsResponse {
-  status: boolean;
-  message: string;
-  data: {
-    count: number;
-    results: ChatRoom[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: {
+    status: boolean;
+    message: string;
+    data: ChatRoom[];
   };
 }
 
@@ -49,6 +51,38 @@ export const communicationsAPI = {
    */
   getRoomMessages: async (roomId: string): Promise<any> => {
     const response = await api.get(`${SERVICE_ENDPOINTS.COMMUNICATIONS_CHAT_ROOMS}${roomId}/messages/`);
+    return response.data;
+  },
+
+  /**
+   * Initializes a conversation with another user. 
+   * Returns existing room if one already exists.
+   */
+  createChatRoom: async (participantIds: string[]): Promise<any> => {
+    const response = await api.post(SERVICE_ENDPOINTS.COMMUNICATIONS_CHAT_ROOMS, {
+      participant_ids: participantIds
+    });
+    return response.data;
+  },
+
+  /**
+   * Sends a message via REST (Fallback method).
+   */
+  sendMessage: async (roomId: string, content: string, messageType: string = 'text'): Promise<any> => {
+    const response = await api.post(`${SERVICE_ENDPOINTS.COMMUNICATIONS_CHAT_ROOMS}${roomId}/messages/`, {
+      content,
+      message_type: messageType
+    });
+    return response.data;
+  },
+
+  /**
+   * Marks specific messages as read.
+   */
+  markMessagesAsRead: async (roomId: string, messageIds: string[]): Promise<any> => {
+    const response = await api.post(`${SERVICE_ENDPOINTS.COMMUNICATIONS_CHAT_ROOMS}${roomId}/mark-read/`, {
+      message_ids: messageIds
+    });
     return response.data;
   },
 };

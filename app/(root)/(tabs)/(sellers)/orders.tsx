@@ -17,7 +17,7 @@ const Orders = () => {
   const { data: profileData, activeRole } = useActiveRoleProfile();
 
   // Extract merchant ID safely from different profile structures
-  const merchantId = activeRole === 'merchant'
+  const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
@@ -106,7 +106,7 @@ const Orders = () => {
         <View className="bg-white px-4 py-4 border-b border-gray-100">
           <View className="flex-row items-center">
             <Text className="text-xl font-NunitoBold text-gray-800 flex-1 text-center">
-              My orders
+              {activeRole === 'vehicle_rental' ? "My Rentals" : "My orders"}
             </Text>
           </View>
         </View>
@@ -130,7 +130,7 @@ const Orders = () => {
         <View className="flex-row items-center">
 
           <Text className="text-xl font-NunitoBold text-gray-800 flex-1 text-center">
-            My orders
+            {activeRole === 'vehicle_rental' ? "My Rentals" : "My orders"}
           </Text>
         </View>
       </View>

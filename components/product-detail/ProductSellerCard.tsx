@@ -45,12 +45,14 @@ const ProductSellerCard: React.FC<ProductSellerCardProps> = ({
     >
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-sm font-NunitoBold text-gray-700">Sold by</Text>
-        <View className="flex-row items-center bg-green-50 px-2 py-1 rounded-full">
-          <View className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1" />
-          <Text className="text-xs text-green-700 font-NunitoMedium">
-            Verified
-          </Text>
-        </View>
+        {(merchantRating && merchantRating > 4.5) && (
+          <View className="flex-row items-center bg-green-50 px-2 py-1 rounded-full">
+            <View className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1" />
+            <Text className="text-xs text-green-700 font-NunitoMedium">
+              Verified
+            </Text>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity

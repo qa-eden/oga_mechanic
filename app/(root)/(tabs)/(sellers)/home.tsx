@@ -24,7 +24,7 @@ import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import LoadingErrorWrapper from "@/components/LoadingErrorWrapper";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { usePrimaryUserProfile, useMerchantProfile } from "@/hooks/useUserProfile";
+import { usePrimaryUserProfile, useMerchantProfile, useVehicleRentalProfile } from "@/hooks/useUserProfile";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
@@ -44,30 +44,36 @@ const SellerHome = () => {
   const { data: primaryProfileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
 
   // Extract active role with fallback
-  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+  const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const isVehicleRental = activeRole === 'vehicle_rental';
+  const isSeller = activeRole === 'merchant' || activeRole === 'seller';
 
-  // Fetch specific merchant profile to check KYC status - ensure enabled on mount
-  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+  // Fetch specific profile to check KYC status
+  const merchantProfileQuery = useMerchantProfile(isSeller);
+  const vehicleRentalProfileQuery = useVehicleRentalProfile(isVehicleRental);
+  
+  const activeProfileQuery = isVehicleRental ? vehicleRentalProfileQuery : merchantProfileQuery;
 
   // Extract merchant ID safely from different profile structures
   const profileData = primaryProfileData;
-  const merchantId = activeRole === 'merchant'
+  const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
 
   // Fetch merchant analytics data
-  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics();
+  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics(isSeller);
 
 
 
   const hasShownModalRef = React.useRef(false);
   const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Check profile status using the specific merchant profile endpoint
+  // Check profile status using the specific profile endpoint
   React.useEffect(() => {
-    if (merchantProfileQuery.data && !merchantProfileQuery.isLoading) {
-      const isComplete = merchantProfileQuery.data?.data?.kyc?.is_complete ?? false;
-      const isApproved = merchantProfileQuery.data?.data?.merchant_profile?.is_approved ?? false;
+    if (activeProfileQuery.data && !activeProfileQuery.isLoading) {
+      const isComplete = activeProfileQuery.data?.data?.kyc?.is_complete ?? false;
+      const isApproved = (activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved || false;
       
       setIsProfileComplete(isComplete);
       
@@ -97,11 +103,11 @@ const SellerHome = () => {
         timerIdRef.current = null;
       }
     };
-  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, setIsProfileComplete, isNewSwitch]);
+  }, [activeProfileQuery.data, activeProfileQuery.isLoading, setIsProfileComplete, isNewSwitch]);
 
   const isPendingApproval = Boolean(
-    merchantProfileQuery.data?.data?.kyc?.is_complete && 
-    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+    activeProfileQuery.data?.data?.kyc?.is_complete && 
+    !((activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved)
   );
 
   // Debug: Log profile data
@@ -146,7 +152,8 @@ const SellerHome = () => {
     try {
       await Promise.all([
         refetchAnalytics(),
-        refetchProfile()
+        refetchProfile(),
+        activeProfileQuery.refetch()
       ]);
     } catch (error) {
     } finally {
@@ -183,7 +190,7 @@ const SellerHome = () => {
         <View className=" py-4">
           <KYCBanner 
             isVisible={!isProfileComplete || isPendingApproval} 
-            role="seller" 
+            role={isVehicleRental ? "vehicle_rental" : "seller"} 
             isPending={isPendingApproval}
           />
 
@@ -196,10 +203,12 @@ const SellerHome = () => {
         <View className="flex-row gap-4 mb-6">
           <View className="flex-1 bg-[#D3C8E4] rounded-xl p-4">
             <Text className="text-gray-600 text-sm font-NunitoMedium mb-2">
-              Total Products
+              {isVehicleRental ? "Total Rental Fleet" : "Total Products"}
             </Text>
             <Text className="text-2xl font-NunitoBold text-gray-800">
-              {analyticsData?.product_count || 0}
+              {isVehicleRental 
+                ? (analyticsData?.rental_analytics?.total_rentals || 0) 
+                : (analyticsData?.product_count || 0)}
             </Text>
           </View>
         </View>
@@ -219,13 +228,13 @@ const SellerHome = () => {
               <CustomerInsightsChart data={analyticsData.customer_insights} />
             )}
 
-            {/* Product Performance Chart */}
-            {analyticsData?.product_performance && (
+            {/* Product Performance Chart - Only for Sellers */}
+            {isSeller && analyticsData?.product_performance && (
               <ProductPerformanceChart data={analyticsData.product_performance} />
             )}
 
-            {/* Rental Analytics Chart */}
-            {analyticsData?.rental_analytics && (
+            {/* Rental Analytics Chart - Only for Vehicle Rental */}
+            {isVehicleRental && analyticsData?.rental_analytics && (
               <RentalAnalyticsChart data={analyticsData.rental_analytics} />
             )}
           </View>
@@ -274,7 +283,7 @@ const SellerHome = () => {
       {/* Profile Completion Modal */}
       <ProfileCompletionModal
         isVisible={showProfileModal}
-        roleName="seller"
+        roleName={isVehicleRental ? "vehicle_rental" : "seller"}
         onComplete={() => setShowProfileModal(false)}
         onClose={() => setShowProfileModal(false)}
         isPending={isPendingApproval}

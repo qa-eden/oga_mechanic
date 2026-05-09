@@ -310,7 +310,7 @@ const CarDetail = () => {
   };
 
   const { width: screenWidth } = Dimensions.get("window");
-  const FallbackCarSvg = images.splashBackgroundCar;
+  const FallbackImage = images.carFront;
 
   // Show loading state
   if (isLoading) {
@@ -379,7 +379,7 @@ const CarDetail = () => {
             />
             <View
               className="w-full h-72 rounded-2xl items-center justify-center overflow-hidden"
-              style={{ backgroundColor: carData.color + "20" }}
+              style={{ backgroundColor: (carData?.color || "#F3F4F6") + "20" }}
             >
               {heroUri ?? carData.imageUri ? (
                 <Image
@@ -388,7 +388,11 @@ const CarDetail = () => {
                   resizeMode="cover"
                 />
               ) : (
-                <FallbackCarSvg width={screenWidth * 0.8} height={200} />
+                <Image 
+                  source={FallbackImage} 
+                  style={{ width: screenWidth * 0.8, height: 200 }} 
+                  resizeMode="contain" 
+                />
               )}
             </View>
             {/* Status Badge */}

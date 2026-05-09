@@ -8,21 +8,27 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  TextInput,
+  LayoutAnimation,
+  Platform,
 } from "react-native";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 import {
   ChevronLeftIcon,
   UserIcon,
   MapPinIcon,
   BriefcaseIcon,
-  IdentificationIcon
+  PlusIcon,
+  TrashIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  InformationCircleIcon,
 } from "react-native-heroicons/outline";
 
 
@@ -35,22 +41,21 @@ import ImageUpload from "@/components/ImageUpload";
 import LivenessCamera from "@/components/LivenessCamera";
 import SuccessModal from "@/components/modals/SuccessModal";
 import ErrorModal from "@/components/modals/ErrorModal";
+import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
+import ExpertiseRecordItem from "@/components/mechanic/ExpertiseRecordItem";
 import SelfieUpload from "@/components/SelfieUpload";
 import { userAPI } from "@/lib/api/user";
 import { mechanicAPI } from "@/lib/api/mechanic";
 import { useProfileStore } from "@/hooks/useProfileStore";
-import { useSubmitMechanicKYC } from "@/hooks/useUserProfile";
+import { useSubmitMechanicKYC, useSubmitVehicleExpertise } from "@/hooks/useUserProfile";
 import { mechanicRoutes } from "@/constants/routes";
 
-// Validation Schema
-const validationSchema = Yup.object().shape({
+// Step 1 Validation Schema
+const step1ValidationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
-  latitude: Yup.string(),
-  longitude: Yup.string(),
   bio: Yup.string().required("Please tell us about your experience"),
   nin_number: Yup.string().required("NIN is required"),
   specializations: Yup.array().min(1, "Select at least one specialization").required("Specializations are required"),
-  vehicle_expertise: Yup.array().min(1, "Select at least one vehicle expertise").required("Vehicle expertise is required"),
 });
 
 interface FormValues {
@@ -60,7 +65,12 @@ interface FormValues {
   bio: string;
   nin_number: string;
   specializations: string[];
-  vehicle_expertise: string[];
+}
+
+interface ExpertiseRecord {
+  vehicle_make_id: string;
+  years_of_experience: string;
+  certification_level: string;
 }
 
 interface DocumentFile {
@@ -71,21 +81,37 @@ interface DocumentFile {
 }
 
 const CompleteKYC = () => {
+  const params = useLocalSearchParams();
+  const initialStep = params.step ? parseInt(params.step as string, 10) : 1;
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [ninDocument, setNinDocument] = useState<DocumentFile | null>(null);
   const [selfie, setSelfie] = useState<DocumentFile | null>(null);
   const [certificateOfLearning, setCertificateOfLearning] = useState<DocumentFile | null>(null);
 
   const submitKYCMutation = useSubmitMechanicKYC();
-  const isSubmitting = submitKYCMutation.isPending;
+  const submitExpertiseMutation = useSubmitVehicleExpertise();
+  
   const [showLivenessModal, setShowLivenessModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isLoadingExpertise, setIsLoadingExpertise] = useState(true);
   
   // Dynamic Dropdown Options
   const [specializationsOptions, setSpecializationsOptions] = useState<{label: string, value: string}[]>([]);
   const [carBrandsOptions, setCarBrandsOptions] = useState<{label: string, value: string}[]>([]);
+  
+  // Step 2 State
+  const [expertiseRecords, setExpertiseRecords] = useState<ExpertiseRecord[]>([]);
+
+  const certificationLevels = [
+    { label: "Basic", value: "basic" },
+    { label: "Intermediate", value: "intermediate" },
+    { label: "Advanced", value: "advanced" },
+    { label: "Expert", value: "expert" },
+    { label: "Certified", value: "certified" },
+  ];
 
   const [initialFormValues, setInitialFormValues] = useState<FormValues>({
     location: "",
@@ -94,8 +120,19 @@ const CompleteKYC = () => {
     bio: "",
     nin_number: "",
     specializations: [],
-    vehicle_expertise: [],
   });
+
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
+
+
+  // Cleanup expertise records on unmount to prevent stale data
+  useEffect(() => {
+    return () => {
+      setExpertiseRecords([]);
+      setIsLoadingExpertise(true);
+      setIsLoadingProfile(true);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchProfileAndOptions = async () => {
@@ -104,6 +141,10 @@ const CompleteKYC = () => {
         const profileResponse = await userAPI.getMechanicProfile();
         if (profileResponse?.data?.has_mechanic_profile) {
           const profile = profileResponse.data.mechanic_profile;
+          const kyc = profileResponse.data.kyc;
+          
+          setIsPendingApproval(Boolean(kyc?.is_complete && !profile?.is_approved));
+          
           setInitialFormValues({
             location: profile.location || "",
             latitude: profile.latitude || "",
@@ -111,25 +152,42 @@ const CompleteKYC = () => {
             bio: profile.bio || "",
             nin_number: profile.nin_number || "",
             specializations: Array.isArray(profile.specializations) ? profile.specializations.map(String) : [],
-            vehicle_expertise: Array.isArray(profile.vehicle_expertise) ? profile.vehicle_expertise.map(String) : [],
           });
         }
 
         // Fetch Dropdown Options
         try {
-          const servicesResponse = await mechanicAPI.getServiceTypes();
-          const services = servicesResponse?.results || servicesResponse?.data || servicesResponse || [];
-          setSpecializationsOptions(services.map((item: any) => ({
+          const specsResponse = await mechanicAPI.getSpecializations();
+          const specs = Array.isArray(specsResponse) ? specsResponse : (specsResponse as any)?.data || (specsResponse as any)?.results || [];
+          setSpecializationsOptions(specs.map((item: any) => ({
             label: item.name || String(item.id),
             value: String(item.id)
           })));
 
-          const expertiseResponse = await mechanicAPI.getVehicleExpertise();
-          const expertises = expertiseResponse?.results || expertiseResponse?.data || expertiseResponse || [];
+          const expertiseResponse = await mechanicAPI.getVehicleMakes();
+          const expertises = Array.isArray(expertiseResponse) ? expertiseResponse : (expertiseResponse as any)?.data || (expertiseResponse as any)?.results || [];
           setCarBrandsOptions(expertises.map((item: any) => ({
-            label: item.vehicle_make?.name || item.name || String(item.id),
-            value: String(item.vehicle_make?.id || item.id)
+            label: item.name || String(item.id),
+            value: String(item.id)
           })));
+
+          // Fetch Existing Expertise Records
+          try {
+            const currentExpertiseResponse = await mechanicAPI.getVehicleExpertise();
+            const currentRecords = Array.isArray(currentExpertiseResponse) 
+              ? currentExpertiseResponse 
+              : currentExpertiseResponse?.data || currentExpertiseResponse?.results || [];
+            
+            if (currentRecords.length > 0) {
+              setExpertiseRecords(currentRecords.map((item: any) => ({
+                vehicle_make_id: String(item.vehicle_make_id || item.vehicle_make?.id || ""),
+                years_of_experience: String(item.years_of_experience || ""),
+                certification_level: item.certification_level || "basic"
+              })));
+            }
+          } catch (expertiseError) {
+            console.warn("Failed to fetch existing expertise records:", expertiseError);
+          }
         } catch (optionsError) {
           console.warn("Failed to fetch dropdown options:", optionsError);
         }
@@ -138,10 +196,18 @@ const CompleteKYC = () => {
         console.log("Error prefilling mechanic profile:", error);
       } finally {
         setIsLoadingProfile(false);
+        setIsLoadingExpertise(false);
       }
     };
     fetchProfileAndOptions();
   }, []);
+
+  // Automatically add first row when entering Step 2 if none exist and not loading
+  useEffect(() => {
+    if (currentStep === 2 && !isLoadingExpertise && expertiseRecords.length === 0) {
+      addExpertiseRow();
+    }
+  }, [currentStep, isLoadingExpertise]);
 
   if (isLoadingProfile) {
     return (
@@ -153,7 +219,6 @@ const CompleteKYC = () => {
 
   // Document Picking Logic
   const pickDocument = async (type: "nin_document" | "selfie" | "certificate_of_learning") => {
-    // Alert.alert("Debug", `Button clicked for: ${type}`);
     if (type === 'selfie') {
       setShowLivenessModal(true);
       return;
@@ -196,24 +261,22 @@ const CompleteKYC = () => {
       uri: uri,
       name: `selfie_${Date.now()}.jpg`,
       type: "image/jpeg",
-      size: 0, // Unknown size currently
+      size: 0,
     };
     setSelfie(file);
     setShowLivenessModal(false);
   };
 
-  // Location Selection Logic
   const handleLocationSelect = async (loc: any, setFieldValue: any) => {
     setFieldValue("location", loc.address || loc.name);
-    
     if (loc.latitude && loc.longitude) {
       setFieldValue("latitude", String(loc.latitude));
       setFieldValue("longitude", String(loc.longitude));
     }
   };
 
-  // Submission Logic
-  const handleSubmit = async (values: FormValues) => {
+  // Step 1 Submission
+  const handleStep1Submit = async (values: FormValues) => {
     if (!ninDocument) {
       setErrorMessage("Please upload your NIN document.");
       setShowErrorModal(true);
@@ -234,14 +297,10 @@ const CompleteKYC = () => {
       formData.append('bio', values.bio);
       formData.append('nin_number', values.nin_number);
       formData.append('specializations', JSON.stringify(values.specializations));
-      formData.append('vehicle_expertise', JSON.stringify(values.vehicle_expertise));
 
-      // Helper function to handle image upload if it's a local URI
       const getFileObject = (image: any) => {
         if (!image || !image.uri) return null;
-        // If it's already a URL, we don't need to wrap it as a file object
         if (image.uri.startsWith('http')) return image.uri;
-        
         return {
           uri: image.uri,
           name: image.name || `file_${Date.now()}.jpg`,
@@ -249,7 +308,6 @@ const CompleteKYC = () => {
         } as any;
       };
 
-      // Append files (now as file objects or existing URLs)
       if (ninDocument) {
         const file = getFileObject(ninDocument);
         if (file) formData.append('nin_document', file);
@@ -265,36 +323,81 @@ const CompleteKYC = () => {
         if (file) formData.append('certificate_of_learning', file);
       }
 
-      console.log('🚀 Submitting Mechanic KYC via Mutation...');
       submitKYCMutation.mutate(formData, {
         onSuccess: () => {
-          // Update global state
-          useProfileStore.getState().setIsProfileComplete(true);
-          setShowSuccessModal(true);
+          setCurrentStep(2);
         },
         onError: (error: any) => {
-          console.error('KYC Submission Error:', error);
-          
           const errMsg = error?.response?.data?.message || 
                          error?.response?.data?.detail || 
                          error?.message || 
                          "There was an error submitting your verification. Please try again.";
-          
           setErrorMessage(errMsg);
           setShowErrorModal(true);
         }
       });
     } catch (error: any) {
-      console.error('Form Preparation Error:', error);
       setErrorMessage("Failed to prepare submission data.");
       setShowErrorModal(true);
     }
   };
 
+  // Step 2 Submission
+  const handleStep2Submit = async () => {
+    if (expertiseRecords.length === 0) {
+      Alert.alert("Required", "Please add at least one vehicle brand expertise.");
+      return;
+    }
 
-  // ... existing imports ...
+    // Validate records
+    const isValid = expertiseRecords.every(r => r.vehicle_make_id && r.years_of_experience && r.certification_level);
+    if (!isValid) {
+      Alert.alert("Incomplete", "Please fill in all details for each vehicle expertise.");
+      return;
+    }
 
-  // Helper Component for Section Headers
+    const payload = expertiseRecords.map(r => ({
+      vehicle_make_id: parseInt(r.vehicle_make_id),
+      years_of_experience: parseInt(r.years_of_experience),
+      certification_level: r.certification_level
+    }));
+
+    submitExpertiseMutation.mutate(payload, {
+      onSuccess: () => {
+        useProfileStore.getState().setIsProfileComplete(true);
+        setShowSuccessModal(true);
+      },
+      onError: (error: any) => {
+        const errMsg = error?.response?.data?.message || error?.message || "Failed to save expertise.";
+        setErrorMessage(errMsg);
+        setShowErrorModal(true);
+      }
+    });
+  };
+
+
+  const addExpertiseRow = () => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    setExpertiseRecords([...expertiseRecords, { vehicle_make_id: "", years_of_experience: "", certification_level: "basic" }]);
+  };
+
+  const removeExpertiseRow = (index: number) => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    const newRecords = [...expertiseRecords];
+    newRecords.splice(index, 1);
+    setExpertiseRecords(newRecords);
+  };
+
+  const updateExpertiseRecord = (index: number, field: keyof ExpertiseRecord, value: string) => {
+    const newRecords = [...expertiseRecords];
+    newRecords[index] = { ...newRecords[index], [field]: value };
+    setExpertiseRecords(newRecords);
+  };
+
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <View className="flex-row items-center space-x-2 mb-4">
       <View className="bg-primary-50 p-2 rounded-full">
@@ -304,196 +407,268 @@ const CompleteKYC = () => {
     </View>
   );
 
-  // ... existing code ...
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar style="dark" />
 
       {/* Header */}
       <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10">
-        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
+        <TouchableOpacity onPress={() => currentStep === 1 ? router.back() : setCurrentStep(1)} className="p-2 -ml-2">
           <ChevronLeftIcon size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text className="text-xl font-NunitoBold ml-2 text-gray-900">Mechanic Profile</Text>
+        <Text className="text-xl font-NunitoBold ml-2 text-gray-900">
+          {currentStep === 1 ? "Mechanic Profile" : "Vehicle Expertise"}
+        </Text>
+        <View className="flex-1" />
+        <View className="bg-gray-100 px-3 py-1 rounded-full">
+          <Text className="text-xs font-NunitoBold text-gray-500">Step {currentStep} of 2</Text>
+        </View>
       </View>
 
       <KeyboardAwareScrollView 
-        className="flex-1 px-4 pt-6" 
+        className="flex-1" 
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 24 }}
         showsVerticalScrollIndicator={false}
         enableOnAndroid={true}
-        enableAutomaticScroll={true}
-        extraScrollHeight={120}
-        extraHeight={140}
-        keyboardOpeningTime={0}
         keyboardShouldPersistTaps="handled"
-        enableResetScrollToCoords={false}
       >
-        <Text className="text-gray-500 font-NunitoMedium mb-6 text-base leading-5">
-          Complete your verification to start accepting jobs.
-        </Text>
+        {currentStep === 1 ? (
+          <View>
+            <Text className="text-gray-500 font-NunitoMedium mb-6 text-base leading-5">
+              Tell us about yourself and your background.
+            </Text>
 
-        <Formik
-          enableReinitialize={true}
-          initialValues={initialFormValues}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, setFieldValue }) => (
-            <View className="pb-10">
-
-
-              {/* Card: Professional Bio */}
-              <View className="bg-white px-4 py-2 rounded-2xl mb-5 border border-gray-100 shadow-sm">
-
-                <SectionHeader icon={UserIcon} title="Professional Profile" />
-
-                <SelfieUpload
-                  onPress={() => pickDocument("selfie")}
-                  imageUri={selfie?.uri}
-                />
-                <View>
-                  <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-wider mb-2 ml-1">Bio</Text>
-                  <TextArea
-                    placeholder="Briefly describe your experience and expertise..."
-                    value={values.bio}
-                    onChangeText={handleChange("bio")}
-                    error={errors.bio}
-                    touched={touched.bio}
-                    numberOfLines={4}
-                  />
+            {isPendingApproval && (
+              <View className="bg-amber-50 border border-amber-200 p-4 rounded-2xl mb-6 flex-row items-start">
+                <ClockIcon size={24} color="#D97706" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-amber-900 font-NunitoBold text-sm">Profile Under Review</Text>
+                  <Text className="text-amber-700 font-NunitoMedium text-xs mt-1">
+                    You've already submitted your documents. We're currently reviewing them. You can still update your details if needed.
+                  </Text>
                 </View>
               </View>
+            )}
 
-              {/* Card: Location Details */}
-              <View className="bg-white px-4 pt-2 rounded-2xl mb-5 border border-gray-100 shadow-sm">
-                <SectionHeader icon={MapPinIcon} title="Location Details" />
+            <Formik
+              enableReinitialize={true}
+              initialValues={initialFormValues}
+              validationSchema={step1ValidationSchema}
+              onSubmit={handleStep1Submit}
+            >
+              {({ handleChange, handleSubmit, values, errors, touched, setFieldValue }) => (
+                <View className="pb-10">
+                  <View className="bg-white px-4 py-2 rounded-2xl mb-5 border border-gray-100 shadow-sm">
+                    <SectionHeader icon={UserIcon} title="Professional Profile" />
+                    <SelfieUpload
+                      onPress={() => pickDocument("selfie")}
+                      imageUri={selfie?.uri}
+                    />
+                    <View>
+                      <Text className="text-xs font-NunitoBold text-gray-500 uppercase tracking-wider mb-2 ml-1">Bio</Text>
+                      <TextArea
+                        placeholder="Briefly describe your experience and expertise..."
+                        value={values.bio}
+                        onChangeText={handleChange("bio")}
+                        error={errors.bio}
+                        touched={touched.bio}
+                        numberOfLines={4}
+                      />
+                    </View>
+                  </View>
 
-                <View className="mb-4">
-                  <AddressInput
-                    label="Business Address"
-                    placeholder="Search for your workshop address"
-                    value={values.location}
-                    onChangeText={handleChange("location")}
-                    onLocationSelect={(loc: any) => handleLocationSelect(loc, setFieldValue)}
-                    error={errors.location}
-                    touched={touched.location}
-                    required
-                    showCurrentLocationButton={true}
-                  />
+                  <View className="bg-white px-4 pt-2 rounded-2xl mb-5 border border-gray-100 shadow-sm">
+                    <SectionHeader icon={MapPinIcon} title="Location Details" />
+                    <View className="mb-4">
+                      <AddressInput
+                        label="Business Address"
+                        placeholder="Search for your workshop address"
+                        value={values.location}
+                        onChangeText={handleChange("location")}
+                        onLocationSelect={(loc: any) => handleLocationSelect(loc, setFieldValue)}
+                        error={errors.location}
+                        touched={touched.location}
+                        required
+                        showCurrentLocationButton={true}
+                      />
+                    </View>
+                  </View>
+
+                  <View className="bg-white p-5 rounded-2xl mb-5 border border-gray-100 shadow-sm">
+                    <SectionHeader icon={BriefcaseIcon} title="Identity & Expertise" />
+                    <View className="mb-5">
+                      <InputField
+                        label="NIN Number"
+                        placeholder="Enter your 11-digit NIN"
+                        value={values.nin_number}
+                        onChangeText={handleChange("nin_number")}
+                        error={errors.nin_number}
+                        touched={touched.nin_number}
+                        required
+                      />
+                    </View>
+                    <View className="mb-5">
+                      <ImageUpload
+                        label="Upload NIN Document"
+                        isUploaded={!!ninDocument}
+                        imageUri={ninDocument?.uri}
+                        onPress={() => pickDocument("nin_document")}
+                        required
+                      />
+                    </View>
+                    <View className="mb-5">
+                      <MultiSelectField
+                        label="Areas of Specialization"
+                        name="specializations"
+                        placeholder="Select specializations"
+                        options={specializationsOptions}
+                        value={values.specializations}
+                        onValueChange={(val) => setFieldValue("specializations", val)}
+                      />
+                      {touched.specializations && errors.specializations && (
+                        <Text className="text-red-500 text-xs mt-1 ml-1">{errors.specializations as string}</Text>
+                      )}
+                    </View>
+                    <View className="mb-2">
+                      <ImageUpload
+                        label="Certificate of Learning (Optional)"
+                        isUploaded={!!certificateOfLearning}
+                        imageUri={certificateOfLearning?.uri}
+                        onPress={() => pickDocument("certificate_of_learning")}
+                      />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => handleSubmit()}
+                    className={`py-4 rounded-xl mb-8 items-center shadow-md ${submitKYCMutation.isPending ? 'bg-primary-300' : 'bg-primary-500'}`}
+                    disabled={submitKYCMutation.isPending}
+                  >
+                    {submitKYCMutation.isPending ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text className="text-white font-NunitoBold text-lg">Next: Vehicle Expertise</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Card: Identity & Expertise */}
-              <View className="bg-white p-5 rounded-2xl mb-5 border border-gray-100 shadow-sm">
-                <SectionHeader icon={BriefcaseIcon} title="Identity & Expertise" />
-
-                <View className="mb-5">
-                  <InputField
-                    label="NIN Number"
-                    placeholder="Enter your 11-digit NIN"
-                    value={values.nin_number}
-                    onChangeText={handleChange("nin_number")}
-                    error={errors.nin_number}
-                    touched={touched.nin_number}
-                    required
-                  />
-                </View>
-
-                <View className="mb-5">
-                  <ImageUpload
-                    label="Upload NIN Document"
-                    isUploaded={!!ninDocument}
-                    imageUri={ninDocument?.uri}
-                    onPress={() => pickDocument("nin_document")}
-                    required
-                  />
-                </View>
-
-                <View className="mb-5">
-                  <MultiSelectField
-                    label="Areas of Specialization"
-                    name="specializations"
-                    placeholder="Select specializations"
-                    options={specializationsOptions}
-                    value={values.specializations}
-                    onValueChange={(val) => setFieldValue("specializations", val)}
-                  />
-                  {touched.specializations && errors.specializations && (
-                    <Text className="text-red-500 text-xs mt-1 ml-1">{errors.specializations as string}</Text>
-                  )}
-                </View>
-
-                <View className="mb-5">
-                  <MultiSelectField
-                    label="Vehicle Brands Expertise"
-                    name="vehicle_expertise"
-                    placeholder="Select car brands"
-                    options={carBrandsOptions}
-                    value={values.vehicle_expertise}
-                    onValueChange={(val) => setFieldValue("vehicle_expertise", val)}
-                  />
-                  {touched.vehicle_expertise && errors.vehicle_expertise && (
-                    <Text className="text-red-500 text-xs mt-1 ml-1">{errors.vehicle_expertise as string}</Text>
-                  )}
-                </View>
-                
-                <View className="mb-2">
-                  <ImageUpload
-                    label="Certificate of Learning (Optional)"
-                    isUploaded={!!certificateOfLearning}
-                    imageUri={certificateOfLearning?.uri}
-                    onPress={() => pickDocument("certificate_of_learning")}
-                  />
-                </View>
-              </View>
-
-              {/* Submit Button */}
-              <TouchableOpacity
-                onPress={() => handleSubmit()}
-                className={`py-4 rounded-xl mb-8 items-center shadow-md ${isSubmitting ? 'bg-primary-300' : 'bg-primary-500'}`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text className="text-white font-NunitoBold text-lg">Submit Verification</Text>
-                )}
-              </TouchableOpacity>
+              )}
+            </Formik>
+          </View>
+        ) : (
+          <View className="pb-10">
+            <View className="mb-6">
+              <Text className="text-gray-500 font-NunitoMedium text-base leading-5">
+                Specify the vehicle brands you are experienced with to help us match you with the right repair requests.
+              </Text>
             </View>
-          )}
-        </Formik>
+
+            {isPendingApproval && (
+              <View className="bg-amber-50 border border-amber-200 p-4 rounded-2xl mb-6 flex-row items-start">
+                <InformationCircleIcon size={24} color="#D97706" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-amber-900 font-NunitoBold text-sm">Application Status</Text>
+                  <Text className="text-amber-700 font-NunitoMedium text-xs mt-1">
+                    Your expertise records are being reviewed. Adding more brands or changing details may extend the review period.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-lg font-NunitoBold text-gray-900">Expertise Records</Text>
+              <View className="bg-primary-100 px-3 py-1 rounded-full">
+                <Text className="text-primary-700 font-NunitoBold text-xs">
+                  {expertiseRecords.length} {expertiseRecords.length === 1 ? 'Brand' : 'Brands'}
+                </Text>
+              </View>
+            </View>
+
+            {expertiseRecords.length === 0 ? (
+              <View className="bg-white p-10 rounded-2xl items-center border border-dashed border-gray-300 mb-6">
+                <BriefcaseIcon size={48} color="#9CA3AF" />
+                <Text className="text-gray-400 font-NunitoMedium text-center mt-4">
+                  No expertise added yet. Click the button below to add your first vehicle brand expertise.
+                </Text>
+              </View>
+            ) : (
+              expertiseRecords.map((record, index) => (
+                <ExpertiseRecordItem
+                  key={index}
+                  index={index}
+                  record={record}
+                  carBrandsOptions={carBrandsOptions}
+                  certificationLevels={certificationLevels}
+                  onRemove={() => removeExpertiseRow(index)}
+                  onUpdate={(field, val) => updateExpertiseRecord(index, field, val)}
+                />
+              ))
+            )}
+
+            <TouchableOpacity
+              onPress={addExpertiseRow}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-center py-5 rounded-2xl bg-white border border-gray-100 shadow-sm mb-10"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 5,
+                elevation: 2,
+              }}
+            >
+              <View className="w-9 h-9 rounded-full bg-primary-50 items-center justify-center mr-3">
+                <PlusIcon size={20} color="#D30309" strokeWidth={2.5} />
+              </View>
+              <Text className="text-gray-900 font-NunitoBold text-lg">Add New Expertise</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleStep2Submit}
+              activeOpacity={0.9}
+              className={`py-5 rounded-2xl mb-12 flex-row items-center justify-center shadow-lg ${
+                submitExpertiseMutation.isPending ? 'bg-primary-400' : 'bg-primary-600'
+              }`}
+              style={{
+                shadowColor: '#D30309',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.3,
+                shadowRadius: 15,
+                elevation: 10,
+              }}
+              disabled={submitExpertiseMutation.isPending}
+            >
+              {submitExpertiseMutation.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <CheckCircleIcon size={24} color="white" strokeWidth={2} />
+                  <Text className="text-white font-NunitoExtraBold text-lg ml-3">Complete Verification</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAwareScrollView>
 
-        <Modal
-          visible={showLivenessModal}
-          animationType="slide"
-          onRequestClose={() => setShowLivenessModal(false)}
-        >
-          <LivenessCamera
-            onCapture={handleLivenessCapture}
-            onCancel={() => setShowLivenessModal(false)}
-          />
-        </Modal>
+      <Modal visible={showLivenessModal} animationType="slide" onRequestClose={() => setShowLivenessModal(false)}>
+        <LivenessCamera onCapture={handleLivenessCapture} onCancel={() => setShowLivenessModal(false)} />
+      </Modal>
 
-        <SuccessModal
-          isVisible={showSuccessModal}
-          onClose={() => {
-            setShowSuccessModal(false);
-            router.replace(mechanicRoutes.home as any);
-          }}
-          title="Verification Submitted 🎉"
-          message="Your profile verification has been submitted successfully and will be reviewed and approved in less than 24 hours."
-          buttonText="Go to Dashboard"
-        />
+      <SuccessModal
+        isVisible={showSuccessModal}
+        onClose={() => { setShowSuccessModal(false); router.replace(mechanicRoutes.home as any); }}
+        title="Verification Complete! 🎉"
+        message="Your profile and vehicle expertise have been submitted successfully. We'll review your application within 24 hours."
+        buttonText="Go to Dashboard"
+      />
 
-        <ErrorModal
-          isVisible={showErrorModal}
-          onClose={() => setShowErrorModal(false)}
-          title="Verification Failed"
-          message={errorMessage}
-          buttonText="Try Again"
-        />
+      <ErrorModal
+        isVisible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Submission Failed"
+        message={errorMessage}
+        buttonText="Try Again"
+      />
     </SafeAreaView>
   );
 };

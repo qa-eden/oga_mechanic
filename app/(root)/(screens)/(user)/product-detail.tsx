@@ -13,17 +13,20 @@ import {
 } from "react-native";
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { ShareIcon } from 'react-native-heroicons/outline';
+import { ShareIcon, CheckCircleIcon } from 'react-native-heroicons/outline';
+import { CheckCircleIcon as CheckCircleIconSolid } from 'react-native-heroicons/solid';
 
 const { width: screenWidth } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
-import { useMerchantProfileByUuid } from "@/hooks/useUserProfile";
+import { useMerchantProfileByUuid, usePrimaryUserProfile, useUserCars } from "@/hooks/useUserProfile";
+import { communicationsAPI } from "@/lib/api/communications";
 import { showToast } from "@/utils/toastUtils";
 import { getErrorMessage } from "@/utils/errorMessages";
 import { routes } from "@/constants/routes";
+import { useProfileStore } from "@/hooks/useProfileStore";
 import {
   ProductImageGallery,
   ProductSellerCard,
@@ -48,6 +51,8 @@ const ProductDetail = () => {
   // API hooks
   const { data: product, isLoading, error, refetch } = useProductDetail(productId || "");
   const { data: merchantProfileData } = useMerchantProfileByUuid(product?.merchant_id || "", !!product?.merchant_id);
+  const { data: profileResponse } = usePrimaryUserProfile();
+  const { data: vehicles } = useUserCars();
   const toggleFavoriteMutation = useToggleFavorite();
 
   // Refetch on focus
@@ -73,7 +78,7 @@ const ProductDetail = () => {
     
     try {
       const priceValue = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-      const shareMessage = `Check out ${product.name}\n\nPrice: ₦${priceValue.toLocaleString()}\n\nView on Oga Mechanic`;
+      const shareMessage = `Check out ${product.name} on Oga Mechanic! 🚗\n\nPrice: ₦${priceValue.toLocaleString()}\n\nView details and contact the seller on the Oga Mechanic app.\n\nDownload or open here: https://ogamechanic.org`;
       
       await Share.share({
         message: shareMessage,
@@ -130,7 +135,22 @@ const ProductDetail = () => {
     
     // Format number: remove leading + and ensure international format
     const cleanedNumber = phoneNumber.replace(/\D/g, '');
-    const whatsappUrl = `https://wa.me/${cleanedNumber}`;
+    
+    // Role detection - normalized for PrimaryUserProfileResponse structure
+    const user = (profileResponse as any)?.data || (profileResponse as any)?.user;
+    const activeRole = user?.active_role || (profileResponse as any)?.active_role || "customer";
+    const isMechanic = activeRole.toLowerCase() === 'mechanic';
+    const roleLabel = isMechanic ? "a mechanic" : "a customer";
+    
+    // Professional Template
+    const firstName = user?.first_name || "";
+    const lastName = user?.last_name || "";
+    const userName = (firstName || lastName) ? `${firstName} ${lastName}` : "a user";
+    
+    const message = `Hi, I'm ${userName}, ${roleLabel} from Oga Mechanic. I'm interested in your ${product.name} (₦${productPrice.toLocaleString()}). Is it available for pickup?`;
+    const encodedMessage = encodeURIComponent(message);
+    
+    const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`;
     
     Linking.canOpenURL(whatsappUrl).then(supported => {
       if (supported) {
@@ -139,25 +159,103 @@ const ProductDetail = () => {
         showToast.error("WhatsApp is not installed on this device");
       }
     });
-  }, [product, merchantProfileData]);
+  }, [product, merchantProfileData, productPrice, profileResponse]);
 
-  const handleChat = useCallback(() => {
+  const handleChat = useCallback(async () => {
     if (!product) return;
 
-    // Navigate to chat with merchant
-    router.push({
-      pathname: routes.chatMechanic, // Reusing mechanics chat for now or generic chat if available
-      params: {
-        mechanicId: product.merchant_id,
-        mechanicName: product.merchant_email.split('@')[0],
-        mechanicImage: product.images?.[0]?.image || "",
+    try {
+      // 1. Get the target seller's USER UUID (flexible lookup)
+      const sellerUserId = 
+        merchantProfileData?.data?.merchant_profile?.user?.id || 
+        (merchantProfileData?.data?.merchant_profile as any)?.user_id ||
+        (merchantProfileData?.data as any)?.user_id ||
+        product.merchant_id;
+
+      if (!sellerUserId) {
+        showToast.error("Could not find seller information.");
+        return;
       }
-    });
+
+      // 2. CHECK FIRST: Call GET to see if a chat room already exists
+      const roomsResponse = await communicationsAPI.getChatRooms();
+      const rooms = roomsResponse?.results?.data || [];
+      
+      // Look for a room that includes this seller's user ID
+      const existingRoom = rooms.find((room: any) => 
+        room.participants?.some((p: any) => p.id === sellerUserId) ||
+        room.other_participant?.id === sellerUserId
+      );
+
+      let roomId: string;
+
+      if (existingRoom) {
+        console.log("♻️ Found existing chat room:", existingRoom.id);
+        roomId = existingRoom.id;
+      } else {
+        // 3. Only POST if no existing room was found
+        console.log("🆕 No existing room, creating new chat with User ID:", sellerUserId);
+        const createResponse = await communicationsAPI.createChatRoom([sellerUserId]);
+        
+        if (createResponse.status && createResponse.data) {
+          roomId = createResponse.data.id;
+        } else {
+          showToast.error("Could not start chat. Please try again.");
+          return;
+        }
+      }
+
+      // 4. Navigate to the chat room
+      router.push({
+        pathname: "/(root)/(screens)/(user)/chat-room",
+        params: {
+          roomId: roomId,
+          participantName: product.merchant_email.split('@')[0],
+          participantAvatar: product.images?.[0]?.image || "",
+        }
+      });
+    } catch (error) {
+      console.error("❌ Chat connection error:", error);
+      showToast.error("Failed to connect with seller.");
+    }
 
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [product]);
+
+  // Check compatibility with user's car
+  const compatibilityInfo = useMemo(() => {
+    if (!product) return { isCompatible: false, userCar: "" };
+    
+    // Build list of makes to check
+    const user = (profileResponse as any)?.data || (profileResponse as any)?.user;
+    const cars = vehicles || [];
+    
+    const productTitle = product.name?.toLowerCase() || "";
+    const categoryName = product.category?.name?.toLowerCase() || "";
+    const productMake = String((product as any).make_id || "").toLowerCase();
+
+    // Check primary profile car
+    if (user?.car_make) {
+      const makeLower = user.car_make.toLowerCase();
+      if (productTitle.includes(makeLower) || categoryName.includes(makeLower) || productMake.includes(makeLower)) {
+        return { isCompatible: true, userCar: `${user.car_year || ""} ${user.car_make} ${user.car_model || ""}`.trim() };
+      }
+    }
+
+    // Check all cars in vehicle list
+    for (const car of cars) {
+      if (car.make) {
+        const makeLower = car.make.toLowerCase();
+        if (productTitle.includes(makeLower) || categoryName.includes(makeLower) || productMake.includes(makeLower)) {
+          return { isCompatible: true, userCar: `${car.year || ""} ${car.make} ${car.model || ""}`.trim() };
+        }
+      }
+    }
+
+    return { isCompatible: false, userCar: "" };
+  }, [product, profileResponse, vehicles]);
 
   const handleToggleFavorite = useCallback(async () => {
     if (!product) return;
@@ -312,6 +410,22 @@ const ProductDetail = () => {
           />
         }
       >
+        {/* Compatibility Banner */}
+        {compatibilityInfo.isCompatible && (
+          <Animated.View 
+            entering={FadeInDown.duration(400)}
+            className="mx-4 mb-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex-row items-center"
+          >
+            <View className="w-10 h-10 bg-emerald-500 rounded-xl items-center justify-center mr-3 shadow-sm shadow-emerald-200">
+              <CheckCircleIconSolid size={24} color="white" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-emerald-900 font-NunitoExtraBold text-sm">Fits Your Vehicle</Text>
+              <Text className="text-emerald-700 font-NunitoMedium text-xs">Compatible with your {compatibilityInfo.userCar}</Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Image Gallery */}
         <Animated.View entering={FadeIn.duration(400)}>
           <ProductImageGallery images={product.images || []} />

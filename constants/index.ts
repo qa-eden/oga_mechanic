@@ -1,22 +1,16 @@
 import { ServicesProps } from "@/types/type";
 
 //images
-import onboarding1 from "@/assets/images/auth/onboarding1.svg";
 import welcomeImg1 from "@/assets/images/auth/welcomeImg1.svg";
 import welcomeImg2 from "@/assets/images/auth/welcomeImg2.svg";
 import welcomeImg3 from "@/assets/images/auth/welcomeImg3.svg";
 import welcomeImg4 from "@/assets/images/auth/welcomeImg4.svg";
-import splashBackgroundCar from "@/assets/images/auth/splashBackgroundCar1.svg";
 import success from "@/assets/images/success.svg";
 import dummyProfile from "@/assets/images/propics.jpeg";
-import adsbackground from "@/assets/images/adsbackground.png";
 import carFront from "@/assets/images/frontCarPlaceholder.jpg";
 import carBack from "@/assets/images/carBack.png";
 import carRight from "@/assets/images/carRight.png";
 import carLeft from "@/assets/images/carLeft.png";
-
-//mechanics
-import mechanic1 from "@/assets/images/dummy/mechanic2.svg";
 
 //icons
 import logo from "@/assets/icons/logo.svg";
@@ -31,12 +25,12 @@ import filledStar from "@/assets/icons/filledStar.svg";
 import unfillStar from "@/assets/icons/unfillStar.svg";
 import empty from "@/assets/icons/empty.svg";
 import bankIcon from "@/assets/icons/bank.svg";
-import mechanic2 from "@/assets/icons/mechanic2.svg";
-import rent from "@/assets/icons/rent.svg";
+import mechanic3 from "@/assets/icons/mechanic3.png";
+import carRent from "@/assets/icons/car_rent.png";
 import round from "@/assets/icons/round.svg";
+import mechanicOrderIcon from "@/assets/icons/find_mechanic.png";
 
 //profile icons
-import redPhone from "@/assets/icons/redPhone.svg";
 import UserCircle from "@/assets/icons/profile/UserCircle.svg";
 import addBank from "@/assets/icons/profile/addBank.svg";
 import savingWallet from "@/assets/icons/profile/savingWallet.svg";
@@ -53,7 +47,6 @@ import email from "@/assets/icons/profile/email.svg";
 //services icons
 import sparePartIcon from "@/assets/icons/sparePart.svg";
 import buycar from "@/assets/icons/buycar.svg";
-import { HeadphonesIcon } from "@/components/icons/HeadphonesIcon";
 
 //tabs icons
 import home from "@/assets/icons/home.svg";
@@ -71,25 +64,16 @@ import profile from "@/assets/icons/profile.svg";
 import shopTab from "@/assets/icons/shopTab.svg";
 import productTab from "@/assets/icons/productTab.svg";
 import activeProductTab from "@/assets/icons/activeProductTab.svg";
-import orderIcon2 from "@/assets/icons/orderIcon2.svg";
-import activeOrderIcon2 from "@/assets/icons/activeOrderIcon2.svg";
+import searchCar from "@/assets/icons/search_car.png";
 
-//roles images
-import user from "@/assets/icons/user.svg";
-import merchant from "@/assets/icons/merchant.png";
-import mechanic from "@/assets/icons/mechanic.png";
 import { mechanicRoutes, routes, sellerRoutes, generalRoutes } from "./routes";
 
 export const images = {
-  onboarding1,
   welcomeImg1,
   welcomeImg2,
   welcomeImg3,
   welcomeImg4,
-  splashBackgroundCar,
   dummyProfile,
-  adsbackground,
-  mechanic1,
 
   carFront,
   carBack,
@@ -107,9 +91,6 @@ export const icons = {
   splash,
   success,
   backBtn,
-  user,
-  merchant,
-  mechanic,
   home,
   earnings,
   activeEarnings,
@@ -124,7 +105,6 @@ export const icons = {
   profile,
   filledStar,
   unfillStar,
-  redPhone,
   UserCircle,
   enablePass,
   faceId,
@@ -133,93 +113,27 @@ export const icons = {
   productTab,
   activeProductTab,
   empty,
-  orderIcon2,
-  activeOrderIcon2,
-  round
+  round,
 };
 
-export const onboarding = [
-  {
-    id: 1,
-    title: "Your Ultimate Auto Hub",
-    description:
-      "Buy & sell cars, find expert mechanics, and book rides—all in one place.",
-    image: images.onboarding1,
-  },
-  {
-    id: 2,
-    title: "Your Car, Your Control",
-    description:
-      "Stay connected, drive with ease, and manage everything on the go—all in one powerful app",
-    image: images.onboarding1,
-  },
-];
 
-export const Roles = [
-  {
-    id: 7,
-    title: "Primary User",
-    description: "I am a customer",
-    image: icons.user,
-    border: "#7DA0FF",
-    backgroundColor: "#D6E1FF",
-    route: routes?.userStep1,
-  },
-  {
-    id: 3,
-    title: "Seller",
-    description: "I want to sell",
-    image: icons.merchant,
-    border: "#FFC38D",
-    backgroundColor: "#FFEAD8",
-    route: sellerRoutes?.step1,
-  },
-  {
-    id: 5,
-    title: "Mechanic",
-    description: "I am a mechanic",
-    image: icons.mechanic,
-    border: "#DBAF79",
-    backgroundColor: "#ECE2D6",
-    route: mechanicRoutes?.step1,
-  },
-];
-
-export const Ads = [
-  {
-    id: 1,
-    title: "Smooth Rides",
-    description: "Expert Maintenance, Instant Booking",
-    image: images.adsbackground,
-  },
-  {
-    id: 2,
-    title: "Your Car, Our Passion",
-    description: "Repair, Upgrade, Drive with Confidence",
-    image: images.adsbackground,
-  },
-  {
-    id: 3,
-    title: "Automotive Solutions",
-    description: "From Diagnostics to Delivery",
-    image: images.adsbackground,
-  },
-];
 
 export const Services: ServicesProps[] = [
   {
     id: 6,
     name: "Find a Mechanic",
     description: "Get a mechanic to fix your car",
-    image: mechanic2,
+    image: mechanic3,
     bgColor: "#F3F2FE",
     border: "#ACA6FF",
+    isSmall: true,
   },
   {
     id: 8,
     name: "My Mechanic Orders",
     description: "View all your repair requests",
-    image: mechanic2,
+    image: mechanicOrderIcon,
+    isSmall: true,
     bgColor: "#FEF2F2",
     border: "#FCA5A5",
   },
@@ -227,6 +141,7 @@ export const Services: ServicesProps[] = [
     id: 3,
     name: "Buy a Car",
     description: "Find your dream car",
+    // image: rent,
     image: buycar,
     bgColor: "#F8FFD8",
     border: "#F6B80D",
@@ -236,14 +151,17 @@ export const Services: ServicesProps[] = [
     name: "Buy spare parts",
     description: "Find the right spare parts",
     image: sparePartIcon,
+    isSmall: true,
     bgColor: "#FFF8F5",
     border: " #5A4F49",
   },
   {
     id: 5,
-    name: "Rent a car",
-    description: "Rent a car for a day or more",
-    image: rent,
+    name: "Vehicle Rental",
+    description: "Rent a Car for a day or more",
+    image: carRent,
+     isSmall: true,
+    // image: rent,
     bgColor: "#F3FFF1",
     border: "#189804",
   },
@@ -259,7 +177,8 @@ export const Services: ServicesProps[] = [
     id: 10,
     name: "VIN Search",
     description: "Search car details by VIN",
-    image: car,
+    image: searchCar,
+    isSmall: true,
     bgColor: "#F0FDF4",
     border: "#86EFAC",
   },
@@ -435,5 +354,4 @@ export const ProfileSopprt = {
 };
 
 export const data = {
-  onboarding,
 };

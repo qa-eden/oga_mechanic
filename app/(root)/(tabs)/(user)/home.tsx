@@ -8,13 +8,11 @@ import {
   Image,
   RefreshControl,
   Dimensions,
-  Animated,
   StatusBar,
 } from "react-native";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Services as ServicesData, Ads } from "@/constants";
-import AdsComponents from "@/components/AdsComponents";
+import { Services as ServicesData } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,6 +24,122 @@ import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 import SpecialistIconBtn from "@/components/SpecialistIconBtn";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import VINSearchModal from "@/components/modals/VINSearchModal";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  FadeInDown 
+} from "react-native-reanimated";
+
+const ServiceCard = ({ item, index, onPress }: { item: any; index: number; onPress: () => void }) => {
+  const scale = useSharedValue(1);
+  
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
+
+  return (
+    <Animated.View 
+      entering={FadeInDown.delay(index * 60).duration(400).springify()}
+      style={[{ width: "48.5%", marginBottom: 12 }, animatedStyle]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={{
+          height: 160,
+          borderRadius: 24,
+          backgroundColor: '#fff',
+          shadowColor: item.border,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.12,
+          shadowRadius: 10,
+          elevation: 5,
+        }}
+        activeOpacity={1}
+      >
+        <LinearGradient
+          colors={[item.bgColor, '#ffffff', '#ffffff']}
+          locations={[0, 0.6, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            flex: 1,
+            borderRadius: 24,
+            padding: 16,
+            borderWidth: 1.5,
+            borderColor: item.border,
+            justifyContent: "space-between",
+          }}
+        >
+          {/* Icon Container */}
+          <View
+            style={{
+              width: "100%",
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              alignItems: "flex-start",
+              marginTop: -6,
+              marginRight: -6,
+            }}
+          >
+            {typeof item.image === "function" ? (
+              <item.image width={item.isSmall ? 65 : 85} height={item.isSmall ? 65 : 85} />
+            ) : (
+              <Image
+                source={
+                  typeof item.image === "string"
+                    ? { uri: item.image }
+                    : item.image
+                }
+                style={{ 
+                  width: item.isSmall ? 65 : 85, 
+                  height: item.isSmall ? 65 : 85, 
+                  resizeMode: "contain" 
+                }}
+              />
+            )}
+          </View>
+
+          {/* Text Content */}
+          <View style={{ width: "100%" }}>
+            <Text
+              style={{
+                fontSize: 17,
+                lineHeight: 22,
+                color: "#1F2937",
+                width: "95%",
+                letterSpacing: -0.3,
+              }}
+              numberOfLines={2}
+              className="font-NunitoExtraBold"
+            >
+              {item.name}
+            </Text>
+            {/* Subtle indicator bar */}
+            <View style={{ 
+              width: 20, 
+              height: 4, 
+              backgroundColor: item.border, 
+              borderRadius: 2, 
+              marginTop: 6,
+              opacity: 0.5
+            }} />
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 const Home = () => {
 
@@ -71,33 +185,19 @@ const Home = () => {
       // case "Order a Ride":
       //   router.push(routes.enterAddressForRide);
       //   break;
-      case "Buy spare parts":
-        if (sparePartCategoryId) {
-          router.push({
-            pathname: routes.shop,
-            params: {
-              category: homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.name || 'Spare Part',
-              categoryId: sparePartCategoryId.toString(),
-            }
-          });
-        } else {
-          router.push(routes.shop);
-        }
+      case "Buy spare parts": {
+        const catId = (sparePartCategoryId || 24);
+        const catName = homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.name || 'Spare Part';
+        router.push(`${routes.shop}?categoryId=${catId}&category=${encodeURIComponent(catName)}`);
         break;
-      case "Buy a Car":
-        if (carCategoryId) {
-          router.push({
-            pathname: routes.shop,
-            params: {
-              category: homeProducts?.data?.best_selling_cars?.[0]?.category?.name || 'Car',
-              categoryId: carCategoryId.toString(),
-            }
-          });
-        } else {
-          router.push(routes.cars);
-        }
+      }
+      case "Buy a Car": {
+        const catId = (carCategoryId || 23);
+        const catName = homeProducts?.data?.best_selling_cars?.[0]?.category?.name || 'Car';
+        router.push(`${routes.shop}?categoryId=${catId}&category=${encodeURIComponent(catName)}`);
         break;
-      case "Rent a car":
+      }
+      case "Vehicle Rental":
         router.push(routes.rentACar);
         break;
       // case "Tow your car":
@@ -118,85 +218,6 @@ const Home = () => {
       default:
         console.log("Navigate to:", service.name);
     }
-  };
-
-  const renderServiceItem = ({ item }: { item: any }) => {
-    return (
-      <TouchableOpacity
-        onPress={() => handleServicePress(item)}
-        style={{
-          width: "48.5%",
-          height: 160, // Slightly taller for elegance
-          borderRadius: 24, // Super smooth
-          marginBottom: 12, // Balanced gap
-          // BEAUTIFUL GLOWING SHADOW
-          shadowColor: item.border, // Use the card's own accent color for shadow
-          shadowOffset: { width: 0, height: 4 }, // Reduced offset
-          shadowOpacity: 0.1, // Much softer (was 0.25)
-          shadowRadius: 10, // Tighter radius (was 16)
-          elevation: 4, // Reduced elevation (was 8)
-          backgroundColor: '#fff' 
-        }}
-        activeOpacity={0.9}
-      >
-        <LinearGradient
-          colors={[item.bgColor, '#ffffff', '#ffffff']} // Smoother fade
-          locations={[0, 0.7, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            flex: 1,
-            borderRadius: 24,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: item.border, // Crisp border matching shadow
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Icon Container - Floating Effect */}
-          <View
-            style={{
-              width: "100%",
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              alignItems: "flex-start",
-              marginTop: -5, // Slight overlap for dynamic feel
-              marginRight: -5,
-            }}
-          >
-            {typeof item.image === "function" ? (
-              <item.image width={85} height={85} />
-            ) : (
-              <Image
-                source={
-                  typeof item.image === "string"
-                    ? { uri: item.image }
-                    : item.image
-                }
-                style={{ width: 85, height: 85, resizeMode: "contain" }}
-              />
-            )}
-          </View>
-
-          {/* Text Content - Clear & Bold */}
-          <View style={{ width: "100%" }}>
-            <Text
-              style={{
-                fontSize: 17, // Larger, more readable
-                lineHeight: 22,
-                color: "#1F2937",
-                width: "95%",
-                letterSpacing: -0.2,
-              }}
-              numberOfLines={2}
-              className="font-NunitoExtraBold"
-            >
-              {item.name}
-            </Text>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -230,7 +251,13 @@ const Home = () => {
               <FlatList
                 scrollEnabled={false} // Disable internal scrolling since we wrapped in ScrollView
                 data={enhancedServices}
-                renderItem={renderServiceItem}
+                renderItem={({ item, index }) => (
+                  <ServiceCard 
+                    item={item} 
+                    index={index} 
+                    onPress={() => handleServicePress(item)} 
+                  />
+                )}
                 keyExtractor={(item) => item.id.toString()}
                 numColumns={2}
                 columnWrapperStyle={{

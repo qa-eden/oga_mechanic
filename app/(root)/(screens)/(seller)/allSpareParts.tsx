@@ -42,10 +42,11 @@ const AllSpareParts = () => {
   const { data: primaryProfileData, isLoading: isProfileLoading } = usePrimaryUserProfile();
 
   // Extract active role with fallback
-  const activeRole = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || 'merchant';
+  const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
 
   // Fetch specific merchant profile to check KYC status
-  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller' || activeRole === 'vehicle_rental');
 
   const isPendingApproval = Boolean(
     merchantProfileQuery.data?.data?.kyc?.is_complete && 
@@ -56,7 +57,7 @@ const AllSpareParts = () => {
   const { data: profileData } = useActiveRoleProfile();
   
   // Extract merchant ID safely from different profile structures
-  const merchantId = activeRole === 'merchant' 
+  const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
     ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
     : (profileData?.data as any)?.user_id;
   
@@ -326,7 +327,7 @@ const AllSpareParts = () => {
 
           <ProfileCompletionModal
             isVisible={showProfileModal}
-            roleName="seller"
+            roleName={activeRole === 'vehicle_rental' ? 'vehicle_rental' : 'seller'}
             onComplete={() => setShowProfileModal(false)}
             onClose={() => setShowProfileModal(false)}
             isPending={isPendingApproval}

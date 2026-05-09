@@ -344,8 +344,26 @@ export const mechanicAPI = {
     return response.data;
   },
 
+  getVehicleMakes: async (): Promise<any[]> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.VEHICLE_MAKES);
+    return response.data;
+  },
+
   getServiceTypes: async (): Promise<any> => {
     const response = await api.get(MECHANIC_ENDPOINTS.SERVICE_TYPES);
+    return response.data;
+  },
+  
+  getSpecializations: async (): Promise<any[]> => {
+    const response = await api.get(MECHANIC_ENDPOINTS.SPECIALIZATIONS);
+    return response.data;
+  },
+
+  createVehicleExpertise: async (expertise: any[]): Promise<any> => {
+    const response = await api.post(MECHANIC_ENDPOINTS.VEHICLE_EXPERTISE, {
+      requestType: "inbound",
+      data: expertise
+    });
     return response.data;
   },
 };

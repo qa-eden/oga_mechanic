@@ -1,5 +1,5 @@
 import api from '../axios';
-import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS, SERVICE_ENDPOINTS } from '../endpoints';
+import { USER_ENDPOINTS, AUTH_ENDPOINTS, BASE_URL, MERCHANT_ENDPOINTS, SERVICE_ENDPOINTS, VEHICLE_RENTAL_ENDPOINTS } from '../endpoints';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
@@ -163,7 +163,7 @@ export interface PrimaryUserProfileData {
   email: string;
   phone_number: string;
   is_verified: boolean;
-  active_role: string;
+  current_role: string;
   car_make: string;
   car_model: string;
   car_year: number | null;
@@ -180,7 +180,6 @@ export interface PrimaryUserProfileResponse {
   requestTime: string;
   requestType: string;
   data: PrimaryUserProfileData;
-  active_role: string;
   message: string;
   referenceId: string;
   status: boolean;
@@ -249,6 +248,8 @@ export interface MechanicProfile {
   government_id_back?: string | null;
   nin_number?: string | null;
   nin_document?: string | null;
+  specializations?: (string | number)[];
+  vehicle_expertise?: (string | number)[];
   created_at: string;
   updated_at: string;
 }
@@ -325,6 +326,20 @@ export interface MerchantProfileResponse {
     merchant_profile: MerchantProfile;
     kyc: KYCStatus;
     restricted: boolean;
+  };
+}
+
+// Vehicle Rental Profile API Response
+export interface VehicleRentalProfileResponse {
+  requestTime: string;
+  requestType: string;
+  message: string;
+  referenceId: string;
+  status: boolean;
+  data: {
+    has_vehicle_rental_profile: boolean;
+    vehicle_rental_profile: MerchantProfile;
+    kyc: KYCStatus;
   };
 }
 
@@ -452,6 +467,15 @@ export interface WalletData {
   currency: string;
   is_active: boolean;
   transactions?: WalletTransaction[];
+}
+
+export interface WalletResponse {
+  requestTime: string;
+  requestType: string;
+  referenceId: string;
+  status: boolean;
+  message: string;
+  data: WalletData;
 }
 
 export interface UserEarnings {
@@ -787,6 +811,36 @@ export const userAPI = {
     }
   },
 
+  // Get vehicle rental profile
+  getVehicleRentalProfile: async (): Promise<VehicleRentalProfileResponse> => {
+    try {
+      const response = await api.get<VehicleRentalProfileResponse>(VEHICLE_RENTAL_ENDPOINTS.PROFILE);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Create vehicle rental profile
+  createVehicleRentalProfile: async (data: any): Promise<VehicleRentalProfileResponse> => {
+    try {
+      const response = await api.post<VehicleRentalProfileResponse>(VEHICLE_RENTAL_ENDPOINTS.PROFILE, data);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Update vehicle rental profile
+  updateVehicleRentalProfile: async (data: any): Promise<VehicleRentalProfileResponse> => {
+    try {
+      const response = await api.put<VehicleRentalProfileResponse>(VEHICLE_RENTAL_ENDPOINTS.PROFILE, data);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
 
 
   // Get merchant profile by UUID
@@ -966,7 +1020,6 @@ export const userAPI = {
     return normalizeUserVehiclesListResponse(response.data);
   },
 
-  // Get single car by ID
   getCarById: async (carId: string): Promise<UserVehicle> => {
     const response = await api.get(`${USER_ENDPOINTS.CARS}${carId}/`);
     const d = response.data;
@@ -979,9 +1032,9 @@ export const userAPI = {
       typeof (d as any).data === 'object' &&
       !Array.isArray((d as any).data)
     ) {
-      return (d as { data: unknown }).data;
+      return (d as { data: UserVehicle }).data;
     }
-    return d;
+    return d as UserVehicle;
   },
 
   // Add new car (multipart: make, model, year, optional vin, license_plate, uploaded_images)

@@ -6,6 +6,7 @@ import {
   CloudIcon,
   BellIcon,
   UserIcon,
+  ChatBubbleLeftRightIcon,
 } from "react-native-heroicons/outline";
 import { router, useSegments } from "expo-router";
 import { routes, mechanicRoutes, sellerRoutes } from "@/constants/routes";
@@ -199,20 +200,33 @@ const Navbar = () => {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full relative"
-        onPress={handleNotificationPress}
-        activeOpacity={0.7}
-      >
-        <BellIcon size={24} color="#D30309" />
-        {unreadCount > 0 && (
-          <View className="absolute -top-1 -right-1 bg-red-500 px-1 rounded-full w-fit h-5 items-center justify-center border-2 border-white">
-            <Text className="text-white text-xs font-NunitoBold">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
+      <View className="flex-row items-center gap-2">
+        {/* Chat / Inbox Icon */}
+        <TouchableOpacity 
+          className="w-[45px] h-[45px] bg-gray-50 flex justify-center items-center rounded-full relative"
+          onPress={() => router.push("/(root)/(screens)/(user)/inbox")}
+          activeOpacity={0.7}
+        >
+          <ChatBubbleLeftRightIcon size={24} color="#475569" />
+          {/* We can wire up a real unread chat count here later */}
+        </TouchableOpacity>
+
+        {/* Notifications Icon */}
+        <TouchableOpacity 
+          className="w-[45px] h-[45px] bg-primary-100 flex justify-center items-center rounded-full relative"
+          onPress={handleNotificationPress}
+          activeOpacity={0.7}
+        >
+          <BellIcon size={24} color="#D30309" />
+          {unreadCount > 0 && (
+            <View className="absolute -top-1 -right-1 bg-red-500 px-1 rounded-full w-fit h-5 items-center justify-center border-2 border-white">
+              <Text className="text-white text-xs font-NunitoBold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

@@ -194,7 +194,8 @@ declare interface ServicesProps {
   id: number
   name: string
   description: string
-  image: React.FC<SvgProps>
+  image: any // Support both SVG components and standard Image assets
+  isSmall?: boolean
   bgColor: string
   border: string
 }

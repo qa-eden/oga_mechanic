@@ -32,6 +32,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import KYCBanner from "@/components/KYCBanner";
+import { useQuery } from "@tanstack/react-query";
+import { mechanicAPI } from "@/lib/api/mechanic";
+import { 
+  ShieldCheckIcon, 
+  ClockIcon, 
+  ChevronRightIcon as ChevronRightIconOutline,
+  SparklesIcon
+} from "react-native-heroicons/outline";
 
 const MechanicProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -39,6 +47,18 @@ const MechanicProfile = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // New query for vehicle expertise
+  const {
+    data: expertiseData,
+    isLoading: isExpertiseLoading,
+  } = useQuery({
+    queryKey: ["vehicleExpertise"],
+    queryFn: () => mechanicAPI.getVehicleExpertise(),
+    enabled: true,
+  });
+
+  const expertise = expertiseData?.results || expertiseData?.data || (Array.isArray(expertiseData) ? expertiseData : []);
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;
 
@@ -169,11 +189,9 @@ const MechanicProfile = () => {
   const pendingJobs = repairRequests?.data?.filter((r: any) => r.status === 'pending')?.length || 0;
   const totalEarnings = (mechanicData?.mechanic_profile as any)?.total_earnings || 0;
 
-  const isPendingApproval = Boolean(
-    isMechanic &&
-    (profileData as any)?.data?.kyc?.is_complete && 
-    !(profileData as any)?.data?.mechanic_profile?.is_approved
-  );
+  const isComplete = Boolean((profileData as any)?.data?.kyc?.is_complete || (profileData as any)?.kyc?.is_complete);
+  const isApproved = Boolean((profileData as any)?.data?.mechanic_profile?.is_approved || (profileData as any)?.mechanic_profile?.is_approved);
+  const isPendingApproval = isMechanic && isComplete && !isApproved;
 
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>
@@ -204,11 +222,71 @@ const MechanicProfile = () => {
 
               <View className="mb-4">
                 <KYCBanner 
-                  isVisible={!isProfileComplete || isPendingApproval} 
+                  isVisible={!isComplete || isPendingApproval} 
                   role="mechanic" 
                   isPending={isPendingApproval} 
                 />
               </View>
+
+              {/* Specializations Section - Only show when profile is complete */}
+              {isComplete && (
+                <View className="mb-6">
+                  <View className="flex-row items-center justify-between mb-3">
+                    <Text className="text-sm font-NunitoBold text-gray-500 uppercase ml-1">Specializations</Text>
+                    {expertise.length > 0 && (
+                      <TouchableOpacity onPress={() => router.push(`${mechanicRoutes.completeKyc}?step=2`)}>
+                        <Text className="text-red-600 font-NunitoBold text-xs">Edit</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  {isExpertiseLoading ? (
+                    <View className="flex-row flex-wrap gap-2">
+                      {[1, 2, 3].map((i) => (
+                        <View key={i} className="bg-gray-200 h-8 w-24 rounded-full animate-pulse" />
+                      ))}
+                    </View>
+                  ) : expertise.length > 0 ? (
+                    <View className="flex-row flex-wrap gap-2">
+                      {expertise.map((item: any, index: number) => (
+                        <View 
+                          key={index} 
+                          className="bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm flex-row items-center"
+                        >
+                          <View className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                          <Text className="text-gray-800 font-NunitoSemiBold text-sm">
+                            {item.vehicle_make_name || item.vehicle_make?.name || "Expertise"}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <TouchableOpacity 
+                      onPress={() => router.push(`${mechanicRoutes.completeKyc}?step=2`)}
+                      activeOpacity={0.9}
+                      className="bg-white border border-gray-100 p-4 rounded-[20px] flex-row items-center shadow-sm relative overflow-hidden"
+                    >
+                      <View className="bg-primary-50 p-3 rounded-[16px] mr-4 relative z-10">
+                        <ShieldCheckIcon size={24} color="#D30309" />
+                        <View className="absolute -top-1 -right-1">
+                          <SparklesIcon size={12} color="#FBBF24" />
+                        </View>
+                      </View>
+                      
+                      <View className="flex-1 mr-3 z-10">
+                        <Text className="text-gray-900 font-NunitoExtraBold text-[15px] mb-0.5 tracking-tight">Define Your Expertise</Text>
+                        <Text className="text-gray-500 font-NunitoMedium text-[12px] leading-[16px]">
+                          List the vehicle brands you specialize in.
+                        </Text>
+                      </View>
+
+                      <View className="bg-gray-50 w-9 h-9 rounded-full items-center justify-center z-10">
+                        <ChevronRightIconOutline size={18} color="#9CA3AF" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
 
               {/* Profile Card */}
               <View className="bg-gray-50 rounded-2xl p-4 border border-gray-100">

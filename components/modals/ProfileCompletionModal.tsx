@@ -11,7 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SparklesIcon, ShieldCheckIcon } from "react-native-heroicons/solid";
 import CustomButton from "../CustomButton";
 import { router } from "expo-router";
-import { roleKYCRoutes } from "@/constants/routes";
+import { roleKYCRoutes, routes } from "@/constants/routes";
 
 interface ProfileCompletionModalProps {
   isVisible: boolean;
@@ -35,12 +35,13 @@ const ProfileCompletionModal = ({
       driver: "Driver",
       rider: "Rider",
       seller: "Seller",
+      vehicle_rental: "Vehicle Rental",
     };
     return roleMap[role] || role;
   };
 
   const getRoleKYCRoute = (role: string): string => {
-    return roleKYCRoutes[role] || "/(auth)/(register)/sign_up";
+    return roleKYCRoutes[role] || routes.register;
   };
 
   const handleCompleteProfile = () => {

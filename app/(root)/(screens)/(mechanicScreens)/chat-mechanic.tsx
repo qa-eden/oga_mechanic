@@ -3,7 +3,6 @@
 import React from "react";
 import { useLocalSearchParams } from "expo-router";
 import ChatScreen from "@/components/templates/ChatScreen";
-import { images } from "@/constants";
 import { Message } from "@/utils/chatUtils";
 
 const ChatMechanic = () => {
@@ -11,7 +10,7 @@ const ChatMechanic = () => {
   const participant = {
     name: (params.mechanicName as string) || "Fatai Sule",
     phone: "08056432765",
-    avatar: params.mechanicImage || images.mechanic1,
+    avatar: params.mechanicImage,
     isOnline: true,
     lastSeen: "just now",
   };
@@ -35,8 +34,9 @@ const ChatMechanic = () => {
 
   return (
     <ChatScreen
-      participant={participant}
-      initialMessages={initialMessages}
+      participant={participant as any}
+      messages={initialMessages}
+      onSendMessage={(text) => console.log("Sending message:", text)}
       headerSubtitle="Chat mechanic"
     />
   );

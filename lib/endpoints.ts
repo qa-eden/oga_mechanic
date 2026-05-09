@@ -78,6 +78,7 @@ export const MECHANIC_ENDPOINTS = {
   ANALYTICS: '/mechanics/mechanic-analytics/',
   SERVICE_TYPES: '/mechanics/service-types/',
   VEHICLE_EXPERTISE: '/mechanics/vehicle-expertise/',
+  SPECIALIZATIONS: '/mechanics/specializations/',
 } as const;
 
 // Merchant endpoints (shop owners)
@@ -100,6 +101,11 @@ export const MERCHANT_ENDPOINTS = {
   WITHDRAW: '/merchant/earnings/withdraw',
   ANALYTICS: '/products/merchant/analytics/',
   SUBSCRIPTION: '/products/merchant/subscription/',
+} as const;
+
+// Vehicle Rental endpoints
+export const VEHICLE_RENTAL_ENDPOINTS = {
+  PROFILE: '/users/profile/vehicle-rental/',
 } as const;
 
 // Common service endpoints (used by multiple roles)

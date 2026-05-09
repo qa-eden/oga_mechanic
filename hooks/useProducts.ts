@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient, InfiniteData, keepPreviousData } from '@tanstack/react-query';
 import { productsAPI, HomeProductsResponse, ProductDetailResponse, ProductListResponse, CategoryResponse, ProductListAPIResponse, FavoriteProductAPIResponse } from '../lib/api/products';
 
 // Query keys
@@ -75,6 +75,7 @@ export const useProductsInfinite = (
     staleTime: 0, // Always refetch on mount for fresh data
     gcTime: 10 * 60 * 1000, // 10 minutes cache
     refetchOnMount: true, // Silently refetch when component mounts
+    placeholderData: keepPreviousData,
   });
 };
 

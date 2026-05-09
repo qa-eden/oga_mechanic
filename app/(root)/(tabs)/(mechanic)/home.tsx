@@ -35,6 +35,14 @@ import { useMechanicOrderNotifications } from "@/hooks/useMechanicOrderNotificat
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { registerForPushNotificationsAsync } from "@/services/notificationService";
 import { NewOrderBanner } from "@/components/NewOrderBanner";
+import { 
+  ExclamationCircleIcon, 
+  ChevronRightIcon, 
+  ClockIcon,
+  ShieldCheckIcon,
+  AdjustmentsVerticalIcon,
+  SparklesIcon,
+} from "react-native-heroicons/outline";
 
 // Metric Card Skeleton Loader
 const MetricCardSkeleton = () => {
@@ -220,7 +228,9 @@ const MechanicHome = () => {
     };
   }, [profileData, profileLoading, setIsProfileComplete, isNewSwitch]);
 
-  const isPendingApproval = Boolean(profileData?.data?.kyc?.is_complete && !profileData?.data?.mechanic_profile?.is_approved);
+  const isComplete = Boolean(profileData?.data?.kyc?.is_complete || profileData?.kyc?.is_complete);
+  const isApproved = Boolean(profileData?.data?.mechanic_profile?.is_approved || profileData?.mechanic_profile?.is_approved);
+  const isPendingApproval = isComplete && !isApproved;
 
   // Fetch repair requests from API with status="pending" filter
   const {
@@ -229,6 +239,19 @@ const MechanicHome = () => {
     error: pendingError,
     refetch: refetchPending
   } = useRepairRequests('pending', isMechanic);
+
+  // New query for vehicle expertise
+  const {
+    data: expertiseData,
+    isLoading: isExpertiseLoading,
+    refetch: refetchExpertise
+  } = useQuery({
+    queryKey: ["vehicleExpertise"],
+    queryFn: () => mechanicAPI.getVehicleExpertise(),
+    enabled: !!isMechanic,
+  });
+
+  const expertise = expertiseData?.results || expertiseData?.data || (Array.isArray(expertiseData) ? expertiseData : []);
 
   // Check if pending requests are empty (only check after loading is done)
   const hasPendingRequests = !pendingLoading && pendingRequestsData?.data && Array.isArray(pendingRequestsData.data) && pendingRequestsData.data.length > 0;
@@ -496,10 +519,11 @@ const MechanicHome = () => {
         }}
         refreshControl={
           <RefreshControl
-            refreshing={requestsLoading || analyticsLoading}
+            refreshing={pendingLoading || analyticsLoading || isExpertiseLoading}
             onRefresh={() => {
               refetchRequests();
               refetchAnalytics();
+              refetchExpertise();
             }}
             colors={['#D30309']}
             tintColor="#D30309"
@@ -510,30 +534,10 @@ const MechanicHome = () => {
           <Navbar />
 
           <View className="py-4">
-          <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="mechanic" isPending={isPendingApproval} />
+          <KYCBanner isVisible={!isComplete || isPendingApproval} role="mechanic" isPending={isPendingApproval} />
 
           {/* Add Bidding Carousel */}
           <BiddingCarousel containerPadding={20} />
-
-          {/* Let's fix some cars card */}
-          {/* <View className="rounded-2xl mb-6 overflow-hidden">
-            <ImageBackground
-              source={images?.adsbackground}
-              className="w-full h-[150px] bg-cover bg-center"
-              resizeMode="cover"
-            >
-              <View className="bg-black/40 flex-1 justify-center items-start p-6">
-                <View className="items-start">
-                  <Text className="text-white text-[1.4rem] font-NunitoBold mb-2 text-start">
-                    Let's fix some cars
-                  </Text>
-                  <Text className="text-gray-300 text-md font-NunitoMedium text-start">
-                    Connecting with car owners
-                  </Text>
-                </View>
-              </View>
-            </ImageBackground>
-          </View> */}
 
           {/* Key Metrics Header */}
           <View className="flex-row items-center justify-between mb-2">
@@ -585,27 +589,73 @@ const MechanicHome = () => {
             )}
           </View>
 
-          {/* Additional Metrics Row */}
-          {!analyticsLoading && (
-            <View className="flex-row gap-4 space-x-4 mb-4">
-              <View className="flex-1 bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] bg-[#FDE68A] rounded-[.4rem] p-4">
-                <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                  Completion Rate
+
+          {/* Specializations Section - Only show when profile is complete */}
+          {isComplete && (
+            <View className="mb-6 mt-2">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  Specializations
                 </Text>
-                <Text className="text-2xl font-NunitoBold text-gray-900">
-                  {analyticsData?.data?.summary?.completion_rate 
-                    ? `${(analyticsData.data.summary.completion_rate * 100).toFixed(1)}%`
-                    : '0%'}
-                </Text>
+                {expertise.length > 0 && (
+                  <TouchableOpacity onPress={() => router.push(`${mechanicRoutes.completeKyc}?step=2`)}>
+                    <Text className="text-red-600 font-NunitoBold text-xs">Edit</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <View className="flex-1 bg-gradient-to-r from-[#D1FAE5] to-[#A7F3D0] bg-[#A7F3D0] rounded-[.4rem] p-4">
-                <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
-                  Total Customers
-                </Text>
-                <Text className="text-2xl font-NunitoBold text-gray-900">
-                  {analyticsData?.data?.summary?.distinct_customers || 0}
-                </Text>
-              </View>
+              
+              {isExpertiseLoading ? (
+                <View className="flex-row flex-wrap gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} className="bg-gray-200 h-8 w-24 rounded-full animate-pulse" />
+                  ))}
+                </View>
+              ) : expertise.length > 0 ? (
+                <View className="flex-row flex-wrap gap-2">
+                  {expertise.map((item: any, index: number) => (
+                    <View 
+                      key={index} 
+                      className="bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm flex-row items-center"
+                      style={{
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1
+                      }}
+                    >
+                      <View className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                      <Text className="text-gray-800 font-NunitoSemiBold text-sm">
+                        {item.vehicle_make_name || item.vehicle_make?.name || "Expertise"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  onPress={() => router.push(`${mechanicRoutes.completeKyc}?step=2`)}
+                  activeOpacity={0.9}
+                  className="bg-white border border-gray-100 p-4 rounded-[20px] flex-row items-center shadow-sm relative overflow-hidden"
+                >
+                  <View className="bg-primary-50 p-3 rounded-[16px] mr-4 relative z-10">
+                    <ShieldCheckIcon size={24} color="#D30309" />
+                    <View className="absolute -top-1 -right-1">
+                      <SparklesIcon size={12} color="#FBBF24" />
+                    </View>
+                  </View>
+                  
+                  <View className="flex-1 mr-3 z-10">
+                    <Text className="text-gray-900 font-NunitoExtraBold text-[15px] mb-0.5 tracking-tight">Define Your Expertise</Text>
+                    <Text className="text-gray-500 font-NunitoMedium text-[12px] leading-[16px]">
+                      List the vehicle brands you specialize in.
+                    </Text>
+                  </View>
+
+                  <View className="bg-gray-50 w-9 h-9 rounded-full items-center justify-center z-10">
+                    <ChevronRightIcon size={18} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 

@@ -33,7 +33,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useProfileStore } from "@/hooks/useProfileStore";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
-import { useMerchantProfile } from "@/hooks/useUserProfile";
+import { useMerchantProfile, useVehicleRentalProfile } from "@/hooks/useUserProfile";
 
 const SellerProfile = () => {
   const [isEnabledFaceId, setIsEnabledFaceId] = useState(false);
@@ -55,28 +55,37 @@ const SellerProfile = () => {
   // Use primary profile for all roles
   const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
 
-  // Fetch merchant analytics for stats
-  const { data: analyticsData, refetch: refetchAnalytics } = useMerchantAnalytics();
-
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'merchant';
-  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
+  const activeRoleRaw = (profileData as PrimaryUserProfileResponse)?.active_role || (profileData as any)?.data?.active_role || (profileData as any)?.data?.current_role;
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const isVehicleRental = activeRole === 'vehicle_rental';
+  const isMerchant = activeRole === 'merchant' || activeRole === 'seller';
+  
+  // Fetch merchant analytics for stats (only if merchant)
+  const { data: analyticsData, refetch: refetchAnalytics } = useMerchantAnalytics(isMerchant);
+  
+  const merchantProfileQuery = useMerchantProfile(isMerchant);
+  const vehicleRentalProfileQuery = useVehicleRentalProfile(isVehicleRental);
+  
+  const activeProfileQuery = isVehicleRental ? vehicleRentalProfileQuery : merchantProfileQuery;
 
   const hasShownModalRef = React.useRef(false);
   const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const isPendingApproval = Boolean(
-    merchantProfileQuery.data?.data?.kyc?.is_complete && 
-    !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
+    activeProfileQuery.data?.data?.kyc?.is_complete && 
+    !((activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved)
   );
 
   React.useEffect(() => {
-    if (!merchantProfileQuery.isLoading && merchantProfileQuery.data?.data) {
-      const merchantData = merchantProfileQuery.data.data;
-      const hasKycData = !!(merchantData as any).nin_number || !!(merchantData as any).kyc?.is_complete;
+    if (!activeProfileQuery.isLoading && activeProfileQuery.data?.data) {
+      const activeData = activeProfileQuery.data.data;
+      // Check KYC status based on active role
+      const profileInfo = isVehicleRental ? (activeData as any).vehicle_rental_profile : (activeData as any).merchant_profile;
+      const hasKycData = !!(profileInfo as any)?.nin_number || !!activeData.kyc?.is_complete;
       setIsProfileComplete(hasKycData);
       
       // ONLY show automatically if we just switched roles and it's not complete
-      if (isNewSwitch && !hasKycData && !merchantProfileQuery.isLoading && !isProfileLoading && !hasShownModalRef.current) {
+      if (isNewSwitch && !hasKycData && !activeProfileQuery.isLoading && !isProfileLoading && !hasShownModalRef.current) {
         // Start timer only if not already started
         if (!timerIdRef.current) {
           timerIdRef.current = setTimeout(() => {
@@ -101,11 +110,11 @@ const SellerProfile = () => {
         timerIdRef.current = null;
       }
     };
-  }, [merchantProfileQuery.data, merchantProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
+  }, [activeProfileQuery.data, activeProfileQuery.isLoading, isProfileLoading, setIsProfileComplete, isNewSwitch]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchProfile(), refetchAnalytics(), merchantProfileQuery.refetch()]);
+    await Promise.all([refetchProfile(), refetchAnalytics(), activeProfileQuery.refetch()]);
     setRefreshing(false);
   };
 
@@ -188,7 +197,7 @@ const SellerProfile = () => {
   // 1. Merchant Selfie (primary for KYC)
   // 2. Merchant Profile Picture
   // 3. Primary User Profile Picture
-  const merchantProfile = merchantProfileQuery.data?.data?.merchant_profile;
+  const merchantProfile = (activeProfileQuery.data?.data as any)?.merchant_profile || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile;
   const profileImage = 
     merchantProfile?.selfie || 
     merchantProfile?.profile_picture || 
@@ -223,12 +232,16 @@ const SellerProfile = () => {
             {/* Top Bar */}
             <View className="flex-row justify-between items-center mb-5">
               <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-                Seller Account
+                {isVehicleRental ? "Vehicle Rental Account" : "Seller Account"}
               </Text>
             </View>
 
             <View className="mb-4">
-              <KYCBanner isVisible={!isProfileComplete || isPendingApproval} role="seller" isPending={isPendingApproval} />
+              <KYCBanner 
+                isVisible={!isProfileComplete || isPendingApproval} 
+                role={isVehicleRental ? "vehicle_rental" : "seller"} 
+                isPending={isPendingApproval} 
+              />
             </View>
 
             {/* Profile Card */}
@@ -277,8 +290,8 @@ const SellerProfile = () => {
 
                 {/* Role Badge */}
                 <View className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100">
-                  <Text className="text-primary-600 text-xs font-NunitoBold capitalize">
-                    {activeRole.replace('_', ' ')}
+                  <Text className="text-primary-600 text-xs font-NunitoBold">
+                    {activeRole.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                   </Text>
                 </View>
               </View>
@@ -295,7 +308,9 @@ const SellerProfile = () => {
                     {analyticsData?.product_count || 0}
                   </Text>
                   <View className="flex-row items-center">
-                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">Products</Text>
+                    <Text className="text-gray-500 text-xs font-NunitoBold mr-1">
+                      {isVehicleRental ? "Fleet" : "Products"}
+                    </Text>
                     <ChevronRightIcon size={12} color="#9CA3AF" />
                   </View>
                 </TouchableOpacity>
@@ -422,7 +437,7 @@ const SellerProfile = () => {
 
       <ProfileCompletionModal
         isVisible={showProfileModal}
-        roleName="seller"
+        roleName={isVehicleRental ? "vehicle_rental" : "seller"}
         onComplete={() => setShowProfileModal(false)}
         onClose={() => setShowProfileModal(false)}
         isPending={isPendingApproval}

@@ -13,6 +13,7 @@ import { icons } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
+import { useActiveRoleProfile } from "@/hooks/useUserProfile";
 
 // Import your actual tab screen components
 import SellerProduct from "./product";
@@ -25,6 +26,8 @@ export default function Layout() {
   const insets = useSafeAreaInsets();
   const { tab } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState(tab as string || "home");
+  const { activeRole } = useActiveRoleProfile();
+  const isVehicleRental = activeRole === 'vehicle_rental';
 
   // Update active tab when query param changes
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function Layout() {
       products: {
         icon: <icons.productTab />,
         activeIcon: <icons.activeProductTab />,
-        label: "Products",
+        label: isVehicleRental ? "Fleet" : "Products",
         component: SellerProduct,
       },
       profile: {

@@ -135,13 +135,18 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
         icon: UsersIcon,
         description: "Main user account",
         displayName: "Primary User"
+      },
+      vehicle_rental: {
+        icon: UsersIcon,
+        description: "Rent out vehicles",
+        displayName: "Vehicle Rental"
       }
     };
 
     return roleMap[roleName] || {
       icon: UsersIcon,
       description: "User account",
-      displayName: roleName.charAt(0).toUpperCase() + roleName.slice(1).replace('_', ' ')
+      displayName: roleName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     };
   };
 
@@ -159,7 +164,8 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
         role.name !== 'admin' &&
         role.name !== 'driver' &&
         role.name !== 'rider';
-      const isNotActive = role.name !== activeRole?.name;
+      const activeRoleName = typeof activeRole === 'object' ? activeRole?.name : activeRole;
+      const isNotActive = role.name !== activeRoleName;
       return isNotExcluded && isNotActive;
     });
 
@@ -248,6 +254,9 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                 case 'seller':
                   profileResponse = await userAPI.getMerchantProfile();
                   break;
+                case 'vehicle_rental':
+                  profileResponse = await userAPI.getVehicleRentalProfile();
+                  break;
                 default:
                   profileResponse = null;
               }
@@ -263,7 +272,8 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
 
                   // Check for approval if complete
                   if (isComplete) {
-                    const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 'merchant_profile';
+                    const profileKey = roleName === 'mechanic' ? 'mechanic_profile' : 
+                                      (roleName === 'vehicle_rental' ? 'vehicle_rental_profile' : 'merchant_profile');
                     isPending = !profileResponse.data[profileKey]?.is_approved;
                   }
                 }
@@ -301,6 +311,7 @@ const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
             case 'mechanic': targetRoute = routes?.mechanicHome; break;
             case 'merchant':
             case 'seller':
+            case 'vehicle_rental':
               targetRoute = sellerRoutes.home;
               break;
             default: targetRoute = routes?.userHome;

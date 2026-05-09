@@ -3,7 +3,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import Toast from 'react-native-toast-message';
-import * as Notifications from 'expo-notifications';
+import { setupNotificationListeners } from "@/lib/notifications";
 import { useRouter } from "expo-router";
 
 // Import your global CSS file
@@ -29,17 +29,15 @@ function AppContent() {
 
   // ── Global Notification Listener ──────────────────────────────────────────
   useEffect(() => {
-    // This listener is fired whenever a user taps on or interacts with a notification
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      
-      // If the notification data contains a 'new_order' type, redirect to orders
-      if (data?.type === 'new_order') {
-        router.push("/(root)/(tabs)/(mechanic)/home" as any);
-      }
+    const subscription = setupNotificationListeners(() => {
+      router.push("/(root)/(tabs)/(mechanic)/home" as any);
     });
 
-    return () => subscription.remove();
+    return () => {
+      if (subscription && typeof subscription.remove === 'function') {
+        subscription.remove();
+      }
+    };
   }, []);
   // ──────────────────────────────────────────────────────────────────────────
 

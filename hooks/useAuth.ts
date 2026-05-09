@@ -134,6 +134,7 @@ export const useAuth = () => {
         return routes?.riderHome || '/(root)/(tabs)/(rider)/home';
       case 'merchant':
       case 'seller':
+      case 'vehicle_rental':
         return '/(root)/(tabs)/(sellers)/home';
       default:
         console.warn('⚠️ Unknown role:', role);

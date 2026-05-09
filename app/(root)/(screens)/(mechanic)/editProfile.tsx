@@ -13,6 +13,8 @@ import { router } from "expo-router";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
 import { CameraIcon, WrenchScrewdriverIcon, EnvelopeIcon, BriefcaseIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
 import { useMechanicProfile, usePrimaryUserProfile, userProfileKeys } from "@/hooks/useUserProfile";
+import { useSpecializations } from "@/hooks/useMechanic";
+import { useMemo } from "react";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,6 +53,7 @@ const EditMechanicProfile = () => {
   const queryClient = useQueryClient();
   const { data: profileData, isLoading: isLoadingPrimary } = usePrimaryUserProfile();
   const { data: mechanicProfile, isLoading: isLoadingMechanic } = useMechanicProfile(true);
+  const { data: specializations, isLoading: isLoadingSpecs } = useSpecializations();
   
   const userData = profileData?.data;
   const mechanicData = mechanicProfile?.data;
@@ -218,7 +221,7 @@ const EditMechanicProfile = () => {
     </View>
   );
 
-  if (isLoadingPrimary || isLoadingMechanic) {
+  if (isLoadingPrimary || isLoadingMechanic || isLoadingSpecs) {
     return (
       <View className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#D30309" />
@@ -226,16 +229,11 @@ const EditMechanicProfile = () => {
     );
   }
 
-  const specializationOptions = [
-    { label: "General Mechanic", value: "general" },
-    { label: "Engine Specialist", value: "engine" },
-    { label: "Electrical Systems", value: "electrical" },
-    { label: "Brake Specialist", value: "brakes" },
-    { label: "Transmission", value: "transmission" },
-    { label: "AC & Cooling", value: "ac_cooling" },
-    { label: "Body Work", value: "body_work" },
-    { label: "Diagnostics", value: "diagnostics" },
-  ];
+  const specs = Array.isArray(specializations) ? specializations : (specializations as any)?.data || [];
+  const specializationOptions = specs.map((spec: any) => ({
+    label: spec.name,
+    value: spec.id.toString(),
+  }));
 
   const experienceOptions = [
     { label: "Less than 1 year", value: "0" },

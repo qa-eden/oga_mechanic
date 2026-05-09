@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse, WalletResponse, UserEarningsResponse, WithdrawalResponse, WithdrawalFilters, WithdrawalRequestData, UserBankAccountsResponse } from '@/lib/api/user';
+import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse, WalletResponse, UserEarningsResponse, WithdrawalResponse, WithdrawalFilters, WithdrawalRequestData, UserBankAccountsResponse, VehicleRentalProfileResponse } from '@/lib/api/user';
+import { mechanicAPI } from '@/lib/api/mechanic';
 import { useMechanicStore } from '@/stores/mechanicStore';
 
 // Query key factory
@@ -17,6 +18,8 @@ export const userProfileKeys = {
   wallet: () => [...userProfileKeys.all, 'wallet'] as const,
   earnings: () => [...userProfileKeys.all, 'earnings'] as const,
   withdrawals: () => [...userProfileKeys.all, 'withdrawals'] as const,
+  vehicleRental: () => [...userProfileKeys.all, 'vehicleRental'] as const,
+  cars: () => [...userProfileKeys.all, 'cars'] as const,
 };
 
 // Hook to get primary user profile
@@ -38,6 +41,19 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchant(),
     queryFn: userAPI.getMerchantProfile,
+    staleTime: 30 * 1000, // 5 minutes
+    retry: 1,
+    enabled: enabled,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
+};
+
+// Hook to get vehicle rental profile (only when enabled)
+export const useVehicleRentalProfile = (enabled: boolean = true) => {
+  return useQuery<VehicleRentalProfileResponse>({
+    queryKey: userProfileKeys.vehicleRental(),
+    queryFn: userAPI.getVehicleRentalProfile,
     staleTime: 30 * 1000, // 5 minutes
     retry: 1,
     enabled: enabled,
@@ -77,25 +93,27 @@ export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean 
 export const useActiveRoleProfile = () => {
   // First, get primary profile to check active role
   const primaryProfile = usePrimaryUserProfile();
-  const activeRole = primaryProfile.data?.data?.active_role;
-
-  // Add logging for debugging
-  // console.log("useActiveRoleProfile - activeRole:", activeRole);
+  const activeRoleData = primaryProfile.data?.active_role || primaryProfile.data?.data?.active_role || (primaryProfile.data?.data as any)?.current_role;
+  const activeRole = typeof activeRoleData === 'object' ? activeRoleData?.name : activeRoleData;
 
   // Role-specific profile flags
+  const isVehicleRental = activeRole === 'vehicle_rental';
   const isMerchant = activeRole === 'merchant' || activeRole === 'seller';
   const isMechanic = activeRole === 'mechanic' || activeRole === 'Mechanic';
 
   // Fetch role-specific profiles conditionally
+  const vehicleRentalProfile = useVehicleRentalProfile(isVehicleRental);
   const merchantProfile = useMerchantProfile(isMerchant);
   const mechanicProfile = useMechanicProfile(isMechanic);
 
   // Determine the consolidated state
   const isFetching = primaryProfile.isFetching || 
+    (isVehicleRental && vehicleRentalProfile.isFetching) ||
     (isMerchant && merchantProfile.isFetching) || 
     (isMechanic && mechanicProfile.isFetching);
 
   const isLoading = primaryProfile.isLoading || 
+    (isVehicleRental && vehicleRentalProfile.isLoading) ||
     (isMerchant && merchantProfile.isLoading) || 
     (isMechanic && mechanicProfile.isLoading);
 
@@ -105,6 +123,7 @@ export const useActiveRoleProfile = () => {
 
   const refetch = async () => {
     await primaryProfile.refetch();
+    if (isVehicleRental) await vehicleRentalProfile.refetch();
     if (isMerchant) await merchantProfile.refetch();
     if (isMechanic) await mechanicProfile.refetch();
   };
@@ -112,7 +131,8 @@ export const useActiveRoleProfile = () => {
   // Return the appropriate profile data based on role
   // Only return role-specific data if it's actually loaded
   let data: any = null;
-  if (isMerchant && merchantProfile.data) data = merchantProfile.data;
+  if (isVehicleRental && vehicleRentalProfile.data) data = vehicleRentalProfile.data;
+  else if (isMerchant && merchantProfile.data) data = merchantProfile.data;
   else if (isMechanic && mechanicProfile.data) data = mechanicProfile.data;
 
   return {
@@ -121,7 +141,8 @@ export const useActiveRoleProfile = () => {
     error,
     refetch,
     activeRole,
-    isMerchant,
+    isMerchant: isMerchant || isVehicleRental, // Group for generic merchant-like components
+    isVehicleRental,
     isMechanic,
     primaryProfileData: primaryProfile.data,
   };
@@ -206,6 +227,23 @@ export const useSubmitMechanicKYC = () => {
     },
     onError: (error) => {
       console.error('❌ Error submitting mechanic KYC:', error);
+    },
+  });
+};
+
+// Hook to submit vehicle expertise
+export const useSubmitVehicleExpertise = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (expertise: any[]) => mechanicAPI.createVehicleExpertise(expertise),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["vehicleExpertise"] });
+      console.log('✅ Vehicle expertise submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting vehicle expertise:', error);
     },
   });
 };
@@ -475,5 +513,16 @@ export const useUpdateBankAccount = () => {
     onError: (error: any) => {
       console.error('❌ Error updating bank account:', error);
     },
+  });
+};
+
+// Hook to get user cars (Vehicle List)
+export const useUserCars = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: userProfileKeys.cars(),
+    queryFn: () => userAPI.getCars(),
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    enabled: enabled,
   });
 };

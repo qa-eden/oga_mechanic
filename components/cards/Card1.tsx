@@ -2,16 +2,17 @@
 
 import { View, Text, TouchableOpacity, Platform, Animated, Image, ActivityIndicator } from "react-native";
 import type { SvgProps } from "react-native-svg";
-import { type FC, useRef, memo, useState, useEffect } from "react";
+import { type FC, useRef, memo } from "react";
 import Rating from "../Rating";
 import { NairaCurrency } from "@/utils/useCurrencyFormatter";
 // import { icons } from "@/constants";
 import { router } from "expo-router";
 import { routes } from "@/constants/routes";
-import { HeartIcon, ShoppingCartIcon, CheckIcon, CameraIcon } from "react-native-heroicons/outline";
+import { HeartIcon, ShoppingCartIcon, CheckIcon, CameraIcon, CheckBadgeIcon } from "react-native-heroicons/outline";
+import { CheckBadgeIcon as CheckBadgeIconSolid } from "react-native-heroicons/solid";
 import { useToggleFavorite } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
-import { useCart } from "@/contexts/CartContext";
+// import { useCart } from "@/contexts/CartContext";
 
 interface Props {
   Images: FC<SvgProps> | number | { uri: string };
@@ -28,6 +29,7 @@ interface Props {
   containerStyle?: string;
   productId?: number | string;
   isFavorite?: boolean;
+  userCarMakes?: string[];
 }
 
 const Card1 = memo(({
@@ -45,6 +47,7 @@ const Card1 = memo(({
   containerStyle,
   productId,
   isFavorite = false,
+  userCarMakes,
 }: Props) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const heartAnim = useRef(new Animated.Value(1)).current;
@@ -180,8 +183,7 @@ const Card1 = memo(({
               <TouchableOpacity
                 onPress={handleLovePress}
                 disabled={toggleFavoriteMutation.isPending}
-                className={`w-8 h-8 rounded-full items-center justify-center ${isFavorite ? 'bg-red-100' : 'bg-black/20'
-                  }`}
+                className={`w-8 h-8 rounded-full items-center justify-center ${isFavorite ? 'bg-red-100' : 'bg-black/20'}`}
                 style={{
                   opacity: toggleFavoriteMutation.isPending ? 0.6 : 1,
                   ...Platform.select({
@@ -214,6 +216,20 @@ const Card1 = memo(({
                 )}
               </TouchableOpacity>
             </Animated.View>
+          )}
+
+          {/* Verified Badge */}
+          {rating && rating > 4.5 && (
+            <View className="absolute top-3 left-3 bg-emerald-500/90 px-2 py-1 rounded-lg flex-row items-center shadow-sm">
+              <CheckBadgeIconSolid size={14} color="white" />
+              <Text className="text-[10px] font-NunitoExtraBold text-white ml-1 uppercase">Verified</Text>
+            </View>
+          )}
+          {!!userCarMakes?.length && name && userCarMakes.some(make => name.toLowerCase().includes(make.toLowerCase())) && (
+            <View className="absolute bottom-2 left-2 bg-blue-600/90 px-2 py-1 rounded-md flex-row items-center shadow-sm">
+              <CheckIcon size={12} color="white" strokeWidth={3} />
+              <Text className="text-[10px] font-NunitoExtraBold text-white ml-1 uppercase">Fits Your Car</Text>
+            </View>
           )}
         </View>
 

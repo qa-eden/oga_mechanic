@@ -234,6 +234,7 @@ export interface CategoryResponse {
   description: string;
   created_at: string;
   updated_at: string;
+  sub_categories?: CategoryResponse[];
 }
 
 export interface FavoriteProduct {
@@ -530,38 +531,19 @@ export const productsAPI = {
     isRental?: boolean,
     make?: string
   ): Promise<ProductListAPIResponse> => {
-    const params = new URLSearchParams();
-    if (categoryId) {
-      params.append('category', categoryId.toString());
-    }
-    if (minPrice && minPrice.trim()) {
-      params.append('min_price', minPrice);
-    }
-    if (maxPrice && maxPrice.trim()) {
-      params.append('max_price', maxPrice);
-    }
-    if (offset !== undefined) {
-      params.append('offset', offset.toString());
-    }
-    if (limit !== undefined) {
-      params.append('limit', limit.toString());
-    }
-    if (merchantId) {
-      params.append('merchant', merchantId);
-    }
-    if (isRental !== undefined) {
-      params.append('is_rental', isRental.toString());
-    }
-    if (make && make.trim()) {
-      params.append('make', make);
-    }
-
-    const url = params.toString()
-      ? `${SERVICE_ENDPOINTS.PRODUCTS_LIST}?${params.toString()}`
-      : SERVICE_ENDPOINTS.PRODUCTS_LIST;
-
-    const response = await api.get<ProductListAPIResponse>(url);
-    return response.data; // Return full paginated response
+    const response = await api.get(SERVICE_ENDPOINTS.PRODUCTS_LIST, {
+      params: {
+        category: categoryId || undefined,
+        min_price: minPrice?.trim() || undefined,
+        max_price: maxPrice?.trim() || undefined,
+        offset,
+        limit,
+        merchant: merchantId || undefined,
+        is_rental: isRental,
+        make: make?.trim() || undefined,
+      }
+    });
+    return response.data;
   },
 
   // Search products

@@ -12,6 +12,7 @@ interface MechanicState {
   // Actions
   findMechanics: (carDetails: CarDetails) => Promise<void>;
   setSelectedMechanic: (mechanic: Mechanic | null) => void;
+  setSearchResults: (mechanics: Mechanic[]) => void;
   clearError: () => void;
   clearSearchResults: () => void;
   getNearbyMechanics: (lat: number, lng: number, radius?: number) => Promise<void>;
@@ -47,6 +48,10 @@ export const useMechanicStore = create<MechanicState>((set, get) => ({
 
   setSelectedMechanic: (mechanic: Mechanic | null) => {
     set({ selectedMechanic: mechanic });
+  },
+
+  setSearchResults: (mechanics: Mechanic[]) => {
+    set({ searchResults: mechanics });
   },
 
   clearError: () => {

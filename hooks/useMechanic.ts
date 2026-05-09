@@ -11,18 +11,19 @@ export const mechanicKeys = {
   detail: (id: string) => [...mechanicKeys.details(), id] as const,
   nearby: (lat: number, lng: number, radius: number) => 
     [...mechanicKeys.all, 'nearby', lat, lng, radius] as const,
+  specializations: () => [...mechanicKeys.all, 'specializations'] as const,
 };
 
 // Hooks
 export const useFindMechanics = () => {
   const queryClient = useQueryClient();
-  const { findMechanics, loading, error, searchResults } = useMechanicStore();
+  const { setSearchResults, loading, error, searchResults } = useMechanicStore();
 
   const mutation = useMutation({
     mutationFn: (carDetails: CarDetails) => mechanicAPI.findMechanic(carDetails),
     onSuccess: (data) => {
       // Update Zustand store
-      findMechanics(data);
+      setSearchResults(data.mechanics);
       
       // Invalidate and refetch queries
       queryClient.invalidateQueries({ queryKey: mechanicKeys.lists() });
@@ -98,5 +99,13 @@ export const useMechanicReviews = (mechanicId: string) => {
     queryKey: [...mechanicKeys.detail(mechanicId), 'reviews'],
     queryFn: () => mechanicAPI.getMechanicReviews(mechanicId),
     enabled: !!mechanicId,
+  });
+};
+
+export const useSpecializations = () => {
+  return useQuery({
+    queryKey: mechanicKeys.specializations(),
+    queryFn: () => mechanicAPI.getSpecializations(),
+    staleTime: 24 * 60 * 60 * 1000, // Specializations don't change often
   });
 };

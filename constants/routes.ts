@@ -1,10 +1,8 @@
 export const routes = {
   // Auth routes
   welcome: "/(auth)/welcome",
-  signUp: "/(auth)/(register)/sign_up",
+  signUp: "/(auth)/(register)/register",
   register: "/(auth)/(register)/register",
-  registerStep1: "/(auth)/(register)/register-step1",
-  registerStep2: "/(auth)/(register)/register-step2",
   signIn: "/(auth)/(login)/sign_in",
   forgotPassword: "/(auth)/(login)/forgetPassword",
   resetPassword: "/(auth)/(login)/resetPassword",
@@ -12,11 +10,7 @@ export const routes = {
   verifyEmail: "/(auth)/(register)/verify-email",
 
 
-  // Registration user steps
-  userStep1: "/(auth)/(register)/user/step1",
-  userStep2: "/(auth)/(register)/user/step2",
-  userStep3: "/(auth)/(register)/user/step3", 
-  userStep4: "/(auth)/(register)/user/step4", 
+
 
   // Success pages
   accountCreated: "/(auth)/accountCreatedSucessful",
@@ -83,12 +77,6 @@ export type RouteValues = (typeof routes)[RouteKeys];
 
 // Mechanic routes
 export const mechanicRoutes = {
-  welcome: "/(auth)/(register)/mechanic/mechanic-welcome",
-  step1: "/(auth)/(register)/mechanic/step1",
-  step2: "/(auth)/(register)/mechanic/step2",
-  step3: "/(auth)/(register)/mechanic/step3",
-  step4: "/(auth)/(register)/mechanic/step4",
-  accountCreated: "/(auth)/(register)/mechanic/accountCreated",
   // Mechanic tabs
   home: "/(root)/(tabs)/(mechanic)/home",
   earnings: "/(root)/(tabs)/(mechanic)/earnings",
@@ -102,6 +90,7 @@ export const mechanicRoutes = {
   EditProfile: "/(root)/(screens)/(mechanic)/editProfile",
   profileDetails: "/(root)/(screens)/(mechanic)/profileDetails",
   orderDetails: "/(root)/(screens)/(mechanic)/order-details",
+  completeKyc: "/(root)/(screens)/(mechanic)/complete-kyc",
 } as const;
 
 export type MechanicRouteKeys = keyof typeof mechanicRoutes;
@@ -109,12 +98,6 @@ export type MechanicRouteValues = (typeof mechanicRoutes)[MechanicRouteKeys];
 
   // seller routes
 export const sellerRoutes = {
-  step1: "/(auth)/(register)/seller/step1",
-  step2: "/(auth)/(register)/seller/step2",
-  step3: "/(auth)/(register)/seller/step3",
-  step4: "/(auth)/(register)/seller/step4",
-  step5: "/(auth)/(register)/seller/step5",
-  accountCreated: "/(auth)/(register)/seller/accountCreated",
 
   // seller tabs
   home: "/(root)/(tabs)/(sellers)/home",
@@ -157,6 +140,7 @@ export const roleKYCRoutes: Record<string, string> = {
   mechanic: "/(root)/(screens)/(mechanic)/complete-kyc",
   merchant: "/(root)/(screens)/(seller)/complete-kyc",
   seller: "/(root)/(screens)/(seller)/complete-kyc",
+  vehicle_rental: "/(root)/(screens)/(seller)/complete-kyc",
 };
 
 // KYC Routes map by role
