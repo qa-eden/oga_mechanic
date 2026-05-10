@@ -15,7 +15,7 @@ export const useP2PChatSocket = (roomId: string, enabled: boolean = true) => {
 
   // Path matches the documentation: /ws/chat/{chat_room_id}/
   const urlPath = useMemo(() => 
-    `chat/${roomId ? roomId : ''}`,
+    `chat/${roomId}/`,
     [roomId]
   );
 
@@ -86,11 +86,21 @@ export const useP2PChatSocket = (roomId: string, enabled: boolean = true) => {
         // Skip duplicate IDs
         if (prev.some(m => m.id && m.id?.toString() === data.id?.toString())) return prev;
 
+        const senderObj = typeof data.sender === 'object' ? data.sender : null;
+        const senderEmail = senderObj ? senderObj?.email : (data.sender_email || data.sender);
+        const senderRole = senderObj ? senderObj?.active_role : data.active_role;
+        
+        const isSentByMe = 
+          senderEmail === profileResponse?.data?.email && 
+          senderRole === profileResponse?.data?.current_role;
+
         const mappedMessage = {
           ...data,
           id: data.id || Date.now().toString(),
           timestamp: data.created_at || new Date().toISOString(),
           text: data.content || "",
+          isSent: isSentByMe,
+          senderName: senderObj?.full_name || data.sender_name || 'Other User',
           status: 'sent',
           messageType: data.message_type || 'text',
         };
@@ -105,6 +115,17 @@ export const useP2PChatSocket = (roomId: string, enabled: boolean = true) => {
                 updated[localIndex] = { ...mappedMessage };
                 return updated;
             }
+        }
+
+        if (mappedMessage.text && !mappedMessage.isSent) {
+            import('@/services/notificationService').then(service => {
+                service.scheduleChatMessageNotification({
+                    senderName: mappedMessage.senderName,
+                    message: mappedMessage.text,
+                    roomId: roomId,
+                    type: 'p2p'
+                });
+            });
         }
 
         return [...prev, mappedMessage].sort((a, b) => 
@@ -167,6 +188,11 @@ export const useP2PChatSocket = (roomId: string, enabled: boolean = true) => {
     baseSendMessage('typing', { is_typing: isTypingStatus });
   }, [baseSendMessage]);
 
+  const markMessagesAsRead = useCallback((messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+    baseSendMessage('read_messages', { message_ids: messageIds });
+  }, [baseSendMessage]);
+
   return {
     messages,
     isTyping,
@@ -174,6 +200,7 @@ export const useP2PChatSocket = (roomId: string, enabled: boolean = true) => {
     isConnected,
     sendMessage,
     sendTypingStatus,
+    markMessagesAsRead,
     reconnect,
   };
 };

@@ -37,6 +37,15 @@ export const useLogin = () => {
               ['user_data', JSON.stringify(userData)],
               ['is_logged_in', 'true']
             ]);
+
+            // Synchronize with the Zustand store to notify all hooks (including WebSockets)
+            try {
+              const { useUserStore } = require('../stores/userStore');
+              useUserStore.getState().setTokens(access, refresh);
+              useUserStore.getState().setUser(userData);
+            } catch (e) {
+              console.error('⚠️ Failed to sync login data to Zustand store:', e);
+            }
             
             // Call /users/roles/ endpoint after successful login
             try {
@@ -97,6 +106,15 @@ export const useLogin = () => {
                 ['user_data', JSON.stringify(userData)],
                 ['is_logged_in', 'true']
               ]);
+
+              // Synchronize with the Zustand store (fallback path)
+              try {
+                const { useUserStore } = require('../stores/userStore');
+                useUserStore.getState().setTokens(access, refresh);
+                useUserStore.getState().setUser(userData);
+              } catch (e) {
+                console.error('⚠️ Failed to sync login data to Zustand store (fallback):', e);
+              }
               
               // Navigate based on role
               const role = active_role || 'primary_user';

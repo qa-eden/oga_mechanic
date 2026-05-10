@@ -1092,9 +1092,11 @@ export const userAPI = {
   },
 
   // Get notifications
-  getNotifications: async (): Promise<any> => {
+  getNotifications: async (offset = 0, limit = 10, filters?: { category?: string; is_read?: boolean }): Promise<any> => {
     try {
-      const response = await api.get(USER_ENDPOINTS.NOTIFICATIONS);
+      const response = await api.get(USER_ENDPOINTS.NOTIFICATIONS, {
+        params: { offset, limit, ...filters }
+      });
       return response.data;
     } catch (error: any) {
       throw error;
@@ -1126,7 +1128,7 @@ export const userAPI = {
   // Mark all notifications as read
   markAllNotificationsAsRead: async (): Promise<any> => {
     try {
-      const response = await api.patch(USER_ENDPOINTS.NOTIFICATION_MARK_ALL_READ);
+      const response = await api.post(USER_ENDPOINTS.NOTIFICATION_MARK_ALL_READ);
       return response.data;
     } catch (error: any) {
       throw error;

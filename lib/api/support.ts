@@ -5,6 +5,7 @@ export interface SupportConversation {
   id: string;
   subject: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  unread_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -46,9 +47,10 @@ export const supportAPI = {
 
   /**
    * Retrieves messages for a specific support conversation.
+   * Default ordering is latest first (-created_at) to ensure the chat opens at the end.
    */
-  getMessages: async (id: string): Promise<any> => {
-    const response = await api.get(`${SERVICE_ENDPOINTS.SUPPORT_CONVERSATIONS}${id}/messages/`);
+  getMessages: async (id: string, limit: number = 100, offset: number = 0): Promise<any> => {
+    const response = await api.get(`${SERVICE_ENDPOINTS.SUPPORT_CONVERSATIONS}${id}/messages/?limit=${limit}&offset=${offset}&ordering=-created_at`);
     return response.data;
   },
 

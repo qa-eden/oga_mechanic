@@ -140,10 +140,77 @@ const CategorySection = ({ category, onSuggestionPress }: any) => {
 
 /* ---------------- LIVE CHAT TAB ---------------- */
 
-const LiveChatTab = () => {
+/* ---------------- PREMIUM TICKET CARD ---------------- */
+
+const TicketCard = ({ chat, onPress }: any) => {
+  const statusColor = chat.status === 'open' ? '#10b981' : chat.status === 'in_progress' ? '#f59e0b' : '#94a3b8';
+  const statusBg = chat.status === 'open' ? '#ecfdf5' : chat.status === 'in_progress' ? '#fffbeb' : '#f8fafc';
+  
+  // Last message preview logic
+  const lastMsg = chat.last_message?.content || "No messages yet";
+  const unreadCount = chat.unread_count || 0;
+  
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={styles.premiumCard}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.cardSubjectContainer}>
+          <Text style={styles.premiumSubject} numberOfLines={1}>{chat.subject || "Support Request"}</Text>
+          <View style={[styles.premiumStatusBadge, { backgroundColor: statusBg }]}>
+             <View style={[styles.premiumStatusDot, { backgroundColor: statusColor }]} />
+             <Text style={[styles.premiumStatusText, { color: statusColor }]}>
+               {chat.status?.replace('_', ' ').toUpperCase()}
+             </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.cardBody}>
+        <Text style={styles.lastMessagePreview} numberOfLines={1}>
+          {lastMsg}
+        </Text>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <Text style={styles.premiumDate}>
+          {chat.created_at ? format(new Date(chat.created_at), "MMM d · h:mm a") : "Recently"}
+        </Text>
+        {unreadCount > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadCountText}>{unreadCount}</Text>
+          </View>
+        )}
+        <ChevronRightIcon size={14} color="#CBD5E1" />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const LiveChatTab = ({ isConnected }: { isConnected: boolean }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isConnected) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isConnected]);
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["support-conversations"],
     queryFn: () => supportAPI.getConversations(),
+    staleTime: 0,
+    retry: 2,
+    refetchOnMount: true,
   });
 
   useFocusEffect(
@@ -160,65 +227,42 @@ const LiveChatTab = () => {
 
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-      {/* Header Row */}
       <View style={styles.liveChatHeader}>
         <View>
-          <Text style={styles.liveChatTitle}>Your Tickets</Text>
-          <Text style={styles.liveChatSubtitle}>
-            {conversations.length} active {conversations.length === 1 ? "conversation" : "conversations"}
-          </Text>
+          <Text style={styles.liveChatTitle}>Active Tickets</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <Text style={styles.liveChatSubtitle}>
+              {conversations.length} total thread{conversations.length !== 1 ? 's' : ''}
+            </Text>
+            {isConnected && (
+              <View style={styles.liveIndicatorContainer}>
+                <Animated.View style={[styles.liveDot, { transform: [{ scale: pulseAnim }] }]} />
+                <Text style={styles.liveIndicatorText}>Live Sync</Text>
+              </View>
+            )}
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => router.push(routes.chatSpecialist as any)}
-          style={styles.newTicketBtn}
+          style={styles.plusFab}
         >
-          <PlusIcon size={15} color="#fff" />
-          <Text style={styles.newTicketText}>New</Text>
+          <PlusIcon size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
       {conversations.length > 0 ? (
-        conversations.map((chat: any) => {
-          const statusColor = chat.status === 'open' ? '#10b981' : chat.status === 'in_progress' ? '#f59e0b' : '#94a3b8';
-          const statusBg = chat.status === 'open' ? '#ecfdf5' : chat.status === 'in_progress' ? '#fffbeb' : '#f8fafc';
-          return (
-            <TouchableOpacity
-              key={chat.id}
-              onPress={() =>
-                router.push({
-                  pathname: routes.chatSpecialist as any,
-                  params: { roomId: chat.id },
-                })
-              }
-              activeOpacity={0.85}
-              style={styles.ticketCard}
-            >
-              {/* Left accent bar */}
-              <View style={[styles.ticketAccent, { backgroundColor: statusColor }]} />
-
-              <View style={{ flex: 1 }}>
-                <View style={styles.ticketTopRow}>
-                  <Text style={styles.ticketSubject} numberOfLines={1}>
-                    {chat.subject || "Support Request"}
-                  </Text>
-                  <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-                    <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                    <Text style={[styles.statusText, { color: statusColor }]}>
-                      {chat.status?.replace('_', ' ').toUpperCase() || 'OPEN'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.ticketBottomRow}>
-                  <Text style={styles.ticketDate}>
-                    {chat.created_at ? format(new Date(chat.created_at), "MMM d, yyyy · h:mm a") : "Recently"}
-                  </Text>
-                  <ChevronRightIcon size={16} color="#CBD5E1" />
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })
+        <View style={{ gap: 16 }}>
+          {conversations.map((chat: any) => (
+            <TicketCard 
+              key={chat.id} 
+              chat={chat} 
+              onPress={() => router.push({
+                pathname: routes.chatSpecialist as any,
+                params: { roomId: chat.id },
+              })}
+            />
+          ))}
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
@@ -226,7 +270,7 @@ const LiveChatTab = () => {
           </View>
           <Text style={styles.emptyTitle}>No tickets yet</Text>
           <Text style={styles.emptySubtitle}>
-            Start a conversation with our support specialists and get help fast.
+            Our specialists are online and ready to help you with anything you need.
           </Text>
           <TouchableOpacity
             onPress={() => router.push(routes.chatSpecialist as any)}
@@ -244,6 +288,7 @@ const LiveChatTab = () => {
 
 const SupportSuggestions = () => {
   const [activeTab, setActiveTab] = useState<'support' | 'live-chat'>('support');
+  const isConnected = true; // Managed globally in _layout.tsx
 
   const handleSuggestionPress = (text: string) => {
     router.push({
@@ -439,7 +484,7 @@ const SupportSuggestions = () => {
             </View>
           </>
         ) : (
-          <LiveChatTab />
+          <LiveChatTab isConnected={isConnected} />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -491,21 +536,30 @@ const styles = StyleSheet.create({
   ctaButtonText: { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#D30309' },
 
   // Tickets
-  liveChatHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
-  liveChatTitle: { fontFamily: 'Nunito-ExtraBold', fontSize: 20, color: '#111827' },
-  liveChatSubtitle: { fontFamily: 'Nunito-Medium', fontSize: 13, color: '#94a3b8', marginTop: 2 },
-  newTicketBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D30309', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
-  newTicketText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: '#fff' },
+  liveChatHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  liveChatTitle: { fontFamily: 'Nunito-ExtraBold', fontSize: 22, color: '#111827' },
+  liveChatSubtitle: { fontFamily: 'Nunito-Medium', fontSize: 13, color: '#94a3b8' },
+  plusFab: { width: 44, height: 44, backgroundColor: '#D30309', borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#D30309', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  
+  liveIndicatorContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0fdf4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' },
+  liveIndicatorText: { fontSize: 10, fontFamily: 'Nunito-ExtraBold', color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  ticketCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#f1f5f9', marginBottom: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, padding: 16, paddingLeft: 20 },
-  ticketAccent: { width: 3, borderRadius: 3, marginRight: 14, alignSelf: 'stretch' },
-  ticketTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  ticketSubject: { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#111827', flex: 1, marginRight: 10 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontFamily: 'Nunito-Bold', fontSize: 11 },
-  ticketBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  ticketDate: { fontFamily: 'Nunito-Medium', fontSize: 12, color: '#94a3b8' },
+  premiumCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#f1f5f9', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3 },
+  cardHeader: { marginBottom: 12 },
+  cardSubjectContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  premiumSubject: { flex: 1, fontFamily: 'Nunito-ExtraBold', fontSize: 16, color: '#111827', marginRight: 12 },
+  premiumStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  premiumStatusDot: { width: 5, height: 5, borderRadius: 2.5 },
+  premiumStatusText: { fontFamily: 'Nunito-Bold', fontSize: 10, letterSpacing: 0.2 },
+  
+  cardBody: { marginBottom: 16 },
+  lastMessagePreview: { fontFamily: 'Nunito-Medium', fontSize: 14, color: '#64748b', lineHeight: 20 },
+  
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTopWidth: 1, borderTopColor: '#f8fafc' },
+  premiumDate: { fontFamily: 'Nunito-Bold', fontSize: 12, color: '#94a3b8', flex: 1 },
+  unreadBadge: { backgroundColor: '#ef4444', minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, marginRight: 12 },
+  unreadCountText: { color: '#fff', fontSize: 10, fontFamily: 'Nunito-ExtraBold' },
 
   emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
   emptyIcon: { width: 80, height: 80, backgroundColor: '#f8fafc', borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
@@ -10,7 +10,7 @@ import {
   InformationCircleIcon,
 } from 'react-native-heroicons/outline';
 import {
-  useNotifications,
+  useInfiniteNotifications,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead
 } from '@/hooks/useUserProfile';
@@ -26,17 +26,27 @@ export interface Notification {
   message: string;
   time: string;
   read: boolean;
+  data?: any;
   action?: () => void;
 }
 
 const Notification = () => {
-  // Fetch notifications from API
+  const [filterUnread, setFilterUnread] = useState(false);
+
+  // Fetch infinite notifications from API
   const {
-    data: notificationsData,
+    data,
     isLoading,
     error,
-    refetch
-  } = useNotifications();
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteNotifications({ 
+    // category: 'admin_chat', 
+    category: 'general', 
+    is_read: filterUnread ? false : undefined 
+  });
 
   // Mutation hooks
   const markAsReadMutation = useMarkNotificationAsRead();
@@ -44,18 +54,17 @@ const Notification = () => {
 
   // Transform API response to Notification interface
   const notifications: Notification[] = useMemo(() => {
-    if (!notificationsData) return [];
+    if (!data?.pages) return [];
     
-    // Handle different possible response structures
-    const data = notificationsData?.data || notificationsData;
-    const notificationsArray = Array.isArray(data) ? data : (data?.notifications || data?.results || []);
+    // Flat map all pages into a single array
+    const notificationsArray = data.pages.flatMap((page: any) => {
+      const pageData = page?.data || page;
+      return Array.isArray(pageData) ? pageData : (pageData?.notifications || pageData?.results || []);
+    });
     
-    if (!Array.isArray(notificationsArray)) return [];
-
     return notificationsArray.map((item: any) => {
-      // Map API fields to our Notification interface
-      // Normalize notification type to match our interface
-      const rawType = (item.type || item.notification_type || item.category || 'info').toLowerCase();
+      // Normalize notification type
+      const rawType = (item.type || item.notification_type || 'info').toLowerCase();
       let normalizedType: 'success' | 'info' | 'warning' | 'error' = 'info';
       
       if (rawType.includes('success') || rawType.includes('complete')) {
@@ -67,37 +76,50 @@ const Notification = () => {
       }
       
       return {
-        id: item.id?.toString() || item.notification_id?.toString() || '',
+        id: item.id?.toString() || '',
         type: normalizedType,
-        title: item.title || item.subject || item.heading || 'Notification',
+        title: item.title || item.subject || 'Notification',
         message: item.message || item.body || item.description || item.content || '',
-        time: item.created_at || item.timestamp || item.time || item.date || '',
+        time: item.created_at || item.timestamp || item.time || '',
         read: item.read || item.is_read || item.read_status || false,
-        action: item.action_url ? () => {
-          // TODO: Handle navigation based on action_url
-          console.log('Navigate to:', item.action_url);
-        } : undefined,
+        data: item,
       };
     });
-  }, [notificationsData]);
+  }, [data]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const firstPageData = data?.pages[0]?.data || data?.pages[0];
+  const totalCount = firstPageData?.count || 0;
+  const unreadCount = notifications.filter(n => !n.read).length; // Approximated from loaded pages, but could be fetched from API if available
 
   const handleRefresh = async () => {
     await refetch();
   };
 
   const handleNotificationPress = (notification: Notification) => {
-    // Mark as read if not already read
     if (!notification.read) {
       markAsReadMutation.mutate(notification.id);
     }
 
-    // Navigate to notification detail page
-    router.push({
-      pathname: routes.notificationDetail as any,
-      params: { id: notification.id }
-    });
+    const itemData = notification.data;
+    const type = itemData?.notification_type || itemData?.type;
+    const relatedId = itemData?.related_object_id || itemData?.related_id;
+
+    if (type === 'repair_update' && relatedId) {
+      router.push({
+        pathname: routes.trackMechanicOrder as any,
+        params: { orderId: relatedId }
+      });
+    } else if (type === 'support_chat') {
+      router.push({
+        pathname: routes.chatSpecialist as any,
+        params: { roomId: relatedId }
+      });
+    } else {
+      router.push({
+        pathname: routes.notificationDetail as any,
+        params: { id: notification.id }
+      });
+    }
   };
 
   const handleMarkAllAsRead = () => {
@@ -148,7 +170,6 @@ const Notification = () => {
       if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
       if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
       
-      // For older notifications, show date
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -159,8 +180,17 @@ const Notification = () => {
     }
   };
 
+  const renderFooter = () => {
+    if (!isFetchingNextPage) return <View className="h-20" />;
+    return (
+      <View className="py-6 items-center h-20">
+        <ActivityIndicator size="small" color="#D30309" />
+      </View>
+    );
+  };
+
   // Loading state
-  if (isLoading && !notificationsData) {
+  if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
         <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
@@ -204,9 +234,7 @@ const Notification = () => {
             textColor="text-red-800"
             actionButton={{
               text: "Try Again",
-              onPress: () => {
-                refetch();
-              },
+              onPress: () => refetch(),
               backgroundColor: "#DC2626"
             }}
           />
@@ -227,7 +255,7 @@ const Notification = () => {
           {unreadCount > 0 && (
             <View className="ml-3 bg-primary-500 rounded-full px-3 py-1">
               <Text className="text-white text-xs font-NunitoBold">
-                {unreadCount}
+                {totalCount > 0 ? totalCount : unreadCount}
               </Text>
             </View>
           )}
@@ -247,10 +275,29 @@ const Notification = () => {
         </View>
       </View>
 
-      {/* Notifications List */}
-      <ScrollView
-        className="flex-1"
+      {/* Filters */}
+      <View className="px-5 py-3 border-b border-gray-100 flex-row bg-white">
+        <TouchableOpacity
+          onPress={() => setFilterUnread(false)}
+          className={`px-4 py-1.5 rounded-full mr-2 border ${!filterUnread ? 'bg-primary-50 border-primary-200' : 'bg-white border-gray-200'}`}
+        >
+          <Text className={`text-sm font-NunitoBold ${!filterUnread ? 'text-primary-700' : 'text-gray-500'}`}>All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setFilterUnread(true)}
+          className={`px-4 py-1.5 rounded-full border ${filterUnread ? 'bg-primary-50 border-primary-200' : 'bg-white border-gray-200'}`}
+        >
+          <Text className={`text-sm font-NunitoBold ${filterUnread ? 'text-primary-700' : 'text-gray-500'}`}>Unread</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Notifications List using FlatList */}
+      <FlatList
+        className="flex-1 px-5 pt-4"
+        data={notifications}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -259,10 +306,15 @@ const Notification = () => {
             tintColor="#D30309"
           />
         }
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        {notifications.length === 0 ? (
-          <View className="items-center justify-center py-16 px-5 mt-20">
+        onEndReached={() => {
+          if (hasNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={
+          <View className="items-center justify-center py-16 mt-20">
             <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-4">
               <BellIcon size={40} color="#9CA3AF" />
             </View>
@@ -273,56 +325,52 @@ const Notification = () => {
               You're all caught up! Check back later for updates.
             </Text>
           </View>
-        ) : (
-          <View className="px-5 pt-4">
-            {notifications.map((notification) => (
-              <TouchableOpacity
-                key={notification.id}
-                onPress={() => handleNotificationPress(notification)}
-                className={`mb-3 rounded-2xl border-2 p-4 ${
-                  notification.read
-                    ? 'bg-white border-gray-100'
-                    : 'bg-primary-50 border-primary-200'
-                }`}
-                activeOpacity={0.7}
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => handleNotificationPress(item)}
+            className={`mb-3 rounded-2xl border-2 p-4 ${
+              item.read
+                ? 'bg-white border-gray-100'
+                : 'bg-primary-50 border-primary-200'
+            }`}
+            activeOpacity={0.7}
+          >
+            <View className="flex-row">
+              {/* Icon */}
+              <View
+                className={`w-12 h-12 rounded-xl items-center justify-center ${getNotificationBgColor(
+                  item.type
+                )}`}
               >
-                <View className="flex-row">
-                  {/* Icon */}
-                  <View
-                    className={`w-12 h-12 rounded-xl items-center justify-center ${getNotificationBgColor(
-                      notification.type
-                    )}`}
-                  >
-                    {getNotificationIcon(notification.type)}
-                  </View>
+                {getNotificationIcon(item.type)}
+              </View>
 
-                  {/* Content */}
-                  <View className="flex-1 ml-3">
-                    <View className="flex-row items-start justify-between mb-1">
-                      <Text
-                        className={`text-base font-NunitoBold flex-1 ${
-                          notification.read ? 'text-gray-900' : 'text-gray-900'
-                        }`}
-                      >
-                        {notification.title}
-                      </Text>
-                      {!notification.read && (
-                        <View className="w-2 h-2 bg-primary-500 rounded-full ml-2 mt-1" />
-                      )}
-                    </View>
-                    <Text className="text-sm font-NunitoMedium text-gray-600 mb-2 leading-5">
-                      {notification.message}
-                    </Text>
-                    <Text className="text-xs font-NunitoMedium text-gray-400">
-                      {formatRelativeTime(notification.time)}
-                    </Text>
-                  </View>
+              {/* Content */}
+              <View className="flex-1 ml-3">
+                <View className="flex-row items-start justify-between mb-1">
+                  <Text
+                    className={`text-base font-NunitoBold flex-1 ${
+                      item.read ? 'text-gray-900' : 'text-gray-900'
+                    }`}
+                  >
+                    {item.title}
+                  </Text>
+                  {!item.read && (
+                    <View className="w-2 h-2 bg-primary-500 rounded-full ml-2 mt-1" />
+                  )}
                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                <Text className="text-sm font-NunitoMedium text-gray-600 mb-2 leading-5">
+                  {item.message}
+                </Text>
+                <Text className="text-xs font-NunitoMedium text-gray-400">
+                  {formatRelativeTime(item.time)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 };

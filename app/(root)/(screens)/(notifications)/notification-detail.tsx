@@ -11,7 +11,7 @@ import {
   ClockIcon,
 } from 'react-native-heroicons/outline';
 import { 
-  useNotifications, 
+  useNotificationDetail, 
   useMarkNotificationAsRead 
 } from '@/hooks/useUserProfile';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -31,25 +31,16 @@ const NotificationDetailScreen = () => {
   const params = useLocalSearchParams<{ id: string }>();
   const notificationId = params?.id;
 
-  // Fetch notifications to get the specific one
-  const { data: notificationsData, isLoading, error, refetch } = useNotifications();
+  // Fetch the specific notification detail
+  const { data: itemData, isLoading, error } = useNotificationDetail(notificationId || '');
   const markAsReadMutation = useMarkNotificationAsRead();
 
-  // Find the specific notification
+  // Normalize the specific notification
   const notification: NotificationDetail | null = useMemo(() => {
-    if (!notificationsData || !notificationId) return null;
+    if (!itemData || !notificationId) return null;
     
-    const data = notificationsData?.data || notificationsData;
-    const notificationsArray = Array.isArray(data) ? data : (data?.notifications || data?.results || []);
+    const item = itemData?.data || itemData;
     
-    if (!Array.isArray(notificationsArray)) return null;
-
-    const item = notificationsArray.find((n: any) => 
-      n.id?.toString() === notificationId || n.notification_id?.toString() === notificationId
-    );
-
-    if (!item) return null;
-
     // Normalize notification type
     const rawType = (item.type || item.notification_type || item.category || 'info').toLowerCase();
     let normalizedType: 'success' | 'info' | 'warning' | 'error' = 'info';
@@ -71,7 +62,7 @@ const NotificationDetailScreen = () => {
       read: item.read || item.is_read || item.read_status || false,
       readAt: item.read_at || null,
     };
-  }, [notificationsData, notificationId]);
+  }, [itemData, notificationId]);
 
   // Mark as read when viewing
   useEffect(() => {
@@ -138,7 +129,7 @@ const NotificationDetailScreen = () => {
   };
 
   // Loading state
-  if (isLoading && !notificationsData) {
+  if (isLoading && !itemData) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
         <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">

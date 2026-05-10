@@ -120,7 +120,7 @@ export const SERVICE_ENDPOINTS = {
   PAYMENTS_VERIFY: (id: string) => `/payments/${id}/verify`,
   PAYMENTS_HISTORY: '/payments/history',
   SHOP_PRODUCTS: '/shop/products',
-  SHOP_PRODUCT_DETAIL: (id: string) => `/products/products/${id}`,
+  SHOP_PRODUCT_DETAIL: (id: string) => `/products/products/${id}/`,
   SHOP_CATEGORIES: '/shop/categories',
   SHOP_SEARCH: '/shop/search',
   PRODUCTS_HOME: '/products/home/',

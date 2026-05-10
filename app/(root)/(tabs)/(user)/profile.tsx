@@ -186,7 +186,7 @@ const Profile = () => {
   const displayEmail = userData?.email || '';
   const displayPhone = userData?.phone_number || userInfo.phone;
   const isVerified = userData?.is_verified || false;
-  const activeRole = (profileData as PrimaryUserProfileResponse)?.active_role || 'primary_user';
+  const activeRole = userData?.current_role || 'primary_user';
 
   return (
     <SafeAreaView className="bg-gray-50 flex-1" edges={["top"]}>

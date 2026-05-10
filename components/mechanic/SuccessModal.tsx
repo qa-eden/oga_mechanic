@@ -70,11 +70,11 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
           )}
 
           {amount != null && (
-            <View className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4">
-              <Text className="text-xs text-red-700 font-NunitoExtraBold uppercase tracking-[1.5px] text-center mb-1">
+            <View className="mb-6 bg-green-50 border border-green-200 rounded-2xl p-4">
+              <Text className="text-xs text-green-700 font-NunitoExtraBold uppercase tracking-[1.5px] text-center mb-1">
                 Estimated Cost
               </Text>
-              <Text className="text-3xl font-NunitoExtraBold text-red-700 text-center">
+              <Text className="text-3xl font-NunitoExtraBold text-green-700 text-center">
                 ₦{amount.toLocaleString()}
               </Text>
             </View>

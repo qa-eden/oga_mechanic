@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse, WalletResponse, UserEarningsResponse, WithdrawalResponse, WithdrawalFilters, WithdrawalRequestData, UserBankAccountsResponse, VehicleRentalProfileResponse } from '@/lib/api/user';
 import { mechanicAPI } from '@/lib/api/mechanic';
 import { useMechanicStore } from '@/stores/mechanicStore';
@@ -269,19 +269,42 @@ export const useSwitchRole = () => {
   });
 };
 
-// Hook to get notifications
-export const useNotifications = () => {
+// Hook to get unread notification count efficiently
+export const useUnreadNotificationCount = () => {
   return useQuery({
-    queryKey: userProfileKeys.notifications(),
-    queryFn: userAPI.getNotifications,
-    staleTime: 2 * 60 * 1000, // 2 minutes - notifications change frequently
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: false,
-    networkMode: 'online',
+    queryKey: [...userProfileKeys.notifications(), 'unread-count', 'general'],
+    queryFn: () => userAPI.getNotifications(0, 1, { is_read: false, category: 'general' }),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    select: (data) => data?.data?.count ?? data?.count ?? 0,
+  });
+};
+
+// Hook to get a single notification's details
+export const useNotificationDetail = (id: string | number) => {
+  return useQuery({
+    queryKey: [...userProfileKeys.notifications(), 'detail', id],
+    queryFn: () => userAPI.getNotification(id),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!id,
+  });
+};
+
+// Hook for infinite scrolling notifications
+export const useInfiniteNotifications = (filters?: { category?: string; is_read?: boolean }) => {
+  return useInfiniteQuery({
+    queryKey: [...userProfileKeys.notifications(), 'infinite', filters],
+    queryFn: ({ pageParam = 0 }) => userAPI.getNotifications(pageParam, 15, filters),
+    getNextPageParam: (lastPage, allPages) => {
+      // API returns response.data inside lastPage, so the actual paginated data is in lastPage?.data
+      const pageData = lastPage?.data || lastPage;
+      if (pageData?.next) {
+        return allPages.length * 15;
+      }
+      return undefined;
+    },
+    initialPageParam: 0,
+    staleTime: 2 * 60 * 1000,
   });
 };
 

@@ -695,7 +695,7 @@ const MechanicOrderDetails = () => {
                 <Text className="text-sm font-NunitoBold text-gray-700 ml-2">Call Customer</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => router.push(routes.chatSeller as any)}
+                onPress={() => router.push(routes.chatSpecialist as any)}
                 className="flex-1 flex-row items-center justify-center bg-blue-600 py-3 rounded-xl shadow-sm"
               >
                 <ChatBubbleLeftRightIcon size={18} color="#FFFFFF" />
@@ -1174,7 +1174,7 @@ const MechanicOrderDetails = () => {
           {/* Cost Information */}
           <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center mb-4">
-              <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center mr-3">
+              <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
                 <Text className="text-lg">₦</Text>
               </View>
               <Text className="text-lg font-NunitoBold text-gray-900">
@@ -1182,16 +1182,16 @@ const MechanicOrderDetails = () => {
               </Text>
             </View>
 
-            <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-              <Text className="text-xs font-NunitoMedium text-red-700 uppercase tracking-wider">
+            <View className="bg-green-50 border border-green-200 rounded-xl p-3 mb-3">
+              <Text className="text-xs font-NunitoMedium text-green-700 uppercase tracking-wider">
                 Estimated Cost
               </Text>
               {request.estimated_cost ? (
-                <Text className="text-2xl font-NunitoExtraBold text-red-700 mt-1">
+                <Text className="text-2xl font-NunitoExtraBold text-green-700 mt-1">
                   ₦{parseFloat(request.estimated_cost).toLocaleString()}
                 </Text>
               ) : (
-                <Text className="text-sm font-NunitoBold text-red-600 mt-1">
+                <Text className="text-sm font-NunitoBold text-green-600 mt-1">
                   Awaiting estimate
                 </Text>
               )}

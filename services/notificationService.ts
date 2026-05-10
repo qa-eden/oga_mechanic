@@ -58,6 +58,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         lightColor: '#FF231F7C',
         sound: 'default',
       });
+
+      await Notifications.setNotificationChannelAsync('chat-messages', {
+        name: 'Chat Messages',
+        importance: Notifications.AndroidImportance?.MAX ?? 4,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#3B82F6',
+        sound: 'default',
+      });
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
@@ -105,6 +113,64 @@ export async function scheduleNewOrderNotification(params: {
     });
   } catch (e) {
     console.warn('Failed to schedule notification:', e);
+  }
+}
+
+/**
+ * Schedule a generic local notification with server-provided title and body.
+ */
+export async function scheduleGenericNotification(title: string, body: string, data: any = {}) {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data,
+      },
+      trigger: null,
+    });
+  } catch (e) {
+    console.warn('Failed to schedule generic notification:', e);
+  }
+}
+
+/**
+ * Schedule a local notification for a new chat message.
+ */
+export async function scheduleChatMessageNotification(params: {
+  senderName?: string;
+  message?: string;
+  roomId?: string;
+  type?: 'p2p' | 'support';
+}) {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+
+  const { senderName, message, roomId, type = 'p2p' } = params;
+
+  const title = `💬 New message from ${senderName || 'Support'}`;
+  const body = message || 'Tap to view message';
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data: { 
+          type: 'chat_message', 
+          roomId, 
+          chatType: type 
+        },
+      },
+      trigger: null,
+    });
+  } catch (e) {
+    console.warn('Failed to schedule chat notification:', e);
   }
 }
 

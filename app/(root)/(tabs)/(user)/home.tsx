@@ -24,11 +24,11 @@ import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 import SpecialistIconBtn from "@/components/SpecialistIconBtn";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import VINSearchModal from "@/components/modals/VINSearchModal";
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  FadeInDown 
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeInDown
 } from "react-native-reanimated";
 
 const ServiceCard = ({ item, index, onPress }: { item: any; index: number; onPress: () => void }) => {

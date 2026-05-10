@@ -222,16 +222,16 @@ const MechanicOrderCard: React.FC<MechanicOrderCardProps> = ({ order, onPress })
 
             {/* Estimated Cost */}
             {estimatedCostValue != null && (
-              <View className="mt-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              <View className="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-[11px] font-NunitoBold text-red-700 uppercase tracking-wide">
+                  <Text className="text-[11px] font-NunitoBold text-green-700 uppercase tracking-wide">
                     Estimated Cost
                   </Text>
-                  <View className="px-2 py-0.5 rounded-full bg-red-600">
+                  <View className="px-2 py-0.5 rounded-full bg-green-600">
                     <Text className="text-[10px] font-NunitoBold text-white">BUDGET</Text>
                   </View>
                 </View>
-                <Text className="text-[19px] font-NunitoExtraBold text-red-700 mt-1">
+                <Text className="text-[19px] font-NunitoExtraBold text-green-700 mt-1">
                   ₦{estimatedCostValue.toLocaleString()}
                 </Text>
               </View>

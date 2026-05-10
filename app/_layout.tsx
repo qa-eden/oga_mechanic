@@ -17,6 +17,8 @@ import { AuthEventProvider } from "@/providers/AuthEventProvider";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AnimatedSplash from "../components/AnimatedSplash";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
+import GlobalNotificationBanner from "@/components/GlobalNotificationBanner";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -27,10 +29,25 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // Initialize Global Notification WebSocket
+  useNotificationWebSocket({ enabled: auth.isAuthenticated, triggerPush: true });
+
   // ── Global Notification Listener ──────────────────────────────────────────
   useEffect(() => {
     const subscription = setupNotificationListeners(() => {
       router.push("/(root)/(tabs)/(mechanic)/home" as any);
+    }, (data) => {
+      if (data.chatType === 'support') {
+        router.push({ 
+          pathname: "/(root)/(screens)/(user)/chat-specialist", 
+          params: { roomId: data.roomId } 
+        } as any);
+      } else {
+        router.push({ 
+          pathname: "/(root)/(screens)/(user)/chat-room", 
+          params: { roomId: data.roomId } 
+        } as any);
+      }
     });
 
     return () => {
@@ -62,6 +79,7 @@ function AppContent() {
             <Stack.Screen name="(root)" options={{ headerShown: false, gestureEnabled: false }} />
           </Stack>
           <Toast />
+          <GlobalNotificationBanner />
 
           {/* Global Android Navigation Bar Overlay */}
           {Platform.OS === "android" && insets.bottom > 0 && (

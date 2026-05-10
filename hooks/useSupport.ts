@@ -9,14 +9,14 @@ export const useSupportConversations = () => {
   return useQuery<ConversationsResponse>({
     queryKey: ["support-conversations"],
     queryFn: () => supportAPI.getConversations(),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 30 * 1000,
     retry: 2,
   });
 };
 
 /**
- * Hook to get the count of active support conversations.
- * Filters for 'open' or 'in_progress' tickets.
+ * Hook to get the count of active support notifications.
+ * Sums up unread_count across all active support conversations.
  */
 export const useSupportCount = () => {
   const { data } = useSupportConversations();
@@ -24,11 +24,12 @@ export const useSupportCount = () => {
   // Extract results array based on API structure
   const conversations = data?.results?.data || [];
   
-  // Count active tickets (open or in_progress)
-  // According to our plan, this is what defines the "support count"
-  const activeCount = conversations.filter(
-    (chat) => chat.status === "open" || chat.status === "in_progress"
-  ).length;
+  if (!Array.isArray(conversations)) return 0;
 
-  return activeCount;
+  // Sum up all unread messages in open or in-progress conversations
+  const unreadCount = conversations
+    .filter((chat: any) => chat.status === "open" || chat.status === "in_progress")
+    .reduce((sum: number, chat: any) => sum + (chat.unread_count || 0), 0);
+
+  return unreadCount;
 };

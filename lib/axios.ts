@@ -109,14 +109,26 @@ api.interceptors.response.use(
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         if (refreshToken) {
-          const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, { 
-            refresh_token: refreshToken 
+          const response = await axios.post(`${BASE_URL}${AUTH_ENDPOINTS.REFRESH_TOKEN}`, { 
+            refresh: refreshToken 
           });
-          const newToken = response.data.access_token;
+          const newToken = response.data.access_token || response.data.access;
+          const newRefreshToken = response.data.refresh_token || refreshToken;
           
           await AsyncStorage.setItem('auth_token', newToken);
+          if (response.data.refresh_token) {
+            await AsyncStorage.setItem('refresh_token', response.data.refresh_token);
+          }
+
+          // Sync with the Zustand store to notify hooks (like useWebSocket)
+          try {
+            const { useUserStore } = require('../stores/userStore');
+            useUserStore.getState().setTokens(newToken, newRefreshToken);
+          } catch (e) {
+            console.error('⚠️ Failed to sync refreshed token to store:', e);
+          }
+
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          
           return api(originalRequest);
         } else {
           // No refresh token available, trigger logout

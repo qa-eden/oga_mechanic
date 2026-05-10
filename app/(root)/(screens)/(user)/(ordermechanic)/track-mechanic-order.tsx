@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, RefreshControl, Modal, TouchableOpacity, Linking, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,7 +64,10 @@ const openInMaps = (address: string) => {
 
 const TrackMechanicOrder = () => {
   const params = useLocalSearchParams();
-  const orderId = Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined);
+  const orderId = useMemo(() => {
+    const rawId = params?.orderId || params?.id;
+    return Array.isArray(rawId) ? rawId[0] : (rawId as string | undefined);
+  }, [params?.orderId, params?.id]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -520,7 +523,7 @@ const TrackMechanicOrder = () => {
 
   const handleChatSupport = () => {
     // Correctly routes to Support/Help Specialist as per user request
-    router.push(routes.chatSeller as any);
+    router.push(routes.chatSpecialist as any);
   };
 
   if (isLoadingData) {
@@ -817,14 +820,14 @@ const TrackMechanicOrder = () => {
             {order.service_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}
           </Text>
           {(order as any).estimated_cost != null && !Number.isNaN(Number((order as any).estimated_cost)) && (
-            <View className="mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+            <View className="mt-3 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-NunitoBold text-red-700 uppercase tracking-wide">Estimated Cost</Text>
-                <View className="px-2 py-0.5 rounded-full bg-red-600">
+                <Text className="text-xs font-NunitoBold text-green-700 uppercase tracking-wide">Estimated Cost</Text>
+                <View className="px-2 py-0.5 rounded-full bg-green-600">
                   <Text className="text-[10px] font-NunitoBold text-white">BUDGET</Text>
                 </View>
               </View>
-              <Text className="text-[22px] font-NunitoExtraBold text-red-700 mt-1">
+              <Text className="text-[22px] font-NunitoExtraBold text-green-700 mt-1">
                 ₦{Number((order as any).estimated_cost).toLocaleString()}
               </Text>
             </View>

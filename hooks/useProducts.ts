@@ -43,7 +43,10 @@ export const useProducts = (
 ) => {
   return useQuery<ProductListResponse[], Error>({
     queryKey: productKeys.list(categoryId?.toString(), minPrice, maxPrice),
-    queryFn: () => productsAPI.getProducts(categoryId, minPrice, maxPrice).then(response => response.data.results),
+    queryFn: () => productsAPI.getProducts(categoryId, minPrice, maxPrice).then(response => {
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.results || []);
+    }),
     staleTime: 10 * 60 * 1000, // 10 minutes - increased to reduce API calls
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 2,
@@ -62,7 +65,8 @@ export const useProductsInfinite = (
     queryKey: productKeys.list(categoryId?.toString(), minPrice, maxPrice, 'infinite'),
     queryFn: ({ pageParam }) => productsAPI.getProducts(categoryId, minPrice, maxPrice, pageParam, limit),
     getNextPageParam: (lastPage) => {
-      if (lastPage.data.next) {
+      // Check if data is the paginated object and not a direct array
+      if (lastPage.data && !Array.isArray(lastPage.data) && lastPage.data.next) {
         // Extract offset from next URL
         const url = new URL(lastPage.data.next);
         const offset = url.searchParams.get('offset');
@@ -76,6 +80,8 @@ export const useProductsInfinite = (
     gcTime: 10 * 60 * 1000, // 10 minutes cache
     refetchOnMount: true, // Silently refetch when component mounts
     placeholderData: keepPreviousData,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -85,6 +91,8 @@ export const useCategories = () => {
     queryFn: () => productsAPI.getCategories(),
     staleTime: 10 * 60 * 1000, // 10 minutes (categories change less frequently)
     gcTime: 20 * 60 * 1000, // 20 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -102,6 +110,8 @@ export const useProductSearch = (
     enabled: enabled, // Simple boolean value only
     staleTime: 2 * 60 * 1000, // 2 minutes (search results can be more dynamic)
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -145,6 +155,8 @@ export const useFavoriteProducts = () => {
     queryFn: () => productsAPI.getFavoriteProducts(),
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -154,6 +166,8 @@ export const useActiveBiddingProducts = () => {
     queryFn: () => productsAPI.getActiveBiddingProducts(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -193,6 +207,8 @@ export const useMyBids = () => {
     queryKey: [...productKeys.all, 'bidding', 'my-bids'] as const,
     queryFn: () => productsAPI.getMyBids(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 export const useUpdateBid = (biddingWindowId: string) => {

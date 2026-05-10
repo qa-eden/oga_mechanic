@@ -51,6 +51,8 @@ const ChatSpecialist = () => {
     markAsRead,
     isConnected,
     reconnect,
+    hasMore,
+    loadMore,
   } = useChatWebSocket(activeConversationId, !isNewChat);
 
   // Memoize BEFORE any early returns — Rules of Hooks
@@ -218,6 +220,8 @@ const ChatSpecialist = () => {
         initialText={prefill as string | undefined}
         headerSubtitle={isNewChat ? "Start a new conversation" : isConnected ? "Chat with specialist" : "Connecting..."}
         onAttachFile={handleAttachFile}
+        onLoadMore={loadMore}
+        hasMore={hasMore}
       />
     </View>
   );

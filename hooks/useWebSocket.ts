@@ -57,13 +57,15 @@ export default function useWebSocket({
 
   // Update activeToken when store hydrates or changes
   useEffect(() => {
+    console.log(`[WebSocket DEBUG] storeToken updated: ${storeToken?.slice(0, 20)}...`);
     if (storeToken) {
+      console.log('🔌 [WebSocket] Using token from Store');
       setActiveToken(storeToken);
     } else if (!hasHydrated) {
       // If store is still hydrating, try direct disk read as a fallback
       AsyncStorage.getItem('auth_token').then((token) => {
         if (token && !activeToken) {
-          console.log('🔌 [WebSocket] Recovered token from disk (Pre-hydration fallback)');
+          console.log(`🔌 [WebSocket] Recovered token from disk: ${token.slice(0, 20)}...`);
           setActiveToken(token);
         }
       });
@@ -85,16 +87,20 @@ export default function useWebSocket({
     }
 
     // 2. Auth & Reality Check
-    if (!enabled || !urlPath || !storeToken) {
+    if (!enabled || !urlPath || !activeToken) {
       if (ws.current) {
-        ws.current.onclose = null; // Prevent self-healing
+        console.log(`🛑 [WebSocket] Hard Shutting Down: ${urlPath}`);
+        ws.current.onopen = null;
+        ws.current.onmessage = null;
+        ws.current.onerror = null;
+        ws.current.onclose = null; // Kill the self-healing loop
         ws.current.close();
         ws.current = null;
         setIsConnected(false);
       }
       
       const missing = [];
-      if (!storeToken) missing.push('AccessToken');
+      if (!activeToken) missing.push('AccessToken');
       if (!urlPath) missing.push('URL Path');
       if (!enabled) missing.push('Enabled Flag');
       
@@ -115,11 +121,14 @@ export default function useWebSocket({
     const protocol = baseRaw.startsWith("wss") ? "wss" : "ws";
     const baseNoProto = baseRaw.replace(/^wss?:\/\//, "");
     
-    const cleanPath = urlPath.replace(/^\//, "").replace(/\/$/, "");
+    const cleanPath = urlPath.replace(/^\//, ""); 
     const fullPath = `${baseNoProto}/${cleanPath}`.replace(/\/+/g, "/");
     
-    // Construct finalUrl - ensuring no extra slashes before query params
-    const finalUrl = `${protocol}://${fullPath}/?token=${storeToken}`;
+    // Construct finalUrl - most backends prefer /?token or just ?token
+    // We will use the path exactly as provided, and only add ?token
+    const finalUrl = `${protocol}://${fullPath}${activeToken ? `?token=${activeToken}` : ''}`;
+
+    console.log(`🔑 [WebSocket] Token Length: ${activeToken.length}`);
 
     console.groupCollapsed(`🔌 [WebSocket Connecting] ${urlPath}`);
     console.table({
@@ -127,7 +136,7 @@ export default function useWebSocket({
       Target: fullPath,
       Status: 'Connecting',
       Protocol: protocol,
-      Token: `***${storeToken.slice(-6)}`,
+      Token: `***${activeToken.slice(-6)}`,
       URL: finalUrl // Add this for precise terminal inspection
     });
     console.groupEnd();
@@ -137,26 +146,24 @@ export default function useWebSocket({
 
       ws.current.onopen = () => {
         reconnectAttempts.current = 0; // Reset backoff
-        console.log(`✅ [WebSocket Connected] ${urlPath}`);
+        console.log(`\n✅ [WebSocket Connected]`);
+        console.log(`📍 Path: ${urlPath}`);
+        console.log(`🔗 URL: ${finalUrl}`);
+        console.log(`==========================\n`);
         setIsConnected(true);
         onConnectRef.current?.();
       };
 
       ws.current.onmessage = (event) => {
-        console.log('\n=========================================');
-        console.log('🔥 [WEBSOCKET RAW MESSAGE RECEIVED] 🔥');
-        console.log(`URL Path: ${urlPath}`);
-        console.log('Raw Data String:', event.data);
-        console.log('Raw type String:', event.type);
-        console.log('=========================================\n');
-        
         try {
           const data: WebSocketMessage = JSON.parse(event.data);
           
-          // Log parsed object for easy inspection in devtools
-          console.groupCollapsed(`📥 [WebSocket Parsed JSON] Type: ${data.type || 'UNKNOWN'}`);
-          console.dir(data, { depth: null });
-          console.groupEnd();
+          // LOUD LOGGING for every message
+          console.log(`\n📥 [WS MESSAGE RECEIVED]`);
+          console.log(`📍 Path: ${urlPath}`);
+          console.log(`🏷️  Type: ${data.type || 'UNKNOWN'}`);
+          console.log(`📦 Data:`, JSON.stringify(data, null, 2));
+          console.log(`========================\n`);
           
           const handler = eventHandlersRef.current[data.type];
           if (handler) {
@@ -193,13 +200,24 @@ export default function useWebSocket({
       ws.current.onerror = (error) => {
         // Use warn to bypass RN Red Box blocking while debugging
         console.warn(`🔌 [WebSocket Error] ${urlPath}:`, error);
+        
+        // If we fail with a token that might be stale (even if not expired), 
+        // we can try to trigger a refresh via a small REST call that we know handles 401s
+        // or by explicitly calling the refresh logic.
+        if (reconnectAttempts.current === 0) {
+           console.log('🔄 [WebSocket] First failure - attempting to check session health...');
+           // Triggering a background profile fetch which will trigger axios refresh if needed
+           const { userAPI } = require('../lib/api/user');
+           userAPI.getProfile().catch((e: any) => console.log('👤 [WebSocket] Health check REST failed:', e.message));
+        }
+
         ws.current?.close(); // Trigger backoff flow
       };
 
     } catch (err) {
       console.error('❌ [WebSocket Setup Crash]:', err);
     }
-  }, [urlPath, enabled, reconnect, reconnectInterval, storeToken]);
+  }, [urlPath, enabled, reconnect, reconnectInterval, activeToken]);
 
   // Handle (re)connection logic
   useEffect(() => {

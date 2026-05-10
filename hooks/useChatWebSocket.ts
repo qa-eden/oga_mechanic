@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import useWebSocket, { WebSocketMessage } from './useWebSocket';
 import { supportAPI } from '@/lib/api/support';
 
@@ -10,30 +11,56 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   // Socket-First Construction: Matches the /ws/support/chat/{id}/ channel exactly
   const urlPath = useMemo(() => 
-    `support/chat/${roomId ? roomId : ''}`,
+    `support/chat/${roomId}/`,
     [roomId]
   );
+
+  useEffect(() => {
+    console.log("💎 [Chat Hook DEBUG] urlPath:", urlPath);
+  }, [urlPath]);
 
   /**
    * Fetch historical messages from the REST API.
    * Runs whenever the roomId becomes valid and enabled is true.
    */
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (currentOffset?: number) => {
     if (!roomId || !enabled) return;
     
     try {
       setIsLoadingHistory(true);
-      console.log(`📜 [Chat History] Fetching messages for room: ${roomId}`);
-      const response = await supportAPI.getMessages(roomId);
+      const limit = 20;
       
-      // Correct Path: response.results.data based on provided JSON
-      const historicalData = response?.results?.data || response?.data || [];
+      // 1. If no offset is provided, we need to find the "tail" (latest messages)
+      let targetOffset = currentOffset;
+      
+      if (targetOffset === undefined) {
+        console.log(`📜 [Chat History] Initial fetch to find tail for room: ${roomId}`);
+        const initialRes = await supportAPI.getMessages(roomId, 1, 0);
+        const totalCount = initialRes?.count || 0;
+        
+        // Calculate offset to get the last 'limit' messages
+        targetOffset = Math.max(0, totalCount - limit);
+        setOffset(targetOffset);
+        
+        // If we are starting from 0, there is no more "previous" data
+        if (targetOffset === 0) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      }
 
+      console.log(`📜 [Chat History] Fetching messages (offset: ${targetOffset}) for room: ${roomId}`);
+      const response = await supportAPI.getMessages(roomId, limit, targetOffset);
+      
+      const historicalData = response?.results?.data || response?.data || [];
+      
       const mappedHistory = historicalData.map((m: any) => {
-        // Handle nested sender object or flat property
         let isStaff = false;
         if (typeof m.sender === 'object' && m.sender !== null) {
           isStaff = !!m.sender?.is_staff;
@@ -61,12 +88,9 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         const existingIds = new Set(prev.map(m => m.id?.toString()));
         const filteredHistory = mappedHistory.filter((m: any) => !existingIds.has(m.id?.toString()));
         
-        if (filteredHistory.length > 0) {
-          console.log(`📜 [Chat History] Added ${filteredHistory.length} new messages from history.`);
-        }
-        
-        return [...filteredHistory, ...prev].sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        // Combine and sort chronologically
+        return [...prev, ...filteredHistory].sort((a, b) => 
+          new Date(a.created_at || a.timestamp).getTime() - new Date(b.created_at || b.timestamp).getTime()
         );
       });
     } catch (err) {
@@ -75,6 +99,23 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
       setIsLoadingHistory(false);
     }
   }, [roomId, enabled]);
+
+  /**
+   * Loads the previous page of history (older messages).
+   */
+  const loadMore = useCallback(() => {
+    if (isLoadingHistory || !hasMore) return;
+    
+    // In tail-first mode, we move the offset backwards to get older data
+    const nextOffset = Math.max(0, offset - 20);
+    
+    if (nextOffset === 0) {
+      setHasMore(false);
+    }
+    
+    setOffset(nextOffset);
+    fetchHistory(nextOffset);
+  }, [offset, hasMore, isLoadingHistory, fetchHistory]);
 
   useEffect(() => {
     fetchHistory();
@@ -148,16 +189,37 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         }
         
         console.log('💬 [Chat WS] Adding to state. Sender:', mappedMessage.sender, '| Content:', textContent);
+        
+        // Push Notification Integration
+        // Only notify if message is from staff and app is potentially not looking at this chat
+        // (In a real app, you might check if the screen is currently focused)
+        if (isStaff && textContent) {
+          import('@/services/notificationService').then(service => {
+            service.scheduleChatMessageNotification({
+              senderName: 'Oga Mechanic Specialist',
+              message: textContent,
+              roomId: roomId,
+              type: 'support'
+            });
+          });
+        }
+
         return [...prev, mappedMessage].sort((a, b) => 
           new Date(a.timestamp || a.created_at).getTime() - new Date(b.timestamp || b.created_at).getTime()
         );
       });
     },
     typing: (data: WebSocketMessage) => {
-      setIsTyping(!!data.is_typing);
+      console.log('⌨️ [Chat WS] Typing event:', data);
+      setIsTyping(!!data.is_typing || !!data.typing);
     },
     user_typing: (data: WebSocketMessage) => {
-      setIsTyping(!!data.is_typing);
+      console.log('⌨️ [Chat WS] User typing event:', data);
+      setIsTyping(!!data.is_typing || !!data.typing);
+    },
+    typing_status: (data: WebSocketMessage) => {
+      console.log('⌨️ [Chat WS] Typing status event:', data);
+      setIsTyping(!!data.is_typing || !!data.typing);
     },
     messages_read: (data: any) => {
       console.log('👁️ [Chat WS] Received messages_read:', JSON.stringify(data));
@@ -182,7 +244,7 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
   } = useWebSocket({
     urlPath,
     eventHandlers,
-    enabled: enabled && !!roomId,
+    enabled: enabled && !!roomId, // Restoring room socket to enable typing and live updates
   });
 
   // Connection Status Logging
@@ -237,11 +299,11 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         
         // 4. Trigger a full history sync to ensure perfect match
         console.log(`🔄 [Chat Sync] Post-send history refresh for room: ${roomId}`);
-        await fetchHistory();
+        await fetchHistory(0);
       } else {
         // Fallback: If POST worked but structure is weird, still refresh
         console.warn(`⚠️ [Chat Sync] POST successful but ID not found in response structure:`, response);
-        await fetchHistory();
+        await fetchHistory(0);
       }
     } catch (err) {
       console.error(`❌ [Chat REST Send] Failed:`, err);
@@ -259,18 +321,30 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
     baseSendMessage('typing', { is_typing: isTypingStatus });
   }, [baseSendMessage]);
 
+  const queryClient = useQueryClient();
+
   /**
    * Marks a batch of messages as read.
    */
   const markAsRead = useCallback((messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+    
+    // 1. Send to server
     baseSendMessage('read_messages', { message_ids: messageIds });
-  }, [baseSendMessage]);
+    
+    // 2. Invalidate counts locally after a small delay to allow server to process
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['support-conversations'] });
+    }, 500);
+  }, [baseSendMessage, queryClient]);
 
   return {
     messages,
     isTyping,
     isLoadingHistory,
     isConnected,
+    hasMore,
+    loadMore,
     sendMessage,
     sendTypingStatus,
     markAsRead,

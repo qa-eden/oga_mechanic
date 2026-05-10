@@ -219,13 +219,13 @@ const Card1 = memo(({
           )}
 
           {/* Verified Badge */}
-          {rating && rating > 4.5 && (
+          {!!(rating && rating > 4.5) && (
             <View className="absolute top-3 left-3 bg-emerald-500/90 px-2 py-1 rounded-lg flex-row items-center shadow-sm">
               <CheckBadgeIconSolid size={14} color="white" />
               <Text className="text-[10px] font-NunitoExtraBold text-white ml-1 uppercase">Verified</Text>
             </View>
           )}
-          {!!userCarMakes?.length && name && userCarMakes.some(make => name.toLowerCase().includes(make.toLowerCase())) && (
+          {!!(userCarMakes?.length && name && userCarMakes.some(make => name.toLowerCase().includes(make.toLowerCase()))) && (
             <View className="absolute bottom-2 left-2 bg-blue-600/90 px-2 py-1 rounded-md flex-row items-center shadow-sm">
               <CheckIcon size={12} color="white" strokeWidth={3} />
               <Text className="text-[10px] font-NunitoExtraBold text-white ml-1 uppercase">Fits Your Car</Text>
@@ -261,7 +261,7 @@ const Card1 = memo(({
           </View>
 
           {/* Address/Location */}
-          {address && typeof address === 'string' && (
+          {!!(address && typeof address === 'string') && (
             <View className="flex-row items-center bg-gray-50 rounded-lg px-2 py-1.5">
               <View className="w-4 h-4 bg-primary-100 rounded-full items-center justify-center mr-2">
                 <Text className="text-xs text-primary-600">📍</Text>
@@ -274,7 +274,7 @@ const Card1 = memo(({
 
           {/* Price */}
           {/* Price and Cart Action */}
-          {price && price > 0 && (
+          {!!(price && price > 0) && (
             <View className="flex-row items-center justify-between pt-1">
               <NairaCurrency
                 value={price}

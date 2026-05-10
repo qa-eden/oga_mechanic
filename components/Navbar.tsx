@@ -10,7 +10,7 @@ import {
 } from "react-native-heroicons/outline";
 import { router, useSegments } from "expo-router";
 import { routes, mechanicRoutes, sellerRoutes } from "@/constants/routes";
-import { useNotifications, useActiveRoleProfile } from "@/hooks/useUserProfile";
+import { useUnreadNotificationCount, useActiveRoleProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from "@/lib/endpoints";
@@ -63,24 +63,8 @@ const Navbar = () => {
 
   const queryClient = useQueryClient();
   
-  // Fetch notifications from API to get unread count
-  const { data: notificationsData } = useNotifications();
-  
-  // Calculate unread count from API data
-  const unreadCount = useMemo(() => {
-    if (!notificationsData) return 0;
-    
-    // Handle different possible response structures
-    const data = notificationsData?.data || notificationsData;
-    const notificationsArray = Array.isArray(data) ? data : (data?.notifications || data?.results || []);
-    
-    if (!Array.isArray(notificationsArray)) return 0;
-
-    return notificationsArray.filter((item: any) => {
-      const isRead = item.read || item.is_read || item.read_status || false;
-      return !isRead;
-    }).length;
-  }, [notificationsData]);
+  // Fetch unread count efficiently
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
   
   // Use the unified active role profile hook
   const { 

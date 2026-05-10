@@ -47,6 +47,8 @@ interface ChatScreenProps {
   onReconnect?: () => void;
   showAttachmentButton?: boolean;
   onAttachFile?: (file: { uri: string; name: string; mimeType: string; size?: number }) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -62,6 +64,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   onReconnect,
   showAttachmentButton = true,
   onAttachFile,
+  onLoadMore,
+  hasMore = false,
 }) => {
   const [inputText, setInputText] = useState(initialText || "");
   const insets = useSafeAreaInsets();
@@ -86,12 +90,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   }, [isTyping]);
 
-  // Auto-scroll to bottom when new messages arrive
+  const lastMessageIdRef = useRef<string | null>(null);
+
+  // Auto-scroll to bottom only when NEW messages arrive at the bottom
   useEffect(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages, isTyping]);
+    if (messages.length > 0 && !isLoadingHistory) {
+      const lastMessage = messages[messages.length - 1];
+      const hasNewMessageAtBottom = lastMessage.id !== lastMessageIdRef.current;
+      
+      if (hasNewMessageAtBottom) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+      lastMessageIdRef.current = lastMessage.id.toString();
+    }
+  }, [messages, isTyping, isLoadingHistory]);
 
   const handleSendMessage = () => {
     if (inputText.trim()) {
@@ -312,7 +326,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
               windowSize={10}
               removeClippedSubviews={true}
               keyboardShouldPersistTaps="handled"
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              ListHeaderComponent={hasMore ? (
+                <TouchableOpacity 
+                  onPress={onLoadMore}
+                  style={{ alignSelf: 'center', marginVertical: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#f1f5f9', borderRadius: 20 }}
+                >
+                  <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 13, color: '#64748b' }}>
+                    {isLoadingHistory ? 'Loading history...' : 'Load previous messages'}
+                  </Text>
+                </TouchableOpacity>
+              ) : <View style={{ height: 16 }} />}
               ListFooterComponent={isTyping ? renderTypingIndicator : <View style={{ height: 30 }} />}
             />
           )}

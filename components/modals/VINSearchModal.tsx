@@ -26,7 +26,8 @@ const VINSearchModal: React.FC<VINSearchModalProps> = ({
   isVisible,
   onClose,
 }) => {
-  const [vin, setVin] = useState("1GNEK13ZX3R298984");
+  // 1GNEK13ZX3R298984
+  const [vin, setVin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [searchResult, setSearchResult] = useState<ProductListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -188,7 +189,7 @@ const VINSearchModal: React.FC<VINSearchModalProps> = ({
                   <TextInput
                     value={vin}
                     onChangeText={(t) => { setVin(t); setError(null); }}
-                    placeholder="Enter VIN"
+                    placeholder="Enter VIN e.g 1GNEK13ZX3R298984"
                     className="border border-gray-400 rounded-xl px-4 py-4 text-base text-gray-900 bg-gray-50"
                     autoCapitalize="characters"
                     autoCorrect={false}
