@@ -177,8 +177,8 @@ const MechanicHome = () => {
     }
   });
 
-  // Fallback Polling (Reduced frequency to every 2 minutes)
-  useMechanicOrderNotifications(true); 
+  // Fallback Polling removed in favor of WebSocket
+  // useMechanicOrderNotifications(true); 
   // ───────────────────────────────────────────────────────────────────────────
 
   const isProfileComplete = useProfileStore((state) => state.isProfileComplete);

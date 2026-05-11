@@ -4,10 +4,12 @@
 export const ENV_CONFIG = {
   // API Configuration
   API_URL: process.env.EXPO_PUBLIC_API_URL || (() => {
-    throw new Error('EXPO_PUBLIC_API_URL is required but not set');
+    console.error('❌ EXPO_PUBLIC_API_URL is missing! Requests will fail.');
+    return 'https://api-missing-error.ogamechanic.org';
   })(),
   API_KEY: process.env.EXPO_PUBLIC_API_KEY || (() => {
-    throw new Error('EXPO_PUBLIC_API_KEY is required but not set');
+    console.error('❌ EXPO_PUBLIC_API_KEY is missing! API access may be restricted.');
+    return 'MISSING_API_KEY';
   })(),
   
   // Environment

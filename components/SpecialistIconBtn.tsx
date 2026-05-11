@@ -21,7 +21,10 @@ const SpecialistIconBtn = ({ count: manualCount, isFloating = false }: Specialis
   return (
     <View>
       <TouchableOpacity 
-        onPress={() => router.push(routes.supportSuggestions as any)} 
+        onPress={() => router.push({
+          pathname: routes.supportSuggestions as any,
+          params: { activeTab: displayCount > 0 ? 'chat' : 'support' }
+        })} 
         style={
           isFloating 
             ? {

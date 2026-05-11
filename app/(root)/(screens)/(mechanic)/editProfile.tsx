@@ -28,6 +28,9 @@ import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
 import TextArea from "@/components/forms/TextArea";
 import { LinearGradient } from "expo-linear-gradient";
+import { getStatesByCountry } from "@/constants/locationData";
+import { getLGAs } from "@/constants/nigeriaData";
+import * as Location from "expo-location";
 
 // Validation Schema for Mechanic Profile
 const editMechanicProfileSchema = Yup.object().shape({
@@ -43,6 +46,8 @@ const editMechanicProfileSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Email is required"),
   bio: Yup.string().nullable(),
   location: Yup.string().nullable(),
+  state: Yup.string().nullable(),
+  lga: Yup.string().nullable(),
   specialization: Yup.string().nullable(),
   years_of_experience: Yup.string().nullable(),
   nin_number: Yup.string().nullable(),
@@ -67,6 +72,10 @@ const EditMechanicProfile = () => {
     email: "",
     bio: "",
     location: "",
+    state: "",
+    lga: "",
+    latitude: "",
+    longitude: "",
     specialization: "",
     years_of_experience: "",
     selfie: "",
@@ -86,6 +95,10 @@ const EditMechanicProfile = () => {
         email: userData?.email || mechanicProfileInfo?.user?.email || "",
         bio: mechanicProfileInfo?.bio || "",
         location: mechanicProfileInfo?.location || "",
+        state: mechanicProfileInfo?.state || "",
+        lga: mechanicProfileInfo?.lga || "",
+        latitude: mechanicProfileInfo?.latitude || "",
+        longitude: mechanicProfileInfo?.longitude || "",
         specialization: (mechanicProfileInfo as any)?.specialization || "",
         years_of_experience: (mechanicProfileInfo as any)?.years_of_experience?.toString() || "",
         selfie: (mechanicProfileInfo as any)?.selfie || (userData as any)?.profile_picture || "",
@@ -97,6 +110,45 @@ const EditMechanicProfile = () => {
       });
     }
   }, [userData, mechanicProfileInfo]);
+
+  // Auto-sync location data if missing on mount
+  useEffect(() => {
+    const syncLocation = async () => {
+      if (initialValues.location && (!initialValues.state || !initialValues.lga)) {
+        try {
+          const geocoded = await Location.geocodeAsync(initialValues.location);
+          if (geocoded.length > 0) {
+            const { latitude, longitude } = geocoded[0];
+            
+            const reverseGeocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
+            if (reverseGeocoded.length > 0) {
+              const address = reverseGeocoded[0];
+              const region = address.region;
+              if (region) {
+                const nigerianStates = getStatesByCountry('NG');
+                const matchedState = nigerianStates.find(s => s.name.toLowerCase() === region.toLowerCase());
+                if (matchedState) {
+                  setInitialValues(prev => ({ 
+                    ...prev, 
+                    state: matchedState.name,
+                    latitude: String(latitude),
+                    longitude: String(longitude),
+                    lga: prev.lga || address.city || address.subregion || ""
+                  }));
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("MechanicEditProfile: Auto-sync location error:", error);
+        }
+      }
+    };
+
+    if (userData || mechanicProfileInfo) {
+      syncLocation();
+    }
+  }, [userData, initialValues.location]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
@@ -136,6 +188,10 @@ const EditMechanicProfile = () => {
       const mechanicPayload = {
         bio: values.bio,
         location: values.location,
+        state: values.state,
+        lga: values.lga,
+        latitude: values.latitude,
+        longitude: values.longitude,
         specialization: values.specialization,
         years_of_experience: values.years_of_experience,
         nin_number: values.nin_number,
@@ -421,11 +477,68 @@ const EditMechanicProfile = () => {
                   label="Workshop Location"
                   value={values.location}
                   onChangeText={(text: string) => setFieldValue("location", text)}
-                  onLocationSelect={(location: any) => setFieldValue("location", location?.address || location)}
+                  onLocationSelect={async (location: any) => {
+                    setFieldValue("location", location?.address || location);
+                    if (location?.latitude && location?.longitude) {
+                      setFieldValue("latitude", String(location.latitude));
+                      setFieldValue("longitude", String(location.longitude));
+                      
+                      try {
+                        const reverseGeocoded = await Location.reverseGeocodeAsync({
+                          latitude: location.latitude,
+                          longitude: location.longitude
+                        });
+                        if (reverseGeocoded.length > 0) {
+                          const addr = reverseGeocoded[0];
+                          if (addr.region) {
+                            const matchedState = getStatesByCountry('NG').find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
+                            if (matchedState) {
+                              setFieldValue("state", matchedState.name);
+                              setFieldValue("lga", addr.city || addr.subregion || "");
+                            }
+                          }
+                        }
+                      } catch (e) {
+                        console.log("Reverse geocode error in editProfile:", e);
+                      }
+                    }
+                  }}
                   placeholder="Enter your workshop address"
                   error={errors.location as string}
                   touched={touched.location as boolean}
+                  showCurrentLocationButton={true}
                 />
+
+                <View className="flex-row gap-x-3 mt-4">
+                  <View className="flex-1">
+                    <SelectField
+                      label="State"
+                      name="state"
+                      placeholder="Select State"
+                      options={getStatesByCountry('NG').map((s: any) => ({ label: s.name || '', value: s.name || '' }))}
+                      value={values.state || ''}
+                      onValueChange={(val: string) => {
+                        setFieldValue("state", val);
+                        setFieldValue("lga", ""); // Reset lga when state changes
+                      }}
+                      error={errors.state as string}
+                      touched={touched.state as boolean}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <SelectField
+                      label="LGA"
+                      name="lga"
+                      placeholder="Select LGA"
+                      options={values.state ? getLGAs(values.state).map((l: string) => ({ label: l, value: l })) : []}
+                      value={values.lga || ''}
+                      onValueChange={(val: string) => setFieldValue("lga", val)}
+                      error={errors.lga as string}
+                      touched={touched.lga as boolean}
+                      disabled={!values.state}
+                    />
+                  </View>
+                </View>
               </View>
 
               {/* Business & Documents Section */}

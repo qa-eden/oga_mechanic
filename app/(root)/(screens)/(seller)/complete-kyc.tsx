@@ -32,20 +32,24 @@ import ErrorModal from "@/components/modals/ErrorModal";
 import SelectField from "@/components/forms/SelectField";
 import { userAPI } from "@/lib/api/user";
 import { useProfileStore } from "@/hooks/useProfileStore";
-import { useSubmitMerchantKYC } from "@/hooks/useUserProfile";
+import { useSubmitMerchantKYC, useSubmitVehicleRentalKYC, useActiveRoleProfile } from "@/hooks/useUserProfile";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import { sellerRoutes } from "@/constants/routes";
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
-  store_name: Yup.string().required("Store name is required"),
+  store_name: Yup.string().required("Name is required"),
   location: Yup.string().required("Please enter your location"),
   latitude: Yup.string(),
   longitude: Yup.string(),
   state: Yup.string().required("Please select your state"),
   lga: Yup.string().required("Please select your LGA"),
-  nin_number: Yup.string().required("NIN number is required"),
+  nin_number: Yup.string()
+    .required("NIN number is required")
+    .matches(/^\d{11}$/, "NIN must be exactly 11 digits"),
+  // Note: Formik doesn't handle non-field state (files) directly in the schema easily, 
+  // but we can add them as hidden fields or check them in the submit handler.
 });
 
 interface FormValues {
@@ -82,7 +86,14 @@ const CompleteKYC = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const submitKYCMutation = useSubmitMerchantKYC();
+  
+  const { data: activeProfileData, isLoading: isProfileLoading, primaryProfileData, isVehicleRental } = useActiveRoleProfile();
+  
+  const submitMerchantKYCMutation = useSubmitMerchantKYC();
+  const submitRentalKYCMutation = useSubmitVehicleRentalKYC();
+  
+  const submitKYCMutation = isVehicleRental ? submitRentalKYCMutation : submitMerchantKYCMutation;
+
   const [initialFormValues, setInitialFormValues] = useState<FormValues>({
     store_name: "",
     location: "",
@@ -94,90 +105,73 @@ const CompleteKYC = () => {
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await userAPI.getMerchantProfile();
-        if (response?.data?.has_merchant_profile) {
-          const profile = response.data.merchant_profile;
-          
-          const initialValues: FormValues = {
-            store_name: profile.store_name || "",
-            location: profile.location || "",
-            latitude: profile.latitude || "",
-            longitude: profile.longitude || "",
-            state: profile.state || "",
-            lga: profile.lga || "",
-            nin_number: profile.nin_number || "",
-          };
+    if (activeProfileData?.data) {
+      const profile = activeProfileData.data.merchant_profile || activeProfileData.data.vehicle_rental_profile;
+      
+      if (profile) {
+        const initialValues: FormValues = {
+          store_name: profile.store_name || (profile as any).company_name || "",
+          location: profile.location || "",
+          latitude: profile.latitude || "",
+          longitude: profile.longitude || "",
+          state: profile.state || "",
+          lga: profile.lga || "",
+          nin_number: profile.nin_number || "",
+        };
 
-          // If we have a location but no coordinates or state, try to geocode it
-          if (initialValues.location && (!initialValues.latitude || !initialValues.state)) {
-            try {
-              const geocoded = await Location.geocodeAsync(initialValues.location);
-              if (geocoded.length > 0) {
-                initialValues.latitude = String(geocoded[0].latitude);
-                initialValues.longitude = String(geocoded[0].longitude);
+        setInitialFormValues(initialValues);
 
-                // Now reverse geocode to get State and LGA
-                const reverseGeocoded = await Location.reverseGeocodeAsync({
-                  latitude: geocoded[0].latitude,
-                  longitude: geocoded[0].longitude
-                });
-
-                if (reverseGeocoded.length > 0) {
-                  const addr = reverseGeocoded[0];
-                  if (addr.region && !initialValues.state) {
-                    const matchedState = nigerianStates.find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
-                    if (matchedState) {
-                      initialValues.state = matchedState.name;
-                      
-                      // Try to match LGA
-                      const city = addr.city || addr.subregion;
-                      if (city && !initialValues.lga) {
-                        const availableLGAs = getLGAs(matchedState.name);
-                        const matchedLga = availableLGAs.find(lga => 
-                          lga.toLowerCase() === city.toLowerCase() || 
-                          city.toLowerCase().includes(lga.toLowerCase())
-                        );
-                        if (matchedLga) initialValues.lga = matchedLga;
-                      }
-                    }
-                  }
-                }
-              }
-            } catch (geocodeError) {
-              console.warn("Initial location geocoding failed:", geocodeError);
-            }
-          }
-
-          setInitialFormValues(initialValues);
-
-          if (profile.nin_document) {
-            setNinDocument({
-              uri: profile.nin_document,
-              name: "nin_document.jpg",
-              type: "image/jpeg",
-              size: 0,
-            });
-          }
-
-          if (profile.selfie) {
-            setSelfie({
-              uri: profile.selfie,
-              name: "selfie.jpg",
-              type: "image/jpeg",
-              size: 0,
-            });
-          }
+        if (profile.nin_document) {
+          setNinDocument({
+            uri: profile.nin_document,
+            name: "nin_document.jpg",
+            type: "image/jpeg",
+            size: 0,
+          });
         }
-      } catch (error) {
-        console.error("Error prefilling merchant profile:", error);
-      } finally {
-        setIsLoadingProfile(false);
+
+        if (profile.selfie) {
+          setSelfie({
+            uri: profile.selfie,
+            name: "selfie.jpg",
+            type: "image/jpeg",
+            size: 0,
+          });
+        }
+      }
+      setIsLoadingProfile(false);
+    } else if (!isProfileLoading && !primaryProfileData) {
+      setIsLoadingProfile(false);
+    }
+  }, [activeProfileData, isProfileLoading, primaryProfileData]);
+
+  // Auto-sync location data if missing on mount
+  useEffect(() => {
+    const syncLocation = async () => {
+      if (initialFormValues.location && (!initialFormValues.state || !initialFormValues.latitude)) {
+        try {
+          const geocoded = await Location.geocodeAsync(initialFormValues.location);
+          if (geocoded.length > 0) {
+            const { latitude, longitude } = geocoded[0];
+            // Trigger the existing logic to fill state/lga
+            await handleLocationSelect({
+              address: initialFormValues.location,
+              latitude,
+              longitude
+            }, (field: string, value: any) => {
+              setInitialFormValues(prev => ({ ...prev, [field]: value }));
+            });
+          }
+        } catch (error) {
+          console.error("Auto-sync location error:", error);
+        }
       }
     };
-    fetchProfile();
-  }, []);
+
+    if (!isLoadingProfile) {
+      syncLocation();
+    }
+  }, [isLoadingProfile, initialFormValues.location]);
 
   if (isLoadingProfile) {
     return (
@@ -305,7 +299,7 @@ const CompleteKYC = () => {
     try {
       const formData = new FormData();
       formData.append('requestType', 'inbound');
-      formData.append('store_name', values.store_name);
+      formData.append(isVehicleRental ? 'company_name' : 'store_name', values.store_name);
       formData.append('location', values.location);
       if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
@@ -354,6 +348,10 @@ const CompleteKYC = () => {
     </View>
   );
 
+  const headerTitle = isVehicleRental ? "Vehicle Rental Verification" : "Merchant Verification";
+  const storeLabel = isVehicleRental ? "Company Name" : "Business Name";
+  const storePlaceholder = isVehicleRental ? "Enter your company name" : "Enter your business name";
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar style="dark" />
@@ -366,7 +364,7 @@ const CompleteKYC = () => {
         >
           <ChevronLeftIcon size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text className="text-xl font-NunitoBold text-gray-900">Merchant Verification</Text>
+        <Text className="text-xl font-NunitoBold text-gray-900">{headerTitle}</Text>
       </View>
 
       <KeyboardAwareScrollView
@@ -382,6 +380,7 @@ const CompleteKYC = () => {
         <Formik
           initialValues={initialFormValues}
           validationSchema={validationSchema}
+          enableReinitialize
           onSubmit={submitForm}
         >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, setFieldValue }) => (
@@ -461,8 +460,8 @@ const CompleteKYC = () => {
                 
                 <View className="space-y-4">
                   <InputField
-                    label="Store Name"
-                    placeholder="Enter your store name"
+                    label={storeLabel}
+                    placeholder={storePlaceholder}
                     value={values.store_name}
                     onChangeText={handleChange("store_name")}
                     onBlur={handleBlur("store_name")}
@@ -527,7 +526,7 @@ const CompleteKYC = () => {
             router.replace(sellerRoutes.home as any);
           }}
           title="Verification Submitted 🎉"
-          message="Your merchant profile verification has been submitted successfully and will be reviewed and approved in less than 24 hours."
+          message={`Your ${isVehicleRental ? 'vehicle rental' : 'merchant'} profile verification has been submitted successfully and will be reviewed and approved in less than 24 hours.`}
           buttonText="Go to Dashboard"
         />
 

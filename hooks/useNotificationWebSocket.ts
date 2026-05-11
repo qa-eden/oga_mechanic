@@ -23,6 +23,10 @@ export const useNotificationWebSocket = ({ onNewOrder, enabled = true, triggerPu
     // Order events
     new_repair_request: (data: WebSocketMessage) => {
       console.log('⚡ [Notification WS] New repair request!', data);
+      
+      // Refetch the pending requests list immediately
+      queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
+      
       if (onNewOrder) onNewOrder(data.order || data);
       
       // Play mechanic sound for new repair requests
@@ -87,6 +91,8 @@ export const useNotificationWebSocket = ({ onNewOrder, enabled = true, triggerPu
           // Play sound for repair status/update
           if (type === 'repair_status' || type === 'repair_update') {
             playMechanicNotificationSound();
+            // Refetch the pending requests list immediately
+            queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
           }
 
           useNotificationStore.getState().showNotification(notifData.title, notifData.message, isChat ? 'chat' : 'info', notifData);
@@ -106,6 +112,8 @@ export const useNotificationWebSocket = ({ onNewOrder, enabled = true, triggerPu
           // Play sound for repair status/update
           if (type === 'repair_status' || type === 'repair_update') {
             playMechanicNotificationSound();
+            // Refetch the pending requests list immediately
+            queryClient.invalidateQueries({ queryKey: ['mechanic', 'repair-requests'] });
           }
 
           useNotificationStore.getState().showNotification(notifData.title, notifData.message, isChat ? 'chat' : 'info', notifData);

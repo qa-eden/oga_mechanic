@@ -143,7 +143,7 @@ export interface UserProfile {
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
-  active_role?: string;
+  active_role?: string | { name: string; [key: string]: any };
   car_make?: string | null;
   car_model?: string | null;
   car_year?: string | null;
@@ -164,6 +164,7 @@ export interface PrimaryUserProfileData {
   phone_number: string;
   is_verified: boolean;
   current_role: string;
+  active_role?: string | { name: string; [key: string]: any }; // Added to match backend and hook usage
   car_make: string;
   car_model: string;
   car_year: number | null;
@@ -180,6 +181,7 @@ export interface PrimaryUserProfileResponse {
   requestTime: string;
   requestType: string;
   data: PrimaryUserProfileData;
+  active_role?: string | { name: string; [key: string]: any }; // Added to match top-level access in hooks
   message: string;
   referenceId: string;
   status: boolean;
@@ -1185,12 +1187,47 @@ export const userAPI = {
     return await response.json();
   },
 
+  submitVehicleRentalKYC: async (formData: FormData) => {
+    const token = await AsyncStorage.getItem('auth_token');
+    const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}${VEHICLE_RENTAL_ENDPOINTS.PROFILE}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      throw { response: { data: errorData } };
+    }
+    
+    return await response.json();
+  },
+
 
 
   // Subscribe merchant
   subscribeMerchant: async (data: { payment_reference: string; payment_url: string; amount: number }): Promise<any> => {
     try {
       const response = await api.post('users/profile/merchant/subscribe/', data);
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  // Subscribe vehicle rental
+  subscribeVehicleRental: async (data: { payment_reference: string; payment_url: string; amount: number }): Promise<any> => {
+    try {
+      const response = await api.post('users/profile/vehicle-rental/subscribe/', data);
       return response.data;
     } catch (error: any) {
       throw error;

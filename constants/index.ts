@@ -29,6 +29,7 @@ import mechanic3 from "@/assets/icons/mechanic3.png";
 import carRent from "@/assets/icons/car_rent.png";
 import round from "@/assets/icons/round.svg";
 import mechanicOrderIcon from "@/assets/icons/find_mechanic.png";
+import customerService from "@/assets/icons/customer-service.png";
 
 //profile icons
 import UserCircle from "@/assets/icons/profile/UserCircle.svg";
@@ -114,6 +115,7 @@ export const icons = {
   activeProductTab,
   empty,
   round,
+  customerService
 };
 
 

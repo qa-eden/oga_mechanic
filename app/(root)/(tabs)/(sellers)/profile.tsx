@@ -56,7 +56,7 @@ const SellerProfile = () => {
   const { data: profileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
 
   const activeRoleRaw = (profileData as PrimaryUserProfileResponse)?.active_role || (profileData as any)?.data?.active_role || (profileData as any)?.data?.current_role;
-  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : activeRoleRaw;
   const isVehicleRental = activeRole === 'vehicle_rental';
   const isMerchant = activeRole === 'merchant' || activeRole === 'seller';
   

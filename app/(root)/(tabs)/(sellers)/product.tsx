@@ -39,7 +39,7 @@ const Product = () => {
 
   // Extract active role with fallback
   const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
-  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : activeRoleRaw;
   const isVehicleRental = activeRole === 'vehicle_rental';
   const isSeller = activeRole === 'merchant' || activeRole === 'seller';
 

@@ -19,6 +19,7 @@ import AnimatedSplash from "../components/AnimatedSplash";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import GlobalNotificationBanner from "@/components/GlobalNotificationBanner";
+import RootErrorBoundary from "@/components/RootErrorBoundary";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -81,7 +82,7 @@ function AppContent() {
           <Toast />
           <GlobalNotificationBanner />
 
-          {/* Global Android Navigation Bar Overlay */}
+          {/* Dynamic Android Navigation Bar Spacer */}
           {Platform.OS === "android" && insets.bottom > 0 && (
             <View
               style={{
@@ -89,8 +90,10 @@ function AppContent() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: 40,
-                backgroundColor: "#333",
+                height: insets.bottom,
+                backgroundColor: "white", // Match app background
+                borderTopWidth: 1,
+                borderTopColor: "#F3F4F6", // Subtle separator
                 zIndex: 1000,
               }}
             />
@@ -150,13 +153,15 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* <StatusBar style="auto" /> */}
-      <AuthProvider>
-        <AuthEventProvider>
-          <AppContent />
-        </AuthEventProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <RootErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        {/* <StatusBar style="auto" /> */}
+        <AuthProvider>
+          <AuthEventProvider>
+            <AppContent />
+          </AuthEventProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </RootErrorBoundary>
   );
 }

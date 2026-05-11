@@ -100,7 +100,7 @@ export const MERCHANT_ENDPOINTS = {
   EARNINGS: '/merchant/earnings',
   WITHDRAW: '/merchant/earnings/withdraw',
   ANALYTICS: '/products/merchant/analytics/',
-  SUBSCRIPTION: '/products/merchant/subscription/',
+  SUBSCRIPTION: '/users/profile/merchant/subscribe/',
 } as const;
 
 // Vehicle Rental endpoints

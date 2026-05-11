@@ -7,9 +7,10 @@ import {
   Dimensions,
   Animated,
   StyleSheet,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -27,6 +28,7 @@ import {
 } from "react-native-heroicons/outline";
 import { LinearGradient } from "expo-linear-gradient";
 import { routes } from "@/constants/routes";
+import { icons, images } from "@/constants";
 import { useQuery } from "@tanstack/react-query";
 import { supportAPI } from "@/lib/api/support";
 import { format } from "date-fns";
@@ -145,11 +147,11 @@ const CategorySection = ({ category, onSuggestionPress }: any) => {
 const TicketCard = ({ chat, onPress }: any) => {
   const statusColor = chat.status === 'open' ? '#10b981' : chat.status === 'in_progress' ? '#f59e0b' : '#94a3b8';
   const statusBg = chat.status === 'open' ? '#ecfdf5' : chat.status === 'in_progress' ? '#fffbeb' : '#f8fafc';
-  
+
   // Last message preview logic
   const lastMsg = chat.last_message?.content || "No messages yet";
   const unreadCount = chat.unread_count || 0;
-  
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -160,10 +162,10 @@ const TicketCard = ({ chat, onPress }: any) => {
         <View style={styles.cardSubjectContainer}>
           <Text style={styles.premiumSubject} numberOfLines={1}>{chat.subject || "Support Request"}</Text>
           <View style={[styles.premiumStatusBadge, { backgroundColor: statusBg }]}>
-             <View style={[styles.premiumStatusDot, { backgroundColor: statusColor }]} />
-             <Text style={[styles.premiumStatusText, { color: statusColor }]}>
-               {chat.status?.replace('_', ' ').toUpperCase()}
-             </Text>
+            <View style={[styles.premiumStatusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.premiumStatusText, { color: statusColor }]}>
+              {chat.status?.replace('_', ' ').toUpperCase()}
+            </Text>
           </View>
         </View>
       </View>
@@ -253,9 +255,9 @@ const LiveChatTab = ({ isConnected }: { isConnected: boolean }) => {
       {conversations.length > 0 ? (
         <View style={{ gap: 16 }}>
           {conversations.map((chat: any) => (
-            <TicketCard 
-              key={chat.id} 
-              chat={chat} 
+            <TicketCard
+              key={chat.id}
+              chat={chat}
               onPress={() => router.push({
                 pathname: routes.chatSpecialist as any,
                 params: { roomId: chat.id },
@@ -287,7 +289,8 @@ const LiveChatTab = ({ isConnected }: { isConnected: boolean }) => {
 /* ---------------- MAIN SCREEN ---------------- */
 
 const SupportSuggestions = () => {
-  const [activeTab, setActiveTab] = useState<'support' | 'live-chat'>('support');
+  const params = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState<'support' | 'live-chat'>(params.activeTab === 'chat' ? 'live-chat' : 'support');
   const isConnected = true; // Managed globally in _layout.tsx
 
   const handleSuggestionPress = (text: string) => {
@@ -299,24 +302,37 @@ const SupportSuggestions = () => {
 
   const categories = [
     {
-      id: "orders",
-      title: "Orders & Payments",
-      icon: CreditCardIcon,
+      id: "marketplace",
+      title: "Buying & Selling",
+      icon: ShoppingCartIcon,
       color: "#3B82F6",
       bgColor: "#EFF6FF",
       suggestions: [
-        "I need to track my order",
-        "My payment failed, what do I do?",
+        "I need to contact a seller",
+        "How do I confirm my car purchase?",
+        "I received a wrong spare part",
         "I'd like to request a refund",
-        "I was charged incorrectly",
+      ],
+    },
+    {
+      id: "rentals",
+      title: "Rentals & Towing",
+      icon: BoltIcon,
+      color: "#F59E0B",
+      bgColor: "#FFFBEB",
+      suggestions: [
+        "I need help with a car rental",
+        "My towing service is delayed",
+        "I want to extend my rental duration",
+        "How do I book a towing van?",
       ],
     },
     {
       id: "repairs",
-      title: "Vehicle Repairs",
+      title: "Mechanic Repairs",
       icon: WrenchScrewdriverIcon,
-      color: "#F59E0B",
-      bgColor: "#FFFBEB",
+      color: "#10B981",
+      bgColor: "#ECFDF5",
       suggestions: [
         "I need to book a mechanic",
         "What are your service prices?",
@@ -334,14 +350,15 @@ const SupportSuggestions = () => {
         "Where is my delivery?",
         "I want to change my delivery address",
         "My package arrived damaged",
+        "I need to track my parts delivery",
       ],
     },
     {
       id: "account",
       title: "App & Account",
       icon: UserCircleIcon,
-      color: "#10B981",
-      bgColor: "#ECFDF5",
+      color: "#6B7280",
+      bgColor: "#F9FAFB",
       suggestions: [
         "I want to reset my password",
         "I need to change my phone number",
@@ -409,7 +426,15 @@ const SupportSuggestions = () => {
               style={styles.hero}
             >
               <View style={styles.heroEmoji}>
-                <Text style={{ fontSize: 36 }}>🛠️</Text>
+                <Image
+                  source={icons.customerService}
+                  resizeMode="contain"
+                  style={{
+                    width: 85,
+                    height: 85,
+                    marginRight: width * 0.04,
+                  }}
+                />
               </View>
               <Text style={styles.heroTitle}>How can we{"\n"}<Text style={styles.heroAccent}>help you today?</Text></Text>
               <Text style={styles.heroSubtitle}>
@@ -540,7 +565,7 @@ const styles = StyleSheet.create({
   liveChatTitle: { fontFamily: 'Nunito-ExtraBold', fontSize: 22, color: '#111827' },
   liveChatSubtitle: { fontFamily: 'Nunito-Medium', fontSize: 13, color: '#94a3b8' },
   plusFab: { width: 44, height: 44, backgroundColor: '#D30309', borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#D30309', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  
+
   liveIndicatorContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0fdf4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' },
   liveIndicatorText: { fontSize: 10, fontFamily: 'Nunito-ExtraBold', color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -552,10 +577,10 @@ const styles = StyleSheet.create({
   premiumStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   premiumStatusDot: { width: 5, height: 5, borderRadius: 2.5 },
   premiumStatusText: { fontFamily: 'Nunito-Bold', fontSize: 10, letterSpacing: 0.2 },
-  
+
   cardBody: { marginBottom: 16 },
   lastMessagePreview: { fontFamily: 'Nunito-Medium', fontSize: 14, color: '#64748b', lineHeight: 20 },
-  
+
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTopWidth: 1, borderTopColor: '#f8fafc' },
   premiumDate: { fontFamily: 'Nunito-Bold', fontSize: 12, color: '#94a3b8', flex: 1 },
   unreadBadge: { backgroundColor: '#ef4444', minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, marginRight: 12 },

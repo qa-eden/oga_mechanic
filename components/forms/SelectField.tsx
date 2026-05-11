@@ -20,6 +20,7 @@ interface SelectFieldProps {
   error?: any
   touched?: any
   required?: boolean
+  disabled?: boolean
 }
 
 const SelectField: React.FC<SelectFieldProps> = ({
@@ -31,7 +32,8 @@ const SelectField: React.FC<SelectFieldProps> = ({
   onValueChange,
   error,
   touched,
-  required = false
+  required = false,
+  disabled = false
 }) => {
   const [showDrawer, setShowDrawer] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -162,7 +164,8 @@ const SelectField: React.FC<SelectFieldProps> = ({
       >
         <TouchableOpacity 
           onPress={openDrawer}
-          className="flex-1 flex-row items-center justify-between py-3"
+          disabled={disabled}
+          className={`flex-1 flex-row items-center justify-between py-3 ${disabled ? "opacity-50" : ""}`}
         >
           <View className="flex-row items-center flex-1 min-w-0 pr-2">
             {selectedOption?.imageUri ? (

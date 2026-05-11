@@ -73,6 +73,7 @@ const Navbar = () => {
     activeRole: hookActiveRole,
     isMechanic,
     isMerchant,
+    isVehicleRental,
     primaryProfileData
   } = useActiveRoleProfile();
 
@@ -94,7 +95,7 @@ const Navbar = () => {
 
   // Specific profiles extracted safely
   const mProfile = roleResponseData?.mechanic_profile || (isMechanic ? roleResponseData : null);
-  const merchProfile = roleResponseData?.merchant_profile || (isMerchant ? roleResponseData : null);
+  const merchProfile = roleResponseData?.merchant_profile || roleResponseData?.vehicle_rental_profile || ((isMerchant || isVehicleRental) ? roleResponseData : null);
 
   // Flattened data source for permissive lookup
   const combinedData = {
@@ -108,7 +109,7 @@ const Navbar = () => {
 
   // Robust Name Resolution
   const displayName = 
-    (isMerchant && combinedData.store_name) ||
+    ((isMerchant || isVehicleRental) && combinedData.store_name) ||
     combinedData.first_name || 
     'User';
 
@@ -179,6 +180,8 @@ const Navbar = () => {
               ? 'Manage your jobs and earnings.' 
               : activeRole === 'seller' || activeRole === 'merchant'
               ? 'Manage your shop and products.' 
+              : activeRole === 'vehicle_rental'
+              ? 'Manage your rental fleet and bookings.'
               : 'Everything your car needs is here.'}
           </Text>
         </View>

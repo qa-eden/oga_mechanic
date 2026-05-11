@@ -48,6 +48,7 @@ interface ProfileEditModalProps {
   userObj: any;
   handleSectionSave: any;
   handleImagePick: (setFieldValue: any, fieldName: string) => void;
+  isVehicleRental: boolean;
 }
 
 const ProfileEditModal = ({
@@ -58,6 +59,7 @@ const ProfileEditModal = ({
   userObj,
   handleSectionSave,
   handleImagePick,
+  isVehicleRental,
 }: ProfileEditModalProps) => {
   const nigerianStates = getStatesByCountry('NG');
   const states = nigerianStates.map(s => ({ label: s.name, value: s.name }));
@@ -110,7 +112,7 @@ const ProfileEditModal = ({
         }
 
         return {
-          store_name: merchantProfile?.store_name || "",
+          store_name: merchantProfile?.store_name || merchantProfile?.company_name || "",
           location: initialLocation,
           state: initialState,
           lga: initialLga,
@@ -143,7 +145,7 @@ const ProfileEditModal = ({
           <View className="p-6">
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-NunitoBold text-gray-900 capitalize">
-                Edit {editingSection === 'personal' ? 'Personal' : editingSection === 'business' ? 'Business' : 'Documentation'} Information
+                Edit {editingSection === 'personal' ? 'Personal' : editingSection === 'business' ? (isVehicleRental ? 'Fleet' : 'Business') : 'Documentation'} Information
               </Text>
               <TouchableOpacity
                 onPress={onClose}
@@ -198,7 +200,12 @@ const ProfileEditModal = ({
 
                     {editingSection === "business" && (
                       <View>
-                        <FormikInput name="store_name" placeholder="Enter business name" label="Business Name" required />
+                        <FormikInput 
+                          name="store_name" 
+                          placeholder={isVehicleRental ? "Enter company name" : "Enter business name"} 
+                          label={isVehicleRental ? "Company Name" : "Business Name"} 
+                          required 
+                        />
 
                         <AddressInput
                           label="Business Address"
@@ -380,14 +387,20 @@ const ProfileRow = ({ label, value }: { label: string; value: string }) => (
 const SellerProfileDetails = () => {
   const submitKYCMutation = useSubmitMerchantKYC();
   const updateProfileMutation = useUpdateUserProfile();
-  const { data: profileData, isLoading: isLoadingProfile } = useMerchantProfile();
+  
+  const { 
+    data: activeProfileData, 
+    isLoading: isLoadingProfile,
+    primaryProfileData,
+    isVehicleRental,
+  } = useActiveRoleProfile();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
 
-  const merchantProfile = profileData?.data?.merchant_profile;
-  const userObj = merchantProfile?.user;
-  const displayName = merchantProfile?.store_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : "Merchant");
+  const merchantProfile = activeProfileData?.data?.merchant_profile || activeProfileData?.data?.vehicle_rental_profile;
+  const userObj = merchantProfile?.user || (primaryProfileData?.data as any);
+  const displayName = merchantProfile?.store_name || merchantProfile?.company_name || (userObj?.first_name && userObj?.last_name ? `${userObj.first_name} ${userObj.last_name}`.trim() : "Business");
   const profileImage = merchantProfile?.selfie || merchantProfile?.profile_picture || (userObj as any)?.profileImage || "";
 
   const handleSectionSave = async (values: any, { setSubmitting }: any) => {
@@ -412,7 +425,7 @@ const SellerProfileDetails = () => {
       formData.append('requestType', 'inbound');
 
       const fullValues = {
-        store_name: merchantProfile?.store_name || "",
+        store_name: merchantProfile?.store_name || merchantProfile?.company_name || "",
         location: merchantProfile?.location || "",
         lga: merchantProfile?.lga || "",
         nin_number: merchantProfile?.nin_number || "",
@@ -421,7 +434,8 @@ const SellerProfileDetails = () => {
 
       Object.entries(fullValues).forEach(([key, val]) => {
         if (val !== undefined && val !== null && key !== 'first_name' && key !== 'last_name' && key !== 'phone_number' && key !== 'profile_picture' && key !== 'selfie' && key !== 'nin_document') {
-          formData.append(key, val as string);
+          const apiKey = (key === 'store_name' && isVehicleRental) ? 'company_name' : key;
+          formData.append(apiKey, val as string);
         }
       });
 
@@ -497,6 +511,7 @@ const SellerProfileDetails = () => {
         userObj={userObj}
         handleSectionSave={handleSectionSave}
         handleImagePick={handleImagePick}
+        isVehicleRental={isVehicleRental}
       />
 
       <View className="px-5 py-4 border-b border-gray-100 flex-row items-center justify-between">
@@ -507,7 +522,9 @@ const SellerProfileDetails = () => {
           >
             <ChevronLeftIcon size={24} color="#1F2937" />
           </TouchableOpacity>
-          <Text className="text-xl font-NunitoBold text-gray-900">Business Details</Text>
+          <Text className="text-xl font-NunitoBold text-gray-900">
+            {isVehicleRental ? "Rental Fleet Details" : "Business Details"}
+          </Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push(sellerRoutes.EditProfile as any)}
@@ -555,11 +572,11 @@ const SellerProfileDetails = () => {
               <ProfileRow label="Phone Number" value={userObj?.phone_number || ""} />
             </View>
 
-            {/* Business Details */}
+            {/* Business/Fleet Details */}
             <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
               <SectionHeader
                 icon={BriefcaseIcon}
-                title="Business Details"
+                title={isVehicleRental ? "Rental Fleet Details" : "Business Details"}
                 color="#F59E0B"
                 bgColor="bg-amber-50"
                 onEdit={() => {
@@ -567,9 +584,15 @@ const SellerProfileDetails = () => {
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="Business Name" value={merchantProfile?.store_name || ""} />
+              <ProfileRow 
+                label={isVehicleRental ? "Company Name" : "Business Name"} 
+                value={merchantProfile?.store_name || merchantProfile?.company_name || ""} 
+              />
               <ProfileRow label="NIN Number" value={merchantProfile?.nin_number || ""} />
-              <ProfileRow label="Business Address" value={merchantProfile?.location || ""} />
+              <ProfileRow 
+                label={isVehicleRental ? "Fleet Address" : "Business Address"} 
+                value={merchantProfile?.location || ""} 
+              />
               <View className="flex-row items-center justify-start gap-20">
                 <ProfileRow label="State" value={merchantProfile?.state || ""} />
                 <ProfileRow label="LGA" value={merchantProfile?.lga || ""} />

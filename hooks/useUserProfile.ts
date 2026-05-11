@@ -93,7 +93,7 @@ export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean 
 export const useActiveRoleProfile = () => {
   // First, get primary profile to check active role
   const primaryProfile = usePrimaryUserProfile();
-  const activeRoleData = primaryProfile.data?.active_role || primaryProfile.data?.data?.active_role || (primaryProfile.data?.data as any)?.current_role;
+  const activeRoleData = primaryProfile.data?.active_role || primaryProfile.data?.data?.active_role || primaryProfile.data?.data?.current_role;
   const activeRole = typeof activeRoleData === 'object' ? activeRoleData?.name : activeRoleData;
 
   // Role-specific profile flags
@@ -141,7 +141,7 @@ export const useActiveRoleProfile = () => {
     error,
     refetch,
     activeRole,
-    isMerchant: isMerchant || isVehicleRental, // Group for generic merchant-like components
+    isMerchant, // Strictly merchant/seller
     isVehicleRental,
     isMechanic,
     primaryProfileData: primaryProfile.data,
@@ -211,6 +211,22 @@ export const useSubmitMerchantKYC = () => {
     },
     onError: (error) => {
       console.error('❌ Error submitting merchant KYC:', error);
+    },
+  });
+};
+
+// Hook to submit vehicle rental KYC
+export const useSubmitVehicleRentalKYC = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: userAPI.submitVehicleRentalKYC,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userProfileKeys.all });
+      console.log('✅ Vehicle Rental KYC submitted successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Error submitting vehicle rental KYC:', error);
     },
   });
 };

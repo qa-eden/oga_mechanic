@@ -126,18 +126,14 @@ export const useAuth = () => {
     switch (role) {
       case 'primary_user':
         return routes?.userHome || '/(root)/(tabs)/(user)/home';
-      case 'driver':
-        return routes?.driverHome || '/(root)/(tabs)/(driver)/home';
       case 'mechanic':
         return routes?.mechanicHome || '/(root)/(tabs)/(mechanic)/home';
-      case 'rider':
-        return routes?.riderHome || '/(root)/(tabs)/(rider)/home';
       case 'merchant':
       case 'seller':
       case 'vehicle_rental':
         return '/(root)/(tabs)/(sellers)/home';
       default:
-        console.warn('⚠️ Unknown role:', role);
+        console.warn('⚠️ Unknown or inactive role:', role);
         return routes?.userHome || '/(root)/(tabs)/(user)/home';
     }
   };
@@ -192,11 +188,19 @@ export const useAuth = () => {
         throw new Error('No refresh token available');
       }
 
-      // TODO: Implement token refresh API call
-      // const response = await authAPI.refreshToken(refreshToken);
-      // await AsyncStorage.setItem('auth_token', response.access_token);
-      
-      return true;
+      const { BASE_URL } = await import('@/lib/endpoints'); // Accessing endpoints
+      const response = await fetch(`${BASE_URL}/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+
+      const data = await response.json();
+      if (data.access) {
+        await AsyncStorage.setItem('auth_token', data.access);
+        return true;
+      }
+      return false;
     } catch (error) {
       await logout();
       return false;

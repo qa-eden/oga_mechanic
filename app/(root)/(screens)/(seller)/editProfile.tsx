@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ChevronLeftIcon } from "react-native-heroicons/solid";
 import { CameraIcon, BuildingStorefrontIcon, MapPinIcon, PhoneIcon, EnvelopeIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
-import { useMerchantProfile, usePrimaryUserProfile, useSubmitMerchantKYC } from "@/hooks/useUserProfile";
+import { useActiveRoleProfile, useSubmitMerchantKYC } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,6 +26,7 @@ import SelectField from "@/components/forms/SelectField";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
 
 // Validation Schema for Seller Profile
 const editSellerProfileSchema = Yup.object().shape({
@@ -48,8 +49,16 @@ const editSellerProfileSchema = Yup.object().shape({
 
 const EditSellerProfile = () => {
   const submitKYCMutation = useSubmitMerchantKYC();
-  const { data: profileData, isLoading: isLoadingProfile } = usePrimaryUserProfile();
-  const userData = profileData?.data;
+  
+  const { 
+    data: activeProfileData, 
+    isLoading: isLoadingProfile,
+    primaryProfileData,
+    isVehicleRental,
+  } = useActiveRoleProfile();
+
+  const userData = primaryProfileData?.data;
+  const merchantProfileInfo = activeProfileData?.data?.merchant_profile || activeProfileData?.data?.vehicle_rental_profile;
 
   const [initialValues, setInitialValues] = useState({
     first_name: "",
@@ -65,9 +74,6 @@ const EditSellerProfile = () => {
     nin_document: "",
   });
 
-  const { data: merchantProfileData, isLoading: isLoadingMerchant } = useMerchantProfile();
-  const merchantProfileInfo = merchantProfileData?.data?.merchant_profile;
-
   useEffect(() => {
     if (userData) {
       setInitialValues({
@@ -75,7 +81,7 @@ const EditSellerProfile = () => {
         last_name: userData.last_name || "",
         phone_number: userData.phone_number || "",
         email: userData.email || "",
-        store_name: merchantProfileInfo?.store_name || "",
+        store_name: merchantProfileInfo?.store_name || (merchantProfileInfo as any)?.company_name || "",
         location: merchantProfileInfo?.location || "",
         state: merchantProfileInfo?.state || "",
         lga: merchantProfileInfo?.lga || "",
@@ -85,6 +91,46 @@ const EditSellerProfile = () => {
       });
     }
   }, [userData, merchantProfileInfo]);
+
+  // Auto-sync location data if missing on mount
+  useEffect(() => {
+    const syncLocation = async () => {
+      if (initialValues.location && (!initialValues.state || !initialValues.lga)) {
+        try {
+          const geocoded = await Location.geocodeAsync(initialValues.location);
+          if (geocoded.length > 0) {
+            const { latitude, longitude } = geocoded[0];
+            
+            // We need a mock setFieldValue to reuse logic or just handle it here
+            // But wait, handleLocationSelect isn't defined here, it's inline in onLocationSelect
+            // Let's implement a small reverse geocode here or refactor
+            const reverseGeocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
+            if (reverseGeocoded.length > 0) {
+              const address = reverseGeocoded[0];
+              const region = address.region;
+              if (region) {
+                const matchedState = getStatesByCountry('NG').find(s => s.name.toLowerCase() === region.toLowerCase());
+                if (matchedState) {
+                  setInitialValues(prev => ({ 
+                    ...prev, 
+                    state: matchedState.name,
+                    // Try to match LGA if possible
+                    lga: prev.lga || address.city || address.subregion || ""
+                  }));
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("EditProfile: Auto-sync location error:", error);
+        }
+      }
+    };
+
+    if (userData) {
+      syncLocation();
+    }
+  }, [userData, initialValues.location]);
 
   const handleSave = async (values: any, { setSubmitting }: any) => {
     try {
@@ -113,7 +159,9 @@ const EditSellerProfile = () => {
       formData.append('phone_number', values.phone_number);
       
       // Business Info
-      if (values.store_name) formData.append('store_name', values.store_name);
+      if (values.store_name) {
+        formData.append(isVehicleRental ? 'company_name' : 'store_name', values.store_name);
+      }
       if (values.location) formData.append('location', values.location);
       if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
@@ -314,15 +362,17 @@ const EditSellerProfile = () => {
                   <View className="w-8 h-8 bg-orange-50 rounded-lg items-center justify-center mr-2">
                     <BuildingStorefrontIcon size={16} color="#EA580C" />
                   </View>
-                  <Text className="text-base font-NunitoBold text-gray-900">Business Information</Text>
+                  <Text className="text-base font-NunitoBold text-gray-900">
+                    {isVehicleRental ? "Fleet Information" : "Business Information"}
+                  </Text>
                 </View>
 
                 {/* Store Name */}
                 <View className="mb-3">
                   <FormikInput
                     name="store_name"
-                    label="Store Name"
-                    placeholder="Enter your store name"
+                    label={isVehicleRental ? "Company Name" : "Business Name"}
+                    placeholder={isVehicleRental ? "Enter your company name" : "Enter your business name"}
                     autoCapitalize="words"
                   />
                 </View>
@@ -330,13 +380,13 @@ const EditSellerProfile = () => {
                 {/* Business Address */}
                 <View className="mb-3">
                   <AddressInput
-                    label="Business Location"
+                    label={isVehicleRental ? "Fleet Location" : "Business Location"}
                     value={values.location}
                     onChangeText={(text: string) => setFieldValue("location", text)}
                     onLocationSelect={(location: any) => {
                       setFieldValue("location", location?.address || location);
                     }}
-                    placeholder="Search for your shop address"
+                    placeholder={isVehicleRental ? "Search for your fleet address" : "Search for your shop address"}
                     error={errors.location as string}
                     touched={touched.location as boolean}
                   />

@@ -194,12 +194,6 @@ const MyBids = () => {
               <Text className="text-gray-400 font-NunitoMedium mt-3 text-sm text-center px-10 leading-6">
                 You haven't participated in any auctions yet. Start bidding on items to see your history here!
               </Text>
-              <TouchableOpacity
-                onPress={() => router.push(routes.home as any)}
-                className="mt-10 bg-primary-500 px-8 py-4 rounded-[20px] shadow-lg shadow-primary-500/30"
-              >
-                <Text className="text-white font-NunitoExtraBold text-[16px]">Explore Auctions</Text>
-              </TouchableOpacity>
             </View>
           ) : (
             <View>

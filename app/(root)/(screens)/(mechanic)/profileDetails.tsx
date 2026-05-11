@@ -38,6 +38,7 @@ import { showToast } from "@/utils/toastUtils";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 
 interface ProfileEditModalProps {
   isVisible: boolean;
@@ -111,7 +112,7 @@ const ProfileEditModal = ({
 
         return {
           location: initialLocation,
-          state: initialState,
+          state: mechanicProfile?.state || initialState,
           lga: initialLga,
           latitude: mechanicProfile?.latitude || "",
           longitude: mechanicProfile?.longitude || "",
@@ -225,15 +226,30 @@ const ProfileEditModal = ({
                               }
                             }
                           }}
-                          onLocationSelect={(loc: any) => {
+                          onLocationSelect={async (loc: any) => {
                               setFieldValue("location", loc.address || loc.name);
                               if (loc.latitude && loc.longitude) {
                                   setFieldValue("latitude", String(loc.latitude));
                                   setFieldValue("longitude", String(loc.longitude));
-                              }
-                              if (loc.context && Array.isArray(loc.context)) {
-                                  const region = loc.context.find((c: any) => c.id.startsWith('region'));
-                                  if (region) setFieldValue("state", region.text);
+                                  
+                                  try {
+                                    const reverseGeocoded = await Location.reverseGeocodeAsync({
+                                      latitude: loc.latitude,
+                                      longitude: loc.longitude
+                                    });
+                                    if (reverseGeocoded.length > 0) {
+                                      const addr = reverseGeocoded[0];
+                                      if (addr.region) {
+                                        const matchedState = getStatesByCountry('NG').find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
+                                        if (matchedState) {
+                                          setFieldValue("state", matchedState.name);
+                                          setFieldValue("lga", addr.city || addr.subregion || "");
+                                        }
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.log("Reverse geocode error in profileDetails modal:", e);
+                                  }
                               }
                           }}
                           placeholder="Search for your workshop address"
@@ -395,7 +411,10 @@ const ProfileDetails = () => {
       const fullValues = {
         bio: mechanicProfile?.bio || "",
         location: mechanicProfile?.location || "",
+        state: mechanicProfile?.state || "",
         lga: mechanicProfile?.lga || "",
+        latitude: mechanicProfile?.latitude || "",
+        longitude: mechanicProfile?.longitude || "",
         nin_number: mechanicProfile?.nin_number || "",
         govt_id_type: mechanicProfile?.govt_id_type || "",
         // Merge with form values
@@ -547,8 +566,12 @@ const ProfileDetails = () => {
                   setIsModalVisible(true);
                 }}
               />
-              <ProfileRow label="Business Address" value={mechanicProfile?.location} />
-              <View className="flex-row">
+              <ProfileRow label="Workshop Address" value={mechanicProfile?.location} />
+              <View className="flex-row gap-x-4">
+                 <View className="flex-1">
+                   <Text className="text-gray-500 font-NunitoMedium text-xs uppercase tracking-wider mb-1 mt-4">State</Text>
+                   <Text className="text-base font-NunitoMedium text-gray-900">{mechanicProfile?.state || "Not set"}</Text>
+                 </View>
                  <View className="flex-1">
                    <Text className="text-gray-500 font-NunitoMedium text-xs uppercase tracking-wider mb-1 mt-4">LGA</Text>
                    <Text className="text-base font-NunitoMedium text-gray-900">{mechanicProfile?.lga || "Not set"}</Text>

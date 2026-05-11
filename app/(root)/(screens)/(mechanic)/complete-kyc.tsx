@@ -49,10 +49,15 @@ import { mechanicAPI } from "@/lib/api/mechanic";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import { useSubmitMechanicKYC, useSubmitVehicleExpertise } from "@/hooks/useUserProfile";
 import { mechanicRoutes } from "@/constants/routes";
+import { getStatesByCountry } from "@/constants/locationData";
+import { getLGAs } from "@/constants/nigeriaData";
+import * as Location from "expo-location";
 
 // Step 1 Validation Schema
 const step1ValidationSchema = Yup.object().shape({
   location: Yup.string().required("Please enter your location"),
+  state: Yup.string().required("Please select your state"),
+  lga: Yup.string().required("Please select your LGA"),
   bio: Yup.string().required("Please tell us about your experience"),
   nin_number: Yup.string().required("NIN is required"),
   specializations: Yup.array().min(1, "Select at least one specialization").required("Specializations are required"),
@@ -62,6 +67,8 @@ interface FormValues {
   location: string;
   latitude: string;
   longitude: string;
+  state: string;
+  lga: string;
   bio: string;
   nin_number: string;
   specializations: string[];
@@ -105,6 +112,12 @@ const CompleteKYC = () => {
   // Step 2 State
   const [expertiseRecords, setExpertiseRecords] = useState<ExpertiseRecord[]>([]);
 
+  const nigerianStates = getStatesByCountry('NG');
+  const states = nigerianStates.map(state => ({
+    label: state.name,
+    value: state.name
+  }));
+
   const certificationLevels = [
     { label: "Basic", value: "basic" },
     { label: "Intermediate", value: "intermediate" },
@@ -117,6 +130,8 @@ const CompleteKYC = () => {
     location: "",
     latitude: "",
     longitude: "",
+    state: "",
+    lga: "",
     bio: "",
     nin_number: "",
     specializations: [],
@@ -149,6 +164,8 @@ const CompleteKYC = () => {
             location: profile.location || "",
             latitude: profile.latitude || "",
             longitude: profile.longitude || "",
+            state: profile.state || "",
+            lga: profile.lga || "",
             bio: profile.bio || "",
             nin_number: profile.nin_number || "",
             specializations: Array.isArray(profile.specializations) ? profile.specializations.map(String) : [],
@@ -201,6 +218,34 @@ const CompleteKYC = () => {
     };
     fetchProfileAndOptions();
   }, []);
+
+  // Auto-sync location data if missing on mount
+  useEffect(() => {
+    const syncLocation = async () => {
+      if (initialFormValues.location && (!initialFormValues.state || !initialFormValues.latitude)) {
+        try {
+          const geocoded = await Location.geocodeAsync(initialFormValues.location);
+          if (geocoded.length > 0) {
+            const { latitude, longitude } = geocoded[0];
+            // Trigger the existing logic to fill state/lga
+            await handleLocationSelect({
+              address: initialFormValues.location,
+              latitude,
+              longitude
+            }, (field: string, value: any) => {
+              setInitialFormValues(prev => ({ ...prev, [field]: value }));
+            });
+          }
+        } catch (error) {
+          console.error("Mechanic Auto-sync location error:", error);
+        }
+      }
+    };
+
+    if (!isLoadingProfile) {
+      syncLocation();
+    }
+  }, [isLoadingProfile, initialFormValues.location]);
 
   // Automatically add first row when entering Step 2 if none exist and not loading
   useEffect(() => {
@@ -272,6 +317,46 @@ const CompleteKYC = () => {
     if (loc.latitude && loc.longitude) {
       setFieldValue("latitude", String(loc.latitude));
       setFieldValue("longitude", String(loc.longitude));
+
+      try {
+        const reverseGeocoded = await Location.reverseGeocodeAsync({
+          latitude: loc.latitude,
+          longitude: loc.longitude
+        });
+
+        if (reverseGeocoded.length > 0) {
+          const address = reverseGeocoded[0];
+          const region = address.region;
+          const city = address.city || address.subregion;
+
+          if (region) {
+            const matchedState = states.find(s => s.label.toLowerCase() === region.toLowerCase());
+            if (matchedState) {
+              setFieldValue("state", matchedState.label);
+              
+              const potentialLGAs = [city, address.subregion, address.district].filter(Boolean);
+              if (potentialLGAs.length > 0) {
+                const availableLGAs = getLGAs(matchedState.label);
+                const matchedLga = availableLGAs.find(lga => {
+                  const lgaLower = lga.toLowerCase();
+                  return potentialLGAs.some(candidate => {
+                    const candidateLower = candidate?.toLowerCase() || '';
+                    return candidateLower === lgaLower ||
+                      candidateLower.includes(lgaLower) ||
+                      lgaLower.includes(candidateLower);
+                  });
+                });
+
+                if (matchedLga) {
+                  setFieldValue("lga", matchedLga);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.log("Mechanic auto-fill location failed", error);
+      }
     }
   };
 
@@ -292,6 +377,8 @@ const CompleteKYC = () => {
       const formData = new FormData();
       formData.append('requestType', 'inbound');
       formData.append('location', values.location);
+      if (values.state) formData.append('state', values.state);
+      if (values.lga) formData.append('lga', values.lga);
       if (values.latitude) formData.append('latitude', values.latitude);
       if (values.longitude) formData.append('longitude', values.longitude);
       formData.append('bio', values.bio);
@@ -481,7 +568,7 @@ const CompleteKYC = () => {
                     <SectionHeader icon={MapPinIcon} title="Location Details" />
                     <View className="mb-4">
                       <AddressInput
-                        label="Business Address"
+                        label="Workshop Location"
                         placeholder="Search for your workshop address"
                         value={values.location}
                         onChangeText={handleChange("location")}
@@ -491,6 +578,39 @@ const CompleteKYC = () => {
                         required
                         showCurrentLocationButton={true}
                       />
+                    </View>
+
+                    <View className="flex-row gap-4 mb-2">
+                      <View className="flex-1">
+                        <SelectField
+                          name="state"
+                          label="State"
+                          placeholder="Select State"
+                          options={states}
+                          value={values.state}
+                          onValueChange={(val) => {
+                            setFieldValue("state", val);
+                            setFieldValue("lga", ""); // Reset LGA when state changes
+                          }}
+                          error={errors.state as string}
+                          touched={touched.state}
+                          required
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <SelectField
+                          name="lga"
+                          label="LGA"
+                          placeholder="Select LGA"
+                          options={values.state ? getLGAs(values.state).map(lga => ({ label: lga, value: lga })) : []}
+                          value={values.lga}
+                          onValueChange={(val) => setFieldValue("lga", val)}
+                          error={errors.lga as string}
+                          touched={touched.lga}
+                          required
+                          disabled={!values.state}
+                        />
+                      </View>
                     </View>
                   </View>
 

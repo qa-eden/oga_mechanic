@@ -35,10 +35,10 @@ const AllRentedCars = () => {
 
   // Extract active role with fallback
   const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
-  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : activeRoleRaw;
 
   // Fetch specific merchant profile to check KYC status
-  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller' || activeRole === 'vehicle_rental');
+  const merchantProfileQuery = useMerchantProfile(activeRole === 'merchant' || activeRole === 'seller');
 
   const isPendingApproval = Boolean(
     merchantProfileQuery.data?.data?.kyc?.is_complete && 

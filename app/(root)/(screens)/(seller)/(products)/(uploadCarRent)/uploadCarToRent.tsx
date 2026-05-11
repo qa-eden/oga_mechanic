@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -25,6 +25,7 @@ import {
   availabilityOptions,
   featureOptions
 } from '@/constants/data'
+
 
 const UploadCarToRent = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
@@ -105,6 +106,12 @@ const UploadCarToRent = () => {
     stock: Yup.number().required('Stock is required').min(0),
     availability: Yup.string().required('Availability is required'),
     delivery_option: Yup.string().required('Delivery option is required'),
+    enable_bidding: Yup.boolean(),
+    duration_days: Yup.number().when('enable_bidding', {
+      is: true,
+      then: (schema: any) => schema.required('Duration is required when bidding is enabled').min(1, 'Minimum duration is 1 day'),
+      otherwise: (schema: any) => schema.notRequired()
+    })
   })
 
   const initialValues = {
@@ -126,6 +133,8 @@ const UploadCarToRent = () => {
     delivery_option: isEditMode && parsedProductData ? parsedProductData.delivery_option || 'pickup' : 'pickup',
     negotiable: isEditMode && parsedProductData ? parsedProductData.negotiable || false : false,
     is_rental: true, // Always true for rental cars
+    enable_bidding: false,
+    duration_days: '',
   }
 
   const handleFeatureToggle = (feature: string) => {
@@ -224,6 +233,33 @@ const UploadCarToRent = () => {
 
       // Get the product ID from response
       const updatedProductId = responseData.data?.id || finalProductId || '';
+
+      // Handle bidding window creation if enabled
+      if (values.enable_bidding && updatedProductId) {
+        try {
+          const biddingResponse = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/products/${updatedProductId}/bidding/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`,
+              'X-Api-Key': process.env.EXPO_PUBLIC_API_KEY || '',
+            },
+            body: JSON.stringify({
+              product: updatedProductId,
+              start_time: new Date().toISOString(),
+              duration_days: parseInt(values.duration_days.toString(), 10),
+              is_closed: false,
+            }),
+          })
+          
+          if (!biddingResponse.ok) {
+            console.error('Failed to create bidding window:', await biddingResponse.text())
+            Alert.alert('Warning', 'Rental car created, but failed to setup the bidding window.')
+          }
+        } catch (bidErr) {
+          console.error("Error setting up bidding:", bidErr);
+        }
+      }
 
       if (isEditing) {
         // For editing, show success alert with options
@@ -592,6 +628,51 @@ const UploadCarToRent = () => {
                     error={errors.delivery_option as string}
                     touched={touched.delivery_option as boolean}
                   />
+                </View>
+
+                {/* Bidding Configuration */}
+                <View className="bg-white rounded-2xl p-5 mb-4 border border-gray-200">
+                  <View className="flex-row items-center mb-4">
+                    <View className="w-8 h-8 bg-red-500 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-NunitoBold text-sm">6</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-NunitoBold text-gray-900">Bidding (Optional)</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Let customers compete for this car
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row items-center justify-between py-2">
+                    <View className="flex-1 mr-4">
+                      <Text className="text-base font-NunitoSemiBold text-gray-700">Enable Bidding</Text>
+                      <Text className="text-xs text-gray-500 font-NunitoMedium">
+                        Allow customers to place bids on this rental
+                      </Text>
+                    </View>
+                    <Switch
+                      value={values.enable_bidding as boolean}
+                      onValueChange={v => void setFieldValue('enable_bidding', v)}
+                      trackColor={{ false: '#E5E7EB', true: '#D30309' }}
+                      thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : values.enable_bidding ? '#FFFFFF' : '#F3F4F6'}
+                    />
+                  </View>
+
+                  {values.enable_bidding && (
+                    <View className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100">
+                      <FormikInput
+                        name="duration_days"
+                        label="Bidding Duration (Days)"
+                        placeholder="e.g. 3, 5, 7"
+                        keyboardType="numeric"
+                        type="text"
+                      />
+                      <Text className="text-[10px] text-red-600 font-NunitoMedium mt-1">
+                        * The auction will start immediately after publishing and last for the specified duration.
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* Continue Button */}

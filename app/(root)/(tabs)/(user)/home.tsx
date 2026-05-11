@@ -24,6 +24,7 @@ import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 import SpecialistIconBtn from "@/components/SpecialistIconBtn";
 import SwitchUserModal from "@/components/modals/SwitchUserModal";
 import VINSearchModal from "@/components/modals/VINSearchModal";
+import EmptyState from "@/components/EmptyState";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -273,9 +274,12 @@ const Home = () => {
                 removeClippedSubviews={true}
               />
             ) : (
-              <View className="flex-1 justify-center items-center">
-                <Text className="text-xl font-NunitoBold text-gray-900 mb-2">No services found</Text>
-              </View>
+              <EmptyState 
+                title="No services found"
+                description="We couldn't load any services at the moment. Please try refreshing or checking back later."
+                actionLabel="Refresh Now"
+                onAction={onRefresh}
+              />
             )}
           </View>
         </AnimatedPageContainer>

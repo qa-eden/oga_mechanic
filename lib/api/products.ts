@@ -800,16 +800,14 @@ export const productsAPI = {
   },
 
 
-  // Initiate a subscription payment for merchant
+  // Initiate a subscription payment
   initiatePayment: async (payload: {
     requestType: string;
     data: {
-      amount: number;
-      currency: string;
-      description: string;
       callback_url: string;
+      plan: string;
     };
-  }): Promise<{ status: boolean; message: string; data?: { payment_url: string; reference: string } }> => {
+  }, _isVehicleRental?: boolean): Promise<{ status: boolean; message: string; data?: { payment_url: string; payment_reference?: string; reference?: string; amount?: number } }> => {
     const response = await api.post(
       MERCHANT_ENDPOINTS.SUBSCRIPTION,
       payload

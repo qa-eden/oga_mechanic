@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -26,10 +27,12 @@ import LoadingErrorWrapper from "@/components/LoadingErrorWrapper";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { usePrimaryUserProfile, useMerchantProfile, useVehicleRentalProfile } from "@/hooks/useUserProfile";
 import { useProfileStore } from "@/hooks/useProfileStore";
+import { useMerchantOrders } from "@/hooks/useOrders";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
 import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 import SpecialistIconBtn from "@/components/SpecialistIconBtn";
+import { sellerRoutes } from "@/constants/routes";
 
 const SellerHome = () => {
   const [showDrawer, setShowDrawer] = useState(false);
@@ -45,7 +48,7 @@ const SellerHome = () => {
 
   // Extract active role with fallback
   const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
-  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : (activeRoleRaw || 'merchant');
+  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : activeRoleRaw;
   const isVehicleRental = activeRole === 'vehicle_rental';
   const isSeller = activeRole === 'merchant' || activeRole === 'seller';
 
@@ -62,7 +65,11 @@ const SellerHome = () => {
     : (profileData?.data as any)?.user_id;
 
   // Fetch merchant analytics data
-  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics(isSeller);
+  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics(isSeller || isVehicleRental);
+
+  // Fetch recent orders
+  const { data: ordersData, isLoading: isLoadingOrders } = useMerchantOrders(merchantId);
+  const recentOrders = ordersData?.data?.slice(0, 3) || [];
 
 
 
@@ -193,25 +200,71 @@ const SellerHome = () => {
             role={isVehicleRental ? "vehicle_rental" : "seller"} 
             isPending={isPendingApproval}
           />
-
-          {/* Add Bidding Carousel */}
+          {/* Add Bidding Carousel - Enabled for all roles as requested */}
           <BiddingCarousel containerPadding={20} />
+
+          {!isVehicleRental && (
+            <>
+              {/* Specialty Buttons */}
+              {/* <SpecialistIconBtn /> */}
+            </>
+          )}
 
         </View>
 
         {/* Key Metrics Cards - Full Width */}
         <View className="flex-row gap-4 mb-6">
-          <View className="flex-1 bg-[#D3C8E4] rounded-xl p-4">
-            <Text className="text-gray-600 text-sm font-NunitoMedium mb-2">
-              {isVehicleRental ? "Total Rental Fleet" : "Total Products"}
+          <View className="flex-1 bg-[#F0FDF4] rounded-2xl p-5 border border-[#DCFCE7]">
+            <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
+              {isVehicleRental ? "Active Rentals" : "Total Products"}
             </Text>
-            <Text className="text-2xl font-NunitoBold text-gray-800">
-              {isVehicleRental 
-                ? (analyticsData?.rental_analytics?.total_rentals || 0) 
-                : (analyticsData?.product_count || 0)}
-            </Text>
+            <View className="flex-row items-baseline">
+              <Text className="text-3xl font-NunitoExtraBold text-gray-900">
+                {isVehicleRental 
+                  ? (analyticsData?.rental_analytics?.active_rentals || 0) 
+                  : (analyticsData?.product_count || 0)}
+              </Text>
+              {isVehicleRental && (
+                <Text className="text-xs font-NunitoSemiBold text-green-600 ml-2">Currently Rented</Text>
+              )}
+            </View>
           </View>
+
+          {isVehicleRental && (
+            <View className="flex-1 bg-[#EFF6FF] rounded-2xl p-5 border border-[#DBEAFE]">
+              <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
+                Pending Requests
+              </Text>
+              <View className="flex-row items-baseline">
+                <Text className="text-3xl font-NunitoExtraBold text-gray-900">
+                  {analyticsData?.rental_analytics?.pending_rentals || 0}
+                </Text>
+                <Text className="text-xs font-NunitoSemiBold text-blue-600 ml-2">Awaiting Action</Text>
+              </View>
+            </View>
+          )}
         </View>
+
+        {isVehicleRental && (
+           <View className="flex-row gap-4 mb-6">
+             <View className="flex-1 bg-[#FFFBEB] rounded-2xl p-5 border border-[#FEF3C7]">
+               <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
+                 Total Fleet
+               </Text>
+               <Text className="text-3xl font-NunitoExtraBold text-gray-900">
+                 {analyticsData?.rental_analytics?.total_rentals || 0}
+               </Text>
+             </View>
+             <View className="flex-1 bg-[#FDF2F2] rounded-2xl p-5 border border-[#FEE2E2]">
+               <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
+                 Completion Rate
+               </Text>
+               <Text className="text-3xl font-NunitoExtraBold text-gray-900">
+                 {Math.round((analyticsData?.rental_analytics?.completion_rate || 0) * 100)}%
+               </Text>
+             </View>
+           </View>
+        )}
 
         {/* Analytics Charts with Error Handling */}
         <LoadingErrorWrapper
@@ -224,9 +277,10 @@ const SellerHome = () => {
         >
           <View className="space-y-4">
             {/* Customer Insights Chart */}
-            {analyticsData?.customer_insights && (
+            {/* Customer Insights Chart */}
+            {/* {analyticsData?.customer_insights && (
               <CustomerInsightsChart data={analyticsData.customer_insights} />
-            )}
+            )} */}
 
             {/* Product Performance Chart - Only for Sellers */}
             {isSeller && analyticsData?.product_performance && (
@@ -237,6 +291,65 @@ const SellerHome = () => {
             {isVehicleRental && analyticsData?.rental_analytics && (
               <RentalAnalyticsChart data={analyticsData.rental_analytics} />
             )}
+
+            {/* Recent Activity Section */}
+            {/* <View className="bg-white rounded-2xl p-5 mb-6 shadow-sm border border-gray-100">
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-NunitoBold text-gray-900">
+                  {isVehicleRental ? "Recent Rental Requests" : "Recent Orders"}
+                </Text>
+                <TouchableOpacity onPress={() => router.push(isVehicleRental ? sellerRoutes.allRentedCars as any : sellerRoutes.products as any)}>
+                  <Text className="text-primary-500 font-NunitoBold text-sm">See All</Text>
+                </TouchableOpacity>
+              </View>
+
+              {recentOrders.length > 0 ? (
+                <View className="space-y-4">
+                  {recentOrders.map((order: any, index: number) => (
+                    <TouchableOpacity
+                      key={order.id || index}
+                      onPress={() => router.push({
+                        pathname: isVehicleRental ? sellerRoutes.rentedCarDetail as any : sellerRoutes.orderDetail as any,
+                        params: { id: order.id }
+                      })}
+                      className={`flex-row items-center p-3 rounded-xl ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white border border-gray-50'}`}
+                    >
+                      <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${isVehicleRental ? 'bg-blue-100' : 'bg-red-100'}`}>
+                        {isVehicleRental ? (
+                          <TruckIcon size={20} color="#3B82F6" />
+                        ) : (
+                          <ShoppingBagIcon size={20} color="#EF4444" />
+                        )}
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-gray-900 font-NunitoBold text-sm" numberOfLines={1}>
+                          {isVehicleRental ? (order.car?.name || "Rental Request") : (order.product?.name || "Product Order")}
+                        </Text>
+                        <Text className="text-gray-500 font-NunitoMedium text-[10px]">
+                          {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Recent'} • {order.customer_name || 'Customer'}
+                        </Text>
+                      </View>
+                      <View className="items-end">
+                        <Text className="text-gray-900 font-NunitoBold text-sm">
+                          ₦{(order.total_amount || order.price || 0).toLocaleString()}
+                        </Text>
+                        <View className={`mt-1 px-2 py-0.5 rounded-full ${order.status === 'completed' ? 'bg-green-100' : 'bg-orange-100'}`}>
+                          <Text className={`text-[8px] font-NunitoBold ${order.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>
+                            {order.status?.toUpperCase() || 'PENDING'}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <View className="items-center py-6">
+                  <Text className="text-gray-400 font-NunitoMedium text-center">
+                    No recent {isVehicleRental ? "rentals" : "orders"} found.
+                  </Text>
+                </View>
+              )}
+            </View> */}
           </View>
         </LoadingErrorWrapper>
 
