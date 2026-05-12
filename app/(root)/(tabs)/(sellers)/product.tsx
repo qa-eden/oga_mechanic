@@ -17,6 +17,7 @@ import { useCategories } from '@/hooks/useProducts'
 import AndroidNavBarSpacer from '@/components/AndroidNavBarSpacer'
 import { useProfileStore } from '@/hooks/useProfileStore'
 import ProfileCompletionModal from '@/components/modals/ProfileCompletionModal'
+import PreferredOptionModal from '@/components/modals/PreferredOptionModal'
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -421,7 +422,7 @@ const Product = () => {
     return (
       <View style={{ width: CARD_WIDTH }}>
         <TouchableOpacity 
-          className="bg-white rounded-2xl border border-gray-300 mt-4 overflow-hidden relative shadow-sm"
+          className="bg-white rounded-[24px] border border-gray-100 mt-4 overflow-hidden shadow-md shadow-gray-200/50"
           onPress={() => {
             router.push({
               pathname: sellerRoutes.productDetails as any,
@@ -431,9 +432,12 @@ const Product = () => {
               }
             });
           }}
+          activeOpacity={0.9}
         >
           {isAuction && <LiveIndicator />}
-          <View className="w-full h-[140px] bg-gray-200">
+          
+          {/* Image Container */}
+          <View className="w-full h-[150px] bg-gray-50 relative">
             {productImage ? (
               <Image 
                 source={{ uri: productImage }} 
@@ -441,23 +445,46 @@ const Product = () => {
                 style={{ resizeMode: 'cover' }}
               />
             ) : (
-              <View className="w-full h-full items-center justify-center">
-                <icons.empty width={60} height={60} />
+              <View className="w-full h-full items-center justify-center bg-gray-100">
+                <icons.empty width={48} height={48} />
               </View>
             )}
+            
+            {/* Category Badge */}
+            <View className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/50">
+              <Text className="text-[10px] font-NunitoExtraBold text-gray-900 uppercase tracking-tight">
+                {item.body_type?.replace('_', ' ') || 'Vehicle'}
+              </Text>
+            </View>
           </View>
           
-          <View className="p-3 space-y-2">
-            <Text className="font-NunitoBold text-gray-900" numberOfLines={1}>
-              {item.name}
-            </Text>
-            <View className="flex-row items-center">
-              {renderStars(item.rating || 0)}
-              <Text className="text-gray-500 text-xs ml-1">({item.reviews?.length || 0})</Text>
+          <View className="p-4 space-y-2.5">
+            <View>
+              <Text className="font-NunitoExtraBold text-[15px] text-gray-900 leading-tight" numberOfLines={1}>
+                {item.name}
+              </Text>
+              
+              <View className="flex-row items-center mt-1">
+                <View className="flex-row items-center bg-gray-50 px-1.5 py-0.5 rounded-md">
+                  <SparklesIcon size={10} color="#EAB308" />
+                  <Text className="text-gray-900 font-NunitoBold text-[10px] ml-1">
+                    {item.rating || '5.0'}
+                  </Text>
+                </View>
+                <Text className="text-gray-400 text-[10px] font-NunitoMedium ml-1.5">
+                  ({item.reviews?.length || 0} reviews)
+                </Text>
+              </View>
             </View>
-            <Text className="font-NunitoBold text-gray-900">
-              NGN {parseFloat(item.price).toLocaleString()}/day
-            </Text>
+            
+            <View className="flex-row items-center justify-between pt-1 border-t border-gray-50">
+              <View className="bg-primary-50 px-3 py-1.5 rounded-2xl">
+                <Text className="font-NunitoExtraBold text-primary-600 text-[13px]">
+                  ₦{parseFloat(item.price).toLocaleString()}
+                  <Text className="text-[10px] font-NunitoBold text-primary-400">/day</Text>
+                </Text>
+              </View>
+            </View>
           </View>
         </TouchableOpacity>
       </View>
@@ -509,7 +536,11 @@ const Product = () => {
               });
               return;
             }
-            setShowModal(true);
+            if (isVehicleRental) {
+              router.push(sellerRoutes.uploadCarToRent);
+            } else {
+              setShowModal(true);
+            }
           }}
           className="p-2 bg-primary-500 rounded-full items-center justify-center"
         >
@@ -690,64 +721,11 @@ const Product = () => {
         </ScrollView>
       )}
 
-      {/* Bottom Drawer Modal */}
-      <Modal
-        visible={showModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowModal(false)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/50"
-          onPress={() => setShowModal(false)}
-        >
-          <View 
-            className="bg-white rounded-t-3xl"
-            style={{ height: '90%' }}
-          >
-            <View className="w-12 h-1 bg-gray-300 rounded-full self-center mt-4 mb-6" />
-            
-            <View className="flex-1 justify-center px-8">
-              <View className="bg-gray-200 rounded-3xl p-6">
-                {/* Header Icon */}
-                <View className="mb-4">
-                  <View className="w-16 h-16 bg-[#FCF3F2] rounded-full items-center justify-center mb-2">
-                    <icons.activeProductTab width={32} height={32} />
-                  </View>
-                </View>
-
-                {/* Title and Description */}
-                <View className="items-center mb-8">
-                  <Text className="text-2xl font-NunitoBold text-gray-900 mb-2">
-                    Choose your Preferred Option
-                  </Text>
-                  <Text className="text-gray-600 font-NunitoMedium text-center">
-                    Select either of the Three to Perform an Action
-                  </Text>
-                </View>
-
-                {/* Options */}
-                <View className="space-y-4">
-                  {options.map((option) => (
-                    <TouchableOpacity
-                      key={option.id}
-                      onPress={option.onPress}
-                      className="bg-white rounded-2xl p-5 mb-4 shadow-sm"
-                    >
-                      <Text className="text-lg font-NunitoMedium text-gray-900 text-center">
-                        {option.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Android Navigation Bar Spacer */}
-                <AndroidNavBarSpacer />
-              </View>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <PreferredOptionModal 
+        isVisible={showModal}
+        onClose={() => setShowModal(false)}
+        options={options}
+      />
 
       <ProfileCompletionModal
         isVisible={showProfileModal}

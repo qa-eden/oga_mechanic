@@ -11,7 +11,7 @@ import { routes } from "@/constants/routes"
 import SpecialistIconBtn from "@/components/SpecialistIconBtn"
 import { useProductsInfinite, useCategories, useProductSearch } from "@/hooks/useProducts"
 import { ProductListResponse, ProductListAPIResponse } from "@/lib/api/products"
-import { getErrorMessage } from "@/utils/errorMessages"
+import { getApiErrorMessage } from "@/utils/errorMessages"
 import usePullToRefresh from "@/hooks/usePullToRefresh"
 import { useCart } from "@/contexts/CartContext"
 import LoadingSpinner from "@/components/LoadingSpinner"
@@ -369,7 +369,7 @@ const Shop = () => {
               <XMarkIcon size={32} color="#EF4444" />
             </View>
             <Text className="text-red-600 text-center text-lg font-NunitoBold">
-              {getErrorMessage(searchTriggered ? searchError : productsError, 'products')}
+              {getApiErrorMessage(searchTriggered ? searchError : productsError, 'products')}
             </Text>
             <Text className="text-gray-500 text-center mt-2 text-sm font-NunitoMedium">
               Pull down to refresh or try again

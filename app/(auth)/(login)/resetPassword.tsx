@@ -11,21 +11,53 @@ import FormikInput from "@/components/forms/FormikInput";
 import FormikButton from "@/components/forms/FormikButton";
 import { resetPasswordSchema } from "@/utils/validationSchemas";
 import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
+import { useLocalSearchParams } from "expo-router";
+import { userAPI } from "@/lib/api/user";
+import Toast from "react-native-toast-message";
 
 const ResetPassword = () => {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email: string, code: string }>();
+  const { email, code } = params;
 
-  const handleProceed = (values: any, { setSubmitting }: any) => {
-
+  const handleProceed = async (values: any, { setSubmitting }: any) => {
     if (values.password !== values.confirmPassword) {
-      showToast.error("Password does not match");
+      showToast.error("Passwords do not match");
       setSubmitting(false);
-    } else {
-      // Simulate API call
-      setTimeout(() => {
-        setSubmitting(false);
-      router.push(routes?.resetPasswordSuccess);
-      }, 1000);
+      return;
+    }
+
+    try {
+      const response = await userAPI.resetPassword({
+        email,
+        otp: code,
+        new_password: values.password,
+        confirm_new_password: values.confirmPassword
+      });
+
+      if (response.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Password Reset',
+          text2: 'Your password has been updated successfully.',
+        });
+        router.push(routes?.resetPasswordSuccess);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Reset Failed',
+          text2: response.message || 'Could not reset your password.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.response?.data?.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 

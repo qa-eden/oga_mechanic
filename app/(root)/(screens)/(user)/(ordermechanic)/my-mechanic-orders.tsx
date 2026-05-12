@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { routes } from '@/constants/routes';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
-import { getErrorMessage } from '@/utils/errorMessages';
+import { getApiErrorMessage } from '@/utils/errorMessages';
 import { useUserRepairRequests } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import MechanicOrderCard, { MechanicOrder } from '@/components/cards/MechanicOrderCard';
@@ -50,34 +50,22 @@ const MyMechanicOrders = () => {
   // Transform API data to local format
   const orders: MechanicOrder[] = (() => {
     try {
-      if (!ordersData) {
-        return [];
-      }
-
-      // The API response has the orders array in the 'data' property
+      if (!ordersData) return [];
       const ordersArray = (ordersData as any)?.data || (Array.isArray(ordersData) ? ordersData : []);
-
-      if (!Array.isArray(ordersArray)) {
-        return [];
-      }
+      if (!Array.isArray(ordersArray)) return [];
 
       return ordersArray.map((request: any) => {
         const mechanicName = request.mechanic
           ? `${request.mechanic.first_name || ''} ${request.mechanic.last_name || ''}`.trim() || 'Unknown Mechanic'
           : 'Unknown Mechanic';
 
-        const makeId = request.vehicle_make;
-        const modelId = request.vehicle_model;
-        const makeName = getMakeName(makeId);
-        const modelName = getModelName(makeId, modelId);
-
         return {
           id: request.id?.toString() || '',
           mechanicName: mechanicName,
           mechanicImage: request.mechanic?.selfie || request.mechanic_image || undefined,
           serviceType: request.service_type || '',
-          vehicleMake: makeName,
-          vehicleModel: modelName,
+          vehicleMake: getMakeName(request.vehicle_make),
+          vehicleModel: getModelName(request.vehicle_make, request.vehicle_model),
           vehicleYear: request.vehicle_year || 0,
           problemDescription: request.problem_description || request.description || '',
           serviceAddress: request.service_address || request.address || '',
@@ -96,9 +84,6 @@ const MyMechanicOrders = () => {
     }
   })();
 
-  // Orders are already filtered by the API based on status param
-  const filteredOrders = orders;
-
   const handleTabChange = (tab: TabStatus) => {
     router.setParams({ status: tab });
   };
@@ -109,116 +94,113 @@ const MyMechanicOrders = () => {
     setRefreshing(false);
   };
 
-
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
+      <View className="px-5 py-4 flex-row items-center justify-between">
         <BackArrowBtn onPress={() => router.push(routes.services)} />
-        <Text className="text-xl font-NunitoBold text-gray-900">
-          My Mechanic Orders
-        </Text>
+        <View className="flex-1 items-center">
+          <Text className="text-xl font-NunitoExtraBold text-gray-900">Repair History</Text>
+          <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase tracking-widest mt-0.5">Manage your service requests</Text>
+        </View>
         <View className="w-10" />
       </View>
 
-      {/* Tabs */}
-      <View className="bg-white px-5 py-3 border-b border-gray-100">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+      {/* Modern Tab Bar */}
+      <View className="pt-2 pb-4">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+          className="flex-row"
+        >
           {(['all', 'pending', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled'] as TabStatus[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => handleTabChange(tab)}
-              className={`px-4 py-2 rounded-[.4rem] mr-2 ${
-                activeTab === tab ? 'bg-primary-500' : 'bg-gray-200'
+              className={`mr-3 px-6 py-3 rounded-2xl border ${
+                activeTab === tab 
+                  ? 'bg-gray-900 border-gray-900 shadow-lg shadow-gray-200' 
+                  : 'bg-gray-50 border-gray-50'
               }`}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
             >
               <Text
-                className={`text-center font-NunitoBold text-sm ${
-                  activeTab === tab ? 'text-white' : 'text-gray-700'
+                className={`text-[11px] font-NunitoExtraBold uppercase tracking-widest ${
+                  activeTab === tab ? 'text-white' : 'text-gray-400'
                 }`}
               >
-                {tab === 'in_progress' ? 'In Progress' : tab === 'arrived' ? 'Arrived' : tab.charAt(0).toUpperCase() + tab.slice(1).replace('_', ' ')}
+                {tab === 'in_progress' ? 'Active' : tab === 'all' ? 'All Orders' : tab.replace('_', ' ')}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Content */}
       <ScrollView
-        className="flex-1"
+        className="flex-1 bg-gray-50/30"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#D30309']}
-            tintColor="#D30309"
+            colors={['#111827']}
+            tintColor="#111827"
           />
         }
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Loading State */}
-        {isLoading && (
-          <View className="flex-1 items-center justify-center py-20">
-            <LoadingSpinner size="large" />
-            <Text className="text-gray-600 mt-4 font-NunitoMedium">
-              Loading orders...
-            </Text>
-          </View>
-        )}
-
-        {/* Error State */}
-        {error && !isLoading && (
-          <View className="px-5 py-8">
+        {/* States Section */}
+        <View className="px-5 pt-4">
+          {isLoading ? (
+            <View className="items-center justify-center py-20">
+              <LoadingSpinner size="large" />
+              <Text className="text-gray-400 mt-4 font-NunitoBold uppercase text-[10px] tracking-widest">Synchronizing records...</Text>
+            </View>
+          ) : error ? (
             <AnimatedErrorCard
               emoji="🔧"
-              title="Failed to load orders"
-              message={getErrorMessage(error)}
-              gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
-              textColor="text-red-800"
+              title="System sync failed"
+              message={getApiErrorMessage(error)}
+              gradientColors={['#FFFFFF', '#F9FAFB']}
+              textColor="text-gray-900"
               actionButton={{
-                text: "Try Again",
-                onPress: () => {
-                  refetch();
-                },
-                backgroundColor: "#DC2626"
+                text: "Retry Connection",
+                onPress: refetch,
+                backgroundColor: "#111827"
               }}
             />
-          </View>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && filteredOrders.length === 0 && (
-          <View className="flex-1 justify-center items-center px-5 py-20">
-            <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center mb-4">
-              <Text className="text-4xl">📋</Text>
+          ) : orders.length === 0 ? (
+            <View className="items-center justify-center py-24 px-10">
+              <View className="w-24 h-24 bg-gray-50 rounded-full items-center justify-center mb-6 border border-gray-100">
+                <Text className="text-4xl">📭</Text>
+              </View>
+              <Text className="text-xl font-NunitoExtraBold text-gray-900 mb-2">No Records Found</Text>
+              <Text className="text-gray-400 text-center font-NunitoMedium text-sm leading-5">
+                {activeTab === 'all'
+                  ? "Your repair history is currently empty. Start by finding a professional specialist."
+                  : `You don't have any ${activeTab.replace('_', ' ')} requests at the moment.`}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push(routes.findMechanic)}
+                className="mt-8 bg-gray-900 px-8 py-4 rounded-2xl shadow-xl shadow-gray-200"
+              >
+                <Text className="text-white font-NunitoExtraBold text-sm">Find a Mechanic</Text>
+              </TouchableOpacity>
             </View>
-            <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-              No orders found
-            </Text>
-            <Text className="text-gray-500 text-center font-NunitoMedium mb-6">
-              {activeTab === 'all'
-                ? "You haven't placed any mechanic orders yet"
-                : `No ${activeTab} orders at the moment`}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push(routes.findMechanic)}
-              className="bg-primary-500 px-6 py-3 rounded-lg"
-            >
-              <Text className="text-white font-NunitoBold">Find a Mechanic</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Orders List */}
-        {!isLoading && !error && filteredOrders.length > 0 && (
-          <View className="px-5 py-4">
-            {filteredOrders.map((order) => (
-              <MechanicOrderCard key={order.id} order={order} />
-            ))}
-          </View>
-        )}
+          ) : (
+            <View>
+              <View className="flex-row items-center justify-between mb-6 px-1">
+                <Text className="text-[10px] font-NunitoExtraBold text-gray-400 uppercase tracking-widest">
+                  Showing {orders.length} {activeTab === 'all' ? 'total' : activeTab} orders
+                </Text>
+              </View>
+              {orders.map((order) => (
+                <MechanicOrderCard key={order.id} order={order} />
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

@@ -414,13 +414,15 @@ export const engineSizeOptions = [
 ]
 
 export const bodyTypeOptions = [
-    { label: 'Sedan', value: 'sedan' },
+    { label: 'Towing Van', value: 'van' },
+    { label: 'Truck', value: 'truck' },
     { label: 'SUV', value: 'suv' },
+    { label: 'Sedan', value: 'sedan' },
     { label: 'Hatchback', value: 'hatchback' },
     { label: 'Coupe', value: 'coupe' },
     { label: 'Convertible', value: 'convertible' },
-    { label: 'Truck', value: 'truck' },
-    { label: 'Van', value: 'van' },
+    { label: 'Wagon', value: 'wagon' },
+    { label: 'Other', value: 'other' },
 ]
 
 export const fuelTypeOptions = [
@@ -428,13 +430,11 @@ export const fuelTypeOptions = [
     { label: 'Diesel', value: 'diesel' },
     { label: 'Hybrid', value: 'hybrid' },
     { label: 'Electric', value: 'electric' },
-    { label: 'LPG', value: 'lpg' },
-    { label: 'CNG', value: 'cng' },
 ]
 
 export const conditionOptions = [
-    { label: 'New', value: 'new' },
     { label: 'Used', value: 'used' },
+    { label: 'New', value: 'new' },
     { label: 'Certified', value: 'certified' },
     { label: 'Other', value: 'other' },
 ]
@@ -442,9 +442,8 @@ export const conditionOptions = [
 export const transmissionOptions = [
     { label: 'Automatic', value: 'automatic' },
     { label: 'Manual', value: 'manual' },
-    { label: 'Semi-Automatic', value: 'semi_automatic' },
     { label: 'CVT', value: 'cvt' },
-    { label: 'Other', value: 'other' },
+    { label: 'Semi-Automatic', value: 'semi_automatic' },
 ]
 
 export const mileageUnitOptions = [
@@ -460,7 +459,7 @@ export const availabilityOptions = [
 
 export const featureOptions = [
     'Air Conditioning',
-    'Leather Seats', 
+    'Leather Seats',
     'Navigation System',
     'Bluetooth',
     'Parking Sensors',
@@ -477,104 +476,104 @@ export const featureOptions = [
 
 // Legacy service type options - kept as fallback
 export const fallbackServiceTypeOptions = [
-  { label: 'Diagnostics', value: 'diagnostics' },
-  { label: 'Routine Maintenance', value: 'maintenance' },
-  { label: 'Repair', value: 'repair' },
-  { label: 'Emergency Callout', value: 'emergency' },
-  { label: 'Oil Change', value: 'oil_change' },
-  { label: 'Brake Service', value: 'brake_service' },
-  { label: 'Tire Replacement', value: 'tire_replacement' },
-  { label: 'Tire Repair', value: 'tire_repair' },
-  { label: 'Battery Replacement', value: 'battery_replacement' },
-  { label: 'Battery Jump Start', value: 'battery_jump' },
-  { label: 'Engine Repair', value: 'engine_repair' },
-  { label: 'Transmission Service', value: 'transmission_service' },
-  { label: 'AC Repair', value: 'ac_repair' },
-  { label: 'AC Recharge', value: 'ac_recharge' },
-  { label: 'Electrical System', value: 'electrical' },
-  { label: 'Suspension Repair', value: 'suspension' },
-  { label: 'Exhaust System', value: 'exhaust' },
-  { label: 'Fuel System', value: 'fuel_system' },
-  { label: 'Cooling System', value: 'cooling_system' },
-  { label: 'Timing Belt Replacement', value: 'timing_belt' },
-  { label: 'Spark Plug Replacement', value: 'spark_plugs' },
-  { label: 'Air Filter Replacement', value: 'air_filter' },
-  { label: 'Cabin Filter Replacement', value: 'cabin_filter' },
-  { label: 'Wheel Alignment', value: 'wheel_alignment' },
-  { label: 'Wheel Balancing', value: 'wheel_balancing' },
-  { label: 'Windshield Wiper Replacement', value: 'wiper_replacement' },
-  { label: 'Headlight Repair', value: 'headlight_repair' },
-  { label: 'Tail Light Repair', value: 'taillight_repair' },
-  { label: 'Door Lock Repair', value: 'door_lock' },
-  { label: 'Window Motor Repair', value: 'window_motor' },
-  { label: 'Starter Motor Repair', value: 'starter_motor' },
-  { label: 'Alternator Repair', value: 'alternator' },
-  { label: 'Radiator Repair', value: 'radiator' },
-  { label: 'Water Pump Replacement', value: 'water_pump' },
-  { label: 'Power Steering', value: 'power_steering' },
-  { label: 'Clutch Repair', value: 'clutch' },
-  { label: 'Pre-Purchase Inspection', value: 'pre_purchase' },
-  { label: 'Annual Service', value: 'annual_service' },
-  { label: 'Other', value: 'other' },
+    { label: 'Diagnostics', value: 'diagnostics' },
+    { label: 'Routine Maintenance', value: 'maintenance' },
+    { label: 'Repair', value: 'repair' },
+    { label: 'Emergency Callout', value: 'emergency' },
+    { label: 'Oil Change', value: 'oil_change' },
+    { label: 'Brake Service', value: 'brake_service' },
+    { label: 'Tire Replacement', value: 'tire_replacement' },
+    { label: 'Tire Repair', value: 'tire_repair' },
+    { label: 'Battery Replacement', value: 'battery_replacement' },
+    { label: 'Battery Jump Start', value: 'battery_jump' },
+    { label: 'Engine Repair', value: 'engine_repair' },
+    { label: 'Transmission Service', value: 'transmission_service' },
+    { label: 'AC Repair', value: 'ac_repair' },
+    { label: 'AC Recharge', value: 'ac_recharge' },
+    { label: 'Electrical System', value: 'electrical' },
+    { label: 'Suspension Repair', value: 'suspension' },
+    { label: 'Exhaust System', value: 'exhaust' },
+    { label: 'Fuel System', value: 'fuel_system' },
+    { label: 'Cooling System', value: 'cooling_system' },
+    { label: 'Timing Belt Replacement', value: 'timing_belt' },
+    { label: 'Spark Plug Replacement', value: 'spark_plugs' },
+    { label: 'Air Filter Replacement', value: 'air_filter' },
+    { label: 'Cabin Filter Replacement', value: 'cabin_filter' },
+    { label: 'Wheel Alignment', value: 'wheel_alignment' },
+    { label: 'Wheel Balancing', value: 'wheel_balancing' },
+    { label: 'Windshield Wiper Replacement', value: 'wiper_replacement' },
+    { label: 'Headlight Repair', value: 'headlight_repair' },
+    { label: 'Tail Light Repair', value: 'taillight_repair' },
+    { label: 'Door Lock Repair', value: 'door_lock' },
+    { label: 'Window Motor Repair', value: 'window_motor' },
+    { label: 'Starter Motor Repair', value: 'starter_motor' },
+    { label: 'Alternator Repair', value: 'alternator' },
+    { label: 'Radiator Repair', value: 'radiator' },
+    { label: 'Water Pump Replacement', value: 'water_pump' },
+    { label: 'Power Steering', value: 'power_steering' },
+    { label: 'Clutch Repair', value: 'clutch' },
+    { label: 'Pre-Purchase Inspection', value: 'pre_purchase' },
+    { label: 'Annual Service', value: 'annual_service' },
+    { label: 'Other', value: 'other' },
 ];
 
 // Dynamic service types function - use this in components
 export const getServiceTypeOptions = async (): Promise<{ label: string; value: string }[]> => {
-  try {
-    const { mechanicAPI } = await import('../lib/api/mechanic');
-    const response = await mechanicAPI.getServiceTypes();
-    
-    if (response.results && response.results.length > 0) {
-      return response.results.map((service: any) => {
-        const vehicleInfo = service.vehicle_make_name && service.vehicle_model_name 
-          ? `${service.vehicle_make_name} and ${service.vehicle_model_name}`
-          : service.vehicle_make_name 
-          ? `${service.vehicle_make_name} - All Models`
-          : 'All Models';
-        
-        return {
-          label: `${service.name} (${vehicleInfo})`,
-          value: service.id
-        };
-      });
+    try {
+        const { mechanicAPI } = await import('../lib/api/mechanic');
+        const response = await mechanicAPI.getServiceTypes();
+
+        if (response.results && response.results.length > 0) {
+            return response.results.map((service: any) => {
+                const vehicleInfo = service.vehicle_make_name && service.vehicle_model_name
+                    ? `${service.vehicle_make_name} and ${service.vehicle_model_name}`
+                    : service.vehicle_make_name
+                        ? `${service.vehicle_make_name} - All Models`
+                        : 'All Models';
+
+                return {
+                    label: `${service.name} (${vehicleInfo})`,
+                    value: service.id
+                };
+            });
+        }
+
+        // Fallback to hardcoded options if API fails
+        return fallbackServiceTypeOptions;
+    } catch (error) {
+        console.warn('Failed to fetch service types from API, using fallback:', error);
+        return fallbackServiceTypeOptions;
     }
-    
-    // Fallback to hardcoded options if API fails
-    return fallbackServiceTypeOptions;
-  } catch (error) {
-    console.warn('Failed to fetch service types from API, using fallback:', error);
-    return fallbackServiceTypeOptions;
-  }
 };
 
 export const CAR_BRANDS = [
-  { label: 'Toyota', value: 'Toyota' },
-  { label: 'Honda', value: 'Honda' },
-  { label: 'Mercedes-Benz', value: 'Mercedes-Benz' },
-  { label: 'Lexus', value: 'Lexus' },
-  { label: 'Ford', value: 'Ford' },
-  { label: 'Hyundai', value: 'Hyundai' },
-  { label: 'Kia', value: 'Kia' },
-  { label: 'Nissan', value: 'Nissan' },
-  { label: 'BMW', value: 'BMW' },
-  { label: 'Audi', value: 'Audi' },
-  { label: 'Volkswagen', value: 'Volkswagen' },
-  { label: 'Land Rover', value: 'Land Rover' },
-  { label: 'Mazda', value: 'Mazda' },
-  { label: 'Peugeot', value: 'Peugeot' },
-  { label: 'Other', value: 'Other' },
+    { label: 'Toyota', value: 'Toyota' },
+    { label: 'Honda', value: 'Honda' },
+    { label: 'Mercedes-Benz', value: 'Mercedes-Benz' },
+    { label: 'Lexus', value: 'Lexus' },
+    { label: 'Ford', value: 'Ford' },
+    { label: 'Hyundai', value: 'Hyundai' },
+    { label: 'Kia', value: 'Kia' },
+    { label: 'Nissan', value: 'Nissan' },
+    { label: 'BMW', value: 'BMW' },
+    { label: 'Audi', value: 'Audi' },
+    { label: 'Volkswagen', value: 'Volkswagen' },
+    { label: 'Land Rover', value: 'Land Rover' },
+    { label: 'Mazda', value: 'Mazda' },
+    { label: 'Peugeot', value: 'Peugeot' },
+    { label: 'Other', value: 'Other' },
 ];
 
 export const MECHANIC_SPECIALIZATIONS = [
-  { label: 'General Mechanic', value: 'General Mechanic' },
-  { label: 'Engine Repair & Rebuild', value: 'Engine Repair & Rebuild' },
-  { label: 'Auto Electrical', value: 'Auto Electrical' },
-  { label: 'AC & Cooling Systems', value: 'AC & Cooling Systems' },
-  { label: 'Transmission & Gearbox', value: 'Transmission & Gearbox' },
-  { label: 'Suspension & Steering', value: 'Suspension & Steering' },
-  { label: 'Brake Systems', value: 'Brake Systems' },
-  { label: 'Panel Beating / Body Work', value: 'Panel Beating / Body Work' },
-  { label: 'Auto Painting', value: 'Auto Painting' },
-  { label: 'Diagnostics & Programming', value: 'Diagnostics & Programming' },
-  { label: 'Tire & Wheel Alignment', value: 'Tire & Wheel Alignment' },
+    { label: 'General Mechanic', value: 'General Mechanic' },
+    { label: 'Engine Repair & Rebuild', value: 'Engine Repair & Rebuild' },
+    { label: 'Auto Electrical', value: 'Auto Electrical' },
+    { label: 'AC & Cooling Systems', value: 'AC & Cooling Systems' },
+    { label: 'Transmission & Gearbox', value: 'Transmission & Gearbox' },
+    { label: 'Suspension & Steering', value: 'Suspension & Steering' },
+    { label: 'Brake Systems', value: 'Brake Systems' },
+    { label: 'Panel Beating / Body Work', value: 'Panel Beating / Body Work' },
+    { label: 'Auto Painting', value: 'Auto Painting' },
+    { label: 'Diagnostics & Programming', value: 'Diagnostics & Programming' },
+    { label: 'Tire & Wheel Alignment', value: 'Tire & Wheel Alignment' },
 ];

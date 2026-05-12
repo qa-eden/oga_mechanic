@@ -209,12 +209,12 @@ const MechanicReviewModal: React.FC<MechanicReviewModalProps> = ({
               </View>
 
               {/* Submit Button */}
-              <View className="mt-2">
+              <View className="mt-4">
                 <CustomButton
                   title="Submit Review"
                   onPress={handleSubmit}
                   bgVariant="primary"
-                  className="rounded-[24px] h-16 shadow-xl shadow-primary-200"
+                  className="rounded-2xl h-14 bg-gray-900"
                   disabled={isLoading || rating === 0 || !comment.trim()}
                   loading={isLoading}
                 />

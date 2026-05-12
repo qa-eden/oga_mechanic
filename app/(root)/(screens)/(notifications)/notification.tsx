@@ -16,7 +16,7 @@ import {
 } from '@/hooks/useUserProfile';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
-import { getErrorMessage } from '@/utils/errorMessages';
+import { getApiErrorMessage } from '@/utils/errorMessages';
 import { routes } from '@/constants/routes';
 
 export interface Notification {
@@ -229,7 +229,7 @@ const Notification = () => {
           <AnimatedErrorCard
             emoji="🔔"
             title="Failed to load notifications"
-            message={getErrorMessage(error, 'general')}
+            message={getApiErrorMessage(error, 'general')}
             gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
             textColor="text-red-800"
             actionButton={{

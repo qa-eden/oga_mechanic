@@ -77,42 +77,42 @@ const CancelRequestModal: React.FC<CancelRequestModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-              <View className="p-5">
-                <Text className="text-base font-NunitoMedium text-gray-700 mb-4">
-                  Please provide a reason for cancelling this request:
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              <View className="p-6">
+                <Text className="text-base font-NunitoSemiBold text-gray-600 mb-6">
+                  Please let us know why you are cancelling this request.
                 </Text>
 
                 {/* Default Reasons */}
-                <View className="mb-4">
+                <View className="mb-6">
                   {cancelReasons.map((reason) => (
                     <TouchableOpacity
                       key={reason}
                       onPress={() => handleReasonSelect(reason)}
-                      className={`p-4 mb-2 rounded-xl border-2 ${
+                      className={`p-4 mb-3 rounded-2xl border ${
                         selectedCancelReason === reason
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 bg-white'
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-100 bg-white'
                       }`}
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
                     >
                       <View className="flex-row items-center">
                         <View
-                          className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                          className={`w-5 h-5 rounded-full border mr-3 items-center justify-center ${
                             selectedCancelReason === reason
-                              ? 'border-primary-500 bg-primary-500'
+                              ? 'border-gray-900 bg-gray-900'
                               : 'border-gray-300'
                           }`}
                         >
                           {selectedCancelReason === reason && (
-                            <View className="w-2 h-2 rounded-full bg-white" />
+                            <View className="w-1.5 h-1.5 rounded-full bg-white" />
                           )}
                         </View>
                         <Text
-                          className={`text-base font-NunitoMedium ${
+                          className={`text-sm font-NunitoBold ${
                             selectedCancelReason === reason
-                              ? 'text-primary-700'
-                              : 'text-gray-900'
+                              ? 'text-gray-900'
+                              : 'text-gray-500'
                           }`}
                         >
                           {reason}
@@ -124,10 +124,10 @@ const CancelRequestModal: React.FC<CancelRequestModalProps> = ({
 
                 {/* TextArea for Other/Additional Details */}
                 {selectedCancelReason === 'Other' && (
-                  <View className="mb-4">
+                  <View className="mb-8">
                     <TextArea
-                      label="Please provide reason"
-                      placeholder="Why are you cancelling this request?"
+                      label="Additional Details"
+                      placeholder="Share more context with us..."
                       value={cancelReason}
                       onChangeText={onReasonChange}
                       rows={4}
@@ -137,26 +137,21 @@ const CancelRequestModal: React.FC<CancelRequestModalProps> = ({
                 )}
 
                 {/* Submit Button */}
-                <View className="flex-row gap-2 space-x-3 pb-[2rem]">
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Cancel"
-                      onPress={handleClose}
-                      bgVariant="outline"
-                      textVariant="outline"
-                      className="py-3"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <CustomButton
-                      title="Confirm Cancellation"
-                      onPress={onConfirm}
-                      bgVariant="danger"
-                      className="py-3"
-                      disabled={isLoading || !selectedCancelReason || (selectedCancelReason === 'Other' && !cancelReason.trim())}
-                      loading={isLoading}
-                    />
-                  </View>
+                <View className="mt-4">
+                  <CustomButton
+                    title="Confirm Cancellation"
+                    onPress={onConfirm}
+                    bgVariant="primary"
+                    className="h-14 bg-red-600"
+                    disabled={isLoading || !selectedCancelReason || (selectedCancelReason === 'Other' && !cancelReason.trim())}
+                    loading={isLoading}
+                  />
+                  <TouchableOpacity 
+                    onPress={handleClose}
+                    className="mt-4 items-center"
+                  >
+                    <Text className="text-sm font-NunitoBold text-gray-400">Keep My Request</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </ScrollView>

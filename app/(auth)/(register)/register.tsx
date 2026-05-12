@@ -13,6 +13,7 @@ import CustomAlert from "@/components/CustomAlert";
 import { userAPI, DirectRegisterRequest } from "@/lib/api/user";
 import * as Yup from "yup";
 import { StatusBar } from "expo-status-bar";
+import { formatPhoneNumber } from "@/utils/phoneUtils";
 
 // Validation schema
 const registerSchema = Yup.object().shape({
@@ -26,7 +27,7 @@ const registerSchema = Yup.object().shape({
     .email("Invalid email address")
     .required("Email is required"),
   phone_number: Yup.string()
-    .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
+    .matches(/^\+?[0-9]{10,14}$/, "Please enter a valid phone number")
     .required("Phone number is required"),
   password: Yup.string()
     .min(6, "Password must be at least 6 characters")
@@ -41,6 +42,9 @@ const Register = () => {
     try {
       setIsSubmitting(true);
 
+      // Format phone number to include +234 prefix if missing
+      const formattedPhone = formatPhoneNumber(values.phone_number);
+
       // Prepare registration data
       const registerData: DirectRegisterRequest = {
         email: values.email,
@@ -48,7 +52,7 @@ const Register = () => {
         confirm_password: values.password,
         first_name: values.first_name,
         last_name: values.last_name,
-        phone_number: values.phone_number,
+        phone_number: formattedPhone,
         role: "primary_user", // Default role
       };
 

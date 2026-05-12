@@ -20,7 +20,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.ogamechanic.org/api/v1",
         "EXPO_PUBLIC_API_KEY": "DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq",
-        "EXPO_PUBLIC_ENV": "development"
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZmF2b3VyZWwiLCJhIjoiY2x6bmZ6OWM4MG85bTJscXU1MzZ3Y2YweSJ9.sC9rThXyItn8NKWtwO6JxQ",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://api.ogamechanic.org/ws"
       }
     },
     "preview-optimized": {
@@ -31,7 +33,12 @@
         "image": "latest"
       },
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.ogamechanic.org/api/v1",
+        "EXPO_PUBLIC_API_KEY": "DNTc5u8uGCibny1U5LSz6Su7qYnWHfRFTX1yTSBSU3NwJ8w8iYwBZP0pdg46zqoq",
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiZmF2b3VyZWwiLCJhIjoiY2x6bmZ6OWM4MG85bTJscXU1MzZ3Y2YweSJ9.sC9rThXyItn8NKWtwO6JxQ",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://api.ogamechanic.org/ws"
       }
     },
     "production": {

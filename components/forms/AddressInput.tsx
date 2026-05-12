@@ -82,6 +82,28 @@ const AddressInput: React.FC<AddressInputProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null)
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [userCoords, setUserCoords] = useState<{ latitude: number, longitude: number } | null>(null)
+
+  useEffect(() => {
+    const getInitialLocation = async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync()
+        if (status === 'granted') {
+          // Get last known position as a fast, silent way to get proximity bias
+          const location = await Location.getLastKnownPositionAsync({})
+          if (location) {
+            setUserCoords({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude
+            })
+          }
+        }
+      } catch (e) {
+        // Ignore silent errors
+      }
+    }
+    getInitialLocation()
+  }, [])
 
   const hasError = touched && error
 
@@ -131,14 +153,20 @@ const AddressInput: React.FC<AddressInputProps> = ({
 
       try {
         const encodedQuery = encodeURIComponent(searchQuery.trim())
-        const params = new URLSearchParams({
+        const searchParams: any = {
           access_token: ENV_CONFIG.MAPBOX_ACCESS_TOKEN,
           autocomplete: 'true',
           country: 'ng',
           limit: '6',
           language: 'en',
           types: 'address,place,poi'
-        })
+        }
+
+        if (userCoords) {
+          searchParams.proximity = `${userCoords.longitude},${userCoords.latitude}`
+        }
+
+        const params = new URLSearchParams(searchParams)
 
         const response = await fetch(
           `${ENV_CONFIG.MAPBOX_PLACES_ENDPOINT}/${encodedQuery}.json?${params.toString()}`,
@@ -249,12 +277,18 @@ const AddressInput: React.FC<AddressInputProps> = ({
     try {
       setIsGeocoding(true)
       const encodedQuery = encodeURIComponent(address.trim())
-      const params = new URLSearchParams({
+      const searchParams: any = {
         access_token: ENV_CONFIG.MAPBOX_ACCESS_TOKEN,
         country: 'ng',
         limit: '1',
         types: 'address,place,poi'
-      })
+      }
+
+      if (userCoords) {
+        searchParams.proximity = `${userCoords.longitude},${userCoords.latitude}`
+      }
+
+      const params = new URLSearchParams(searchParams)
 
       const response = await fetch(
         `${ENV_CONFIG.MAPBOX_PLACES_ENDPOINT}/${encodedQuery}.json?${params.toString()}`

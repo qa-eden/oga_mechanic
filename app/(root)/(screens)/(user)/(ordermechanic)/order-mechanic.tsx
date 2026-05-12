@@ -12,7 +12,7 @@ import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useServiceTypes } from '@/hooks/useServiceTypes';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
-import { getErrorMessage } from '@/utils/errorMessages';
+import { getErrorMessage, getApiErrorMessage } from '@/utils/errorMessages';
 import { routes } from '@/constants/routes';
 import { useRepairRequestDetail, useUpdateRepairRequest } from '@/hooks/useRepairRequests';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -279,7 +279,7 @@ const OrderMechanic = () => {
             },
             onError: (err: any) => {
               try {
-                const errorMessage = getErrorMessage(err, 'general');
+                const errorMessage = getApiErrorMessage(err, 'general');
                 Alert.alert('Update failed', errorMessage);
               } catch (alertError) {
                 console.error('Error displaying error message:', alertError);
@@ -318,7 +318,7 @@ const OrderMechanic = () => {
           onError: (err: any) => {
             try {
               // Use the utility function for user-friendly error messages
-              const errorMessage = getErrorMessage(err, 'general');
+              const errorMessage = getApiErrorMessage(err, 'general');
               Alert.alert('Submission failed', errorMessage);
             } catch (alertError) {
               // Fallback if Alert.alert itself fails
@@ -395,7 +395,7 @@ const OrderMechanic = () => {
           {editMode && orderError && (
             <View className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <Text className="text-red-600 text-sm font-NunitoMedium text-center">
-                {getErrorMessage(orderError, 'general')}
+                {getApiErrorMessage(orderError, 'general')}
               </Text>
             </View>
           )}
@@ -572,7 +572,7 @@ const OrderMechanic = () => {
           {(error || updateError) && (
             <View className="mx-5 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <Text className="text-red-600 text-sm font-NunitoMedium text-center">
-                {getErrorMessage(error || updateError, 'general')}
+                {getApiErrorMessage(error || updateError, 'general')}
               </Text>
             </View>
           )}

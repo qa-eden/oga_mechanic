@@ -1,758 +1,420 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Image,
-  Linking,
   Dimensions,
   Alert,
+  StatusBar,
+  Linking,
+  FlatList,
 } from "react-native";
-import { useState, useEffect } from "react";
-
-const { width: screenWidth } = Dimensions.get("window");
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
-import BackArrowBtn from "@/components/BackArrowBtn";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
+import { useLocalSearchParams, router } from "expo-router";
+import { 
+  ChevronLeftIcon, 
+  MapPinIcon, 
   PhoneIcon,
-  MapPinIcon,
-  UserIcon,
-  CogIcon,
-  FunnelIcon,
+  ChatBubbleBottomCenterTextIcon,
+  StarIcon as StarIconOutline,
+  CalendarIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  InformationCircleIcon
 } from "react-native-heroicons/outline";
 import { StarIcon as StarIconSolid } from "react-native-heroicons/solid";
-import { FlatList } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  FadeInDown, 
+  FadeIn,
+  interpolate,
+  useAnimatedScrollHandler
+} from "react-native-reanimated";
 import { productsAPI } from "@/lib/api/products";
 import { userAPI } from "@/lib/api/user";
-import CallOptionsModal from "@/components/modals/CallOptionsModal";
+import { communicationsAPI } from "@/lib/api/communications";
+import { NairaCurrency } from "@/utils/useCurrencyFormatter";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import BackArrowBtn from "@/components/BackArrowBtn";
+import ContactSelectionModal from "@/components/modals/ContactSelectionModal";
 
-interface CarRentalDetails {
-  id: string;
-  name: string;
-  year: string;
-  brand: string;
-  model: string;
-  image: any;
-  pricePerDay: number;
-  pricePerWeek: number;
-  pricePerMonth: number;
-  mileage: number;
-  fuelType: string;
-  transmission: string;
-  seats: number;
-  doors: number;
-  color: string;
-  location: string;
-  rating: number;
-  reviewCount: number;
-  isAvailable: boolean;
-  features: string[];
-  insurance: {
-    included: boolean;
-    coverage: string;
-    deductible: number;
-  };
-  owner: {
-    name: string;
-    phone: string;
-    avatar: string;
-    rating: number;
-    reviewCount: number;
-    responseTime: string;
-    business_address?: string;
-    location?: string;
-    is_approved?: boolean;
-  };
-  pickupLocation: string;
-  returnLocation: string;
-  minimumRentalDays: number;
-  maximumRentalDays: number;
-  cancellationPolicy: string;
-}
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const HEADER_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.45;
+
+const SpecItem = ({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) => (
+  <View className="flex-row items-center bg-gray-50/80 px-4 py-3 rounded-2xl mb-3 border border-gray-100/50" style={{ width: (SCREEN_WIDTH - 52) / 2 }}>
+    <View className="w-9 h-9 bg-white rounded-xl items-center justify-center shadow-sm">
+      <Icon size={18} color="#D30309" />
+    </View>
+    <View className="ml-3 flex-1">
+      <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase tracking-wider">{label}</Text>
+      <Text className="text-[13px] font-NunitoExtraBold text-gray-900" numberOfLines={1}>{value}</Text>
+    </View>
+  </View>
+);
 
 const CarRentalDetail = () => {
   const params = useLocalSearchParams();
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  // State for API data
+  const productId = params.carId as string;
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productData, setProductData] = useState<any>(null);
   const [merchantData, setMerchantData] = useState<any>(null);
-  const [rentalCarsData, setRentalCarsData] = useState<any[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isContactModalVisible, setIsContactModalVisible] = useState(false);
 
-  // State for call modal
-  const [showCallModal, setShowCallModal] = useState(false);
+  const scrollY = useSharedValue(0);
 
-  // Get product ID from params
-  const productId = params.carId as string;
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
-  // Function to fetch rental cars
-  const fetchRentalCars = React.useCallback(async () => {
-    try {
-      const CAR_CATEGORY_ID = 23; // Category ID for cars
-      const response = await productsAPI.getProducts(
-        CAR_CATEGORY_ID, // categoryId - filter by car category (23)
-        undefined, // minPrice
-        undefined, // maxPrice
-        undefined, // offset
-        undefined, // limit
-        undefined, // merchantId - get from all merchants
-        true // isRental - fetch rental cars only
-      );
-      const data = response.data;
-      setRentalCarsData(Array.isArray(data) ? data : (data?.results || []));
-    } catch (err) {
-    }
-  }, []);
-
-  // Fetch rental cars on every component mount
-  useEffect(() => {
-    fetchRentalCars();
-  }, [fetchRentalCars]);
-
-  // Also fetch rental cars on every screen focus
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchRentalCars();
-    }, [fetchRentalCars])
-  );
-
-  // Fetch product details from API
-  useEffect(() => {
-    const fetchProductDetails = async () => {
-      if (!productId) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await productsAPI.getProductById(productId);
-        setProductData(response.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch product details');
-      } finally {
-        setLoading(false);
-      }
+  const headerStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollY.value, [0, 100], [0, 1]);
+    return {
+      backgroundColor: `rgba(255, 255, 255, ${opacity})`,
+      borderBottomWidth: scrollY.value > 100 ? 1 : 0,
+      borderBottomColor: '#F3F4F6',
     };
+  });
 
-    fetchProductDetails();
+  const headerTextStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollY.value, [100, 150], [0, 1]);
+    return { opacity };
+  });
+
+  const fetchDetails = useCallback(async () => {
+    if (!productId) return;
+    try {
+      setLoading(true);
+      const res = await productsAPI.getProductById(productId);
+      setProductData(res.data);
+      
+      if (res.data.merchant_id) {
+        const mRes = await userAPI.getMerchantProfileByUuid(res.data.merchant_id);
+        setMerchantData(mRes.data?.merchant_profile);
+      }
+    } catch (err) {
+      setError("Failed to load vehicle details");
+    } finally {
+      setLoading(false);
+    }
   }, [productId]);
 
-  // Fetch full merchant profile data using the merchant UUID from product data
   useEffect(() => {
-    const fetchMerchantProfile = async () => {
-      if (productData && productData.merchant_id) {
-        try {
-          const merchantResponse = await userAPI.getMerchantProfileByUuid(productData.merchant_id);
+    fetchDetails();
+  }, [fetchDetails]);
 
-          // Combine basic merchant info from product with full profile data
-          // The API response structure: merchantResponse.data.user contains user info
-          const profileData = merchantResponse.data?.merchant_profile;
-          const userData: any = profileData?.user || {};
-          const merchantProfileData: any = profileData || {};
-
-          const fullMerchantInfo = {
-            // Basic info from product
-            id: productData.merchant_id,
-            email: productData.merchant_email || userData.email,
-            rating: productData.merchant_rating,
-            // Full profile data from merchant API
-            business_address: merchantProfileData.business_address,
-            nin_number: merchantProfileData.nin_number,
-            location: merchantProfileData.location,
-            lga: merchantProfileData.lga,
-            is_approved: merchantProfileData.is_approved,
-            profile_picture: merchantProfileData.profile_picture,
-            // User info from nested user object
-            phone_number: userData.phone_number,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            user_id: userData.id,
-            date_joined: userData.date_joined,
-            last_login: userData.last_login,
-            active_role: userData.active_role,
-            // Computed values
-            business_name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Merchant',
-            response_time: '< 1 hour', // Default value
-            review_count: 0, // Default value
-          };
-
-          setMerchantData(fullMerchantInfo);
-        } catch (error) {
-          // Fallback to basic merchant info from product data
-          const basicMerchantInfo = {
-            id: productData.merchant_id,
-            email: productData.merchant_email,
-            rating: productData.merchant_rating,
-          };
-          setMerchantData(basicMerchantInfo);
-        }
-      }
-    };
-
-    fetchMerchantProfile();
+  const isUtility = useMemo(() => {
+    const type = productData?.body_type?.toLowerCase();
+    return type === 'van' || type === 'truck';
   }, [productData]);
 
+  const carImages = useMemo(() => {
+    if (!productData?.images?.length) return [productData?.image || 'https://via.placeholder.com/800x600?text=No+Image'];
+    return productData.images.map((img: any) => img.image);
+  }, [productData]);
 
-  // Force refresh rental cars every time productId changes
-  useEffect(() => {
-    if (productId) {
-      fetchRentalCars();
+  const performVoiceCall = useCallback(() => {
+    const phone = merchantData?.user?.phone_number || productData?.merchant_phone;
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    } else {
+      Alert.alert("Error", "Phone number not available");
     }
-  }, [productId, fetchRentalCars]);
+  }, [merchantData, productData]);
 
-  // Transform API data to CarRentalDetails format
-  const transformProductToCarData = (product: any, merchant: any): CarRentalDetails => {
-    // Build features array from API boolean fields
-    const features = [];
-    if (product.air_conditioning) features.push("Air Conditioning");
-    if (product.bluetooth) features.push("Bluetooth");
-    if (product.navigation_system) features.push("GPS Navigation");
-    if (product.cruise_control) features.push("Cruise Control");
-    if (product.leather_seats) features.push("Leather Seats");
-    if (product.sunroof) features.push("Sunroof");
-    if (product.keyless_entry) features.push("Keyless Entry");
-    if (product.parking_sensors) features.push("Parking Sensors");
-    if (product.lane_assist) features.push("Lane Assist");
-    if (product.blind_spot_monitor) features.push("Blind Spot Monitor");
-    if (product.traction_control) features.push("Traction Control");
-    if (product.abs) features.push("ABS");
-    if (product.airbags) features.push("Airbags");
-    if (product.alloy_wheels) features.push("Alloy Wheels");
-
-    return {
-      id: product.id,
-      name: product.name,
-      year: product.year?.toString(),
-      brand: product.make,
-      model: product.model,
-      image: product.images?.[0]?.image,
-      pricePerDay: parseFloat(product.price),
-      pricePerWeek: parseFloat(product.price),
-      pricePerMonth: parseFloat(product.price),
-      mileage: product.mileage,
-      fuelType: product.fuel_type?.charAt(0).toUpperCase() + product.fuel_type?.slice(1),
-      transmission: product.transmission?.charAt(0).toUpperCase() + product.transmission?.slice(1),
-      seats: product.number_of_seats,
-      doors: product.number_of_doors,
-      color: product.exterior_color,
-      location: product.location,
-      rating: product.rating,
-      reviewCount: product.review_count,
-      isAvailable: product.availability === "in_stock",
-      features: features,
-      insurance: {
-        included: product.insurance_included,
-        coverage: product.insurance_coverage,
-        deductible: product.insurance_deductible,
-      },
-      owner: {
-        name: merchant?.business_name || `${merchant?.first_name || ''} ${merchant?.last_name || ''}`.trim() || merchant?.email?.split('@')[0] || 'Car Owner',
-        phone: merchant?.phone_number,
-        avatar: merchant?.profile_picture,
-        rating: merchant?.rating || product.merchant_rating,
-        reviewCount: merchant?.review_count || 0,
-        responseTime: merchant?.response_time || '< 1 hour',
-        business_address: merchant?.business_address,
-        location: merchant?.location,
-        is_approved: merchant?.is_approved,
-      },
-      pickupLocation: product.pickup_location,
-      returnLocation: product.return_location,
-      minimumRentalDays: product.min_rental_days,
-      maximumRentalDays: product.max_rental_days,
-      cancellationPolicy: product.cancellation_policy,
-    };
-  };
-
-  // Use only API data - no fallback to mock data
-  const carData: CarRentalDetails | null = productData ? transformProductToCarData(productData, merchantData) : null;
-
-  // Multiple car images for carousel - use API images if available
-  const carImages = productData?.images?.length > 0
-    ? productData.images.map((img: any) => img.image)
-    : carData?.image ? [carData.image] : [];
-
-  const handlePreviousImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev === carImages.length - 1 ? 0 : prev + 1));
-  };
-
-  const handleContactNow = () => {
-    setShowCallModal(true);
-  };
-
-  const handleInAppCall = () => {
-    setShowCallModal(false);
-
-    // Show alert about in-app calling
-    Alert.alert(
-      "In-App Calling",
-      "In-app calling feature is currently in development. This will open a demo call screen. For real calls, please use the 'Phone call' option.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Open Demo",
-          onPress: () => {
-            // Navigate to voice call screen (demo)
-            router.push({
-              pathname: "/(root)/(screens)/(calls)/voice-call",
-              params: {
-                mechanicName: merchantData?.business_name || productData?.merchant_email || "Car Owner",
-                mechanicImage: merchantData?.profile_picture || "",
-                phoneNumber: merchantData?.phone_number || productData?.merchant_phone || "+234 000 000 0000"
-              }
-            });
-          }
-        }
-      ]
-    );
-  };
-
-  const handlePhoneCall = async () => {
-    setShowCallModal(false);
-
-    // Get phone number from merchant data
-    const phoneNumber = merchantData?.phone_number || productData?.merchant_phone || "";
-
-    if (!phoneNumber) {
+  const performWhatsAppCall = useCallback(() => {
+    const phone = merchantData?.user?.phone_number || productData?.merchant_phone;
+    if (!phone) {
       Alert.alert("Error", "Phone number not available");
       return;
     }
 
-    try {
-      // Clean the phone number (remove spaces, dashes, etc.)
-      let cleanNumber = phoneNumber.replace(/[\s\-\(\)]/g, "");
+    const cleanedNumber = phone.replace(/\D/g, '');
+    const message = `Hi, I'm interested in your ${productData.name} listed on Oga Mechanic. Is it available for rental?`;
+    const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodeURIComponent(message)}`;
+    
+    Linking.canOpenURL(whatsappUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        Alert.alert("Error", "WhatsApp is not installed on this device");
+      }
+    });
+  }, [merchantData, productData]);
 
-      // Ensure it starts with + for international format
-      if (!cleanNumber.startsWith('+')) {
-        // If it starts with 0, replace with +234 (Nigeria)
-        if (cleanNumber.startsWith('0')) {
-          cleanNumber = '+234' + cleanNumber.substring(1);
-        } else if (!cleanNumber.startsWith('234')) {
-          // If no country code, add +234
-          cleanNumber = '+234' + cleanNumber;
+  const handleChat = useCallback(async () => {
+    if (!productData) return;
+
+    try {
+      const sellerUserId = merchantData?.user?.id || productData.merchant_id;
+
+      if (!sellerUserId) {
+        Alert.alert("Error", "Could not find owner information.");
+        return;
+      }
+
+      const roomsResponse = await communicationsAPI.getChatRooms();
+      const rooms = roomsResponse?.results?.data || [];
+      
+      const existingRoom = rooms.find((room: any) => 
+        room.participants?.some((p: any) => p.id === sellerUserId) ||
+        room.other_participant?.id === sellerUserId
+      );
+
+      let roomId: string;
+
+      if (existingRoom) {
+        roomId = existingRoom.id;
+      } else {
+        const createResponse = await communicationsAPI.createChatRoom([sellerUserId]);
+        if (createResponse.status && createResponse.data) {
+          roomId = createResponse.data.id;
         } else {
-          // Already has 234, just add +
-          cleanNumber = '+' + cleanNumber;
+          Alert.alert("Error", "Could not start chat. Please try again.");
+          return;
         }
       }
 
-      const url = `tel:${cleanNumber}`;
-
-      // Check if the device can handle phone calls
-      const canOpen = await Linking.canOpenURL(url);
-
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert(
-          "Unable to make call",
-          "Your device doesn't support phone calls or the number format is invalid."
-        );
-      }
+      router.push({
+        pathname: "/(root)/(screens)/(user)/chat-room",
+        params: {
+          roomId: roomId,
+          participantName: merchantData?.user?.first_name || "Owner",
+          participantAvatar: merchantData?.profile_picture || "",
+        }
+      });
     } catch (error) {
-      Alert.alert(
-        "Call Failed",
-        "Unable to initiate phone call. Please try again or contact support."
-      );
+      Alert.alert("Error", "Failed to connect with owner.");
     }
-  };
+  }, [productData, merchantData]);
+
+  if (loading) return (
+    <View className="flex-1 bg-white items-center justify-center">
+      <LoadingSpinner message="Refining details..." />
+    </View>
+  );
+
+  if (error || !productData) return (
+    <View className="flex-1 bg-white items-center justify-center px-10">
+      <InformationCircleIcon size={64} color="#D1D5DB" />
+      <Text className="text-xl font-NunitoExtraBold text-gray-900 mt-4 text-center">Something went wrong</Text>
+      <Text className="text-sm font-NunitoMedium text-gray-500 mt-2 text-center">{error || "Vehicle details not found"}</Text>
+      <TouchableOpacity onPress={() => router.back()} className="mt-8 bg-primary-500 px-8 py-3 rounded-full">
+        <Text className="text-white font-NunitoBold">Go Back</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Enhanced Header */}
-      <LinearGradient
-        colors={["#FFFFFF", "#F8FAFC"]}
-        className="border-b border-gray-100"
+    <View className="flex-1 bg-white">
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Immersive Sticky Header */}
+      <Animated.View 
+        style={headerStyle}
+        className="absolute top-0 left-0 right-0 z-50 pt-12 pb-4 px-5 flex-row items-center justify-between"
       >
-        <View className="flex-row items-center justify-between px-5 py-4">
-          <BackArrowBtn />
-          <View className="flex-1 items-center">
-            <Text className="text-xl font-NunitoBold text-gray-900">
-              Car Rental
-            </Text>
-            <Text className="text-sm text-gray-500 font-NunitoMedium">
-              Vehicle Details
-            </Text>
-          </View>
-          <View className="w-6" />
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          className="w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm border border-gray-100"
+        >
+          <ChevronLeftIcon size={24} color="#1F2937" />
+        </TouchableOpacity>
+        
+        <Animated.View style={headerTextStyle} className="flex-1 items-center">
+          <Text className="text-base font-NunitoExtraBold text-gray-900" numberOfLines={1}>
+            {productData.name}
+          </Text>
+        </Animated.View>
+        
+        <View className="w-10 h-10 items-center justify-center bg-white/90 rounded-full shadow-sm border border-gray-100">
+           <InformationCircleIcon size={22} color="#1F2937" />
         </View>
-      </LinearGradient>
+      </Animated.View>
 
-      {/* Loading State */}
-      {loading && (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-lg font-NunitoMedium text-gray-600">Loading car details...</Text>
-        </View>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <View className="flex-1 items-center justify-center px-5">
-          <Text className="text-lg font-NunitoBold text-red-600 mb-2">Error</Text>
-          <Text className="text-base font-NunitoMedium text-gray-600 text-center">{error}</Text>
-        </View>
-      )}
-
-      {/* No Data State */}
-      {!loading && !error && !carData && (
-        <View className="flex-1 items-center justify-center px-5">
-          <Text className="text-lg font-NunitoBold text-gray-600 mb-2">No Data</Text>
-          <Text className="text-base font-NunitoMedium text-gray-600 text-center">Car details not found</Text>
-        </View>
-      )}
-
-      {/* Content */}
-      {!loading && !error && carData && (
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Car Info */}
-        <View className="px-5 pt-6">
-          <View className="flex-row items-center justify-between mb-2">
-            <View className="flex-1">
-              <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-                {carData.brand} {carData.model}
-              </Text>
-              <Text className="text-lg font-NunitoMedium text-gray-600">
-                {carData.year}
-              </Text>
-            </View>
-            <View className="items-end">
-              <View className="flex-row items-center mb-1">
-                <StarIconSolid size={16} color="#F59E0B" />
-                <Text className="text-sm font-NunitoBold text-gray-700 ml-1">
-                  {carData.rating} ({carData.reviewCount})
-                </Text>
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+      >
+        {/* Full Screen Carousel */}
+        <View style={{ height: HEADER_IMAGE_HEIGHT }}>
+          <FlatList
+            data={carImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              setCurrentImageIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
+            }}
+            renderItem={({ item }) => (
+              <View style={{ width: SCREEN_WIDTH, height: HEADER_IMAGE_HEIGHT }} className="bg-gray-100 items-center justify-center">
+                {/* Blurred Background Layer for "Fill" effect */}
+                <Image
+                  source={{ uri: item }}
+                  className="absolute w-full h-full opacity-30"
+                  blurRadius={15}
+                  resizeMode="cover"
+                />
+                
+                <Image 
+                  source={{ uri: item }} 
+                  className="w-full h-full" 
+                  resizeMode="contain" // Ensure full visibility as requested
+                />
               </View>
-              <View
-                className={`px-2 py-1 rounded-full ${
-                  carData.isAvailable ? "bg-green-100" : "bg-red-100"
-                }`}
-              >
-                <Text
-                  className={`text-xs font-NunitoBold ${
-                    carData.isAvailable ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {carData.isAvailable ? "Available" : "Unavailable"}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="flex-row items-center mb-6">
-            <MapPinIcon size={16} color="#6B7280" />
-            <Text className="text-sm text-gray-600 font-NunitoMedium ml-1">
-              {carData.location}
-            </Text>
+            )}
+            keyExtractor={(_, i) => i.toString()}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,1)']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }}
+          />
+          
+          {/* Pagination Indicators Overlay */}
+          <View className="absolute bottom-10 left-0 right-0 flex-row justify-center gap-1.5">
+            {carImages.map((_: string, i: number) => (
+              <View key={i} className={`h-1 rounded-full ${i === currentImageIndex ? 'w-6 bg-primary-500' : 'w-2 bg-white/80'}`} />
+            ))}
           </View>
         </View>
 
-        {/* Car Image Carousel */}
-        <View className="px-5 mb-8">
-          <View className="relative">
-            <FlatList
-              data={carImages}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(event) => {
-                const newIndex = Math.round(
-                  event.nativeEvent.contentOffset.x / (screenWidth - 40)
-                );
-                setCurrentImageIndex(newIndex);
-              }}
-              renderItem={({ item }) => (
-                <View
-                  className="bg-gray-50 rounded-2xl overflow-hidden items-center justify-center"
-                  style={{ width: screenWidth - 40 }}
-                >
-                  {typeof item === 'string' ? (
-                    <Image
-                      source={{ uri: item }}
-                      style={{ width: 300, height: 280 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    React.createElement(item, { width: 300, height: 280 })
-                  )}
+        {/* Content Card */}
+        <View className="bg-white px-5 pt-2 pb-10" style={{ marginTop: -20, borderTopLeftRadius: 32, borderTopRightRadius: 32 }}>
+          
+          <Animated.View entering={FadeInDown.delay(200)}>
+            <View className="flex-row justify-between items-start mb-2">
+              <View className="flex-1 mr-4">
+                <Text className="text-3xl font-NunitoExtraBold text-gray-900" numberOfLines={2}>
+                  {productData.name}
+                </Text>
+                <View className="flex-row items-center mt-1">
+                  <MapPinIcon size={14} color="#6B7280" />
+                  <Text className="text-sm font-NunitoBold text-gray-500 ml-1">{productData.location || "Lagos, Nigeria"}</Text>
+                </View>
+              </View>
+              <View className="bg-green-50 px-3 py-1.5 rounded-xl border border-green-100">
+                <Text className="text-[10px] font-NunitoExtraBold text-green-600 uppercase tracking-tighter">Available</Text>
+              </View>
+            </View>
+
+            {/* Ratings Summary */}
+            <View className="flex-row items-center mt-2 mb-6">
+              <View className="flex-row mr-2">
+                {[1,2,3,4,5].map(i => <StarIconSolid key={i} size={14} color={i <= (productData.rating || 5) ? "#F59E0B" : "#D1D5DB"} />)}
+              </View>
+              <Text className="text-sm font-NunitoBold text-gray-900">{productData.rating || "5.0"}</Text>
+              <Text className="text-sm font-NunitoMedium text-gray-400 ml-1">({productData.review_count || 0} reviews)</Text>
+            </View>
+
+            {/* Specifications Grid */}
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-lg font-NunitoExtraBold text-gray-900">Specifications</Text>
+              {isUtility && (
+                <View className="bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                  <Text className="text-[10px] font-NunitoExtraBold text-blue-600 uppercase">Heavy Duty</Text>
                 </View>
               )}
-              keyExtractor={(_, index) => index.toString()}
-            />
+            </View>
 
-            {/* Image Navigation */}
-            {carImages.length > 1 && (
-              <View className="flex-row items-center justify-center mt-4 space-x-4">
-                <TouchableOpacity
-                  onPress={handlePreviousImage}
-                  className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
-                  activeOpacity={0.7}
-                >
-                  <ChevronLeftIcon size={20} color="#6B7280" />
-                </TouchableOpacity>
+            <View className="flex-row flex-wrap justify-between">
+              {productData.year && <SpecItem icon={CalendarIcon} label="Year" value={productData.year} />}
+              <SpecItem icon={CheckCircleIcon} label="Transmission" value={productData.transmission || "Auto"} />
+              <SpecItem icon={CheckCircleIcon} label="Fuel" value={productData.fuel_type || "Petrol"} />
+              
+              {!isUtility && productData.number_of_seats && (
+                <SpecItem icon={UserGroupIcon} label="Capacity" value={`${productData.number_of_seats} Seats`} />
+              )}
+              
+              {!isUtility && productData.number_of_doors && (
+                <SpecItem icon={CheckCircleIcon} label="Doors" value={`${productData.number_of_doors} Doors`} />
+              )}
 
-                {/* Image Indicators */}
-                <View className="flex-row space-x-2">
-                  {carImages.map((_: any, index: number) => (
-                    <View
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${
-                        index === currentImageIndex
-                          ? "bg-primary-500"
-                          : "bg-gray-300"
-                      }`}
+              {productData.engine_size && (
+                <SpecItem icon={CheckCircleIcon} label="Engine" value={`${productData.engine_size}L`} />
+              )}
+
+              {isUtility && (
+                <SpecItem icon={CheckCircleIcon} label="Service" value="Utility / Logistics" />
+              )}
+            </View>
+
+            {/* Description Section */}
+            <View className="mt-6">
+              <Text className="text-lg font-NunitoExtraBold text-gray-900 mb-3">Vehicle Overview</Text>
+              <Text className="text-sm font-NunitoMedium text-gray-500 leading-6">
+                {productData.description || "Experience pure luxury and performance with this meticulously maintained vehicle. Perfect for executive travel, family trips, or making a grand entrance at your next event."}
+              </Text>
+            </View>
+
+            {/* Merchant / Owner Section */}
+            <View className="mt-10 mb-6 bg-gray-50 rounded-3xl p-5 border border-gray-100">
+               <Text className="text-sm font-NunitoExtraBold text-gray-400 uppercase tracking-widest mb-4">Service Provider</Text>
+               <View className="flex-row items-center">
+                  <View className="w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100">
+                    <Image 
+                      source={{ uri: merchantData?.profile_picture || 'https://via.placeholder.com/150' }} 
+                      className="w-full h-full"
                     />
-                  ))}
-                </View>
-
-                <TouchableOpacity
-                  onPress={handleNextImage}
-                  className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
-                  activeOpacity={0.7}
-                >
-                  <ChevronRightIcon size={20} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+                  </View>
+                  <View className="ml-4 flex-1">
+                    <Text className="text-lg font-NunitoExtraBold text-gray-900">
+                      {merchantData?.user?.first_name} {merchantData?.user?.last_name}
+                    </Text>
+                    <Text className="text-xs font-NunitoBold text-primary-500 mt-1">Verified Partner • Response: {'<'}1hr</Text>
+                  </View>
+                  <TouchableOpacity 
+                    className="w-12 h-12 bg-white rounded-2xl items-center justify-center shadow-sm border border-gray-100"
+                    onPress={handleChat}
+                  >
+                    <ChatBubbleBottomCenterTextIcon size={22} color="#D30309" />
+                  </TouchableOpacity>
+               </View>
+            </View>
+          </Animated.View>
         </View>
+      </Animated.ScrollView>
 
-        {/* Bottom Section */}
-        <View className="bg-gray-900 flex-1 rounded-t-3xl px-5 pt-6 pb-8">
-          {/* Owner Info */}
-          <View className="flex-row items-center mb-6">
-            <View className="w-14 h-14 rounded-full overflow-hidden mr-4">
-              <Image
-                source={{ uri: carData.owner.avatar }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  resizeMode: "cover",
-                }}
-              />
+      {/* Sticky Pricing Footer */}
+      <SafeAreaView edges={['bottom']} className="bg-white border-t border-gray-100 px-5 pt-4 pb-2">
+         <View className="flex-row items-center justify-between">
+            <View>
+               <Text className="text-xs font-NunitoBold text-gray-400">Rental Price</Text>
+               <View className="flex-row items-baseline">
+                  <NairaCurrency value={productData.price} className="text-2xl font-NunitoExtraBold text-gray-900" />
+                  <Text className="text-sm font-NunitoBold text-gray-400 ml-1">/day</Text>
+               </View>
             </View>
+            <TouchableOpacity 
+              onPress={() => setIsContactModalVisible(true)}
+              className="bg-primary-500 px-10 py-4 rounded-2xl shadow-lg shadow-primary-200"
+              activeOpacity={0.8}
+            >
+              <Text className="text-white font-NunitoExtraBold text-base">Book Now</Text>
+            </TouchableOpacity>
+         </View>
+      </SafeAreaView>
 
-            <View className="flex-1">
-              <Text className="text-xl font-NunitoBold text-white mb-1">
-                {carData.owner.name}
-              </Text>
-              <View className="flex-row items-center">
-                <PhoneIcon size={16} color="#9CA3AF" />
-                <Text className="text-gray-300 font-NunitoMedium ml-2">
-                  {carData.owner.phone}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Overview */}
-          <Text className="text-2xl font-NunitoBold text-white mb-4">
-            Overview
-          </Text>
-
-          {/* Description */}
-          {productData?.description && (
-            <View className="mb-6">
-              <Text className="text-lg font-NunitoBold text-white mb-2">Description</Text>
-              <Text className="text-gray-300 font-NunitoMedium leading-6">
-                {productData.description}
-              </Text>
-            </View>
-          )}
-
-          {/* Price */}
-          <Text className="text-4xl font-NunitoExtraBold text-white mb-8">
-            NGN {carData.pricePerDay.toLocaleString()}/day
-          </Text>
-
-          {/* Specifications */}
-          <Text className="text-lg font-NunitoBold text-white mb-4">Specifications</Text>
-          <View className="flex-row flex-wrap mb-6">
-            {/* Transmission */}
-            {carData.transmission && (
-              <View className="w-1/2 pr-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <CogIcon size={16} color="#FFFFFF" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Transmission</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {carData.transmission}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Fuel Type */}
-            {carData.fuelType && (
-              <View className="w-1/2 pl-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <FunnelIcon size={16} color="#FFFFFF" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Fuel Type</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {carData.fuelType}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Seats */}
-            {carData.seats && (
-              <View className="w-1/2 pr-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <UserIcon size={16} color="#FFFFFF" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Seats</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {carData.seats} Seats
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Doors */}
-            {carData.doors && (
-              <View className="w-1/2 pl-2 mb-4">
-              <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                  <Text className="text-white text-xs">�</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-400 text-xs font-NunitoMedium">Doors</Text>
-                  <Text className="text-white font-NunitoBold text-sm">
-                    {carData.doors} Doors
-                  </Text>
-                </View>
-              </View>
-            </View>
-            )}
-
-            {/* Exterior Color */}
-            {carData.color && (
-              <View className="w-1/2 pr-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <Text className="text-white text-xs">🎨</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Exterior Color</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {carData.color}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Interior Color */}
-            {productData?.interior_color && (
-              <View className="w-1/2 pl-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <Text className="text-white text-xs">🪑</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Interior Color</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {productData.interior_color}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Engine Size */}
-            {productData?.engine_size && (
-              <View className="w-1/2 pr-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <Text className="text-white text-xs">⚙️</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Engine Size</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {productData.engine_size}L
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Body Type */}
-            {productData?.body_type && (
-              <View className="w-1/2 pl-2 mb-4">
-                <View className="bg-gray-800 rounded-2xl p-4 flex-row items-center">
-                  <View className="w-8 h-8 bg-gray-700 rounded-lg items-center justify-center mr-3">
-                    <Text className="text-white text-xs">🚗</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-gray-400 text-xs font-NunitoMedium">Body Type</Text>
-                    <Text className="text-white font-NunitoBold text-sm">
-                      {productData.body_type?.charAt(0).toUpperCase() + productData.body_type?.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Features */}
-          {carData.features && carData.features.length > 0 && (
-            <>
-              <Text className="text-lg font-NunitoBold text-white mb-4">Features</Text>
-              <View className="flex-row flex-wrap mb-8">
-                {carData.features.map((feature, index) => (
-                  <View key={index} className="bg-gray-800 rounded-xl px-3 py-2 mr-2 mb-2">
-                    <Text className="text-white font-NunitoMedium text-sm">{feature}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* Contact Button */}
-          <TouchableOpacity
-            onPress={handleContactNow}
-            className="w-full py-4 bg-white rounded-2xl"
-            activeOpacity={0.8}
-          >
-            <Text className="text-center font-NunitoBold text-primary-600 text-lg">
-              Contact now
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-      )}
-
-      {/* Call Options Modal */}
-      <CallOptionsModal
-        isVisible={showCallModal}
-        onClose={() => setShowCallModal(false)}
-        phoneNumber={merchantData?.phone_number || productData?.merchant_phone || "+234 000 000 0000"}
-        onInAppCall={handleInAppCall}
-        onPhoneCall={handlePhoneCall}
+      <ContactSelectionModal
+        visible={isContactModalVisible}
+        onClose={() => setIsContactModalVisible(false)}
+        phoneNumber={merchantData?.user?.phone_number || productData?.merchant_phone || "+234 000 000 0000"}
+        onVoiceCall={performVoiceCall}
+        onWhatsAppCall={performWhatsAppCall}
+        storeName={merchantData?.user?.first_name ? `${merchantData.user.first_name} ${merchantData.user.last_name || ''}` : "Service Provider"}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

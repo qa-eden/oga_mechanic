@@ -23,7 +23,7 @@ import { routes } from "@/constants/routes";
 import CartItemCard from "@/components/cards/CartItemCard";
 import { useCart, useRemoveFromCart } from "@/hooks/useCart";
 import { useCheckout } from "@/hooks/useProducts";
-import { getErrorMessage } from "@/utils/errorMessages";
+import { getApiErrorMessage } from "@/utils/errorMessages";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
 import { useDebouncedQuantityUpdate } from "@/hooks/useDebouncedQuantityUpdate";
 
@@ -380,7 +380,7 @@ const Cart = () => {
         </LinearGradient>
         <View className="flex-1 items-center justify-center px-4">
           <Text className="text-red-500 text-center text-lg mb-4">
-            {getErrorMessage(cartError)}
+            {getApiErrorMessage(cartError)}
           </Text>
           <TouchableOpacity
             onPress={() => refetchCart()}

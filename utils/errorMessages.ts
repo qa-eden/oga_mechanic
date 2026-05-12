@@ -233,3 +233,60 @@ export const getRetryDelay = (error: any, attemptCount: number): number => {
       return baseDelay;
   }
 };
+
+/**
+ * Hardened API error extractor that handles various response formats 
+ * (Django, Custom, nested objects, arrays) and maps technical terms to 
+ * user-friendly ones.
+ */
+export const getApiErrorMessage = (error: any, context: string = 'general'): string => {
+  const apiData = error?.response?.data;
+  let rawMessage = '';
+
+  // 1. Extract raw message from various common API patterns
+  if (apiData?.message) {
+    if (typeof apiData.message === 'string') {
+      rawMessage = apiData.message;
+    } else if (typeof apiData.message === 'object') {
+      const values = Object.values(apiData.message);
+      if (values.length > 0) {
+        const firstVal: any = values[0];
+        rawMessage = Array.isArray(firstVal) ? String(firstVal[0]) : String(firstVal);
+      }
+    }
+  } else if (apiData?.non_field_errors) {
+    rawMessage = Array.isArray(apiData.non_field_errors) ? String(apiData.non_field_errors[0]) : String(apiData.non_field_errors);
+  } else if (apiData?.detail && typeof apiData.detail === 'string') {
+    rawMessage = apiData.detail;
+  }
+
+  // 2. Map technical technical strings to user-friendly ones
+  if (rawMessage) {
+    const technicalToFriendly: Record<string, string> = {
+      "Either 'service_categories' (IDs) or 'service_type' (name) must be provided.": "Please ensure all service details are completed before proceeding.",
+      "Authentication credentials were not provided.": "Your session has expired. Please log in again.",
+      "You do not have permission to perform this action.": "You are not authorized to perform this action.",
+      "Method \"PATCH\" not allowed.": "Operation not supported. Please try again later.",
+      "Object not found.": "The requested item could not be found.",
+      "This field is required.": "Required information is missing.",
+      "Not found.": "The requested resource was not found.",
+    };
+
+    // Check for exact matches or partial inclusions
+    for (const [tech, friendly] of Object.entries(technicalToFriendly)) {
+      if (rawMessage === tech || rawMessage.includes(tech)) {
+        return friendly;
+      }
+    }
+
+    // Generic cleanup for other technical-looking messages (underscores, single quotes with 'must')
+    if (rawMessage.includes('_') || (rawMessage.includes("'") && rawMessage.includes("must"))) {
+      return "An error occurred while processing your request. Please check your details and try again.";
+    }
+
+    return rawMessage;
+  }
+
+  // 3. Fallback to global handler
+  return getErrorMessage(error, context);
+};

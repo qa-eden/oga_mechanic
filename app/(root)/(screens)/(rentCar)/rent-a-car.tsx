@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect } from "react"
-import { View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl } from "react-native"
+import { View, Text, TouchableOpacity, TextInput, FlatList, RefreshControl, Modal } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import { LAYOUT } from "@/constants/units"
@@ -9,24 +9,28 @@ import { routes } from "@/constants/routes"
 import RentalCarCard from "@/components/cards/RentalCarCard";
 import BackArrowBtn from "@/components/BackArrowBtn"
 import InputField from "@/components/InputField"
-import { MagnifyingGlassIcon } from "react-native-heroicons/outline"
+import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { useQuery } from "@tanstack/react-query"
 import { productsAPI } from "@/lib/api/products"
 import { useVehicleMakes } from "@/hooks/useVehicleMakes"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import AnimatedErrorCard from "@/components/AnimatedErrorCard"
+import PriceRangeSlider from "@/components/PriceRangeSlider"
 
 interface RentalCar {
   id: string
   name: string
   transmission: string
   pricePerDay: number
-  image: any
+  image: string
+  images: string[]
   category: string
+  body_type: string
+  make: string
 }
 
 interface SectionData {
-  type: 'search' | 'categories' | 'cars' | 'empty' | 'loading' | 'error';
+  type: 'cars' | 'empty' | 'loading' | 'error';
   data?: any;
 }
 
@@ -34,61 +38,60 @@ const RentACarScreen = () => {
   const { CONTAINER_PADDING } = LAYOUT
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [selectedType, setSelectedType] = useState("All") // "All", "car", "van"
   const [selectedMake, setSelectedMake] = useState("All") // Store make ID or "All"
+  
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-
-
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   // Fetch vehicle makes from API
   const { data: vehicleMakes } = useVehicleMakes();
 
-  // Fetch rental cars from API - use search if there's a query, otherwise get all
+  // Convert vehicle makes to options
+  const makeOptions = useMemo(() => {
+    return vehicleMakes?.map(make => ({
+      label: make.name,
+      value: make.id.toString(),
+      name: make.name
+    })) || [];
+  }, [vehicleMakes]);
+
+  // Fetch rental cars from API
   const {
     data: rentalCarsResponse,
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['rental-cars', selectedMake, minPrice, maxPrice, debouncedSearchQuery],
+    queryKey: ['rental-cars', selectedMake, minPrice, maxPrice, searchQuery],
     queryFn: async () => {
-      // If there's a search query, use search endpoint
-      if (debouncedSearchQuery.trim()) {
+      if (searchQuery.trim()) {
         const searchResults = await productsAPI.searchProducts(
-          debouncedSearchQuery,
-          undefined, // categoryId
+          searchQuery,
+          undefined,
           minPrice || undefined,
           maxPrice || undefined,
           selectedMake !== "All" ? selectedMake : undefined,
-          true // isRental - always true
+          true
         );
         return { data: { results: searchResults } };
       } else {
-        // Otherwise use regular products endpoint
-        return await productsAPI.getProducts(
-          undefined, // categoryId
+        const response = await productsAPI.getProducts(
+          undefined,
           minPrice || undefined,
           maxPrice || undefined,
-          undefined, // offset
-          undefined, // limit
-          undefined, // merchantId
-          true, // isRental
-          selectedMake !== "All" ? selectedMake : undefined // make
+          undefined,
+          undefined,
+          undefined,
+          true,
+          selectedMake !== "All" ? selectedMake : undefined
         );
+        return response;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const rentalCarsData = (() => {
@@ -97,39 +100,27 @@ const RentACarScreen = () => {
     return Array.isArray(data) ? data : (data?.results || []);
   })();
 
-  // Transform API data to match component interface
-  const transformRentalCar = (car: any): RentalCar => ({
-    id: car.id,
-    name: car.name || 'Unknown Car',
-    transmission: car.transmission || 'Automatic',
-    pricePerDay: parseFloat(car.price || 0),
-    image: car.images?.[0]?.image || 'https://via.placeholder.com/300x200/f3f4f6/9ca3af?text=No+Image', // Use first image or placeholder
-    category: car.make || 'Unknown', // Use make as category
-  });
+  const transformRentalCar = (car: any): RentalCar => {
+    const images = car.images?.map((img: any) => img.image) || [];
+    return {
+      id: car.id,
+      name: car.name || 'Unknown Car',
+      transmission: car.transmission || 'Automatic',
+      pricePerDay: parseFloat(car.price || 0),
+      image: images[0] || 'https://via.placeholder.com/300x200/f3f4f6/9ca3af?text=No+Image',
+      images: images.length > 0 ? images : ['https://via.placeholder.com/300x200/f3f4f6/9ca3af?text=No+Image'],
+      category: car.body_type || 'car',
+      body_type: car.body_type,
+      make: car.make,
+    };
+  };
 
-  // Transform API data
   const rentalCars: RentalCar[] = rentalCarsData.map(transformRentalCar);
 
-  // Convert vehicle makes to make options (using IDs for API calls)
-  const makeOptions = vehicleMakes?.map(make => ({
-    label: make.name,
-    value: make.id.toString(),
-    name: make.name
-  })) || [];
-
-  // Create makes array for filtering (using make IDs for API calls)
-  const makes = [
-    { label: "All", value: "All" },
-    ...makeOptions.map(option => ({ label: option.name, value: option.value }))
-  ];
-
-  // Handle refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetch();
-    } catch (error) {
-      console.error('Error refreshing rental cars:', error);
     } finally {
       setRefreshing(false);
     }
@@ -137,24 +128,20 @@ const RentACarScreen = () => {
 
   const filteredCars = useMemo(() =>
     rentalCars.filter((car) => {
-      const matchesSearch = car.name.toLowerCase().includes(searchQuery.toLowerCase())
-
-      // Find the selected make name from the ID
-      const selectedMakeName = selectedMake === "All"
-        ? "All"
-        : makeOptions.find(option => option.value === selectedMake)?.name || "All"
-
-      const matchesMake = selectedMakeName === "All" || car.category === selectedMakeName
-      return matchesSearch && matchesMake
+      const matchesType = selectedType === "All" || car.body_type === selectedType;
+      
+      const selectedMakeName = selectedMake === "All" 
+        ? "All" 
+        : makeOptions.find(o => o.value === selectedMake)?.label || "All";
+        
+      const matchesMake = selectedMakeName === "All" || car.make === selectedMakeName;
+      return matchesType && matchesMake;
     }),
-    [rentalCars, searchQuery, selectedMake, makeOptions]
+    [rentalCars, selectedType, selectedMake, makeOptions]
   )
 
   const sections = useMemo(() => {
-    const sectionsData: SectionData[] = [
-      { type: 'search' },
-      { type: 'categories', data: makes }
-    ]
+    const sectionsData: SectionData[] = []
 
     if (isLoading) {
       sectionsData.push({ type: 'loading' })
@@ -167,121 +154,19 @@ const RentACarScreen = () => {
     }
 
     return sectionsData
-  }, [makes, filteredCars, isLoading, error])
-
-  const renderMakeTab = useCallback(({ item }: { item: { label: string; value: string } }) => (
-    <TouchableOpacity
-      onPress={() => setSelectedMake(item.value)}
-      className={`px-6 py-3 rounded-full mr-3 ${selectedMake === item.value ? "bg-primary-500" : "bg-gray-200"}`}
-      activeOpacity={0.7}
-    >
-      <Text className={`font-NunitoBold text-base ${selectedMake === item.value ? "text-white" : "text-gray-600"}`}>
-        {item.label}
-      </Text>
-    </TouchableOpacity>
-  ), [selectedMake])
+  }, [filteredCars, isLoading, error])
 
   const renderCarCard = useCallback(({ item }: { item: any }) => (
     <RentalCarCard item={item} onPress={(car) => {
       router.push({
         pathname: routes?.carRentalDetail,
-        params: {
-          carId: car.id,
-          carName: car.name,
-          pricePerDay: car.pricePerDay,
-        },
+        params: { carId: car.id, carName: car.name, pricePerDay: car.pricePerDay },
       });
     }} />
   ), [])
 
   const renderSection = useCallback(({ item }: { item: SectionData }) => {
     switch (item.type) {
-      case 'search':
-        return (
-          <View className={`${CONTAINER_PADDING} pt-6 mb-6`}>
-            {/* Search Input */}
-            <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-4 mb-4">
-              <MagnifyingGlassIcon size={20} color="#9CA3AF" />
-              <TextInput
-                placeholder="Search rental cars..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
-                placeholderTextColor="#9CA3AF"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            {/* Price Filter Inputs */}
-            <View className="space-y-3">
-              <View className="flex-row gap-2">
-                <View className="flex-1">
-                  <InputField
-                    label="Min Price (₦)"
-                    placeholder="0"
-                    value={minPrice}
-                    onChangeText={setMinPrice}
-                    keyboardType="numeric"
-                    containerStyle="bg-gray-50 rounded-2xl"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    noMargin={true}
-                  />
-                </View>
-                <View className="flex-1">
-                  <InputField
-                    label="Max Price (₦)"
-                    placeholder="No limit"
-                    value={maxPrice}
-                    onChangeText={setMaxPrice}
-                    keyboardType="numeric"
-                    containerStyle="bg-gray-50 rounded-2xl border"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    noMargin={true}
-                  />
-                </View>
-              </View>
-
-              {/* Clear Filters Button */}
-              {(minPrice || maxPrice) && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setMinPrice("");
-                    setMaxPrice("");
-                  }}
-                  className="bg-gray-100 rounded-xl px-4 py-2 self-center"
-                  activeOpacity={0.7}
-                >
-                  <Text className="text-sm font-NunitoMedium text-gray-600">Clear Price Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )
-      
-      case 'categories':
-        return (
-          <View className="mb-6">
-            <Text className={`text-xl font-NunitoExtraBold text-gray-900 mb-4 ${CONTAINER_PADDING}`}>Car Makes</Text>
-            <FlatList
-              data={item.data}
-              renderItem={renderMakeTab}
-              keyExtractor={(make) => make.value}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
-              initialNumToRender={8}
-              maxToRenderPerBatch={8}
-              windowSize={7}
-              removeClippedSubviews={true}
-            />
-          </View>
-        )
-      
       case 'cars':
         return (
           <View className={CONTAINER_PADDING}>
@@ -291,91 +176,238 @@ const RentACarScreen = () => {
               keyExtractor={(car) => car.id}
               scrollEnabled={false}
               showsVerticalScrollIndicator={false}
-              initialNumToRender={8}
-              maxToRenderPerBatch={8}
-              windowSize={7}
-              removeClippedSubviews={true}
             />
           </View>
         )
-      
       case 'loading':
         return (
           <View className={`${CONTAINER_PADDING} py-12`}>
-            <LoadingSpinner
-              message="Loading rental cars..."
-              subMessage="Please wait while we fetch available cars"
-              size="medium"
-              logoSize={32}
-            />
+            <LoadingSpinner message="Loading rental cars..." size="medium" />
           </View>
         )
-
       case 'error':
         return (
           <AnimatedErrorCard
-            emoji="🚗"
-            title="Error Loading Cars"
-            message="Failed to load rental cars. Please try again."
+            emoji="🚗" title="Error Loading Cars" message="Failed to load rental cars. Please try again."
             gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
             textColor="text-red-800"
-            actionButton={{
-              text: "Retry",
-              onPress: () => refetch(),
-              backgroundColor: "#A80207"
-            }}
+            actionButton={{ text: "Retry", onPress: () => refetch(), backgroundColor: "#A80207" }}
             className={`${CONTAINER_PADDING}`}
           />
         )
-
       case 'empty':
         return (
           <AnimatedErrorCard
-            emoji="🚗"
-            title="No Cars Found"
-            message="Try adjusting your search or category filter"
+            emoji="🚗" title="No Cars Found" message="Try adjusting your search or category filter"
             gradientColors={['#F0F9FF', '#E0F2FE', '#BAE6FD']}
             textColor="text-blue-800"
             className={`${CONTAINER_PADDING}`}
           />
         )
-
       default:
         return null
     }
-  }, [CONTAINER_PADDING, searchQuery, renderMakeTab, renderCarCard, minPrice, maxPrice, setMinPrice, setMaxPrice, isLoading, debouncedSearchQuery])
+  }, [CONTAINER_PADDING, renderCarCard, refetch])
 
-  const keyExtractor = useCallback((item: SectionData, index: number) => 
-    `${item.type}-${index}`, 
-    []
-  )
+  const handleResetSearch = () => {
+    setSearchQuery("");
+    setSelectedType("All");
+    setSelectedMake("All");
+    setMinPrice("");
+    setMaxPrice("");
+    setShowFilters(false);
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
-      <View className={`flex-row items-center justify-between py-4 ${CONTAINER_PADDING} border-b border-gray-100`}>
+      <View className="flex-row items-center justify-between py-4 px-5">
         <BackArrowBtn />
-        <Text className="text-xl font-NunitoExtraBold text-gray-900">Rent a Car</Text>
+        <Text className="text-xl font-NunitoExtraBold text-gray-900">Vehicle Rental</Text>
         <View className="w-10" />
+      </View>
+
+      {/* Custom Search & Filter UI */}
+      <View className="mb-2">
+        {/* Search Input Row */}
+        <View className="px-5 mb-4">
+          <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100">
+            <MagnifyingGlassIcon size={20} color="#9CA3AF" />
+            <TextInput
+              placeholder="Search cars, towing service..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              className="flex-1 ml-3 text-sm font-NunitoMedium text-gray-900"
+              placeholderTextColor="#9CA3AF"
+            />
+            <TouchableOpacity 
+              onPress={() => setShowFilters(!showFilters)}
+              className={`w-9 h-9 items-center justify-center rounded-xl ${showFilters || (minPrice || maxPrice) ? 'bg-primary-500' : 'bg-gray-100'}`}
+            >
+              <AdjustmentsHorizontalIcon size={18} color={(showFilters || minPrice || maxPrice) ? '#fff' : '#6B7280'} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Category Row (Primary) */}
+        <View className="mb-3">
+          <FlatList
+            data={[
+              { label: "All", value: "All" },
+              { label: "Car Rental", value: "car" },
+              { label: "Towing Van", value: "van" },
+              { label: "Truck", value: "truck" }
+            ]}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedType(item.value);
+                  if (item.value === 'van' || item.value === 'truck') setSelectedMake("All");
+                }}
+                className={`px-6 py-2.5 rounded-full mr-2 ${selectedType === item.value ? "bg-primary-500" : "bg-gray-100"}`}
+              >
+                <Text className={`text-xs font-NunitoBold ${selectedType === item.value ? "text-white" : "text-gray-600"}`}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
+            keyExtractor={item => item.value}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20 }}
+          />
+        </View>
+
+        {/* Sub-category Row (Makes) */}
+        {selectedType !== 'van' && selectedType !== 'truck' && (
+          <View className="bg-blue-50/30 border-y border-blue-100/50 py-2.5">
+            <FlatList
+              data={[{ label: "All Makes", value: "All" }, ...makeOptions]}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => setSelectedMake(item.value)}
+                  className={`px-5 py-2 rounded-xl mr-2 ${selectedMake === item.value ? "bg-white border border-primary-500/30" : ""}`}
+                >
+                  <Text className={`text-[11px] font-NunitoBold ${selectedMake === item.value ? "text-primary-500" : "text-blue-500/70"}`}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={item => item.value}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+            />
+          </View>
+        )}
+
+        {/* Price Filter Modal */}
+        <Modal
+          visible={showFilters}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowFilters(false)}
+        >
+          <TouchableOpacity 
+            className="flex-1 bg-black/30" 
+            activeOpacity={1} 
+            onPress={() => setShowFilters(false)} 
+          />
+          <View className="bg-white rounded-t-[40px] p-8 pb-12 absolute bottom-0 left-0 right-0 shadow-2xl">
+            <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mb-8" />
+            
+            <View className="flex-row items-center justify-between mb-4">
+              <View>
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900">Price Range</Text>
+                <Text className="text-sm font-NunitoMedium text-gray-500">Set your daily rental budget</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => { setMinPrice(""); setMaxPrice(""); }}
+                className="bg-gray-100 px-4 py-2 rounded-xl"
+              >
+                <Text className="text-xs font-NunitoBold text-gray-600">Reset All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Visual Slider */}
+            <View className="mb-6">
+               <PriceRangeSlider 
+                  min={0}
+                  max={1000000}
+                  initialMin={parseInt(minPrice) || 0}
+                  initialMax={parseInt(maxPrice) || 1000000}
+                  onValueChange={(low, high) => {
+                    setMinPrice(low.toString());
+                    setMaxPrice(high.toString());
+                  }}
+               />
+            </View>
+            
+            <View className="flex-row gap-4 mb-10">
+              <View className="flex-1">
+                <Text className="text-[11px] font-NunitoBold text-gray-400 uppercase tracking-wider mb-2 ml-1">Minimum (₦)</Text>
+                <View className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex-row items-center">
+                  <Text className="text-gray-400 font-NunitoBold mr-2">₦</Text>
+                  <TextInput
+                    value={minPrice}
+                    onChangeText={setMinPrice}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    className="flex-1 text-sm font-NunitoBold text-gray-900"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+              <View className="flex-1">
+                <Text className="text-[11px] font-NunitoBold text-gray-400 uppercase tracking-wider mb-2 ml-1">Maximum (₦)</Text>
+                <View className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex-row items-center">
+                  <Text className="text-gray-400 font-NunitoBold mr-2">₦</Text>
+                  <TextInput
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                    placeholder="Any"
+                    keyboardType="numeric"
+                    className="flex-1 text-sm font-NunitoBold text-gray-900"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => setShowFilters(false)}
+              className="bg-primary-500 py-5 rounded-2xl items-center shadow-lg shadow-primary-200"
+              activeOpacity={0.8}
+            >
+              <Text className="font-NunitoExtraBold text-white text-lg">Show Results</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Active Price Badge */}
+        {(minPrice || maxPrice) && (
+          <View className="px-5 mt-3">
+            <TouchableOpacity 
+              onPress={() => { setMinPrice(""); setMaxPrice(""); }}
+              className="bg-red-50 border border-red-100 rounded-full px-4 py-1.5 self-start flex-row items-center gap-2"
+            >
+              <Text className="text-[11px] font-NunitoBold text-red-600">
+                Price: ₦{minPrice || '0'} - ₦{maxPrice || 'Any'}
+              </Text>
+              <XMarkIcon size={12} color="#DC2626" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <FlatList
         data={sections}
         renderItem={renderSection}
-        keyExtractor={keyExtractor}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 60 }}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={3}
-        windowSize={5}
-        initialNumToRender={3}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#D30309']}
-            tintColor="#D30309"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#D30309']} tintColor="#D30309" />
         }
       />
     </SafeAreaView>

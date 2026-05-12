@@ -3,7 +3,7 @@ import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToast } from '../utils/toastUtils';
 import { productsAPI } from '../lib/api/products';
-import { getErrorMessage, getSuccessMessage } from '../utils/errorMessages';
+import { getErrorMessage, getApiErrorMessage, getSuccessMessage } from '../utils/errorMessages';
 import { useQueryClient } from '@tanstack/react-query';
 import { cartKeys, useCart as useCartQuery } from '../hooks/useCart';
 import { productKeys } from '../hooks/useProducts';
@@ -216,11 +216,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // showToast.success(getSuccessMessage('cart_add'));
       } else {
         console.log('🛒 Server update failed:', response.message);
-        showToast.error(getErrorMessage({ response }, 'cart'));
+        showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('🛒 Add to cart error:', error);
-      showToast.error(getErrorMessage(error, 'cart'));
+      showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 
@@ -243,11 +243,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         showToast.success(getSuccessMessage('cart_remove'));
       } else {
-        showToast.error(getErrorMessage({ response }, 'cart'));
+        showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Remove from cart error:', error);
-      showToast.error(getErrorMessage(error, 'cart'));
+      showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 
@@ -271,11 +271,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         showToast.success(getSuccessMessage('cart_update'));
       } else {
-        showToast.error(getErrorMessage({ response }, 'cart'));
+        showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Update quantity error:', error);
-      showToast.error(getErrorMessage(error, 'cart'));
+      showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 
@@ -296,11 +296,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         showToast.success(getSuccessMessage('cart_clear'));
       } else {
-        showToast.error(getErrorMessage({ response }, 'cart'));
+        showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
       console.error('Clear cart error:', error);
-      showToast.error(getErrorMessage(error, 'cart'));
+      showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 

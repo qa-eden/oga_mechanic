@@ -27,6 +27,8 @@ import {
 } from '@/constants/data'
 import CustomButton from '@/components/CustomButton'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import CustomAlert from '@/components/CustomAlert'
+import { useCustomAlert } from '@/hooks/useCustomAlert'
 
 const EditRentCar = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
@@ -35,6 +37,7 @@ const EditRentCar = () => {
   const [updatedProductData, setUpdatedProductData] = useState<any>(null)
   const [hasError, setHasError] = useState(false)
   const featuresInitialized = useRef(false)
+  const { visible, alertConfig, hideAlert, showSuccess, showError } = useCustomAlert()
 
   // Get navigation parameters
   const { productId, productData: productDataParam } = useLocalSearchParams<{
@@ -87,22 +90,41 @@ const EditRentCar = () => {
   }, [vehicleMakes, productData?.make]);
 
   const validationSchema = Yup.object().shape({
-    name: Yup.string(),
-    make: Yup.string(),
-    model: Yup.string(),
-    year: Yup.string(),
-    condition: Yup.string(),
-    body_type: Yup.string(),
-    transmission: Yup.string(),
-    fuel_type: Yup.string(),
-    exterior_color: Yup.string(),
-    number_of_seats: Yup.string(),
-    description: Yup.string(),
-    price: Yup.string(),
-    currency: Yup.string(),
-    stock: Yup.string(),
-    availability: Yup.string(),
-    delivery_option: Yup.string(),
+    body_type: Yup.string().required('Vehicle type is required'),
+    name: Yup.string().required('Name is required'),
+    make: Yup.string().when('body_type', {
+      is: (val: string) => val !== 'van' && val !== 'truck',
+      then: (schema) => schema.required('Make is required'),
+      otherwise: (schema) => schema.optional()
+    }),
+    model: Yup.string().when('body_type', {
+      is: (val: string) => val !== 'van' && val !== 'truck',
+      then: (schema) => schema.required('Model is required'),
+      otherwise: (schema) => schema.optional()
+    }),
+    year: Yup.string().optional(),
+    condition: Yup.string().required('Condition is required'),
+    transmission: Yup.string().when('body_type', {
+      is: (val: string) => val !== 'van' && val !== 'truck',
+      then: (schema) => schema.required('Transmission is required'),
+      otherwise: (schema) => schema.optional()
+    }),
+    fuel_type: Yup.string().required('Fuel type is required'),
+    exterior_color: Yup.string().when('body_type', {
+      is: (val: string) => val !== 'van' && val !== 'truck',
+      then: (schema) => schema.required('Exterior color is required'),
+      otherwise: (schema) => schema.optional()
+    }),
+    number_of_seats: Yup.string().when('body_type', {
+      is: (val: string) => val !== 'van' && val !== 'truck',
+      then: (schema) => schema.required('Number of seats is required'),
+      otherwise: (schema) => schema.optional()
+    }),
+    description: Yup.string().optional(),
+    price: Yup.string().required('Price is required'),
+    stock: Yup.string().required('Stock is required'),
+    availability: Yup.string().required('Availability is required'),
+    delivery_option: Yup.string().required('Delivery option is required'),
   })
 
   // Initialize selected features based on product data
@@ -168,7 +190,7 @@ const EditRentCar = () => {
     )
   }
 
-  const handleSubmit = async (values: typeof initialValues) => {
+  const handleSubmit = async (values: typeof initialValues, { setErrors }: any) => {
     try {
       setIsSubmitting(true);
 
@@ -211,19 +233,21 @@ const EditRentCar = () => {
         return isNaN(parsed) ? fallback : parsed;
       };
 
+      const isUtility = values.body_type === 'van' || values.body_type === 'truck';
+
       const payload = {
         data: {
           category_id: carCategoryId,
           name: values.name || '',
-          make: safeParseInt(values.make),
-          model: safeParseInt(values.model),
-          year: safeParseInt(values.year),
+          make: isUtility ? null : safeParseInt(values.make),
+          model: isUtility ? null : safeParseInt(values.model),
+          year: isUtility ? null : safeParseInt(values.year),
           condition: values.condition || '',
           body_type: values.body_type || '',
-          transmission: values.transmission || '',
+          transmission: isUtility ? null : (values.transmission || ''),
           fuel_type: values.fuel_type || '',
-          exterior_color: values.exterior_color || '',
-          number_of_seats: safeParseInt(values.number_of_seats),
+          exterior_color: isUtility ? null : (values.exterior_color || ''),
+          number_of_seats: isUtility ? 0 : safeParseInt(values.number_of_seats),
           air_conditioning: features.air_conditioning || false,
           leather_seats: features.leather_seats || false,
           navigation_system: features.navigation_system || false,
@@ -264,18 +288,36 @@ const EditRentCar = () => {
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
-      }
-
       const responseData = await response.json()
+
+      if (!response.ok) {
+        const errorMsg = responseData.message || 
+                         (responseData.errors && Object.values(responseData.errors).flat()[0]) || 
+                         "Failed to process request";
+        throw new Error(errorMsg);
+      }
 
       // Store updated product data and show success drawer
       setUpdatedProductData(responseData.data || productData);
       setSuccessDrawerVisible(true);
 
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update rental car. Please try again.');
+    } catch (error: any) {
+      if (error.message && error.message.toLowerCase().includes('vin')) {
+        setErrors({ vin: error.message });
+      }
+
+      if (error.message && error.message.toLowerCase().includes('limit of 2 active products')) {
+        showError('Product Limit Reached', error.message, {
+          buttonText: 'Subscribe',
+          onButtonPress: () => {
+            hideAlert();
+            router.push(sellerRoutes.subscription as any);
+          }
+        });
+        return;
+      }
+
+      showError('Error', error.message || 'Failed to update rental car. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -434,6 +476,7 @@ const EditRentCar = () => {
             enableReinitialize={true}
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, dirty, isSubmitting: formikIsSubmitting, setFieldValue }) => {
+              const isUtility = values.body_type === 'van' || values.body_type === 'truck';
 
               return (
                 <View className="space-y-6">
@@ -451,49 +494,69 @@ const EditRentCar = () => {
                       </View>
                     </View>
 
+                    {/* Body type */}
+                    <SelectField
+                      name="body_type"
+                      label="Vehicle Category"
+                      placeholder="Select body type"
+                      options={bodyTypeOptions}
+                      value={values.body_type}
+                      onValueChange={(value) => {
+                        setFieldValue('body_type', value);
+                        if (value === 'van' && !values.name) setFieldValue('name', 'Towing Van');
+                        if (value === 'truck' && !values.name) setFieldValue('name', 'Truck / Utility');
+                      }}
+                      error={errors.body_type as string}
+                      touched={touched.body_type as boolean}
+                    />
+
                     {/* Name of car */}
                     <FormikInput
                       name="name"
-                      label="Rental Car Name"
-                      placeholder="e.g., Toyota Camry LE"
+                      label={isUtility ? "Service/Vehicle Name" : "Rental Car Name"}
+                      placeholder={isUtility ? "e.g., Heavy Duty Towing" : "e.g., Toyota Camry LE"}
                       type="text"
                     />
 
-                    {/* Make */}
-                    <SelectField
-                      name="make"
-                      label="Make"
-                      placeholder="Select make"
-                      options={makeOptions}
-                      value={values.make}
-                      onValueChange={(value) => {
-                        setFieldValue('make', value);
-                        setFieldValue('model', ''); // Reset model when make changes
-                      }}
-                      error={errors.make as string}
-                      touched={touched.make as boolean}
-                    />
+                    {!isUtility && (
+                      <>
+                        {/* Make */}
+                        <SelectField
+                          name="make"
+                          label="Make"
+                          placeholder="Select make"
+                          options={makeOptions}
+                          value={values.make}
+                          onValueChange={(value) => {
+                            setFieldValue('make', value);
+                            setFieldValue('model', ''); // Reset model when make changes
+                          }}
+                          error={errors.make as string}
+                          touched={touched.make as boolean}
+                        />
 
-                    {/* Model */}
-                    <SelectField
-                      name="model"
-                      label="Model"
-                      placeholder={!values.make ? "Select make first" : "Select model"}
-                      options={modelOptions}
-                      value={values.model}
-                      onValueChange={(value) => setFieldValue('model', value)}
-                      error={errors.model as string}
-                      touched={touched.model as boolean}
-                    />
+                        {/* Model */}
+                        <SelectField
+                          name="model"
+                          label="Model"
+                          placeholder={!values.make ? "Select make first" : "Select model"}
+                          options={modelOptions}
+                          value={values.model}
+                          onValueChange={(value) => setFieldValue('model', value)}
+                          error={errors.model as string}
+                          touched={touched.model as boolean}
+                        />
 
-                    {/* Year */}
-                    <FormikInput
-                      name="year"
-                      label="Year"
-                      placeholder="e.g., 2020"
-                      keyboardType="numeric"
-                      type="text"
-                    />
+                        {/* Year */}
+                        <FormikInput
+                          name="year"
+                          label="Year"
+                          placeholder="e.g., 2020"
+                          keyboardType="numeric"
+                          type="text"
+                        />
+                      </>
+                    )}
 
                     {/* Condition */}
                     <SelectField
@@ -505,18 +568,6 @@ const EditRentCar = () => {
                       onValueChange={(value) => setFieldValue('condition', value)}
                       error={errors.condition as string}
                       touched={touched.condition as boolean}
-                    />
-
-                    {/* Body type */}
-                    <SelectField
-                      name="body_type"
-                      label="Body Type"
-                      placeholder="Select body type"
-                      options={bodyTypeOptions}
-                      value={values.body_type}
-                      onValueChange={(value) => setFieldValue('body_type', value)}
-                      error={errors.body_type as string}
-                      touched={touched.body_type as boolean}
                     />
                   </View>
 
@@ -535,16 +586,18 @@ const EditRentCar = () => {
                     </View>
 
                     {/* Transmission */}
-                    <SelectField
-                      name="transmission"
-                      label="Transmission"
-                      placeholder="Select transmission"
-                      options={transmissionOptions}
-                      value={values.transmission}
-                      onValueChange={(value) => setFieldValue('transmission', value)}
-                      error={errors.transmission as string}
-                      touched={touched.transmission as boolean}
-                    />
+                    {!isUtility && (
+                      <SelectField
+                        name="transmission"
+                        label="Transmission"
+                        placeholder="Select transmission"
+                        options={transmissionOptions}
+                        value={values.transmission}
+                        onValueChange={(value) => setFieldValue('transmission', value)}
+                        error={errors.transmission as string}
+                        touched={touched.transmission as boolean}
+                      />
+                    )}
 
                     {/* Fuel type */}
                     <SelectField
@@ -558,22 +611,26 @@ const EditRentCar = () => {
                       touched={touched.fuel_type as boolean}
                     />
 
-                    {/* Exterior color */}
-                    <FormikInput
-                      name="exterior_color"
-                      label="Exterior Color"
-                      placeholder="e.g., Black, White, Silver, Red"
-                      type="text"
-                    />
+                    {!isUtility && (
+                      <>
+                        {/* Exterior color */}
+                        <FormikInput
+                          name="exterior_color"
+                          label="Exterior Color"
+                          placeholder="e.g., Black, White, Silver, Red"
+                          type="text"
+                        />
 
-                    {/* Number of seats */}
-                    <FormikInput
-                      name="number_of_seats"
-                      label="Number of Seats"
-                      placeholder="e.g., 4, 5, 7"
-                      keyboardType="numeric"
-                      type="text"
-                    />
+                        {/* Number of seats */}
+                        <FormikInput
+                          name="number_of_seats"
+                          label="Number of Seats"
+                          placeholder="e.g., 4, 5, 7"
+                          keyboardType="numeric"
+                          type="text"
+                        />
+                      </>
+                    )}
                   </View>
 
                   {/* Features */}
@@ -606,7 +663,7 @@ const EditRentCar = () => {
                       <View className="flex-1">
                         <Text className="text-lg font-NunitoBold text-gray-900">Description</Text>
                         <Text className="text-xs text-gray-500 font-NunitoMedium">
-                          Additional details about your rental car
+                          Additional details about your rental
                         </Text>
                       </View>
                     </View>
@@ -614,10 +671,10 @@ const EditRentCar = () => {
                     <FormikTextArea
                       name="description"
                       label="Description"
-                      placeholder="Describe your rental car, special features, rental terms, etc."
+                      placeholder={isUtility ? "Describe your service, capacity, rental terms, etc." : "Describe your rental car, special features, rental terms, etc."}
                       numberOfLines={4}
                       maxLength={500}
-                      helperText="Describe your rental car's condition, features, and rental terms"
+                      helperText={isUtility ? "Describe capacity, service area, and terms" : "Describe condition, features, and terms"}
                     />
                   </View>
 
@@ -635,57 +692,18 @@ const EditRentCar = () => {
                       </View>
                     </View>
 
-                    {/* Price and Currency */}
+                    {/* Price */}
                     <View className="mb-4">
                       <Text className="text-base font-NunitoSemiBold text-gray-700 mb-3">
-                        Daily Rental Price
+                        Daily Rental Price (₦)
                       </Text>
-                      <View className="flex-row gap-3">
-                        <View className="flex-1">
-                          <FormikInput
-                            name="price"
-                            label=""
-                            placeholder="e.g., 25,000"
-                            keyboardType="numeric"
-                            type="text"
-                          />
-                        </View>
-                        <View className="w-32">
-                          <Text className="text-sm font-NunitoMedium text-gray-600 mb-2">
-                            Currency
-                          </Text>
-                          <View className="flex-row bg-gray-100 rounded-lg p-1">
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('currency', 'NGN')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'NGN'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'NGN'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                ₦
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => setFieldValue('currency', 'USD')}
-                              className={`flex-1 py-2 px-3 rounded-md ${values.currency === 'USD'
-                                ? 'bg-white'
-                                : 'bg-transparent'
-                                }`}
-                            >
-                              <Text className={`text-xs font-NunitoSemiBold text-center ${values.currency === 'USD'
-                                ? 'text-gray-900'
-                                : 'text-gray-500'
-                                }`}>
-                                $
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </View>
+                      <FormikInput
+                        name="price"
+                        label=""
+                        placeholder="e.g., 25,000"
+                        keyboardType="numeric"
+                        type="text"
+                      />
                     </View>
 
                     {/* Negotiable toggle */}
@@ -704,7 +722,7 @@ const EditRentCar = () => {
                     {/* Stock */}
                     <FormikInput
                       name="stock"
-                      label="Number of Cars Available"
+                      label="Inventory Available"
                       placeholder="e.g., 1, 2, 5"
                       keyboardType="numeric"
                       type="text"
@@ -713,7 +731,7 @@ const EditRentCar = () => {
                     {/* Availability */}
                     <SelectField
                       name="availability"
-                      label="Availability"
+                      label="Availability Status"
                       placeholder="Select availability"
                       options={availabilityOptions}
                       value={values.availability}
@@ -725,8 +743,8 @@ const EditRentCar = () => {
                     {/* Delivery option */}
                     <SelectField
                       name="delivery_option"
-                      label="Delivery Option"
-                      placeholder="Select delivery option"
+                      label="Delivery/Pickup"
+                      placeholder="Select option"
                       options={deliveryOptions}
                       value={values.delivery_option}
                       onValueChange={(value) => setFieldValue('delivery_option', value)}
@@ -738,7 +756,7 @@ const EditRentCar = () => {
                   {/* Action Buttons */}
                   <View className="bg-white rounded-2xl p-5 mb-2 border border-gray-200">
                     <FormikButton
-                      title="Update Rental Car Details"
+                      title="Update Rental Details"
                       type="submit"
                       onPress={() => {
                         formikHandleSubmit();
@@ -767,9 +785,6 @@ const EditRentCar = () => {
                     <Text className="text-xs text-gray-500 text-center font-NunitoMedium mt-2">
                       All fields are optional - only update what you want to change
                     </Text>
-                    <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
-                      Or manage images separately
-                    </Text>
                   </View>
                 </View>
               );
@@ -786,6 +801,20 @@ const EditRentCar = () => {
         onDone={handleDone}
         carName={updatedProductData?.name}
       />
+
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+          autoDismiss={alertConfig.autoDismiss}
+          autoDismissDelay={alertConfig.autoDismissDelay}
+          onButtonPress={alertConfig.onButtonPress}
+          buttonText={alertConfig.buttonText}
+        />
+      )}
     </SafeAreaView>
   )
 }

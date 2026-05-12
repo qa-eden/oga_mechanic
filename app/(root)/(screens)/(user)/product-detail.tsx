@@ -24,7 +24,7 @@ import { useProductDetail, useToggleFavorite } from "@/hooks/useProducts";
 import { useMerchantProfileByUuid, usePrimaryUserProfile, useUserCars } from "@/hooks/useUserProfile";
 import { communicationsAPI } from "@/lib/api/communications";
 import { showToast } from "@/utils/toastUtils";
-import { getErrorMessage } from "@/utils/errorMessages";
+import { getApiErrorMessage } from "@/utils/errorMessages";
 import { routes } from "@/constants/routes";
 import { useProfileStore } from "@/hooks/useProfileStore";
 import {
@@ -349,7 +349,7 @@ const ProductDetail = () => {
         </View>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-lg font-NunitoMedium text-red-600 text-center">
-            {getErrorMessage(error, 'products')}
+            {getApiErrorMessage(error, 'products')}
           </Text>
           <Text className="text-gray-500 text-center mt-2 text-sm">
             Go back and try again

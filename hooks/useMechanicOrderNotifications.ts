@@ -38,7 +38,7 @@ export function useMechanicOrderNotifications(
     queryKey: ['mechanic', 'repair-requests', 'polling'],
     queryFn: () => mechanicAPI.getRepairRequests('pending'),
     enabled,
-    refetchInterval: POLL_INTERVAL,
+    refetchInterval: false, // WebSocket handles real-time delivery; polling disabled
     staleTime: 0,
     gcTime: POLL_INTERVAL,
     retry: 1,

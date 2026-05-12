@@ -2,7 +2,7 @@
   "expo": {
     "name": "Oga_mechanic",
     "slug": "oga_mechanic",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icons/box_logo.png",
     "scheme": "ogamechanic",
@@ -50,12 +50,16 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ],
       "usesCleartextTraffic": true,
       "jsEngine": "hermes",
-      "enableProguardInReleaseBuilds": true,
-      "enableSeparateBuildPerCPUArchitecture": true
+      "enableProguardInReleaseBuilds": false,
+      "enableSeparateBuildPerCPUArchitecture": false
     },
     "web": {
       "bundler": "metro",

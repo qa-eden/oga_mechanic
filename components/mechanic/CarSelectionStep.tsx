@@ -18,57 +18,52 @@ export const CarSelectionStep: React.FC<CarSelectionStepProps> = ({
   onSelectNo,
 }) => {
   return (
-    <View>
-      <Text className="text-xl font-NunitoBold text-gray-900 mb-2 text-center">
-        Select a Vehicle
-      </Text>
-      <Text className="text-base text-gray-600 font-NunitoMedium mb-6 text-center">
-        Choose a saved vehicle or add a new one
-      </Text>
+    <View className="px-1">
+      <View className="mb-10 items-center">
+        <Text className="text-2xl font-NunitoExtraBold text-gray-900 mb-2">
+          Select a Vehicle
+        </Text>
+        <Text className="text-sm text-gray-400 font-NunitoMedium text-center px-4 leading-5">
+          Choose a saved vehicle from your profile or add a new one for this request.
+        </Text>
+      </View>
 
       <View className="flex-row gap-4">
         {/* Yes Option Card */}
         <TouchableOpacity
           onPress={onSelectYes}
-          className={`flex-1 p-5 rounded-3xl border-2 ${
+          className={`flex-1 p-6 rounded-[32px] border ${
             carSelection === 'Yes'
-              ? 'bg-primary-500 border-primary-500 shadow-lg'
-              : 'bg-white border-gray-200 shadow-sm'
+              ? 'bg-gray-900 border-gray-900 shadow-xl shadow-gray-200'
+              : 'bg-white border-gray-100'
           }`}
-          activeOpacity={0.8}
-          style={{
-            shadowColor: carSelection === 'Yes' ? '#D30309' : '#000',
-            shadowOffset: { width: 0, height: carSelection === 'Yes' ? 4 : 2 },
-            shadowOpacity: carSelection === 'Yes' ? 0.2 : 0.1,
-            shadowRadius: carSelection === 'Yes' ? 8 : 4,
-            elevation: carSelection === 'Yes' ? 5 : 2,
-          }}
+          activeOpacity={0.9}
         >
           <View className="items-center">
             <View
-              className={`w-14 h-14 rounded-2xl items-center justify-center mb-3 ${
-                carSelection === 'Yes' ? 'bg-white/20' : 'bg-gray-100'
+              className={`w-14 h-14 rounded-2xl items-center justify-center mb-4 ${
+                carSelection === 'Yes' ? 'bg-white/10' : 'bg-gray-50'
               }`}
             >
               {carSelection === 'Yes' ? (
                 <CheckCircleIcon size={28} color="#FFFFFF" />
               ) : (
-                <FolderIcon size={28} color="#6B7280" />
+                <FolderIcon size={28} color="#9CA3AF" />
               )}
             </View>
             <Text
-              className={`text-base font-NunitoBold mb-1 ${
-                carSelection === 'Yes' ? 'text-white' : 'text-gray-800'
+              className={`text-base font-NunitoExtraBold mb-1 ${
+                carSelection === 'Yes' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              Saved Cars
+              Saved List
             </Text>
             <Text
-              className={`text-xs font-NunitoMedium text-center px-2 ${
-                carSelection === 'Yes' ? 'text-white/90' : 'text-gray-600'
+              className={`text-[10px] font-NunitoBold uppercase tracking-wider text-center ${
+                carSelection === 'Yes' ? 'text-white/60' : 'text-gray-400'
               }`}
             >
-              Choose from your list
+              From Profile
             </Text>
           </View>
         </TouchableOpacity>
@@ -76,45 +71,38 @@ export const CarSelectionStep: React.FC<CarSelectionStepProps> = ({
         {/* No Option Card */}
         <TouchableOpacity
           onPress={onSelectNo}
-          className={`flex-1 p-5 rounded-3xl border-2 ${
+          className={`flex-1 p-6 rounded-[32px] border ${
             carSelection === 'No'
-              ? 'bg-primary-500 border-primary-500 shadow-lg'
-              : 'bg-white border-gray-200 shadow-sm'
+              ? 'bg-gray-900 border-gray-900 shadow-xl shadow-gray-200'
+              : 'bg-white border-gray-100'
           }`}
-          activeOpacity={0.8}
-          style={{
-            shadowColor: carSelection === 'No' ? '#D30309' : '#000',
-            shadowOffset: { width: 0, height: carSelection === 'No' ? 4 : 2 },
-            shadowOpacity: carSelection === 'No' ? 0.2 : 0.1,
-            shadowRadius: carSelection === 'No' ? 8 : 4,
-            elevation: carSelection === 'No' ? 5 : 2,
-          }}
+          activeOpacity={0.9}
         >
           <View className="items-center">
             <View
-              className={`w-14 h-14 rounded-2xl items-center justify-center mb-3 ${
-                carSelection === 'No' ? 'bg-white/20' : 'bg-gray-100'
+              className={`w-14 h-14 rounded-2xl items-center justify-center mb-4 ${
+                carSelection === 'No' ? 'bg-white/10' : 'bg-gray-50'
               }`}
             >
               {carSelection === 'No' ? (
                 <CheckCircleIcon size={28} color="#FFFFFF" />
               ) : (
-                <PlusCircleIcon size={28} color="#6B7280" />
+                <PlusCircleIcon size={28} color="#9CA3AF" />
               )}
             </View>
             <Text
-              className={`text-base font-NunitoBold mb-1 ${
-                carSelection === 'No' ? 'text-white' : 'text-gray-800'
+              className={`text-base font-NunitoExtraBold mb-1 ${
+                carSelection === 'No' ? 'text-white' : 'text-gray-900'
               }`}
             >
               Add New
             </Text>
             <Text
-              className={`text-xs font-NunitoMedium text-center px-2 ${
-                carSelection === 'No' ? 'text-white/90' : 'text-gray-600'
+              className={`text-[10px] font-NunitoBold uppercase tracking-wider text-center ${
+                carSelection === 'No' ? 'text-white/60' : 'text-gray-400'
               }`}
             >
-              Enter details manually
+              Manual Entry
             </Text>
           </View>
         </TouchableOpacity>

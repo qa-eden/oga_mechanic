@@ -13,9 +13,14 @@ import { useRouter } from "expo-router";
 import BackArrowBtn from "@/components/BackArrowBtn";
 import { routes } from "@/constants/routes";
 import KeyboardAwareScrollView from "@/components/KeyboardAwareScrollView";
+import { useLocalSearchParams } from "expo-router";
+import { userAPI } from "@/lib/api/user";
+import Toast from "react-native-toast-message";
 
 const EnterCode = () => {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email: string }>();
+  const email = params?.email || "";
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60); // Initial countdown value
 
@@ -30,17 +35,67 @@ const EnterCode = () => {
     }
   }, [countdown]);
 
-  const handleOtpComplete = (otp: string | number) => {
-    setLoading(true); // Start loader
-
-    setTimeout(() => {
-      router.push(routes?.resetPassword);
-      setLoading(false); // Stop loader after navigation
-    }, 1500); // Simulating API call delay
+  const handleOtpComplete = async (otp: string | number) => {
+    setLoading(true);
+    try {
+      const response = await userAPI.verifyResetOtp(email, otp.toString());
+      if (response.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'OTP Verified',
+          text2: 'You can now reset your password.',
+        });
+        router.push({
+          pathname: routes?.resetPassword as any,
+          params: { email, code: otp.toString() }
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Verification Failed',
+          text2: response.message || 'The code you entered is invalid.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.response?.data?.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResendCode = () => {
-    setCountdown(60);
+  const handleResendCode = async () => {
+    try {
+      setLoading(true);
+      const response = await userAPI.forgotPassword(email);
+      if (response.status) {
+        setCountdown(60);
+        Toast.show({
+          type: 'success',
+          text1: 'Code Resent',
+          text2: 'Check your email for the new recovery code.',
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Resend Failed',
+          text2: response.message || 'Could not resend the code.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Resend code error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.response?.data?.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,8 +123,8 @@ const EnterCode = () => {
           <icons.tick1 />
 
           <Text className="font-NunitoSemiBold text-[19px] pt-5 pb-2">
-            Enter the 6-digit code we texted to your linked email{" "}
-            {maskEmail("emmzzyvibes@gmail.com")}
+            Enter the 6-digit code we emailed to your linked address{" "}
+            {maskEmail(email || "your-email@gmail.com")}
           </Text>
           <Text className="text-text-100 text-[16px]">
             This helps keep your account safe by verifying it's you
@@ -77,7 +132,7 @@ const EnterCode = () => {
 
           <OTPInput
             numberOfDigits={6}
-            onComplete={handleOtpComplete}
+            onComplete={(otp) => { handleOtpComplete(otp); }}
             countdown={countdown}
           />
 

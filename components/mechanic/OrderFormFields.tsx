@@ -115,15 +115,15 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         {/* Select Car Section */}
         <View className="mb-4">
           <View className="flex-row items-center mb-4">
-            <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
-              <TruckIcon size={18} color="#D30309" />
+            <View className="w-10 h-10 bg-gray-50 rounded-2xl items-center justify-center mr-4 border border-gray-100">
+              <TruckIcon size={20} color="#111827" />
             </View>
-            <Text className="text-base font-NunitoBold text-gray-900">Select Your Vehicle</Text>
+            <Text className="text-lg font-NunitoExtraBold text-gray-900">Your Vehicle</Text>
           </View>
           
           <SelectField
             name="selectedCar"
-            label="Choose from saved vehicles"
+            label="Vehicle Reference"
             placeholder={
               carsLoading
                 ? "Loading your vehicles…"
@@ -141,7 +141,7 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         </View>
 
         {/* Divider */}
-        <View className="h-px bg-gray-200 mb-4" />
+        <View className="h-[1px] bg-gray-100 mb-4" />
 
         <ServiceDetailsForm
           serviceTypes={serviceTypes}
@@ -158,7 +158,7 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
         />
 
         {/* Divider */}
-        <View className="h-px bg-gray-200 my-3" />
+        <View className="h-[1px] bg-gray-100 mb-4" />
 
         <SchedulingSection
           isScheduled={isScheduled}
@@ -192,7 +192,7 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
       />
 
       {/* Divider */}
-      <View className="h-px bg-gray-200 my-3" />
+      <View className="h-[1px] bg-gray-100 mb-4" />
 
       <VehicleDetailsForm
         vehicleMake={vehicleMake}
@@ -211,7 +211,7 @@ export const OrderFormFields: React.FC<OrderFormFieldsProps> = ({
       />
 
       {/* Divider */}
-      <View className="h-px bg-gray-200 my-3" />
+      <View className="h-[1px] bg-gray-100 mb-2" />
 
       <SchedulingSection
         isScheduled={isScheduled}

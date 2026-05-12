@@ -115,7 +115,10 @@ export const icons = {
   activeProductTab,
   empty,
   round,
-  customerService
+  customerService,
+  spareParts: sparePartIcon,
+  cars: car,
+  activeFleetTab: carRent
 };
 
 

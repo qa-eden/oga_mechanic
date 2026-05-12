@@ -8,6 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, router } from 'expo-router';
 import BackArrowBtn from '@/components/BackArrowBtn';
+import ContactSelectionModal from '@/components/modals/ContactSelectionModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AnimatedErrorCard from '@/components/AnimatedErrorCard';
 import CustomAlert from '@/components/CustomAlert';
@@ -19,7 +20,7 @@ import MechanicOTPVerificationModal from '@/components/modals/MechanicOTPVerific
 import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest, useUpdateRepairRequest, useVerifyRepairRequestOtp } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
-import { getErrorMessage } from '@/utils/errorMessages';
+import { getErrorMessage, getApiErrorMessage } from '@/utils/errorMessages';
 import {
   UserIcon,
   TruckIcon,
@@ -35,7 +36,7 @@ import {
   ShieldCheckIcon,
 } from 'react-native-heroicons/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from 'react-native-heroicons/solid';
-import MapView, { Marker } from '@/components/MapComponent';
+import OgaMapView, { Marker } from '@/components/OgaMapView';
 import { PhoneIcon, ChatBubbleLeftRightIcon } from 'react-native-heroicons/outline';
 import { routes } from '@/constants/routes';
 
@@ -43,11 +44,9 @@ const MechanicOrderDetails = () => {
   const params = useLocalSearchParams();
   const orderId = useMemo(() => Array.isArray(params?.orderId) ? params?.orderId[0] : (params?.orderId as string | undefined), [params?.orderId]);
   
-  const isFocused = useIsFocused();
-  const pollInterval = isFocused ? 25000 : 0;
-
   const [refreshing, setRefreshing] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [isContactModalVisible, setIsContactModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedCancelReason, setSelectedCancelReason] = useState('');
   const [actionModalVisible, setActionModalVisible] = useState(false);
@@ -76,7 +75,7 @@ const MechanicOrderDetails = () => {
     isLoading: isLoadingData, 
     error: errorData, 
     refetch 
-  } = useRepairRequestDetail(orderId, pollInterval);
+  } = useRepairRequestDetail(orderId, 0);
 
 
   // Fetch vehicle makes to resolve make/model names
@@ -191,10 +190,30 @@ const MechanicOrderDetails = () => {
     };
   }, [orderId, orderData?.data?.status]);
 
-  const handleCall = (phoneNumber: string) => {
+  const handleCall = () => {
+    setIsContactModalVisible(true);
+  };
+
+  const performVoiceCall = () => {
+    const phoneNumber = customer?.phone_number;
     if (!phoneNumber) return;
     Linking.openURL(`tel:${phoneNumber}`).catch(() => {
-        showError('Error', 'Unable to initiate phone call');
+      showError('Error', 'Unable to initiate phone call');
+    });
+  };
+
+  const performWhatsAppCall = () => {
+    const phoneNumber = customer?.phone_number;
+    if (!phoneNumber) return;
+    const cleanedNumber = phoneNumber.replace(/\D/g, '');
+    const message = `Hi, I'm a mechanic from Oga Mechanic. I'm assigned to your active repair request. Please connect with me.`;
+    const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodeURIComponent(message)}`;
+    Linking.canOpenURL(whatsappUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        showError('Error', 'WhatsApp is not installed on this device');
+      }
     });
   };
 
@@ -326,17 +345,30 @@ const MechanicOrderDetails = () => {
   }, []);
 
   // Open address in maps
-  const openInMaps = (address: string) => {
+  const openInMaps = async (address: string) => {
     const encodedAddress = encodeURIComponent(address);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${encodedAddress}`,
-      android: `geo:0,0?q=${encodedAddress}`,
-      default: `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
-    });
+    const googleMapsUrl = `comgooglemaps://?q=${encodedAddress}`;
+    const appleMapsUrl = `maps://0,0?q=${encodedAddress}`;
+    const webUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
 
-    Linking.openURL(url as string).catch(() => {
-      showError('Error', 'Unable to open maps application');
-    });
+    if (Platform.OS === 'ios') {
+      try {
+        const canOpenGoogleMaps = await Linking.canOpenURL('comgooglemaps://');
+        if (canOpenGoogleMaps) {
+          await Linking.openURL(googleMapsUrl);
+        } else {
+          await Linking.openURL(appleMapsUrl);
+        }
+      } catch (error) {
+        Linking.openURL(webUrl);
+      }
+    } else {
+      // Android: geo: scheme handles multiple map apps, but we can also try direct google maps intent
+      const androidUrl = `geo:0,0?q=${encodedAddress}`;
+      Linking.openURL(androidUrl).catch(() => {
+        Linking.openURL(webUrl);
+      });
+    }
   };
 
   // Add to calendar
@@ -360,20 +392,7 @@ const MechanicOrderDetails = () => {
   };
 
   // Helper function to extract error message from API response
-  const getApiErrorMessage = (error: any): string => {
-    // Check for API response with status: false and message field
-    if (error?.response?.data?.message) {
-      return error.response.data.message;
-    }
-    
-    // Check for error in response data directly (in case response is successful HTTP but business logic failed)
-    if (error?.response?.data?.status === false && error?.response?.data?.message) {
-      return error.response.data.message;
-    }
-    
-    // Fallback to generic error message handler
-    return getErrorMessage(error, 'general');
-  };
+  // Handled by global utility
 
   const openActionConfirmation = (action: MechanicActionType) => {
     setActionType(action);
@@ -650,7 +669,7 @@ const MechanicOrderDetails = () => {
           {/* Live Tracking Map for Mechanic */}
           {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && request.service_latitude && request.service_longitude && (
             <View className="rounded-2xl overflow-hidden h-64 mb-5 border-2 border-gray-100 shadow-sm">
-                <MapView
+                <OgaMapView
                     initialRegion={{
                         latitude: request.service_latitude,
                         longitude: request.service_longitude,
@@ -660,7 +679,10 @@ const MechanicOrderDetails = () => {
                     style={{ flex: 1 }}
                 >
                     {/* Destination Marker (User) */}
-                    <Marker coordinate={{ latitude: request.service_latitude, longitude: request.service_longitude }}>
+                    <Marker 
+                        type="user"
+                        coordinate={{ latitude: request.service_latitude, longitude: request.service_longitude }}
+                    >
                         <View className="bg-red-500 p-2 rounded-full border-2 border-white shadow-md">
                             <UserIcon size={20} color="#FFFFFF" />
                         </View>
@@ -668,13 +690,13 @@ const MechanicOrderDetails = () => {
 
                     {/* Current Position Marker (Mechanic) */}
                     {mechanicLocation && (
-                        <Marker coordinate={mechanicLocation}>
+                        <Marker type="van" coordinate={mechanicLocation}>
                             <View className="bg-gray-900 p-2 rounded-full border-2 border-white shadow-md">
                                 <TruckIcon size={20} color="#FFFFFF" />
                             </View>
                         </Marker>
                     )}
-                </MapView>
+                </OgaMapView>
                 <View className="absolute bottom-3 left-3 right-3 bg-white/95 p-3 rounded-lg border border-gray-100 flex-row items-center">
                     <MapPinIcon size={16} color="#6B7280" />
                     <Text className="text-xs font-NunitoMedium text-gray-600 ml-2 flex-1" numberOfLines={1}>
@@ -688,7 +710,7 @@ const MechanicOrderDetails = () => {
           {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && (
             <View className="flex-row items-center justify-between mb-5 gap-3">
               <TouchableOpacity
-                onPress={() => handleCall(customer?.phone_number || '')}
+                onPress={handleCall}
                 className="flex-1 flex-row items-center justify-center bg-gray-50 py-3 rounded-xl border border-gray-200"
               >
                 <PhoneIcon size={18} color="#374151" />
@@ -1466,6 +1488,15 @@ const MechanicOrderDetails = () => {
         message={alertConfig?.message || ''}
         type={alertConfig?.type || 'info'}
         onClose={hideAlert}
+      />
+
+      <ContactSelectionModal
+        visible={isContactModalVisible}
+        onClose={() => setIsContactModalVisible(false)}
+        onVoiceCall={performVoiceCall}
+        onWhatsAppCall={performWhatsAppCall}
+        phoneNumber={customer?.phone_number || 'N/A'}
+        storeName={customer?.first_name ? `${customer.first_name} ${customer.last_name || ''}`.trim() : 'Customer'}
       />
     </SafeAreaView>
   );

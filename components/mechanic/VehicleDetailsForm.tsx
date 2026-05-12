@@ -45,19 +45,19 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
   vehicleMakesLoading = false,
 }) => {
   return (
-    <View className="mb-1">
+    <View className="mb-4">
       {/* Section Header */}
-      <View className="flex-row items-center mb-3">
-        <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
-          <TruckIcon size={18} color="#D30309" />
+      <View className="flex-row items-center mb-4">
+        <View className="w-10 h-10 bg-gray-50 rounded-2xl items-center justify-center mr-4 border border-gray-100">
+          <TruckIcon size={20} color="#111827" />
         </View>
-        <Text className="text-base font-NunitoBold text-gray-900">Vehicle Information</Text>
+        <Text className="text-lg font-NunitoExtraBold text-gray-900">Vehicle Info</Text>
       </View>
 
       {/* Vehicle VIN */}
-      <View className="mb-3">
+      <View className="mb-4">
         <VINInput
-          label="Vehicle VIN"
+          label="Vehicle Identification Number (VIN)"
           value={vehicleVin}
           onValueChange={setVehicleVin}
           onVINLookup={onVINLookup ? (vin, setFieldValue) => onVINLookup(vin) : undefined}
@@ -65,11 +65,11 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
       </View>
 
       {/* Vehicle Make */}
-      <View className="mb-3">
+      <View className="mb-2">
         <SelectField
           name="vehicleMake"
-          label="Vehicle Make"
-          placeholder={vehicleMakesLoading ? "Loading makes..." : "Select your vehicle make"}
+          label="Brand"
+          placeholder={vehicleMakesLoading ? "Loading brands..." : "Select vehicle brand"}
           options={vehicleMakeOptions}
           value={vehicleMake}
           onValueChange={(value) => {
@@ -80,11 +80,11 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
       </View>
 
       {/* Vehicle Model */}
-      <View className="mb-3">
+      <View className="mb-2">
         <SelectField
           name="vehicleModel"
           label="Model"
-          placeholder={vehicleMake ? "Select model" : "Select make first"}
+          placeholder={vehicleMake ? "Select car model" : "Select brand first"}
           options={vehicleModelOptions}
           value={vehicleModel}
           onValueChange={setVehicleModel}
@@ -95,7 +95,7 @@ export const VehicleDetailsForm: React.FC<VehicleDetailsFormProps> = ({
       <View className="mb-1">
         <SelectField
           name="vehicleYear"
-          label="Year"
+          label="Production Year"
           placeholder="Select year"
           options={vehicleYearOptions}
           value={vehicleYear}

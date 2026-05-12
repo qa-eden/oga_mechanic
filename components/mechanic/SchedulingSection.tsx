@@ -33,39 +33,39 @@ export const SchedulingSection: React.FC<SchedulingSectionProps> = ({
   timeSlotOptions,
 }) => {
   return (
-    <View className="mt-2">
+    <View className="mt-2 mb-2">
       {/* Section Header */}
-      <View className="flex-row items-center mb-3">
-        <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
-          <CalendarDaysIcon size={18} color="#D30309" />
+      <View className="flex-row items-center mb-4">
+        <View className="w-10 h-10 bg-gray-50 rounded-2xl items-center justify-center mr-4 border border-gray-100">
+          <CalendarDaysIcon size={20} color="#111827" />
         </View>
-        <Text className="text-base font-NunitoBold text-gray-900">Scheduling</Text>
+        <Text className="text-lg font-NunitoExtraBold text-gray-900">Scheduling</Text>
       </View>
 
       {/* Schedule Booking Toggle */}
-      <View className="flex-row items-center justify-between mb-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
-        <View className="flex-1 mr-3">
-          <Text className="text-base font-NunitoBold text-gray-900">Schedule for later</Text>
-          <Text className="text-sm font-NunitoRegular text-gray-500 mt-0.5">
-            Book a mechanic for a specific date & time
+      <View className="flex-row items-center justify-between mb-4 bg-gray-50/50 p-5 rounded-3xl border border-gray-100">
+        <View className="flex-1 mr-4">
+          <Text className="text-base font-NunitoExtraBold text-gray-900">Book for later</Text>
+          <Text className="text-xs font-NunitoMedium text-gray-400 mt-1 leading-5">
+            Prefer a specific date? Toggle this to schedule.
           </Text>
         </View>
         <Switch
           value={isScheduled}
           onValueChange={setIsScheduled}
-          trackColor={{ false: '#D1D5DB', true: '#D30309' }}
+          trackColor={{ false: '#F3F4F6', true: '#111827' }}
           thumbColor="#FFFFFF"
         />
       </View>
 
       {isScheduled && (
-        <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+        <View className="bg-gray-50/30 p-5 rounded-[32px] border border-gray-100 mb-2">
           {/* Date & Time Row */}
-          <View className="flex-col gap-3">
+          <View className="flex-col gap-4">
             <View className="flex-1">
               <DateInput
-                label="Date"
-                placeholder="Select date"
+                label="Preferred Date"
+                placeholder="Select appointment date"
                 value={preferredDate}
                 onDateChange={setPreferredDate}
                 required
@@ -77,8 +77,8 @@ export const SchedulingSection: React.FC<SchedulingSectionProps> = ({
             <View className="flex-1">
               <SelectField
                 name="timeSlot"
-                label="Time Slot"
-                placeholder="Select time"
+                label="Arrival Window"
+                placeholder="Select time slot"
                 options={timeSlotOptions}
                 value={preferredTimeSlot}
                 onValueChange={setPreferredTimeSlot}

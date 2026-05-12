@@ -45,18 +45,16 @@ const AllRentedCars = () => {
     !merchantProfileQuery.data?.data?.merchant_profile?.is_approved
   );
 
+  // Use specific car category ID as provided in product.tsx
+  const CAR_CATEGORY_ID = 23;
+
   // Fetch user profile based on active role to get merchant ID
   const { data: profileData } = useActiveRoleProfile();
 
-  // Extract merchant ID safely from different profile structures
+  // Extract merchant ID safely from primary profile data (consistent with product.tsx)
   const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
-    ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
-    : (profileData?.data as any)?.user_id;
-
-  // Fetch categories to get car category ID
-  const { data: categories } = useCategories();
-  const carCategory = categories?.find(cat => cat.name.toLowerCase().includes('car'));
-  const carCategoryId = carCategory?.id;
+    ? (primaryProfileData?.data as any)?.user?.id || (primaryProfileData?.data as any)?.user_id
+    : (primaryProfileData?.data as any)?.user_id;
 
   // Fetch rental cars from API with search and filter parameters
   const {
@@ -65,12 +63,10 @@ const AllRentedCars = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['products', merchantId, 'rental-cars', carCategoryId, inputQuery, minPrice, maxPrice],
+    queryKey: ['products', merchantId, 'rental-cars', CAR_CATEGORY_ID, inputQuery, minPrice, maxPrice],
     queryFn: async () => {
-
-
       const response = await productsAPI.getProducts(
-        carCategoryId, // categoryId - filter by car category
+        CAR_CATEGORY_ID, // categoryId - filter by car category (23)
         minPrice || undefined, // minPrice
         maxPrice || undefined, // maxPrice
         undefined, // offset
@@ -81,7 +77,7 @@ const AllRentedCars = () => {
       const data = response.data;
       return Array.isArray(data) ? data : (data?.results || []);
     },
-    enabled: !!merchantId && !!carCategoryId,
+    enabled: !!merchantId,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',

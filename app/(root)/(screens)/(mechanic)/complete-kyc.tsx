@@ -39,11 +39,11 @@ import InputField from "@/components/InputField";
 import TextArea from "@/components/forms/TextArea";
 import ImageUpload from "@/components/ImageUpload";
 import LivenessCamera from "@/components/LivenessCamera";
-import SuccessModal from "@/components/modals/SuccessModal";
-import ErrorModal from "@/components/modals/ErrorModal";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import ExpertiseRecordItem from "@/components/mechanic/ExpertiseRecordItem";
 import SelfieUpload from "@/components/SelfieUpload";
+import CustomAlert from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
 import { userAPI } from "@/lib/api/user";
 import { mechanicAPI } from "@/lib/api/mechanic";
 import { useProfileStore } from "@/hooks/useProfileStore";
@@ -99,9 +99,7 @@ const CompleteKYC = () => {
   const submitExpertiseMutation = useSubmitVehicleExpertise();
   
   const [showLivenessModal, setShowLivenessModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { visible, alertConfig, hideAlert, showSuccess, showError, showWarning } = useCustomAlert()
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingExpertise, setIsLoadingExpertise] = useState(true);
   
@@ -272,7 +270,7 @@ const CompleteKYC = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Required", "Please grant camera roll permissions.");
+        showWarning("Permission Required", "Please grant camera roll permissions.");
         return;
       }
 
@@ -297,7 +295,7 @@ const CompleteKYC = () => {
         }
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to select document.");
+      showError("Error", "Failed to select document.");
     }
   };
 
@@ -363,13 +361,11 @@ const CompleteKYC = () => {
   // Step 1 Submission
   const handleStep1Submit = async (values: FormValues) => {
     if (!ninDocument) {
-      setErrorMessage("Please upload your NIN document.");
-      setShowErrorModal(true);
+      showWarning("Required", "Please upload your NIN document.");
       return;
     }
     if (!selfie) {
-      setErrorMessage("Please capture your selfie to continue.");
-      setShowErrorModal(true);
+      showWarning("Required", "Please capture your selfie to continue.");
       return;
     }
 
@@ -419,27 +415,25 @@ const CompleteKYC = () => {
                          error?.response?.data?.detail || 
                          error?.message || 
                          "There was an error submitting your verification. Please try again.";
-          setErrorMessage(errMsg);
-          setShowErrorModal(true);
+          showError("Submission Failed", errMsg);
         }
       });
     } catch (error: any) {
-      setErrorMessage("Failed to prepare submission data.");
-      setShowErrorModal(true);
+      showError("Error", "Failed to prepare submission data.");
     }
   };
 
   // Step 2 Submission
   const handleStep2Submit = async () => {
     if (expertiseRecords.length === 0) {
-      Alert.alert("Required", "Please add at least one vehicle brand expertise.");
+      showWarning("Required", "Please add at least one vehicle brand expertise.");
       return;
     }
 
     // Validate records
     const isValid = expertiseRecords.every(r => r.vehicle_make_id && r.years_of_experience && r.certification_level);
     if (!isValid) {
-      Alert.alert("Incomplete", "Please fill in all details for each vehicle expertise.");
+      showWarning("Incomplete", "Please fill in all details for each vehicle expertise.");
       return;
     }
 
@@ -452,12 +446,16 @@ const CompleteKYC = () => {
     submitExpertiseMutation.mutate(payload, {
       onSuccess: () => {
         useProfileStore.getState().setIsProfileComplete(true);
-        setShowSuccessModal(true);
+        showSuccess("Verification Complete! 🎉", "Your profile and vehicle expertise have been submitted successfully. We'll review your application within 24 hours.", {
+            onButtonPress: () => {
+                hideAlert();
+                router.replace(mechanicRoutes.home as any);
+            }
+        });
       },
       onError: (error: any) => {
         const errMsg = error?.response?.data?.message || error?.message || "Failed to save expertise.";
-        setErrorMessage(errMsg);
-        setShowErrorModal(true);
+        showError("Submission Failed", errMsg);
       }
     });
   };
@@ -774,21 +772,19 @@ const CompleteKYC = () => {
         <LivenessCamera onCapture={handleLivenessCapture} onCancel={() => setShowLivenessModal(false)} />
       </Modal>
 
-      <SuccessModal
-        isVisible={showSuccessModal}
-        onClose={() => { setShowSuccessModal(false); router.replace(mechanicRoutes.home as any); }}
-        title="Verification Complete! 🎉"
-        message="Your profile and vehicle expertise have been submitted successfully. We'll review your application within 24 hours."
-        buttonText="Go to Dashboard"
-      />
-
-      <ErrorModal
-        isVisible={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        title="Submission Failed"
-        message={errorMessage}
-        buttonText="Try Again"
-      />
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+          autoDismiss={alertConfig.autoDismiss}
+          autoDismissDelay={alertConfig.autoDismissDelay}
+          onButtonPress={alertConfig.onButtonPress}
+          buttonText={alertConfig.buttonText}
+        />
+      )}
     </SafeAreaView>
   );
 };

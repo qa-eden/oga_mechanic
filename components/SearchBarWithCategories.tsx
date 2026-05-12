@@ -17,6 +17,7 @@ import {
   AdjustmentsHorizontalIcon,
   ChevronRightIcon,
 } from "react-native-heroicons/outline";
+import PriceRangeSlider from "./PriceRangeSlider";
 
 // ─────────────────────────────────────────────
 // Types
@@ -468,11 +469,25 @@ const SearchBarWithCategories = ({
               fontSize: 18,
               fontFamily: "Nunito-ExtraBold",
               color: "#111827",
-              marginBottom: 20,
+              marginBottom: 10,
             }}
           >
             Filter by Price
           </Text>
+
+          {/* Visual Slider */}
+          <View style={{ marginBottom: 15 }}>
+            <PriceRangeSlider
+              min={0}
+              max={1000000}
+              initialMin={parseInt(localMin) || 0}
+              initialMax={parseInt(localMax) || 1000000}
+              onValueChange={(low, high) => {
+                setLocalMin(low.toString());
+                setLocalMax(high.toString());
+              }}
+            />
+          </View>
 
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
             <View style={{ flex: 1 }}>

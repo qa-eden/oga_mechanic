@@ -40,21 +40,21 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
   serviceTypeOptions,
 }) => {
   return (
-    <View className="mb-1">
+    <View className="mb-2">
       {/* Section Header */}
-      <View className="flex-row items-center mb-3">
-        <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center mr-3">
-          <WrenchScrewdriverIcon size={18} color="#D30309" />
+      <View className="flex-row items-center mb-4">
+        <View className="w-10 h-10 bg-gray-50 rounded-2xl items-center justify-center mr-4 border border-gray-100">
+          <WrenchScrewdriverIcon size={20} color="#111827" />
         </View>
-        <Text className="text-base font-NunitoBold text-gray-900">Service Information</Text>
+        <Text className="text-lg font-NunitoExtraBold text-gray-900">Service Info</Text>
       </View>
 
       {/* Service Type */}
-      <View className="mb-3">
+      <View className="mb-2">
         <MultiSelectField
           name="serviceType"
-          label="Service Type"
-          placeholder="Select the service you need"
+          label="Service Category"
+          placeholder="What do you need help with?"
           options={serviceTypeOptions}
           value={serviceTypes}
           onValueChange={setServiceTypes}
@@ -62,10 +62,10 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
       </View>
 
       {/* Service Address */}
-      <View className="mb-3">
+      <View className="mb-2">
         <AddressInput
-          label="Service Location"
-          placeholder="Where should the mechanic meet you?"
+          label="Service Address"
+          placeholder="Search for service location..."
           value={serviceAddress}
           onChangeText={(text) => setServiceAddress(text)}
           onLocationSelect={(location) => {
@@ -74,8 +74,8 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
             setServiceLongitude(location.longitude);
           }}
           required
-          numberOfLines={2}
-          multiline={true}
+          numberOfLines={1}
+          multiline={false}
           showCurrentLocationButton
         />
       </View>
@@ -84,7 +84,7 @@ export const ServiceDetailsForm: React.FC<ServiceDetailsFormProps> = ({
       <View className="mb-1">
         <TextArea
           label="Problem Description"
-          placeholder="Describe the issue with your vehicle in detail..."
+          placeholder="Tell us what's happening with your vehicle..."
           value={problemDescription}
           onChangeText={setProblemDescription}
           rows={4}

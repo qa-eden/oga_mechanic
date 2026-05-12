@@ -23,8 +23,8 @@ interface VINInputBaseProps extends VINInputProps {
 
 const VINInputBase: React.FC<VINInputBaseProps> = ({
   name,
-  label = "VIN-Vehicle Identification Number",
-  placeholder = "Enter your VIN (17 characters)",
+  label = "Chassis Number (VIN)",
+  placeholder = "Enter 17-character VIN",
   required = false,
   value: controlledValue,
   onValueChange,
@@ -79,11 +79,6 @@ const VINInputBase: React.FC<VINInputBaseProps> = ({
     setHasLookedUp(false)
     setIsSuccess(false)
     
-    // Show warning for invalid VIN format
-    if (text.length === 17 && !isValidVIN(text)) {
-      showError('Invalid VIN Format', 'This VIN format appears to be invalid. Please check and try again.')
-    }
-    
     // Call the parent onChangeText if provided
     if (onChangeText) {
       onChangeText(text)
@@ -120,8 +115,6 @@ const VINInputBase: React.FC<VINInputBaseProps> = ({
     }
   }
 
-  // 1GNEK13ZX3R298984 or 4Y1SL65848Z411439 or 1GNEK13ZX3R298984
-
   const handleAutoVINLookup = async () => {
     if (!localValue || localValue.length !== 17) return
     if (!onVINLookup) return
@@ -140,7 +133,6 @@ const VINInputBase: React.FC<VINInputBaseProps> = ({
     } catch (error) {
       console.error('VIN lookup error:', error)
       setIsSuccess(false)
-      showError('Lookup Failed', 'Unable to find vehicle details. Please check your VIN and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -149,12 +141,15 @@ const VINInputBase: React.FC<VINInputBaseProps> = ({
   return (
     <View>
       <View className="flex-row items-center justify-between mb-2">
-        <Text className="text-sm font-medium text-gray-700">
-          {label} {required && <Text className="text-red-500 text-lg">*</Text>}
+        <Text className="text-xs font-NunitoExtraBold text-gray-500 uppercase tracking-widest ml-1">
+          {label} {required && <Text className="text-red-500">*</Text>}
         </Text>
 
-        <TouchableOpacity onPress={() => setShowQuickTip(!showQuickTip)}>
-          <InformationCircleIcon size={25} color="#3B82F6" />
+        <TouchableOpacity 
+          onPress={() => setShowQuickTip(!showQuickTip)}
+          className="w-6 h-6 items-center justify-center"
+        >
+          <InformationCircleIcon size={18} color={showQuickTip ? "#111827" : "#9CA3AF"} />
         </TouchableOpacity>
       </View>
       
@@ -164,31 +159,32 @@ const VINInputBase: React.FC<VINInputBaseProps> = ({
           onChangeText={handleChange}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="border border-gray-400 rounded-xl px-4 py-4 text-base text-gray-900 bg-gray-50 pr-12"
+          placeholderTextColor="#9CA3AF"
+          className={`border ${isSuccess ? 'border-green-500 bg-green-50/10' : 'border-gray-200 bg-gray-50/50'} rounded-2xl px-5 py-4 text-base font-NunitoBold text-gray-900 pr-12`}
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={17}
         />
         <View className="absolute right-4">
-          {isLoading && <ActivityIndicator size="small" color="#3B82F6" />}
-          {isSuccess && !isLoading && <CheckCircleIcon size={24} color="#10B981" />}
+          {isLoading && <ActivityIndicator size="small" color="#111827" />}
+          {isSuccess && !isLoading && <CheckCircleIcon size={22} color="#10B981" />}
         </View>
       </View>
 
       {name && (errors as Record<string, any>)[name] && (touched as Record<string, any>)[name] && (
-        <Text className="text-red-500 text-sm mt-1">{(errors as Record<string, any>)[name]}</Text>
+        <Text className="text-red-500 text-[10px] font-NunitoBold mt-1.5 ml-1">{(errors as Record<string, any>)[name]}</Text>
       )}
 
       {showQuickTip && (
-        <View className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-          <Text className="text-xs text-blue-800 font-medium mb-1">
-            💡 <Text className="font-bold">Quick Tip:</Text> Enter your 17-character VIN to automatically populate vehicle details!
-          </Text>
-          <Text className="text-xs text-blue-600 mb-2">
-            The VIN can be found on your vehicle registration, insurance card, or on the driver's side dashboard.
-          </Text>
-          <Text className="text-xs text-gray-500">
-            Note: VIN lookup provides make, model, year, and body style. Color, transmission, and engine details may need manual entry.
+        <View className="mt-3 p-4 bg-gray-900 rounded-2xl shadow-lg border border-gray-800">
+          <View className="flex-row items-start mb-2">
+            <InformationCircleIcon size={16} color="#FFFFFF" className="mt-0.5" />
+            <Text className="text-[11px] text-white font-NunitoExtraBold uppercase tracking-wider ml-2">
+              Automated Lookup
+            </Text>
+          </View>
+          <Text className="text-[11px] text-gray-400 font-NunitoMedium leading-4">
+            Enter your 17-character VIN to automatically load details. You can find it on your dashboard or insurance docs.
           </Text>
         </View>
       )}

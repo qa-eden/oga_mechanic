@@ -733,6 +733,24 @@ export const userAPI = {
     return response.data;
   },
 
+  // Forgot password
+  forgotPassword: async (email: string): Promise<{ status: boolean; message: string }> => {
+    const response = await api.post(AUTH_ENDPOINTS.FORGOT_PASSWORD, { email });
+    return response.data;
+  },
+
+  // Verify reset OTP
+  verifyResetOtp: async (email: string, code: string): Promise<{ status: boolean; message: string; data?: any }> => {
+    const response = await api.post(AUTH_ENDPOINTS.VERIFY_OTP, { email, code });
+    return response.data;
+  },
+
+  // Reset password
+  resetPassword: async (passwordData: any): Promise<{ status: boolean; message: string }> => {
+    const response = await api.post(AUTH_ENDPOINTS.RESET_PASSWORD, passwordData);
+    return response.data;
+  },
+
   // Verify email code
   verifyEmailCode: async (email: string, code: string): Promise<{ status: boolean; message: string; data?: any }> => {
     const response = await api.post('/users/verify-email-code/', { email, code });

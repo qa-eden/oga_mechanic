@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -24,7 +25,7 @@ import { useUserRepairRequests } from "@/hooks/useRepairRequests";
 import { useVehicleMakes } from "@/hooks/useVehicleMakes";
 import MechanicOrderCard, { MechanicOrder } from "@/components/cards/MechanicOrderCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getErrorMessage } from "@/utils/errorMessages";
+import { getApiErrorMessage } from "@/utils/errorMessages";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -225,124 +226,103 @@ const AllMechanic = () => {
       </View>
 
       {/* Tabs */}
-      <View className="flex-row bg-white px-5 py-3 border-b border-gray-100">
+      <View className="flex-row bg-white px-5 py-4 border-b border-gray-50">
         <TouchableOpacity
           onPress={() => {
             setActiveTab("Mechanics");
-            setSearchQuery(""); // Clear search when switching tabs
+            setSearchQuery("");
           }}
-          className={`flex-1 py-3 mr-2 rounded-[.4rem] ${
-            activeTab === "Mechanics" ? "bg-primary-500" : "bg-gray-200"
+          className={`flex-1 py-3.5 rounded-2xl ${
+            activeTab === "Mechanics" ? "bg-gray-900 shadow-sm" : "bg-gray-50"
           }`}
           activeOpacity={0.8}
         >
           <Text
-            className={`text-center font-NunitoBold text-base ${
-              activeTab === "Mechanics" ? "text-white" : "text-gray-700"
+            className={`text-center font-NunitoExtraBold text-sm ${
+              activeTab === "Mechanics" ? "text-white" : "text-gray-500"
             }`}
           >
-           All Mechanics
+           Find Mechanics
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => {
             setActiveTab("All orders");
-            setSearchQuery(""); // Clear search when switching tabs
+            setSearchQuery("");
           }}
-          className={`flex-1 py-3 rounded-[.4rem] ml-2 ${
-            activeTab === "All orders" ? "bg-primary-500" : "bg-gray-200"
+          className={`flex-1 py-3.5 rounded-2xl ml-3 ${
+            activeTab === "All orders" ? "bg-gray-900 shadow-sm" : "bg-gray-50"
           }`}
           activeOpacity={0.8}
         >
           <Text
-            className={`text-center font-NunitoBold text-base ${
-              activeTab === "All orders" ? "text-white" : "text-gray-700"
+            className={`text-center font-NunitoExtraBold text-sm ${
+              activeTab === "All orders" ? "text-white" : "text-gray-500"
             }`}
           >
-            All orders
+            My Orders
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Search and Filter */}
       {activeTab === "Mechanics" && (
-        <View className="flex-row items-center px-5 py-4 bg-white border-b border-gray-100">
-          <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mr-3">
-            
-            <MagnifyingGlassIcon/>
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search mechanics..."
-              placeholderTextColor="#9CA3AF"
-              className="flex-1 ml-3 text-base font-NunitoMedium text-gray-900"
-            />
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setShowFilter(!showFilter)}
-            className="bg-red-50 rounded-xl px-4 py-3 flex-row items-center"
-            activeOpacity={0.8}
-          >
-            <View className="w-4 h-4 mr-2">
-              <View className="w-full h-0.5 bg-primary-500 mb-1" />
-              <View className="w-3 h-0.5 bg-primary-500 mb-1" />
-              <View className="w-full h-0.5 bg-primary-500" />
+        <View className="px-5 py-4 bg-white border-b border-gray-50">
+          <View className="flex-row items-center">
+            <View className="flex-1 flex-row items-center bg-gray-50 rounded-2xl px-4 py-3 mr-3 border border-gray-100">
+              <MagnifyingGlassIcon size={20} color="#9CA3AF" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search by name, expertise..."
+                placeholderTextColor="#9CA3AF"
+                className="flex-1 ml-3 text-base font-NunitoSemiBold text-gray-900"
+              />
             </View>
-            <Text className="text-primary-500 font-NunitoBold text-sm">
-              Filter
-            </Text>
-          </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowFilter(!showFilter)}
+              className="w-12 h-12 bg-gray-900 rounded-2xl items-center justify-center shadow-sm"
+              activeOpacity={0.8}
+            >
+              <View className="w-5 h-5 items-center justify-center">
+                <View className="w-5 h-0.5 bg-white mb-1 rounded-full" />
+                <View className="w-3 h-0.5 bg-white mb-1 rounded-full self-start" />
+                <View className="w-5 h-0.5 bg-white rounded-full" />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
       {/* Status Filter Tabs for Orders */}
       {activeTab === "All orders" && (
-        <View className="bg-white px-5 py-3 border-b border-gray-100">
-          {/* First Row: 3 tabs */}
-          <View className="flex-row mb-2">
-            {(['all', 'pending', 'accepted'] as TabStatus[]).map((status) => (
+        <View className="bg-white border-b border-gray-50">
+          <ScrollView
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12 }}
+          >
+            {(['all', 'pending', 'accepted', 'in_progress', 'completed', 'cancelled'] as TabStatus[]).map((status) => (
               <TouchableOpacity
                 key={status}
                 onPress={() => handleStatusChange(status)}
-                className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
-                  activeStatus === status ? 'bg-primary-500' : 'bg-gray-200'
+                className={`px-6 py-2.5 rounded-full mr-3 border ${
+                  activeStatus === status ? 'bg-red-500 border-red-500' : 'bg-white border-gray-100'
                 }`}
                 activeOpacity={0.8}
               >
                 <Text
-                  className={`text-center font-NunitoBold text-sm ${
-                    activeStatus === status ? 'text-white' : 'text-gray-700'
+                  className={`text-center font-NunitoBold text-xs uppercase tracking-widest ${
+                    activeStatus === status ? 'text-white' : 'text-gray-400'
                   }`}
                 >
-                  {status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                  {status === 'in_progress' ? 'In Progress' : status.replace('_', ' ')}
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
-          
-          {/* Second Row: 3 tabs */}
-          <View className="flex-row">
-            {(['in_progress', 'completed', 'cancelled'] as TabStatus[]).map((status) => (
-              <TouchableOpacity
-                key={status}
-                onPress={() => handleStatusChange(status)}
-                className={`flex-1 py-2 rounded-[.4rem] mx-0.5 ${
-                  activeStatus === status ? 'bg-primary-500' : 'bg-gray-200'
-                }`}
-                activeOpacity={0.8}
-              >
-                <Text
-                  className={`text-center font-NunitoBold text-sm ${
-                    activeStatus === status ? 'text-white' : 'text-gray-700'
-                  }`}
-                >
-                  {status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -438,7 +418,7 @@ const AllMechanic = () => {
                 <AnimatedErrorCard
                   emoji="🔧"
                   title="Failed to load orders"
-                  message={getErrorMessage(ordersError)}
+                  message={getApiErrorMessage(ordersError)}
                   gradientColors={['#FEF2F2', '#FECACA', '#FCA5A5']}
                   textColor="text-red-800"
                   actionButton={{

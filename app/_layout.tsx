@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import GlobalNotificationBanner from "@/components/GlobalNotificationBanner";
 import RootErrorBoundary from "@/components/RootErrorBoundary";
+import { routes } from "@/constants/routes";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -35,21 +36,33 @@ function AppContent() {
 
   // ── Global Notification Listener ──────────────────────────────────────────
   useEffect(() => {
-    const subscription = setupNotificationListeners(() => {
-      router.push("/(root)/(tabs)/(mechanic)/home" as any);
-    }, (data) => {
-      if (data.chatType === 'support') {
-        router.push({ 
-          pathname: "/(root)/(screens)/(user)/chat-specialist", 
-          params: { roomId: data.roomId } 
-        } as any);
+    const handleChatNotification = (data: any) => {
+      const relatedId = data.related_object_id || data.related_id || data.id || data.roomId;
+      router.push({ 
+        pathname: "/(root)/(screens)/(user)/chat-specialist", 
+        params: { roomId: data.roomId || relatedId } 
+      } as any);
+    };
+
+    const handleGenericNotification = (data: any) => {
+      const type = data.notification_type || data.type;
+      const relatedId = data.related_object_id || data.related_id || data.id;
+
+      if (relatedId) {
+        router.push({
+          pathname: routes.notificationDetail as any,
+          params: { id: relatedId }
+        });
       } else {
-        router.push({ 
-          pathname: "/(root)/(screens)/(user)/chat-room", 
-          params: { roomId: data.roomId } 
-        } as any);
+        router.push(routes.notifications as any);
       }
-    });
+    };
+
+    const subscription = setupNotificationListeners(
+      () => router.push("/(root)/(tabs)/(mechanic)/home" as any),
+      handleChatNotification,
+      handleGenericNotification
+    );
 
     return () => {
       if (subscription && typeof subscription.remove === 'function') {
@@ -120,8 +133,6 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-
-
   const [loaded, error] = useFonts({
     "Nunito-Bold": require("../assets/fonts/nunito/Nunito-Bold.ttf"),
     "Nunito-ExtraBold": require("../assets/fonts/nunito/Nunito-ExtraBold.ttf"),
@@ -137,15 +148,11 @@ export default function RootLayout() {
     }
     
     if (loaded) {
-      // Hide the splash screen after fonts are loaded
-      // Only hide if it hasn't been hidden already
       SplashScreen.hideAsync().catch(() => {
-        // Silently catch errors - splash screen may already be hidden
       });
     }
   }, [loaded, error]);
 
-  // Show animated splash until fonts are loaded
   if (!loaded) {
     return (
       <AnimatedSplash onAnimationEnd={() => {}} />
@@ -155,7 +162,6 @@ export default function RootLayout() {
   return (
     <RootErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* <StatusBar style="auto" /> */}
         <AuthProvider>
           <AuthEventProvider>
             <AppContent />

@@ -16,6 +16,7 @@ const SubscriptionPayment = () => {
 
   const [loading, setLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const webViewRef = useRef<WebView>(null);
   const hasNavigatedRef = useRef(false);
@@ -48,35 +49,11 @@ const SubscriptionPayment = () => {
         amount,
       });
 
-      Alert.alert(
-        '🎉 Subscription Activated!',
-        'Welcome to OGA Mechanic Pro! You can now upload unlimited products.',
-        [
-          {
-            text: 'Start Uploading',
-            onPress: () => {
-              router.dismissAll();
-              router.replace(sellerRoutes.products as any);
-            },
-          },
-        ]
-      );
+      setIsSuccess(true);
     } catch (err: any) {
       console.error('Subscription confirmation error:', err);
-      // Even if the API call fails, the payment was made — show a partial success
-      Alert.alert(
-        'Payment Received',
-        'Your payment was successful. Subscription activation may take a few minutes. Please refresh your account if products cannot be uploaded.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              router.dismissAll();
-              router.replace(sellerRoutes.products as any);
-            },
-          },
-        ]
-      );
+      // Even if the API call fails, the payment was made — show the success screen
+      setIsSuccess(true);
     } finally {
       setIsVerifying(false);
     }
@@ -150,6 +127,61 @@ const SubscriptionPayment = () => {
           subMessage="We're confirming your payment and setting up your Pro account."
           size="large"
         />
+      </SafeAreaView>
+    );
+  }
+
+  if (isSuccess) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+        <View className="flex-1 px-6 justify-center">
+          <View className="items-center mb-10">
+            <View className="w-24 h-24 bg-green-50 rounded-full items-center justify-center mb-6">
+              <View className="w-18 h-18 bg-green-100 rounded-full items-center justify-center">
+                <Text className="text-5xl">🎉</Text>
+              </View>
+            </View>
+            
+            <Text className="text-3xl font-NunitoExtraBold text-gray-900 text-center mb-3">
+              Subscription Activated!
+            </Text>
+            <Text className="text-base font-NunitoMedium text-gray-500 text-center px-4 leading-6">
+              Welcome to <Text className="text-primary-500 font-NunitoBold">OGA Mechanic Pro</Text>. Your account has been upgraded successfully.
+            </Text>
+          </View>
+
+          <View className="bg-gray-50 rounded-3xl p-6 mb-10 border border-gray-100">
+            <View className="flex-row items-center mb-4">
+              <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center mr-3">
+                <Text className="text-xs">✅</Text>
+              </View>
+              <Text className="text-gray-700 font-NunitoBold text-base">Unlimited Product Uploads</Text>
+            </View>
+            <View className="flex-row items-center mb-4">
+              <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center mr-3">
+                <Text className="text-xs">✅</Text>
+              </View>
+              <Text className="text-gray-700 font-NunitoBold text-base">Priority Customer Support</Text>
+            </View>
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center mr-3">
+                <Text className="text-xs">✅</Text>
+              </View>
+              <Text className="text-gray-700 font-NunitoBold text-base">Verified Seller Badge</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            onPress={() => {
+              router.dismissAll();
+              router.replace(sellerRoutes.products as any);
+            }}
+            className="bg-primary-500 w-full py-4 rounded-2xl items-center shadow-lg shadow-primary-200"
+            activeOpacity={0.8}
+          >
+            <Text className="text-white font-NunitoBold text-lg">Start Uploading</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

@@ -1,16 +1,44 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, RefreshControl, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronDownIcon, ChevronUpIcon } from "react-native-heroicons/outline";
+import { 
+  ChevronDownIcon, 
+  ChevronUpIcon,
+  MapPinIcon,
+  BriefcaseIcon,
+  AcademicCapIcon,
+  IdentificationIcon,
+  PhoneIcon,
+  StarIcon,
+  CheckBadgeIcon,
+  ChatBubbleLeftRightIcon
+} from "react-native-heroicons/outline";
+import { StarIcon as StarIconSolid } from "react-native-heroicons/solid";
 import BackArrowBtn from "@/components/BackArrowBtn";
-import Rating from "@/components/Rating";
 import CustomButton from "@/components/CustomButton";
 import { routes } from "@/constants/routes";
 import { useGetMechanicDetail, useGetMechanicReviews } from "@/hooks/useMechanics";
-import { getErrorMessage } from "@/utils/errorMessages";
+import { getApiErrorMessage } from "@/utils/errorMessages";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
+import Rating from "@/components/Rating";
+
+interface VehicleMake {
+  id: number;
+  name: string;
+  models: {
+    id: number;
+    name: string;
+  }[];
+}
+
+interface VehicleExpertise {
+  id: number;
+  vehicle_make: VehicleMake;
+  years_of_experience: number;
+  certification_level: string;
+}
 
 interface MechanicProfile {
   id: number;
@@ -20,6 +48,7 @@ interface MechanicProfile {
   image: any;
   bio: string;
   specialty: string[];
+  vehicleExpertise: VehicleExpertise[];
   yearsOfExperience: number;
   locationCoverage: string;
   languages: string[];
@@ -30,6 +59,7 @@ interface MechanicProfile {
   isVerified?: boolean;
   phoneNumber?: string;
   ninNumber?: string;
+  cacNumber?: string;
 }
 
 const MechanicProfile = () => {
@@ -71,6 +101,7 @@ const MechanicProfile = () => {
         image: null,
         bio: "",
         specialty: [],
+        vehicleExpertise: [],
         yearsOfExperience: 0,
         locationCoverage: "",
         languages: [],
@@ -86,23 +117,30 @@ const MechanicProfile = () => {
     const reviewsArray = reviewsData?.data || (Array.isArray(reviewsData) ? reviewsData : []);
     const reviewCount = Array.isArray(reviewsArray) ? reviewsArray.length : 0;
     
+    // Calculate total years of experience from expertise if available
+    const totalExperience = Array.isArray(apiMechanic.vehicle_expertise) 
+      ? apiMechanic.vehicle_expertise.reduce((acc: number, curr: any) => acc + (curr.years_of_experience || 0), 0)
+      : 0;
+
     return {
       id: apiMechanic.id || 0,
       name: apiMechanic.user ? `${apiMechanic.user.first_name} ${apiMechanic.user.last_name}`.trim() : "Unknown Mechanic",
       rating: apiMechanic.rating || 0,
       reviewCount: reviewCount,
-      image: apiMechanic.selfie || null, // Use selfie URL from API
+      image: apiMechanic.selfie || null,
       bio: apiMechanic.bio || "",
-      specialty: Array.isArray(apiMechanic.vehicle_expertise) ? apiMechanic.vehicle_expertise : [],
-      yearsOfExperience: 0, // Not provided in API
+      specialty: Array.isArray(apiMechanic.specializations) ? apiMechanic.specializations.map((s: any) => s.name || s) : [],
+      vehicleExpertise: Array.isArray(apiMechanic.vehicle_expertise) ? apiMechanic.vehicle_expertise : [],
+      yearsOfExperience: totalExperience,
       locationCoverage: apiMechanic.location || "",
-      languages: [], // Not provided in API
-      availability: "", // Not provided in API
-      paymentMethods: [], // Not provided in API
+      languages: [], 
+      availability: "", 
+      paymentMethods: [], 
       isOnline: apiMechanic.is_approved || false,
       isVerified: apiMechanic.is_approved || false,
       phoneNumber: apiMechanic.user?.phone_number || "",
       ninNumber: apiMechanic.nin_number || "",
+      cacNumber: apiMechanic.cac_number || "",
     };
   })();
 
@@ -202,7 +240,7 @@ const MechanicProfile = () => {
         </View>
         <View className="flex-1 items-center justify-center px-4">
           <Text className="text-red-500 text-center text-lg mb-4">
-            {getErrorMessage(error)}
+            {getApiErrorMessage(error)}
           </Text>
           <Text className="text-gray-600 text-center">
             Failed to load mechanic details
@@ -215,18 +253,23 @@ const MechanicProfile = () => {
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+      <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-50">
         <BackArrowBtn />
         <Text className="text-xl font-NunitoBold text-gray-900">
-          Mechanics Profile
+          Profile
         </Text>
-        <View className="w-10" />
+        <TouchableOpacity 
+          onPress={() => {/* Share logic */}}
+          className="w-10 h-10 items-center justify-center rounded-full bg-gray-50"
+        >
+          <ChatBubbleLeftRightIcon size={20} color="#374151" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -236,203 +279,253 @@ const MechanicProfile = () => {
           />
         }
       >
-        {/* Profile Header */}
-        <View className="px-5 py-6 border-b border-gray-100">
-          <View className="flex-row items-center">
-            {/* Profile Image */}
-            <View className="relative">
-              <View className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+        {/* Profile Hero Section */}
+        <View className="px-5 py-8 bg-gray-50/50">
+          <View className="items-center">
+            {/* Profile Image with Status */}
+            <View className="relative mb-4">
+              <View className="w-28 h-28 rounded-3xl overflow-hidden bg-gray-200 border-4 border-white shadow-sm">
                 {mechanic.image ? (
                   <Image
                     source={{ uri: mechanic.image }}
-                    style={{ width: 80, height: 80 }}
+                    style={{ width: 112, height: 112 }}
                     resizeMode="cover"
                   />
                 ) : (
-                  <View className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center">
-                    <Text className="text-gray-500 text-2xl">👤</Text>
+                  <View className="w-full h-full bg-gray-300 items-center justify-center">
+                    <Text className="text-gray-500 text-4xl">👤</Text>
                   </View>
                 )}
               </View>
-              {/* Online Status */}
               {mechanic.isOnline && (
-                <View className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-3 border-white items-center justify-center">
-                  <View className="w-2 h-2 bg-white rounded-full" />
+                <View className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-white items-center justify-center shadow-sm">
+                  <View className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
                 </View>
               )}
             </View>
 
-            {/* Name and Rating */}
-            <View className="flex-1 ml-4">
-              <View className="flex-row items-center mb-2">
-                <Text className="text-xl font-NunitoBold text-gray-900 flex-1">
+            {/* Name & Title */}
+            <View className="items-center">
+              <View className="flex-row items-center mb-1">
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900">
                   {mechanic.name}
                 </Text>
-                {mechanic.isVip && (
-                  <View className="bg-red-50 px-2 py-1 rounded-full">
-                    <Text className="text-xs font-NunitoBold text-primary-500">
-                      VIP
-                    </Text>
-                  </View>
-                )}
                 {mechanic.isVerified && (
-                  <View className="bg-green-50 px-2 py-1 rounded-full ml-2">
-                    <Text className="text-[10px] font-NunitoBold text-green-600 uppercase">
-                      Verified
-                    </Text>
-                  </View>
+                  <CheckBadgeIcon size={24} color="#059669" className="ml-2" />
                 )}
               </View>
+              <Text className="text-sm font-NunitoSemiBold text-gray-500 uppercase tracking-wider">
+                Professional Mechanic
+              </Text>
+            </View>
+          </View>
 
-              <View className="flex-row items-center">
-                <Rating rating={mechanic.rating} size={16} />
-                <Text className="text-base font-NunitoMedium text-gray-700 ml-2">
-                  {mechanic.rating.toFixed(1)} ({mechanic.reviewCount})
+          {/* Quick Stats Bar */}
+          <View className="flex-row mt-8 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <View className="flex-1 items-center border-r border-gray-50">
+              <View className="flex-row items-center mb-1">
+                <StarIconSolid size={16} color="#FBBF24" />
+                <Text className="text-base font-NunitoBold text-gray-900 ml-1">
+                  {mechanic.rating.toFixed(1)}
                 </Text>
               </View>
+              <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase">Rating</Text>
+            </View>
+            
+            <View className="flex-1 items-center border-r border-gray-50">
+              <Text className="text-base font-NunitoBold text-gray-900 mb-1">
+                {mechanic.yearsOfExperience}+
+              </Text>
+              <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase">Exp (Yrs)</Text>
+            </View>
+
+            <View className="flex-1 items-center">
+              <Text className="text-base font-NunitoBold text-gray-900 mb-1">
+                {mechanic.reviewCount}
+              </Text>
+              <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase">Reviews</Text>
             </View>
           </View>
         </View>
 
-        {/* Profile Details */}
+        {/* Content Sections */}
         <View className="px-5 py-6">
-          {/* Bio */}
-          {mechanic.bio && <InfoSection title="Bio" content={mechanic.bio} />}
-
-          {/* Specialty */}
-          {mechanic.specialty.length > 0 && <InfoSection title="Specialty" content={mechanic.specialty} />}
-
-          {/* Years of Experience */}
-          {mechanic.yearsOfExperience > 0 && (
-            <InfoSection
-              title="Years of experience"
-              content={`${mechanic.yearsOfExperience} years`}
-            />
+          {/* Bio Section */}
+          {mechanic.bio && (
+            <View className="mb-8">
+              <View className="flex-row items-center mb-3">
+                <View className="w-8 h-8 rounded-lg bg-red-50 items-center justify-center mr-3">
+                  <IdentificationIcon size={18} color="#D30309" />
+                </View>
+                <Text className="text-lg font-NunitoBold text-gray-900">About Mechanic</Text>
+              </View>
+              <Text className="text-base font-NunitoMedium text-gray-600 leading-7">
+                {mechanic.bio}
+              </Text>
+            </View>
           )}
 
-          {/* Location Coverage */}
-          {mechanic.locationCoverage && (
-            <InfoSection
-              title="Location coverage"
-              content={mechanic.locationCoverage}
-            />
-          )}
-
-          {/* Languages */}
-          {mechanic.languages.length > 0 && <InfoSection title="Languages" content={mechanic.languages} />}
-
-          {/* Availability */}
-          {mechanic.availability && <InfoSection title="Availability" content={mechanic.availability} />}
-
-          {/* Payment Methods */}
-          {mechanic.paymentMethods.length > 0 && (
-            <InfoSection
-              title="Payment method"
-              content={mechanic.paymentMethods}
-            />
-          )}
-
-          {/* Business Info */}
-          {mechanic.ninNumber ? (
-            <InfoSection
-              title="Identity Verification"
-              content={`NIN: ${mechanic.ninNumber}`}
-            />
-          ) : null}
-
-          {/* Contact Info */}
-          {mechanic.phoneNumber ? (
-            <InfoSection
-              title="Contact Number"
-              content={mechanic.phoneNumber}
-            />
-          ) : null}
-        </View>
-
-        {/* Reviews Section */}
-        <View className="px-5 py-6 border-t border-gray-100">
-          <TouchableOpacity
-            onPress={() => setShowReviews(!showReviews)}
-            className="flex-row items-center justify-between mb-4"
-            activeOpacity={0.7}
-          >
-            <Text className="text-xl font-NunitoBold text-gray-900">
-              Reviews ({reviews.length})
-            </Text>
-            {showReviews ? (
-              <ChevronUpIcon size={24} color="#374151" />
-            ) : (
-              <ChevronDownIcon size={24} color="#374151" />
-            )}
-          </TouchableOpacity>
-
-          {showReviews && (
-            <>
-              {reviewsLoading ? (
-                <View className="py-8 items-center">
-                  <ActivityIndicator size="small" color="#D30309" />
-                  <Text className="text-gray-500 mt-2 font-NunitoMedium">
-                    Loading reviews...
-                  </Text>
+          {/* Vehicle Expertise Section */}
+          {mechanic.vehicleExpertise.length > 0 && (
+            <View className="mb-8">
+              <View className="flex-row items-center mb-4">
+                <View className="w-8 h-8 rounded-lg bg-blue-50 items-center justify-center mr-3">
+                  <BriefcaseIcon size={18} color="#2563EB" />
                 </View>
-              ) : reviewsError ? (
-                <View className="py-8 items-center">
-                  <Text className="text-red-500 text-center font-NunitoMedium">
-                    {getErrorMessage(reviewsError)}
-                  </Text>
-                </View>
-              ) : reviews.length === 0 ? (
-                <View className="py-8 items-center">
-                  <Text className="text-gray-500 text-center font-NunitoMedium">
-                    No reviews yet
-                  </Text>
-                </View>
-              ) : (
-                <View className="space-y-4">
-                  {reviews.map((review) => (
-                    <View
-                      key={review.id}
-                      className="bg-gray-50 rounded-xl p-4 border border-gray-200"
-                    >
-                      <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-lg font-NunitoBold text-gray-900">Vehicle Expertise</Text>
+              </View>
+              <View className="space-y-4">
+                {mechanic.vehicleExpertise.map((exp) => (
+                  <View key={exp.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                    <View className="flex-row items-center justify-between mb-3">
+                      <View className="flex-row items-center">
+                        <View className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center mr-3">
+                          <Text className="text-lg">🚗</Text>
+                        </View>
                         <Text className="text-base font-NunitoBold text-gray-900">
+                          {exp.vehicle_make.name}
+                        </Text>
+                      </View>
+                      <View className="bg-green-50 px-2.5 py-1 rounded-full">
+                        <Text className="text-[10px] font-NunitoBold text-green-700 uppercase">
+                          {exp.certification_level}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {exp.vehicle_make.models && exp.vehicle_make.models.length > 0 && (
+                      <View className="flex-row flex-wrap gap-2 mb-3">
+                        {exp.vehicle_make.models.map((model) => (
+                          <View key={model.id} className="bg-gray-50 px-3 py-1.5 rounded-xl">
+                            <Text className="text-xs font-NunitoBold text-gray-500">
+                              {model.name}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    
+                    <View className="flex-row items-center pt-2 border-t border-gray-50">
+                      <StarIcon size={14} color="#6B7280" />
+                      <Text className="text-xs font-NunitoSemiBold text-gray-400 ml-1">
+                        {exp.years_of_experience} years specialized experience
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Specialty Tags */}
+          {mechanic.specialty.length > 0 && (
+            <View className="mb-8">
+              <View className="flex-row items-center mb-3">
+                <View className="w-8 h-8 rounded-lg bg-purple-50 items-center justify-center mr-3">
+                  <AcademicCapIcon size={18} color="#7C3AED" />
+                </View>
+                <Text className="text-lg font-NunitoBold text-gray-900">Specializations</Text>
+              </View>
+              <View className="flex-row flex-wrap gap-2">
+                {mechanic.specialty.map((tag, idx) => (
+                  <View key={idx} className="bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+                    <Text className="text-sm font-NunitoSemiBold text-gray-600">{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Location & Contact */}
+          <View className="bg-gray-900 rounded-3xl p-6 mb-8 overflow-hidden relative">
+            <View className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full" />
+            
+            <View className="flex-row items-start mb-6">
+              <View className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center mr-4">
+                <MapPinIcon size={20} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white/60 text-xs font-NunitoBold uppercase mb-1">Primary Location</Text>
+                <Text className="text-white text-base font-NunitoSemiBold leading-6">
+                  {mechanic.locationCoverage || "Lagos, Nigeria"}
+                </Text>
+              </View>
+            </View>
+
+            <View className="flex-row items-start">
+              <View className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center mr-4">
+                <IdentificationIcon size={20} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white/60 text-xs font-NunitoBold uppercase mb-1">Verification Details</Text>
+                <Text className="text-white text-base font-NunitoSemiBold">
+                  {mechanic.cacNumber ? `CAC: ${mechanic.cacNumber}` : `NIN: Verified`}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Reviews Section */}
+          <View className="border-t border-gray-100 pt-8">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-NunitoExtraBold text-gray-900">
+                Client Reviews
+              </Text>
+              <View className="bg-gray-50 px-3 py-1 rounded-full">
+                <Text className="text-xs font-NunitoBold text-gray-500">
+                  {reviews.length} Total
+                </Text>
+              </View>
+            </View>
+
+            {reviewsLoading ? (
+              <ActivityIndicator color="#D30309" />
+            ) : reviews.length === 0 ? (
+              <View className="py-10 items-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                <ChatBubbleLeftRightIcon size={32} color="#D1D5DB" />
+                <Text className="text-gray-400 mt-2 font-NunitoMedium">No reviews yet</Text>
+              </View>
+            ) : (
+              <View className="space-y-4">
+                {reviews.slice(0, 3).map((review) => (
+                  <View key={review.id} className="bg-white rounded-2xl p-5 border border-gray-50 shadow-sm">
+                    <View className="flex-row items-center justify-between mb-3">
+                      <View className="flex-row items-center">
+                        <View className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-3">
+                          <Text className="text-xs">👤</Text>
+                        </View>
+                        <Text className="text-sm font-NunitoBold text-gray-900">
                           {review.customerName}
                         </Text>
-                        <Rating rating={review.rating} size={14} />
                       </View>
-                      {review.comment && (
-                        <Text className="text-sm font-NunitoMedium text-gray-700 leading-5 mt-2">
-                          {review.comment}
-                        </Text>
-                      )}
-                      {review.createdAt && (
-                        <Text className="text-xs font-NunitoMedium text-gray-500 mt-2">
-                          {new Date(review.createdAt).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </Text>
-                      )}
+                      <Rating rating={review.rating} size={12} />
                     </View>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
+                    <Text className="text-sm font-NunitoMedium text-gray-600 leading-6">
+                      "{review.comment}"
+                    </Text>
+                    <Text className="text-[10px] font-NunitoBold text-gray-300 mt-4 uppercase">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Order Button */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-4 pb-8">
-        <CustomButton
-          title="Order Mechanic"
-          onPress={handleOrderPress}
-        //   className="bg-primary-500"
-        //   textVariant="primary"
-        />
-        
-        {/* Android Navigation Bar Spacer */}
+      {/* Sticky Bottom Action Bar */}
+      <View className="absolute bottom-0 left-0 right-0 bg-white/80 border-t border-gray-50 px-5 pt-4 pb-10" style={{ backdropFilter: 'blur(10px)' }}>
+        <View className="flex-row items-center">
+          
+          <View className="flex-1">
+            <CustomButton
+              title="Book Mechanic"
+              onPress={handleOrderPress}
+              className=""
+            />
+          </View>
+        </View>
         <AndroidNavBarSpacer />
       </View>
     </SafeAreaView>

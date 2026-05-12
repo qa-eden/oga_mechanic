@@ -23,7 +23,9 @@ import {
   ShieldCheckIcon,
 } from "react-native-heroicons/outline";
 import { useMechanicProfile, userProfileKeys } from "@/hooks/useUserProfile";
+import { useSpecializations } from "@/hooks/useMechanic";
 import { mechanicRoutes } from "@/constants/routes";
+import { useMemo } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import AnimatedPageContainer from "@/components/AnimatedPageContainer";
 import { Formik } from "formik";
@@ -31,10 +33,12 @@ import * as Yup from "yup";
 import FormikInput from "@/components/forms/FormikInput";
 import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
+import MultiSelectField from "@/components/forms/MultiSelectField";
 import TextArea from "@/components/forms/TextArea";
 import { userAPI } from "@/lib/api/user";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/utils/toastUtils";
+import { formatPhoneNumber } from "@/utils/phoneUtils";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
 import * as ImagePicker from "expo-image-picker";
@@ -48,6 +52,7 @@ interface ProfileEditModalProps {
   userObj: any;
   handleSectionSave: any;
   handleImagePick: any;
+  specializationOptions: any[];
 }
 
 const ProfileEditModal = ({
@@ -58,6 +63,7 @@ const ProfileEditModal = ({
   userObj,
   handleSectionSave,
   handleImagePick,
+  specializationOptions,
 }: ProfileEditModalProps) => {
 
   const getSectionSchema = (section: string | null) => {
@@ -66,6 +72,7 @@ const ProfileEditModal = ({
       last_name: Yup.string().required("Last name is required"),
       phone_number: Yup.string().required("Phone number is required"),
       bio: Yup.string().required("Brief bio is required"),
+      specializations: Yup.array().min(1, "Select at least one specialization").required("Specializations are required"),
     });
 
     const addressSchema = Yup.object().shape({
@@ -76,7 +83,6 @@ const ProfileEditModal = ({
 
     const businessSchema = Yup.object().shape({
       nin_number: Yup.string().required("NIN number is required"),
-      govt_id_type: Yup.string().required("ID type is required"),
     });
 
     switch (section) {
@@ -97,6 +103,9 @@ const ProfileEditModal = ({
           phone_number: userObj?.phone_number || "",
           bio: mechanicProfile?.bio || "",
           profile_picture: mechanicProfile?.selfie || userObj?.profile_image || "",
+          specializations: Array.isArray(mechanicProfile?.specializations) 
+            ? mechanicProfile.specializations.map(String) 
+            : (mechanicProfile as any)?.specialization ? [String((mechanicProfile as any).specialization)] : [],
         };
       case "address":
         let initialLocation = mechanicProfile?.location || "";
@@ -120,10 +129,7 @@ const ProfileEditModal = ({
       case "business":
         return {
           nin_number: mechanicProfile?.nin_number || "",
-          govt_id_type: mechanicProfile?.govt_id_type || "",
           nin_document: mechanicProfile?.nin_document || "",
-          government_id_front: mechanicProfile?.government_id_front || "",
-          government_id_back: mechanicProfile?.government_id_back || "",
         };
       default:
         return {};
@@ -207,6 +213,20 @@ const ProfileEditModal = ({
                             numberOfLines={4}
                           />
                         </View>
+
+                        <View className="mb-4">
+                           <MultiSelectField
+                              name="specializations"
+                              label="Specializations"
+                              placeholder="Select your specializations"
+                              options={specializationOptions}
+                              value={values.specializations}
+                              onValueChange={(val) => setFieldValue("specializations", val)}
+                           />
+                           {touched.specializations && errors.specializations && (
+                              <Text className="text-red-500 text-xs mt-1 ml-1">{errors.specializations as string}</Text>
+                           )}
+                        </View>
                       </View>
                     )}
 
@@ -218,38 +238,68 @@ const ProfileEditModal = ({
                           onChangeText={(text: string) => {
                             setFieldValue("location", text);
                             // Soft auto-fill search
-                            if (text.length > 3) {
+                            if (text.length > 3 && !values.state) {
                               const states = getStatesByCountry('NG');
                               const matchedState = states.find((s: any) => text.toLowerCase().includes(s.name.toLowerCase()));
-                              if (matchedState && !values.state) {
+                              if (matchedState) {
                                 setFieldValue("state", matchedState.name);
                               }
                             }
                           }}
                           onLocationSelect={async (loc: any) => {
-                              setFieldValue("location", loc.address || loc.name);
+                              const addressStr = loc.address || loc.name || loc;
+                              setFieldValue("location", addressStr);
+                              
                               if (loc.latitude && loc.longitude) {
                                   setFieldValue("latitude", String(loc.latitude));
                                   setFieldValue("longitude", String(loc.longitude));
                                   
                                   try {
                                     const reverseGeocoded = await Location.reverseGeocodeAsync({
-                                      latitude: loc.latitude,
-                                      longitude: loc.longitude
+                                      latitude: Number(loc.latitude),
+                                      longitude: Number(loc.longitude)
                                     });
+                                    
                                     if (reverseGeocoded.length > 0) {
                                       const addr = reverseGeocoded[0];
-                                      if (addr.region) {
-                                        const matchedState = getStatesByCountry('NG').find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
+                                      const region = addr.region;
+                                      
+                                      if (region) {
+                                        const matchedState = getStatesByCountry('NG').find(s => 
+                                          s.name.toLowerCase() === region.toLowerCase() ||
+                                          (addr.city && s.name.toLowerCase() === addr.city.toLowerCase())
+                                        );
+                                        
                                         if (matchedState) {
                                           setFieldValue("state", matchedState.name);
-                                          setFieldValue("lga", addr.city || addr.subregion || "");
+                                          if (!values.lga) {
+                                            setFieldValue("lga", addr.city || addr.subregion || "");
+                                          }
                                         }
                                       }
                                     }
                                   } catch (e) {
                                     console.log("Reverse geocode error in profileDetails modal:", e);
                                   }
+                              } else if (addressStr && !values.state) {
+                                 try {
+                                   const geocoded = await Location.geocodeAsync(addressStr);
+                                   if (geocoded.length > 0) {
+                                     const { latitude, longitude } = geocoded[0];
+                                     setFieldValue("latitude", String(latitude));
+                                     setFieldValue("longitude", String(longitude));
+                                     const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+                                     if (reverse.length > 0 && reverse[0].region) {
+                                       const matched = getStatesByCountry('NG').find(s => s.name.toLowerCase() === reverse[0].region?.toLowerCase());
+                                       if (matched) {
+                                         setFieldValue("state", matched.name);
+                                         setFieldValue("lga", reverse[0].city || reverse[0].subregion || "");
+                                       }
+                                     }
+                                   }
+                                 } catch (err) {
+                                   console.log("Geocode fallback error in modal:", err);
+                                 }
                               }
                           }}
                           placeholder="Search for your workshop address"
@@ -294,25 +344,6 @@ const ProfileEditModal = ({
                     {editingSection === "business" && (
                       <View>
                           <FormikInput name="nin_number" placeholder="Enter 11-digit NIN" label="NIN Number" required />
-                          <View className="mt-2">
-                              <SelectField
-                                label="Government ID Type"
-                                name="govt_id_type"
-                                placeholder="Select ID Type"
-                                options={[
-                                    { label: "NIN", value: "NIN" },
-                                    { label: "Drivers license", value: "drivers_license" },
-                                    { label: "Voters card", value: "voters_card" },
-                                    { label: "International passport", value: "international_passport" },
-                                    { label: "Permanent voter's card", value: "permanent_voters_card" },
-                                ]}
-                                value={values.govt_id_type || ''}
-                                onValueChange={(val: string) => setFieldValue("govt_id_type", val)}
-                                error={errors.govt_id_type as string}
-                                touched={touched.govt_id_type as boolean}
-                                required
-                              />
-                          </View>
                       </View>
                     )}
 
@@ -374,6 +405,27 @@ const ProfileDetails = () => {
       ? `${userObj.first_name} ${userObj.last_name}`.trim() 
       : "Mechanic";
   const profileImage = mechanicProfile?.selfie || userObj?.profile_image || userObj?.image || "";
+  
+  const { data: specializations } = useSpecializations();
+  const specializationOptions = useMemo(() => {
+    const specs = Array.isArray(specializations) ? specializations : (specializations as any)?.data || [];
+    return specs.map((spec: any) => ({
+      label: spec.name,
+      value: spec.id.toString(),
+    }));
+  }, [specializations]);
+
+  const specializationLabels = useMemo(() => {
+    if (!mechanicProfile?.specializations || !specializationOptions.length) return "Not set";
+    const selectedIds = Array.isArray(mechanicProfile.specializations) 
+      ? mechanicProfile.specializations.map(String) 
+      : [String(mechanicProfile.specializations)];
+    
+    return specializationOptions
+      .filter((opt: { label: string; value: string }) => selectedIds.includes(opt.value))
+      .map((opt: { label: string; value: string }) => opt.label)
+      .join(", ") || "Not set";
+  }, [mechanicProfile?.specializations, specializationOptions]);
 
   const ProfileRow = ({ label, value, isBio = false }: { label: string; value: string, isBio?: boolean }) => (
     <View className={`py-4 border-b border-gray-50 last:border-0`}>
@@ -401,12 +453,17 @@ const ProfileDetails = () => {
         } as any;
       };
 
-      if (values.profile_picture && (values.profile_picture.startsWith('file://') || values.profile_picture.startsWith('content://') || values.profile_picture.startsWith('data:'))) {
+      if (values.profile_picture && (values.profile_picture.startsWith('file://') || values.profile_picture.startsWith('content://') || values.profile_picture.startsWith('http'))) {
         const profileFile = getFileObject(values.profile_picture);
         if (profileFile) {
           formData.append('selfie', profileFile);
         }
       }
+      
+      // Core User Data (Consolidated into one call)
+      if (values.first_name) formData.append("first_name", values.first_name);
+      if (values.last_name) formData.append("last_name", values.last_name);
+      if (values.phone_number) formData.append("phone_number", formatPhoneNumber(values.phone_number));
       
       const fullValues = {
         bio: mechanicProfile?.bio || "",
@@ -416,7 +473,7 @@ const ProfileDetails = () => {
         latitude: mechanicProfile?.latitude || "",
         longitude: mechanicProfile?.longitude || "",
         nin_number: mechanicProfile?.nin_number || "",
-        govt_id_type: mechanicProfile?.govt_id_type || "",
+        specializations: JSON.stringify(mechanicProfile?.specializations || []),
         // Merge with form values
         ...values
       };
@@ -427,18 +484,7 @@ const ProfileDetails = () => {
         }
       });
 
-      // Handle user basic info natively handled by the user table usually
-      if (values.first_name || values.last_name || values.phone_number) {
-         try {
-           await userAPI.updateProfile({
-              first_name: values.first_name || userObj?.first_name,
-              last_name: values.last_name || userObj?.last_name,
-              phone_number: values.phone_number || userObj?.phone_number,
-           });
-         } catch(e) {
-           console.log("Could not update root user info separately.");
-         }
-      }
+      // Note: first_name, last_name, phone_number are now included in formData above
 
 
       await userAPI.submitMechanicKYC(formData);
@@ -467,8 +513,8 @@ const ProfileDetails = () => {
         quality: 0.6,
         base64: true,
       });
-      if (!result.canceled && result.assets[0].base64) {
-        setFieldValue("profile_picture", `data:image/jpeg;base64,${result.assets[0].base64}`);
+      if (!result.canceled && result.assets[0]) {
+        setFieldValue("profile_picture", result.assets[0].uri);
       }
     } catch (error) {
       showToast.error("Failed to pick image");
@@ -495,54 +541,60 @@ const ProfileDetails = () => {
         userObj={userObj}
         handleSectionSave={handleSectionSave}
         handleImagePick={handleImagePick}
+        specializationOptions={specializationOptions}
       />
       
-      <View className="px-5 py-4 border-b border-gray-100 flex-row items-center justify-between">
+      <View className="px-5 py-4 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-3"
           >
-            <ChevronLeftIcon size={24} color="#1F2937" />
+            <ChevronLeftIcon size={24} color="#111827" />
           </TouchableOpacity>
-          <Text className="text-xl font-NunitoBold text-gray-900">Mechanic Details</Text>
+          <View>
+            <Text className="text-xl font-NunitoExtraBold text-gray-900">Profile Details</Text>
+            <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase tracking-widest mt-0.5">Manage your identity</Text>
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => router.push(mechanicRoutes.EditProfile as any)}
-          className="w-10 h-10 bg-primary-50 rounded-full items-center justify-center"
+          className="w-10 h-10 bg-gray-900 rounded-2xl items-center justify-center"
         >
-          <PencilIcon size={20} color="#D30309" />
+          <PencilIcon size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <ScrollView 
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: Platform.OS === 'android' ? 70 : 40 }} 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} 
         showsVerticalScrollIndicator={false}
       >
         <AnimatedPageContainer animationType="fadeInUp" duration={600}>
           <View className="px-5 pt-6">
-            <View className="items-center mb-8">
-              <View className="w-28 h-28 rounded-2xl items-center justify-center border-4 border-white shadow-lg mb-3 overflow-hidden">
+            <View className="items-center mb-10">
+              <View className="w-32 h-32 rounded-[40px] items-center justify-center border-4 border-white shadow-xl mb-4 overflow-hidden bg-gray-50">
                 {profileImage ? (
                   <Image source={{ uri: profileImage }} className="w-full h-full" resizeMode="cover" />
                 ) : (
-                  <LinearGradient colors={["#D30309", "#B91C1C"]} className="w-full h-full items-center justify-center">
+                  <LinearGradient colors={["#111827", "#374151"]} className="w-full h-full items-center justify-center">
                     <Text className="text-4xl font-NunitoExtraBold text-white">
                       {displayName.charAt(0).toUpperCase()}
                     </Text>
                   </LinearGradient>
                 )}
               </View>
-              <Text className="text-xl font-NunitoBold text-gray-900">{displayName}</Text>
-              <Text className="text-gray-500 font-NunitoMedium text-sm">{userObj?.email}</Text>
+              <Text className="text-2xl font-NunitoExtraBold text-gray-900">{displayName}</Text>
+              <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase tracking-widest mt-1">{userObj?.email}</Text>
             </View>
 
             {/* Personal Information */}
-            <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <View className="mb-8 bg-white p-6 rounded-[32px] border border-gray-50 shadow-sm">
               <SectionHeader 
                 icon={UserIcon} 
                 title="Professional Profile" 
+                color="#111827"
+                bgColor="bg-gray-50"
                 onEdit={() => {
                   setEditingSection("personal");
                   setIsModalVisible(true);
@@ -551,16 +603,17 @@ const ProfileDetails = () => {
               <ProfileRow label="First Name" value={userObj?.first_name} />
               <ProfileRow label="Last Name" value={userObj?.last_name} />
               <ProfileRow label="Phone Number" value={userObj?.phone_number} />
+              <ProfileRow label="Specializations" value={specializationLabels} />
               <ProfileRow label="Bio" value={mechanicProfile?.bio} isBio={true} />
             </View>
 
             {/* Address Details */}
-            <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <View className="mb-8 bg-white p-6 rounded-[32px] border border-gray-50 shadow-sm">
               <SectionHeader 
                 icon={EnvelopeIcon} 
                 title="Location Details" 
-                color="#3B82F6" 
-                bgColor="bg-blue-50" 
+                color="#111827" 
+                bgColor="bg-gray-50" 
                 onEdit={() => {
                   setEditingSection("address");
                   setIsModalVisible(true);
@@ -569,68 +622,57 @@ const ProfileDetails = () => {
               <ProfileRow label="Workshop Address" value={mechanicProfile?.location} />
               <View className="flex-row gap-x-4">
                  <View className="flex-1">
-                   <Text className="text-gray-500 font-NunitoMedium text-xs uppercase tracking-wider mb-1 mt-4">State</Text>
-                   <Text className="text-base font-NunitoMedium text-gray-900">{mechanicProfile?.state || "Not set"}</Text>
+                   <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-widest mb-1 mt-4">State</Text>
+                   <Text className="text-base font-NunitoBold text-gray-900">{mechanicProfile?.state || "Not set"}</Text>
                  </View>
                  <View className="flex-1">
-                   <Text className="text-gray-500 font-NunitoMedium text-xs uppercase tracking-wider mb-1 mt-4">LGA</Text>
-                   <Text className="text-base font-NunitoMedium text-gray-900">{mechanicProfile?.lga || "Not set"}</Text>
+                   <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-widest mb-1 mt-4">LGA</Text>
+                   <Text className="text-base font-NunitoBold text-gray-900">{mechanicProfile?.lga || "Not set"}</Text>
                  </View>
               </View>
             </View>
 
             {/* Business Information */}
-            <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <View className="mb-8 bg-white p-6 rounded-[32px] border border-gray-50 shadow-sm">
               <SectionHeader 
                 icon={BriefcaseIcon} 
                 title="Business Verification" 
-                color="#F59E0B" 
-                bgColor="bg-amber-50" 
+                color="#111827" 
+                bgColor="bg-gray-50" 
                 onEdit={() => {
                   setEditingSection("business");
                   setIsModalVisible(true);
                 }}
               />
               <ProfileRow label="NIN Number" value={mechanicProfile?.nin_number} />
-              <ProfileRow label="Government ID Type" value={mechanicProfile?.govt_id_type?.replace(/_/g, ' ')} />
             </View>
 
             {/* Documentation & Verification */}
-            <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+            <View className="mb-8 bg-white p-6 rounded-[32px] border border-gray-50 shadow-sm">
               <SectionHeader 
                 icon={ShieldCheckIcon} 
-                title="Documentation & Verification" 
-                color="#6366F1" 
-                bgColor="bg-indigo-50" 
+                title="Verification Status" 
+                color="#111827" 
+                bgColor="bg-gray-50" 
                 onEdit={() => {
                   router.push(mechanicRoutes.EditProfile as any);
                 }}
               />
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">NIN Document</Text>
-                <Text className={mechanicProfile?.nin_document ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {mechanicProfile?.nin_document ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">Govt ID Front</Text>
-                <Text className={mechanicProfile?.government_id_front ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {mechanicProfile?.government_id_front ? "Uploaded" : "Pending"}
-                </Text>
-              </View>
-              <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
-                <Text className="text-gray-500 font-NunitoMedium text-sm">Govt ID Back</Text>
-                <Text className={mechanicProfile?.government_id_back ? "text-green-600 font-NunitoBold" : "text-amber-600 font-NunitoBold"}>
-                  {mechanicProfile?.government_id_back ? "Uploaded" : "Pending"}
-                </Text>
+              <View className="flex-row items-center justify-between py-4 border-b border-gray-50">
+                <Text className="text-gray-400 font-NunitoBold text-xs uppercase tracking-widest">NIN Document</Text>
+                <View className={`px-4 py-1.5 rounded-full ${mechanicProfile?.nin_document ? "bg-green-50" : "bg-amber-50"}`}>
+                  <Text className={`text-[10px] font-NunitoExtraBold uppercase tracking-widest ${mechanicProfile?.nin_document ? "text-green-600" : "text-amber-600"}`}>
+                    {mechanicProfile?.nin_document ? "Verified" : "Pending"}
+                  </Text>
+                </View>
               </View>
             </View>
 
             <TouchableOpacity
               onPress={() => router.push(mechanicRoutes.EditProfile as any)}
-              className="mt-4 bg-primary-500 py-4 rounded-2xl items-center shadow-md active:opacity-90"
+              className="mt-4 bg-gray-900 py-5 rounded-2xl items-center shadow-xl shadow-gray-200 active:opacity-90"
             >
-              <Text className="text-white text-base font-NunitoBold">Full Profile Update</Text>
+              <Text className="text-white text-sm font-NunitoExtraBold uppercase tracking-widest">Master Profile Update</Text>
             </TouchableOpacity>
           </View>
         </AnimatedPageContainer>

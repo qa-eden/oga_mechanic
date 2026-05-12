@@ -30,7 +30,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#16A34A',
         iconBgColor: 'bg-green-100',
         confirmText: 'Yes, Accept',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
     case 'decline':
       return {
@@ -50,7 +50,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#2563EB',
         iconBgColor: 'bg-blue-100',
         confirmText: 'Yes, Start Transit',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
     case 'arrived':
       return {
@@ -60,7 +60,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#7C3AED',
         iconBgColor: 'bg-purple-100',
         confirmText: 'Yes, I Have Arrived',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
     case 'in_progress':
       return {
@@ -70,7 +70,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#EA580C',
         iconBgColor: 'bg-orange-100',
         confirmText: 'Yes, Start Work',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
     case 'completed':
       return {
@@ -80,7 +80,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#16A34A',
         iconBgColor: 'bg-green-100',
         confirmText: 'Yes, Job Completed',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
     default:
       return {
@@ -90,7 +90,7 @@ const getActionConfig = (actionType: MechanicActionType | null) => {
         iconColor: '#6B7280',
         iconBgColor: 'bg-gray-100',
         confirmText: 'Confirm',
-        confirmBgVariant: 'primary' as const,
+        confirmBgVariant: 'success' as const,
       };
   }
 };

@@ -29,6 +29,8 @@ import {
   featureOptions
 } from '@/constants/data'
 import CustomButton from '@/components/CustomButton'
+import CustomAlert from '@/components/CustomAlert'
+import { useCustomAlert } from '@/hooks/useCustomAlert'
 
 const PRIMARY = '#D30309';
 
@@ -61,6 +63,7 @@ const EditProduct = () => {
   const [updatedProductData, setUpdatedProductData] = useState<any>(null)
   const [biddingWindow, setBiddingWindow] = useState<any>(null)
   const featuresInitialized = useRef(false)
+  const { visible, alertConfig, hideAlert, showSuccess, showError, showInfo } = useCustomAlert()
 
   const { productId, productData: productDataParam } = useLocalSearchParams<{
     productId?: string;
@@ -224,7 +227,7 @@ const EditProduct = () => {
         setFieldValue('year', info.modelYear);
       }
 
-      Alert.alert("Success", `Vehicle details found: ${info.make} ${info.model} (${info.modelYear})`);
+      showSuccess("Success", `Vehicle details found: ${info.make} ${info.model} (${info.modelYear})`);
     } catch (error) {
       console.error("VIN Lookup error:", error);
     }
@@ -238,7 +241,7 @@ const EditProduct = () => {
     )
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: any, { setErrors }: any) => {
 
     if (!productId || !productData) {
       return;
@@ -325,11 +328,14 @@ const EditProduct = () => {
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
-      }
-
       const responseData = await response.json()
+
+      if (!response.ok) {
+        const errorMsg = responseData.message || 
+                         (responseData.errors && Object.values(responseData.errors).flat()[0]) || 
+                         "Failed to process request";
+        throw new Error(errorMsg);
+      }
 
       // Process bidding window state updates
       try {
@@ -384,15 +390,30 @@ const EditProduct = () => {
         }
       } catch (err) {
         console.error('Bidding operation failed:', err);
-        Alert.alert('Notice', 'Car updated, but failed to sync bidding configurations.');
+        showInfo('Notice', 'Car updated, but failed to sync bidding configurations.');
       }
 
       // Store updated product data and show success drawer
       setUpdatedProductData(responseData.data || productData);
       setSuccessDrawerVisible(true);
 
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update car details. Please try again.')
+    } catch (error: any) {
+      if (error.message && error.message.toLowerCase().includes('vin')) {
+        setErrors({ vin: error.message });
+      }
+
+      if (error.message && error.message.toLowerCase().includes('limit of 2 active products')) {
+        showError('Product Limit Reached', error.message, {
+          buttonText: 'Subscribe',
+          onButtonPress: () => {
+            hideAlert();
+            router.push(sellerRoutes.subscription as any);
+          }
+        });
+        return;
+      }
+
+      showError('Error', error.message || 'Failed to update car details. Please try again.')
     } finally {
       setIsSubmitting(false);
     }
@@ -861,6 +882,20 @@ const EditProduct = () => {
         onDone={handleDone}
         carName={updatedProductData?.name}
       />
+
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+          autoDismiss={alertConfig.autoDismiss}
+          autoDismissDelay={alertConfig.autoDismissDelay}
+          onButtonPress={alertConfig.onButtonPress}
+          buttonText={alertConfig.buttonText}
+        />
+      )}
     </SafeAreaView>
   )
 }

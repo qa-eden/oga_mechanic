@@ -7,6 +7,8 @@ interface AlertConfig {
   showIcon?: boolean;
   autoDismiss?: boolean;
   autoDismissDelay?: number;
+  onButtonPress?: () => void;
+  buttonText?: string;
 }
 
 export const useCustomAlert = () => {

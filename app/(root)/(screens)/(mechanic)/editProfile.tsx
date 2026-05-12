@@ -16,6 +16,7 @@ import { useMechanicProfile, usePrimaryUserProfile, userProfileKeys } from "@/ho
 import { useSpecializations } from "@/hooks/useMechanic";
 import { useMemo } from "react";
 import { userAPI } from "@/lib/api/user";
+import { formatPhoneNumber } from "@/utils/phoneUtils";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Formik } from "formik";
@@ -27,6 +28,7 @@ import FormikButton from "@/components/forms/FormikButton";
 import AddressInput from "@/components/forms/AddressInput";
 import SelectField from "@/components/forms/SelectField";
 import TextArea from "@/components/forms/TextArea";
+import MultiSelectField from "@/components/forms/MultiSelectField";
 import { LinearGradient } from "expo-linear-gradient";
 import { getStatesByCountry } from "@/constants/locationData";
 import { getLGAs } from "@/constants/nigeriaData";
@@ -41,17 +43,15 @@ const editMechanicProfileSchema = Yup.object().shape({
     .min(2, "Last name must be at least 2 characters")
     .required("Last name is required"),
   phone_number: Yup.string()
-    .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
+    .matches(/^[0-9]{10,13}$/, "Phone number must be 10-13 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   bio: Yup.string().nullable(),
   location: Yup.string().nullable(),
   state: Yup.string().nullable(),
   lga: Yup.string().nullable(),
-  specialization: Yup.string().nullable(),
-  years_of_experience: Yup.string().nullable(),
+  specializations: Yup.array().min(1, "Select at least one specialization").required("Specializations are required"),
   nin_number: Yup.string().nullable(),
-  govt_id_type: Yup.string().nullable(),
 });
 
 const EditMechanicProfile = () => {
@@ -65,7 +65,24 @@ const EditMechanicProfile = () => {
 
   const mechanicProfileInfo = mechanicData?.mechanic_profile;
 
-  const [initialValues, setInitialValues] = useState({
+  interface FormValues {
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+    email: string;
+    bio: string;
+    location: string;
+    state: string;
+    lga: string;
+    latitude: string;
+    longitude: string;
+    specializations: string[];
+    selfie: string;
+    nin_number: string;
+    nin_document: string;
+  }
+
+  const [initialValues, setInitialValues] = useState<FormValues>({
     first_name: "",
     last_name: "",
     phone_number: "",
@@ -76,14 +93,10 @@ const EditMechanicProfile = () => {
     lga: "",
     latitude: "",
     longitude: "",
-    specialization: "",
-    years_of_experience: "",
+    specializations: [],
     selfie: "",
     nin_number: "",
-    govt_id_type: "",
     nin_document: "",
-    government_id_front: "",
-    government_id_back: "",
   });
 
   useEffect(() => {
@@ -99,14 +112,12 @@ const EditMechanicProfile = () => {
         lga: mechanicProfileInfo?.lga || "",
         latitude: mechanicProfileInfo?.latitude || "",
         longitude: mechanicProfileInfo?.longitude || "",
-        specialization: (mechanicProfileInfo as any)?.specialization || "",
-        years_of_experience: (mechanicProfileInfo as any)?.years_of_experience?.toString() || "",
+        specializations: Array.isArray(mechanicProfileInfo?.specializations) 
+          ? mechanicProfileInfo.specializations.map(String) 
+          : (mechanicProfileInfo as any)?.specialization ? [String((mechanicProfileInfo as any).specialization)] : [],
         selfie: (mechanicProfileInfo as any)?.selfie || (userData as any)?.profile_picture || "",
         nin_number: mechanicProfileInfo?.nin_number || "",
-        govt_id_type: mechanicProfileInfo?.govt_id_type || "",
         nin_document: mechanicProfileInfo?.nin_document || "",
-        government_id_front: mechanicProfileInfo?.government_id_front || "",
-        government_id_back: mechanicProfileInfo?.government_id_back || "",
       });
     }
   }, [userData, mechanicProfileInfo]);
@@ -154,7 +165,7 @@ const EditMechanicProfile = () => {
     try {
       setSubmitting(true);
       
-      // Helper function to handle image upload if it's a local URI or base64
+      // Helper function to handle image upload if it's a local URI
       const getFileObject = (imageUri: string, fieldName: string) => {
         if (!imageUri) return undefined;
         // If it's already a URL, return it
@@ -170,20 +181,15 @@ const EditMechanicProfile = () => {
       const documentFields = [
         { field: 'selfie', name: 'selfie' },
         { field: 'nin_document', name: 'nin_document' },
-        { field: 'government_id_front', name: 'government_id_front' },
-        { field: 'government_id_back', name: 'government_id_back' }
       ];
 
-      const payload: any = {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        phone_number: values.phone_number,
-      };
-
-      await userAPI.updateProfile(payload);
-      
       const formData = new FormData();
-      formData.append('requestType', 'inbound');
+      formData.append("requestType", "inbound");
+
+      // Core User Data
+      formData.append("first_name", values.first_name);
+      formData.append("last_name", values.last_name);
+      formData.append("phone_number", formatPhoneNumber(values.phone_number));
 
       const mechanicPayload = {
         bio: values.bio,
@@ -192,10 +198,8 @@ const EditMechanicProfile = () => {
         lga: values.lga,
         latitude: values.latitude,
         longitude: values.longitude,
-        specialization: values.specialization,
-        years_of_experience: values.years_of_experience,
+        specializations: JSON.stringify(values.specializations),
         nin_number: values.nin_number,
-        govt_id_type: values.govt_id_type,
       };
 
       Object.entries(mechanicPayload).forEach(([key, val]) => {
@@ -246,12 +250,7 @@ const EditMechanicProfile = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        if (result.assets[0].base64) {
-          const base64Image = `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}`;
-          setFieldValue(field, base64Image);
-        } else {
-          setFieldValue(field, result.assets[0].uri);
-        }
+        setFieldValue(field, result.assets[0].uri);
       }
     } catch (error) {
       showToast.error("Failed to pick image");
@@ -291,13 +290,7 @@ const EditMechanicProfile = () => {
     value: spec.id.toString(),
   }));
 
-  const experienceOptions = [
-    { label: "Less than 1 year", value: "0" },
-    { label: "1-2 years", value: "1" },
-    { label: "3-5 years", value: "3" },
-    { label: "5-10 years", value: "5" },
-    { label: "10+ years", value: "10" },
-  ];
+
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -446,60 +439,89 @@ const EditMechanicProfile = () => {
 
                 {/* Specialization */}
                 <View className="mb-3">
-                  <SelectField
-                    name="specialization"
+                  <MultiSelectField
+                    name="specializations"
                     label="Specialization"
                     placeholder="Select your specialization"
                     options={specializationOptions}
-                    value={values.specialization}
-                    onValueChange={(value) => setFieldValue("specialization", value)}
-                    error={errors.specialization}
-                    touched={touched.specialization}
+                    value={values.specializations}
+                    onValueChange={(value) => setFieldValue("specializations", value)}
                   />
-                </View>
-
-                {/* Years of Experience */}
-                <View className="mb-3">
-                  <SelectField
-                    name="years_of_experience"
-                    label="Years of Experience"
-                    placeholder="Select experience"
-                    options={experienceOptions}
-                    value={values.years_of_experience}
-                    onValueChange={(value) => setFieldValue("years_of_experience", value)}
-                    error={errors.years_of_experience}
-                    touched={touched.years_of_experience}
-                  />
+                  {touched.specializations && errors.specializations && (
+                    <Text className="text-red-500 text-xs mt-1 ml-1">{errors.specializations as string}</Text>
+                  )}
                 </View>
 
                 {/* Location */}
                 <AddressInput
                   label="Workshop Location"
                   value={values.location}
-                  onChangeText={(text: string) => setFieldValue("location", text)}
+                  onChangeText={(text: string) => {
+                    setFieldValue("location", text);
+                    // Soft infer state if not already set
+                    if (text.length > 3 && !values.state) {
+                      const states = getStatesByCountry('NG');
+                      const matchedState = states.find(s => text.toLowerCase().includes(s.name.toLowerCase()));
+                      if (matchedState) {
+                        setFieldValue("state", matchedState.name);
+                      }
+                    }
+                  }}
                   onLocationSelect={async (location: any) => {
-                    setFieldValue("location", location?.address || location);
+                    const addressStr = location?.address || location?.name || location;
+                    setFieldValue("location", addressStr);
+                    
                     if (location?.latitude && location?.longitude) {
                       setFieldValue("latitude", String(location.latitude));
                       setFieldValue("longitude", String(location.longitude));
                       
                       try {
                         const reverseGeocoded = await Location.reverseGeocodeAsync({
-                          latitude: location.latitude,
-                          longitude: location.longitude
+                          latitude: Number(location.latitude),
+                          longitude: Number(location.longitude)
                         });
+                        
                         if (reverseGeocoded.length > 0) {
                           const addr = reverseGeocoded[0];
-                          if (addr.region) {
-                            const matchedState = getStatesByCountry('NG').find(s => s.name.toLowerCase() === addr.region?.toLowerCase());
+                          const region = addr.region;
+                          
+                          if (region) {
+                            const matchedState = getStatesByCountry('NG').find(s => 
+                              s.name.toLowerCase() === region.toLowerCase() ||
+                              (addr.city && s.name.toLowerCase() === addr.city.toLowerCase())
+                            );
+                            
                             if (matchedState) {
                               setFieldValue("state", matchedState.name);
-                              setFieldValue("lga", addr.city || addr.subregion || "");
+                              // Only set LGA if it's currently empty
+                              if (!values.lga) {
+                                setFieldValue("lga", addr.city || addr.subregion || "");
+                              }
                             }
                           }
                         }
                       } catch (e) {
                         console.log("Reverse geocode error in editProfile:", e);
+                      }
+                    } else if (addressStr && !values.state) {
+                      // Fallback: try to geocode the string if no lat/lng provided
+                      try {
+                        const geocoded = await Location.geocodeAsync(addressStr);
+                        if (geocoded.length > 0) {
+                          const { latitude, longitude } = geocoded[0];
+                          setFieldValue("latitude", String(latitude));
+                          setFieldValue("longitude", String(longitude));
+                          const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+                          if (reverse.length > 0 && reverse[0].region) {
+                            const matched = getStatesByCountry('NG').find(s => s.name.toLowerCase() === reverse[0].region?.toLowerCase());
+                            if (matched) {
+                              setFieldValue("state", matched.name);
+                              setFieldValue("lga", reverse[0].city || reverse[0].subregion || "");
+                            }
+                          }
+                        }
+                      } catch (err) {
+                        console.log("Geocode fallback error:", err);
                       }
                     }
                   }}
@@ -566,50 +588,7 @@ const EditMechanicProfile = () => {
                 </View>
               </View>
 
-              <View className="mb-6">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-8 h-8 bg-indigo-50 rounded-lg items-center justify-center mr-2">
-                    <ShieldCheckIcon size={16} color="#6366F1" />
-                  </View>
-                  <Text className="text-base font-NunitoBold text-gray-900">Identity Verification</Text>
-                </View>
 
-                <SelectField
-                  label="Government ID Type"
-                  name="govt_id_type"
-                  placeholder="Select ID Type"
-                  options={[
-                    { label: "NIN", value: "NIN" },
-                    { label: "Drivers license", value: "drivers_license" },
-                    { label: "Voters card", value: "voters_card" },
-                    { label: "International passport", value: "international_passport" },
-                    { label: "Permanent voter's card", value: "permanent_voters_card" },
-                  ]}
-                  value={values.govt_id_type || ''}
-                  onValueChange={(val: string) => setFieldValue("govt_id_type", val)}
-                  error={errors.govt_id_type as string}
-                  touched={touched.govt_id_type as boolean}
-                />
-
-                <View className="flex-row justify-between mt-4">
-                  <View className="w-[48%]">
-                    <DocumentPicker 
-                      label="ID Front View" 
-                      field="government_id_front" 
-                      value={values.government_id_front} 
-                      setFieldValue={setFieldValue} 
-                    />
-                  </View>
-                  <View className="w-[48%]">
-                    <DocumentPicker 
-                      label="ID Back View" 
-                      field="government_id_back" 
-                      value={values.government_id_back} 
-                      setFieldValue={setFieldValue} 
-                    />
-                  </View>
-                </View>
-              </View>
 
               {/* Save Button */}
               <View className="mt-4">

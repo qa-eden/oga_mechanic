@@ -27,6 +27,8 @@ import {
   availabilityOptions,
   featureOptions
 } from '@/constants/data'
+import CustomAlert from '@/components/CustomAlert'
+import { useCustomAlert } from '@/hooks/useCustomAlert'
 
 // ─── Step config ───────────────────────────────────────────────────────────────
 
@@ -129,6 +131,7 @@ const UploadProducts = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
   const [currentStep, setCurrentStep] = useState(1)
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null)
+  const { visible, alertConfig, hideAlert, showSuccess, showError } = useCustomAlert()
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: true })
@@ -264,7 +267,7 @@ const UploadProducts = () => {
         setFieldValue('year', info.modelYear);
       }
 
-      Alert.alert("Success", `Vehicle details found: ${info.make} ${info.model} (${info.modelYear})`);
+      showSuccess("Success", `Vehicle details found: ${info.make} ${info.model} (${info.modelYear})`);
     } catch (error) {
       console.error("VIN Lookup error:", error);
     }
@@ -275,7 +278,7 @@ const UploadProducts = () => {
       prev.includes(feature) ? prev.filter(f => f !== feature) : [...prev, feature]
     )
 
-  const handleSubmit = async (values: typeof initialValues) => {
+  const handleSubmit = async (values: typeof initialValues, { setErrors }: any) => {
     try {
       const editing = isEditMode || isEditingMode
 
@@ -334,9 +337,15 @@ const UploadProducts = () => {
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`)
-
       const responseData = await response.json()
+
+      if (!response.ok) {
+        const errorMsg = responseData.message || 
+                         (responseData.errors && Object.values(responseData.errors).flat()[0]) || 
+                         "Failed to process request";
+        throw new Error(errorMsg);
+      }
+
       const updatedProductId = responseData.data?.id || finalProductId || ''
 
       if (values.enable_bidding && updatedProductId) {
@@ -361,24 +370,38 @@ const UploadProducts = () => {
       }
 
       if (editing) {
-        Alert.alert('Success', 'Car details updated successfully!', [
-          {
-            text: 'Continue to Edit Images',
-            onPress: () => router.push({
+        showSuccess('Success', 'Car details updated successfully!', {
+          onButtonPress: () => {
+            hideAlert();
+            router.push({
               pathname: sellerRoutes.editImage as any,
               params: { productId: updatedProductId, productData: JSON.stringify(responseData.data || parsedProductData) }
             })
-          },
-          { text: 'Done', onPress: () => router.back() }
-        ])
+          }
+        });
       } else {
         router.push({
           pathname: sellerRoutes.uploadCarImages as any,
           params: { formData: JSON.stringify(payload), productId: updatedProductId }
         })
       }
-    } catch (error) {
-      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} product. Please try again.`)
+    } catch (error: any) {
+      if (error.message && error.message.toLowerCase().includes('vin')) {
+        setErrors({ vin: error.message });
+      }
+      
+      if (error.message && error.message.toLowerCase().includes('limit of 2 active products')) {
+        showError('Product Limit Reached', error.message, {
+          buttonText: 'Subscribe',
+          onButtonPress: () => {
+            hideAlert();
+            router.push(sellerRoutes.subscription as any);
+          }
+        });
+        return;
+      }
+
+      showError('Error', error.message || `Failed to ${isEditMode ? 'update' : 'create'} product. Please try again.`)
     }
   }
 
@@ -626,6 +649,20 @@ const UploadProducts = () => {
           </Formik>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {alertConfig && (
+        <CustomAlert
+          visible={visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+          type={alertConfig.type}
+          autoDismiss={alertConfig.autoDismiss}
+          autoDismissDelay={alertConfig.autoDismissDelay}
+          onButtonPress={alertConfig.onButtonPress}
+          buttonText={alertConfig.buttonText || (alertConfig.onButtonPress ? 'Continue to Images' : 'OK')}
+        />
+      )}
     </SafeAreaView>
   )
 }

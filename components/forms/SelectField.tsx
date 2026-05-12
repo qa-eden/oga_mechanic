@@ -1,6 +1,8 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput, Image } from 'react-native'
-import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline'
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Modal, Pressable, Animated, Platform, ScrollView, TextInput, Image, StyleSheet } from 'react-native'
+import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon, XMarkIcon } from 'react-native-heroicons/outline'
+import * as Haptics from 'expo-haptics'
+import { LinearGradient } from 'expo-linear-gradient'
 import AndroidNavBarSpacer from '../AndroidNavBarSpacer'
 
 interface SelectOption {
@@ -39,6 +41,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   const [isFocused, setIsFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const animatedValue = useRef(new Animated.Value(0)).current
+  const pressAnim = useRef(new Animated.Value(1)).current
   const animationRef = useRef<Animated.CompositeAnimation | null>(null)
 
   const selectedOption = options.find(option => option.value === value)
@@ -54,11 +57,11 @@ const SelectField: React.FC<SelectFieldProps> = ({
     )
   }, [options, searchQuery])
 
-  // Memoized border colors to prevent recalculation
+  // Memoized border colors
   const borderColors = useMemo(
     () => ({
-      default: hasError ? "#EF4444" : "#D1D5DB",
-      focused: hasError ? "#EF4444" : "#F59E42",
+      default: hasError ? "#EF4444" : "#E5E7EB",
+      focused: hasError ? "#EF4444" : "#D30309", // Using primary brand color
     }),
     [hasError]
   )
@@ -66,225 +69,285 @@ const SelectField: React.FC<SelectFieldProps> = ({
   const handleFocus = useCallback(() => {
     if (!isFocused) {
       setIsFocused(true)
-
-      // Cancel any existing animation
-      if (animationRef.current) {
-        animationRef.current.stop()
-      }
-
-      animationRef.current = Animated.timing(animatedValue, {
+      Animated.timing(animatedValue, {
         toValue: 1,
-        duration: 150,
+        duration: 200,
         useNativeDriver: false,
-      })
-
-      animationRef.current.start()
+      }).start()
     }
   }, [isFocused, animatedValue])
 
   const handleBlur = useCallback(() => {
     if (isFocused) {
       setIsFocused(false)
-
-      // Cancel any existing animation
-      if (animationRef.current) {
-        animationRef.current.stop()
-      }
-
-      animationRef.current = Animated.timing(animatedValue, {
+      Animated.timing(animatedValue, {
         toValue: 0,
-        duration: 150,
+        duration: 200,
         useNativeDriver: false,
-      })
-
-      animationRef.current.start()
+      }).start()
     }
   }, [isFocused, animatedValue])
 
-  // Stable border color interpolation
+  // Border color interpolation
   const borderColor = animatedValue.interpolate({
     inputRange: [0, 1],
     outputRange: [borderColors.default, borderColors.focused],
-    extrapolate: "clamp",
   })
 
+  const onPressIn = () => {
+    Animated.spring(pressAnim, {
+      toValue: 0.98,
+      useNativeDriver: false,
+    }).start()
+  }
+
+  const onPressOut = () => {
+    Animated.spring(pressAnim, {
+      toValue: 1,
+      useNativeDriver: false,
+    }).start()
+  }
+
   const handleSelect = (optionValue: string) => {
-    if (onValueChange && typeof onValueChange === 'function') {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    if (onValueChange) {
       onValueChange(optionValue)
     }
     setShowDrawer(false)
-    setSearchQuery('') // Clear search when selecting
+    setSearchQuery('')
     handleBlur()
   }
 
   const openDrawer = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     handleFocus()
-    setSearchQuery('') // Clear search when opening
+    setSearchQuery('')
     setShowDrawer(true)
   }
 
   const closeDrawer = () => {
     setShowDrawer(false)
-    setSearchQuery('') // Clear search when closing
+    setSearchQuery('')
     handleBlur()
   }
 
   return (
-    <View className="mb-4 w-full">
+    <View className="mb-5 w-full">
       {/* Label */}
       {label && (
-        <Text className="text-base font-NunitoSemiBold text-gray-700 mb-2">
-          {label}
-          {required && <Text className="text-red-500 ml-1">*</Text>}
-        </Text>
+        <View className="flex-row items-center mb-2 ml-1">
+          <Text className="text-[15px] font-NunitoBold text-gray-800">
+            {label}
+            {required && <Text className="text-primary-500 ml-1"> *</Text>}
+          </Text>
+        </View>
       )}
 
       {/* Select Container */}
       <Animated.View
-        className="flex flex-row items-center bg-gray-50 rounded-xl px-4 py-1"
         style={{
-          borderWidth: 1.5,
+          transform: [{ scale: pressAnim }],
           borderColor: borderColor,
+          borderWidth: 1.5,
+          borderRadius: 16,
+          backgroundColor: '#fff',
           ...Platform.select({
             ios: {
-              shadowColor: hasError
-                ? "#EF4444"
-                : isFocused
-                ? "#F59E42"
-                : "transparent",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
+              shadowColor: isFocused ? "#D30309" : "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: isFocused ? 0.12 : 0.04,
+              shadowRadius: 8,
             },
             android: {
-              elevation: isFocused ? 2 : 0,
+              elevation: isFocused ? 3 : 1,
             },
           }),
         }}
       >
         <TouchableOpacity 
           onPress={openDrawer}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
           disabled={disabled}
-          className={`flex-1 flex-row items-center justify-between py-3 ${disabled ? "opacity-50" : ""}`}
+          activeOpacity={1}
+          className={`flex-row items-center justify-between px-4 py-3.5 ${disabled ? "opacity-50" : ""}`}
         >
-          <View className="flex-row items-center flex-1 min-w-0 pr-2">
+          <View className="flex-row items-center flex-1 min-w-0">
             {selectedOption?.imageUri ? (
-              <Image
-                source={{ uri: selectedOption.imageUri }}
-                className="w-10 h-10 rounded-lg mr-3 bg-gray-200"
-                resizeMode="cover"
-              />
-            ) : null}
+              <View className="w-9 h-9 rounded-full mr-3 bg-gray-100 overflow-hidden border border-gray-100">
+                <Image
+                  source={{ uri: selectedOption.imageUri }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
+            ) : (
+                <View className={`w-2 h-2 rounded-full mr-3 ${selectedOption ? 'bg-primary-500' : 'bg-gray-300'}`} />
+            )}
             <Text
-              className={`text-[1.2rem] font-NunitoMedium flex-1 ${selectedOption ? "text-gray-900" : "text-gray-400"}`}
-              numberOfLines={2}
+              className={`text-[16px] font-NunitoSemiBold flex-1 ${selectedOption ? "text-gray-900" : "text-gray-400"}`}
+              numberOfLines={1}
             >
               {selectedOption ? selectedOption.label : placeholder}
             </Text>
           </View>
-          <ChevronDownIcon size={20} color="#9CA3AF" />
+          <View className="bg-gray-50 p-1.5 rounded-lg">
+            <ChevronDownIcon size={16} color={isFocused ? "#D30309" : "#9CA3AF"} strokeWidth={2.5} />
+          </View>
         </TouchableOpacity>
       </Animated.View>
 
       {/* Error Message */}
       {hasError && (
-        <View className="flex-row items-center mt-2">
-          <View className="w-1 h-1 bg-red-500 rounded-full mr-2" />
-          <Text className="text-md font-NunitoMedium text-red-500 flex-1">
+        <Animated.View className="flex-row items-center mt-2 ml-1">
+          <Text className="text-[13px] font-NunitoMedium text-red-500">
             {error}
           </Text>
-        </View>
+        </Animated.View>
       )}
 
       {/* Bottom Drawer Modal */}
       <Modal
         visible={showDrawer}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeDrawer}
       >
         <Pressable 
-          className="flex-1 justify-end bg-black/50"
+          className="flex-1 justify-end bg-black/60"
           onPress={closeDrawer}
         >
-          <Pressable className="bg-white rounded-t-3xl h-[70vh] max-h-[80vh]">
-            <View className="p-6 pb-0">
-              <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
-              
-              <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-NunitoBold text-gray-900">
-                  {/^(select|choose)\b/i.test(String(label).trim())
-                    ? label
-                    : `Select ${label}`}
-                </Text>
-                {searchQuery.trim() && (
-                  <Text className="text-sm font-NunitoMedium text-gray-500">
-                    {filteredOptions.length} result{filteredOptions.length !== 1 ? 's' : ''}
-                  </Text>
-                )}
-              </View>
-              
-              {/* Search Input */}
-              <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2 mb-4">
-                <MagnifyingGlassIcon size={20} color="#9CA3AF" />
-                <TextInput
-                  placeholder={`Search ${label.toLowerCase()}...`}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  className="flex-1 ml-2 text-base font-NunitoMedium text-gray-900"
-                  placeholderTextColor="#9CA3AF"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
-            
-            <ScrollView 
-              className="flex-1 px-6"
-              showsVerticalScrollIndicator={true}
-              bounces={false}
-            >
-              <View className="space-y-2 pb-6">
-                {filteredOptions.length > 0 ? (
-                  filteredOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      onPress={() => handleSelect(option.value)}
-                      className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl"
+          <Animated.View 
+            className="bg-white rounded-t-[32px] h-[75vh]"
+            style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: -10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 20,
+                elevation: 20,
+            }}
+          >
+            <Pressable className="flex-1">
+                {/* Drag Handle */}
+                <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mt-3 mb-2" />
+                
+                <View className="px-6 pt-2 pb-4">
+                  <View className="flex-row items-center justify-between mb-5">
+                    <View>
+                        <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                        {/^(select|choose)\b/i.test(String(label).trim())
+                            ? label
+                            : `Select ${label}`}
+                        </Text>
+                        <Text className="text-sm font-NunitoMedium text-gray-500 mt-0.5">
+                            {options.length} options available
+                        </Text>
+                    </View>
+                    <TouchableOpacity 
+                        onPress={closeDrawer}
+                        className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
                     >
-                      <View className="flex-row items-center flex-1 min-w-0 pr-3">
-                        {option.imageUri ? (
-                          <Image
-                            source={{ uri: option.imageUri }}
-                            className="w-12 h-12 rounded-xl mr-3 bg-gray-200 shrink-0"
-                            resizeMode="cover"
-                          />
-                        ) : null}
-                        <Text
-                          className="text-base font-NunitoMedium text-gray-900 flex-1"
-                          numberOfLines={2}
-                        >
-                          {option.label}
+                        <XMarkIcon size={20} color="#374151" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Search Input Container */}
+                  <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+                    <MagnifyingGlassIcon size={20} color="#9CA3AF" strokeWidth={2} />
+                    <TextInput
+                      placeholder={`Search ${label.toLowerCase()}...`}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      className="flex-1 ml-3 text-[16px] font-NunitoSemiBold text-gray-900"
+                      placeholderTextColor="#9CA3AF"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <View className="bg-gray-200 rounded-full p-1">
+                                <XMarkIcon size={12} color="#4B5563" strokeWidth={3} />
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                
+                <ScrollView 
+                  className="flex-1"
+                  contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+                  showsVerticalScrollIndicator={false}
+                  bounces={true}
+                >
+                  <View className="space-y-3">
+                    {filteredOptions.length > 0 ? (
+                      filteredOptions.map((option, index) => {
+                        const isSelected = value === option.value
+                        return (
+                            <TouchableOpacity
+                                key={option.value}
+                                onPress={() => handleSelect(option.value)}
+                                activeOpacity={0.7}
+                                className={`flex-row items-center justify-between p-4 rounded-2xl border ${
+                                    isSelected 
+                                    ? 'bg-primary-50 border-primary-200' 
+                                    : 'bg-white border-gray-100 shadow-sm'
+                                }`}
+                            >
+                                <View className="flex-row items-center flex-1 pr-3">
+                                    {option.imageUri ? (
+                                        <View className="w-11 h-11 rounded-xl mr-3 bg-gray-100 overflow-hidden border border-gray-50">
+                                            <Image
+                                                source={{ uri: option.imageUri }}
+                                                className="w-full h-full"
+                                                resizeMode="cover"
+                                            />
+                                        </View>
+                                    ) : (
+                                        <View className={`w-10 h-10 rounded-xl mr-3 items-center justify-center ${isSelected ? 'bg-primary-500' : 'bg-gray-100'}`}>
+                                            <Text className={`text-lg font-NunitoBold ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                                                {option.label.charAt(0).toUpperCase()}
+                                            </Text>
+                                        </View>
+                                    )}
+                                    <View className="flex-1">
+                                        <Text
+                                            className={`text-[16px] ${isSelected ? 'font-NunitoBold text-primary-700' : 'font-NunitoSemiBold text-gray-900'}`}
+                                            numberOfLines={1}
+                                        >
+                                            {option.label}
+                                        </Text>
+                                        {isSelected && (
+                                            <Text className="text-[12px] font-NunitoMedium text-primary-500 mt-0.5">Currently Selected</Text>
+                                        )}
+                                    </View>
+                                </View>
+                                {isSelected && (
+                                    <View className="bg-primary-500 rounded-full p-1">
+                                        <CheckIcon size={14} color="#fff" strokeWidth={3} />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        )
+                      })
+                    ) : (
+                      <View className="py-20 items-center justify-center">
+                        <View className="w-20 h-20 bg-gray-50 rounded-full items-center justify-center mb-4">
+                            <MagnifyingGlassIcon size={40} color="#D1D5DB" strokeWidth={1} />
+                        </View>
+                        <Text className="text-gray-900 font-NunitoBold text-lg">No Results Found</Text>
+                        <Text className="text-gray-500 text-center font-NunitoMedium mt-2 px-10">
+                          We couldn't find any {label.toLowerCase()} matching your search.
                         </Text>
                       </View>
-                      {value === option.value && (
-                        <CheckIcon size={20} color="#0A6DEE" />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View className="p-8 items-center">
-                    <Text className="text-gray-500 text-center font-NunitoMedium">
-                      No {label.toLowerCase()} found matching "{searchQuery}"
-                    </Text>
-                  </View>
-                )}
+                    )}
 
-                {/* Android Navigation Bar Spacer */}
-                <AndroidNavBarSpacer />
-              </View>
-            </ScrollView>
-          </Pressable>
+                    {/* Android Navigation Bar Spacer */}
+                    <AndroidNavBarSpacer />
+                  </View>
+                </ScrollView>
+            </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
     </View>

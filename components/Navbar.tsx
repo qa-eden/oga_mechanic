@@ -148,7 +148,7 @@ const Navbar = () => {
           router.push(profileRoute as any);
         }}
         activeOpacity={0.7}
-        className="flex flex-row items-center gap-2"
+        className="flex-1 flex-row items-center gap-2 mr-2"
       >
         <View className="w-[45px] h-[45px] bg-[#EBEBEB] flex justify-center items-center rounded-full overflow-hidden">
           {profilePicture ? (
@@ -163,9 +163,11 @@ const Navbar = () => {
           )}
         </View>
 
-        <View>
+        <View className="flex-1">
           <View className="flex flex-row items-center gap-1">
-            <Text className="font-NunitoBold text-[1.2rem]">Good {label}, {displayName || 'User'}</Text>
+            <Text className="font-NunitoBold text-[1.2rem]" numberOfLines={1} ellipsizeMode="tail">
+              Good {label}, {displayName || 'User'}
+            </Text>
             {/* {icon} */}
             {/* {isVerified && (
               <View className="bg-green-100 px-1 py-0.5 rounded-full ml-1">
@@ -175,13 +177,13 @@ const Navbar = () => {
               </View>
             )} */}
           </View>
-          <Text className="text-[12px] text-text-100 pt-[.1rem]">
+          <Text className="text-[12px] text-text-100 pt-[.1rem]" numberOfLines={1} ellipsizeMode="tail">
             {activeRole === 'mechanic' 
               ? 'Manage your jobs and earnings.' 
               : activeRole === 'seller' || activeRole === 'merchant'
               ? 'Manage your shop and products.' 
               : activeRole === 'vehicle_rental'
-              ? 'Manage your rental fleet and bookings.'
+              ? 'Manage your rentals and bookings.'
               : 'Everything your car needs is here.'}
           </Text>
         </View>

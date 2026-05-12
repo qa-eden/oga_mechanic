@@ -117,6 +117,29 @@ export async function scheduleNewOrderNotification(params: {
 }
 
 /**
+ * Schedule a success/celebration local notification.
+ */
+export async function scheduleSuccessNotification(title: string, body: string, data: any = {}) {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🎉 ${title}`,
+        body,
+        sound: 'default',
+        data: { ...data, notification_type: 'success' },
+        priority: Notifications.AndroidNotificationPriority?.MAX,
+      },
+      trigger: null,
+    });
+  } catch (e) {
+    console.warn('Failed to schedule success notification:', e);
+  }
+}
+
+/**
  * Schedule a generic local notification with server-provided title and body.
  */
 export async function scheduleGenericNotification(title: string, body: string, data: any = {}) {

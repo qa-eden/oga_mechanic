@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { userAPI, PrimaryUserProfileResponse, UserRolesResponse, UserProfile, MerchantProfileResponse, BanksResponse, BankEnquiryRequest, BankEnquiryResponse, AddBankAccountRequest, UserBankAccountResponse, MechanicProfileResponse, WalletResponse, UserEarningsResponse, WithdrawalResponse, WithdrawalFilters, WithdrawalRequestData, UserBankAccountsResponse, VehicleRentalProfileResponse } from '@/lib/api/user';
 import { mechanicAPI } from '@/lib/api/mechanic';
@@ -91,10 +92,31 @@ export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean 
 
 // Hook to get the appropriate profile based on active role
 export const useActiveRoleProfile = () => {
-  // First, get primary profile to check active role
+  // Seed the active role from AsyncStorage immediately to avoid a flash of the
+  // wrong UI while the primary profile API call is still in-flight.
+  // 'current_active_role' is always written on login and role switch.
+  const [storedRole, setStoredRole] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+      AsyncStorage.getItem('current_active_role').then((role) => {
+        if (!cancelled && role) setStoredRole(role);
+      });
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Primary profile from API (source of truth once loaded)
   const primaryProfile = usePrimaryUserProfile();
-  const activeRoleData = primaryProfile.data?.active_role || primaryProfile.data?.data?.active_role || primaryProfile.data?.data?.current_role;
-  const activeRole = typeof activeRoleData === 'object' ? activeRoleData?.name : activeRoleData;
+  const activeRoleData =
+    primaryProfile.data?.active_role ||
+    primaryProfile.data?.data?.active_role ||
+    primaryProfile.data?.data?.current_role;
+  const apiRole = typeof activeRoleData === 'object' ? activeRoleData?.name : activeRoleData;
+
+  // Use API role when available; fall back to AsyncStorage seed during the loading window
+  const activeRole = apiRole || storedRole || undefined;
 
   // Role-specific profile flags
   const isVehicleRental = activeRole === 'vehicle_rental';
@@ -106,19 +128,19 @@ export const useActiveRoleProfile = () => {
   const merchantProfile = useMerchantProfile(isMerchant);
   const mechanicProfile = useMechanicProfile(isMechanic);
 
-  // Determine the consolidated state
-  const isFetching = primaryProfile.isFetching || 
+  // Consolidated loading/fetching/error states
+  const isFetching = primaryProfile.isFetching ||
     (isVehicleRental && vehicleRentalProfile.isFetching) ||
-    (isMerchant && merchantProfile.isFetching) || 
+    (isMerchant && merchantProfile.isFetching) ||
     (isMechanic && mechanicProfile.isFetching);
 
-  const isLoading = primaryProfile.isLoading || 
+  const isLoading = primaryProfile.isLoading ||
     (isVehicleRental && vehicleRentalProfile.isLoading) ||
-    (isMerchant && merchantProfile.isLoading) || 
+    (isMerchant && merchantProfile.isLoading) ||
     (isMechanic && mechanicProfile.isLoading);
 
-  const error = primaryProfile.error || 
-    (isMerchant ? merchantProfile.error : 
+  const error = primaryProfile.error ||
+    (isMerchant ? merchantProfile.error :
     (isMechanic ? mechanicProfile.error : null));
 
   const refetch = async () => {
@@ -128,8 +150,7 @@ export const useActiveRoleProfile = () => {
     if (isMechanic) await mechanicProfile.refetch();
   };
 
-  // Return the appropriate profile data based on role
-  // Only return role-specific data if it's actually loaded
+  // Return the appropriate role-specific profile data only when fully loaded
   let data: any = null;
   if (isVehicleRental && vehicleRentalProfile.data) data = vehicleRentalProfile.data;
   else if (isMerchant && merchantProfile.data) data = merchantProfile.data;
@@ -138,10 +159,11 @@ export const useActiveRoleProfile = () => {
   return {
     data,
     isLoading,
+    isFetching,
     error,
     refetch,
     activeRole,
-    isMerchant, // Strictly merchant/seller
+    isMerchant,
     isVehicleRental,
     isMechanic,
     primaryProfileData: primaryProfile.data,

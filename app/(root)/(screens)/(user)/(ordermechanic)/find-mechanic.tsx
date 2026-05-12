@@ -6,7 +6,7 @@ import BackArrowBtn from '@/components/BackArrowBtn';
 import { useCreateRepairRequest } from '@/hooks/useMechanic';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { useServiceTypes } from '@/hooks/useServiceTypes';
-import { getErrorMessage } from '@/utils/errorMessages';
+import { getErrorMessage, getApiErrorMessage } from '@/utils/errorMessages';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { decodeVINWithImage } from '@/utils/vinDecoder';
@@ -18,6 +18,7 @@ import { OrderFormFields } from '@/components/mechanic/OrderFormFields';
 import { SuccessModal } from '@/components/mechanic/SuccessModal';
 import { useFindMechanicForm } from '@/hooks/mechanic/useFindMechanicForm';
 import { useCarList } from '@/hooks/mechanic/useCarList';
+import { showToast } from '@/utils/toastUtils';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useVehicleOptions } from '@/hooks/mechanic/useVehicleOptions';
 
@@ -97,10 +98,6 @@ const FindMechanic = () => {
 
           // We reset model when make changes in the component, but here we want to set it
           if (vehicleInfo.model) {
-            // Wait for make to update so model options can populate? 
-            // Actually our useVehicleOptions might need makeId to be the ID, not name
-            // Let's assume setVehicleMake handles it or we'll need a slight delay
-            
             // Try to find model ID if possible
             let modelId = vehicleInfo.model;
             if (vehicleMakes && makeId) {
@@ -116,18 +113,10 @@ const FindMechanic = () => {
           formState.setVehicleYear(vehicleInfo.modelYear.toString());
         }
 
-        Alert.alert(
-          "Vehicle Found!",
-          `Successfully loaded details for ${vehicleInfo.make} ${vehicleInfo.model}`,
-          [{ text: "OK" }]
-        );
+        showToast.success(`Identified: ${vehicleInfo.make} ${vehicleInfo.model}`);
       }
     } catch (error: any) {
-      Alert.alert(
-        "VIN Lookup Failed",
-        error.message || "Unable to find vehicle information for this VIN.",
-        [{ text: "OK" }]
-      );
+      showToast.error(error.message || "VIN identification failed.");
     }
   }, [vehicleMakes, formState]);
 
@@ -293,7 +282,7 @@ const FindMechanic = () => {
       },
       onError: (err: any) => {
         try {
-          const errorMessage = getErrorMessage(err, 'general');
+          const errorMessage = getApiErrorMessage(err, 'general');
           Alert.alert('Submission failed', errorMessage);
         } catch (alertError) {
           console.error('Error displaying error message:', alertError);
@@ -339,18 +328,23 @@ const FindMechanic = () => {
   }
 
   return (
-    <SafeAreaView className="bg-white flex-1">
+    <SafeAreaView className="bg-white flex-1" edges={["top", "bottom"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+      <View className="px-5 py-4 flex-row items-center justify-between">
         {hasCarList && formState.currentStep === 2 ? (
           <BackArrowBtn onPress={() => formState.setCurrentStep(1)} />
         ) : (
           <BackArrowBtn />
         )}
         
-        <Text className="text-xl font-NunitoBold text-gray-900">
-          Find mechanic
-        </Text>
+        <View className="flex-1 items-center">
+          <Text className="text-xl font-NunitoExtraBold text-gray-900">
+            Find Mechanic
+          </Text>
+          <Text className="text-[10px] font-NunitoBold text-gray-400 uppercase tracking-widest mt-0.5">
+            Book professional specialist
+          </Text>
+        </View>
         
         <View className="w-10" />
       </View>
@@ -361,11 +355,11 @@ const FindMechanic = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView 
-          className="flex-1 px-5 pt-6" 
-          showsVerticalScrollIndicator={true}
+          className="flex-1 px-5 pt-4" 
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingBottom: Platform.OS === 'android' ? 80 : 30,
+            paddingBottom: 40,
           }}
         >
         {/* Step Indicator */}
@@ -394,12 +388,12 @@ const FindMechanic = () => {
         {formState.currentStep === 2 && (
           <View>
             {/* Form Header */}
-            <View className="bg-primary-50 rounded-xl p-3 mb-4 border border-primary-100">
-              <Text className="text-lg font-NunitoBold text-gray-900 mb-1 text-center">
+            <View className="bg-gray-50 rounded-3xl p-5 mb-8 border border-gray-100">
+              <Text className="text-base font-NunitoExtraBold text-gray-900 mb-1">
                 Request Details
               </Text>
-              <Text className="text-sm text-gray-600 font-NunitoRegular text-center">
-                Complete the form below to find available mechanics near you
+              <Text className="text-xs text-gray-500 font-NunitoMedium leading-5">
+                Complete the form below and we'll connect you with available specialists near you.
               </Text>
             </View>
 
@@ -444,17 +438,15 @@ const FindMechanic = () => {
             />
 
             {/* Submit Button */}
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1">
-                <CustomButton
-                  title={isPending ? "Submitting request..." : "Proceed"}
-                  onPress={handleProceed}
-                  bgVariant="primary"
-                  className="py-4"
-                  loading={isPending}
-                  disabled={isPending}
-                />
-              </View>
+            <View className="mt-6">
+              <CustomButton
+                title={isPending ? "Submitting request..." : "Proceed to Search"}
+                onPress={handleProceed}
+                bgVariant="primary"
+                className=" bg-gray-900"
+                loading={isPending}
+                disabled={isPending}
+              />
             </View>
           </View>
         )}

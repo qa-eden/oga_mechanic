@@ -9,9 +9,9 @@ export const AUTH_ENDPOINTS = {
   REGISTER: '/auth/register',
   REFRESH_TOKEN: '/auth/refresh',
   LOGOUT: '/auth/logout',
-  FORGOT_PASSWORD: '/auth/forgot-password',
-  RESET_PASSWORD: '/auth/reset-password',
-  VERIFY_OTP: '/auth/verify-otp',
+  FORGOT_PASSWORD: '/users/password/reset/',
+  RESET_PASSWORD: '/users/password/reset/confirm/',
+  VERIFY_OTP: '/users/resend-verification-code/',
   SWITCH_ROLE: '/auth/switch-role',
   ALL_ROLES: '/users/roles/list/',
 } as const;

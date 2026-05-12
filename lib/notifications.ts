@@ -4,7 +4,11 @@ import { Platform } from 'react-native';
  * Safely initialize notification listeners.
  * Wraps in try-catch to prevent crashes when native modules are missing (e.g. in development builds that haven't been rebuilt).
  */
-export const setupNotificationListeners = (onNewOrder: () => void, onNewMessage: (data: any) => void) => {
+export const setupNotificationListeners = (
+  onNewOrder: () => void, 
+  onNewMessage: (data: any) => void,
+  onNotification: (data: any) => void
+) => {
   try {
     const Notifications = require('expo-notifications');
     
@@ -24,6 +28,8 @@ export const setupNotificationListeners = (onNewOrder: () => void, onNewMessage:
         onNewOrder();
       } else if (data?.type === 'chat_message') {
         onNewMessage(data);
+      } else {
+        onNotification(data);
       }
     });
 

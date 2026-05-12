@@ -13,6 +13,7 @@ import { ChevronLeftIcon } from "react-native-heroicons/solid";
 import { CameraIcon, BuildingStorefrontIcon, MapPinIcon, PhoneIcon, EnvelopeIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
 import { useActiveRoleProfile, useSubmitMerchantKYC } from "@/hooks/useUserProfile";
 import { userAPI } from "@/lib/api/user";
+import { formatPhoneNumber } from "@/utils/phoneUtils";
 import { showToast } from "@/utils/toastUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Formik } from "formik";
@@ -37,7 +38,7 @@ const editSellerProfileSchema = Yup.object().shape({
     .min(2, "Last name must be at least 2 characters")
     .required("Last name is required"),
   phone_number: Yup.string()
-    .matches(/^[0-9]{10,11}$/, "Phone number must be 10-11 digits")
+    .matches(/^[0-9]{10,13}$/, "Phone number must be 10-13 digits")
     .required("Phone number is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   store_name: Yup.string().nullable(),
@@ -156,7 +157,7 @@ const EditSellerProfile = () => {
       // Personal Info
       formData.append('first_name', values.first_name);
       formData.append('last_name', values.last_name);
-      formData.append('phone_number', values.phone_number);
+      formData.append('phone_number', formatPhoneNumber(values.phone_number));
       
       // Business Info
       if (values.store_name) {

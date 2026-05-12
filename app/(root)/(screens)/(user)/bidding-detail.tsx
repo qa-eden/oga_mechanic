@@ -18,7 +18,7 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 
 import { useProductDetail, useSubmitBid, useProductBids } from "@/hooks/useProducts";
 import { showToast } from "@/utils/toastUtils";
-import { getErrorMessage } from "@/utils/errorMessages";
+import { getApiErrorMessage } from "@/utils/errorMessages";
 
 import {
   ProductImageGallery,
@@ -170,7 +170,7 @@ const BiddingDetail = () => {
         </View>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-lg font-NunitoMedium text-gray-600 text-center">
-            {error ? getErrorMessage(error, 'products') : 'Product not found'}
+            {error ? getApiErrorMessage(error, 'products') : 'Product not found'}
           </Text>
         </View>
       </SafeAreaView>
