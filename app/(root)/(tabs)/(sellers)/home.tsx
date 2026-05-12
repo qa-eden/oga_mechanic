@@ -196,7 +196,7 @@ const SellerHome = () => {
 
         <View className=" py-4">
           <KYCBanner 
-            isVisible={!isProfileComplete || isPendingApproval} 
+            isVisible={!activeProfileQuery.isLoading && (!isProfileComplete || isPendingApproval)} 
             role={isVehicleRental ? "vehicle_rental" : "seller"} 
             isPending={isPendingApproval}
           />

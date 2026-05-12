@@ -222,7 +222,7 @@ const MechanicProfile = () => {
 
               <View className="mb-4">
                 <KYCBanner 
-                  isVisible={!isComplete || isPendingApproval} 
+                  isVisible={!isLoadingProfile && (!isComplete || isPendingApproval)} 
                   role="mechanic" 
                   isPending={isPendingApproval} 
                 />

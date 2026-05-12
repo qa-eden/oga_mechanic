@@ -88,13 +88,13 @@ export const useRepairRequestDetail = (requestId: string | undefined, pollInterv
     queryKey: ['repair-request', requestId],
     queryFn: () => mechanicAPI.getRepairRequestDetail(requestId!),
     enabled: !!requestId,
-    staleTime: 5000, // Reduced staleTime for tracking
+    staleTime: 30 * 1000, // 30 seconds – prevents back-to-back refetches on re-render
     gcTime: 5 * 60 * 1000,
     retry: 1,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Modal open/close fires "focus" in RN — avoid extra calls
     refetchOnReconnect: true,
-    refetchInterval: pollInterval, // Apply polling interval
+    refetchInterval: pollInterval,
     networkMode: 'online',
   });
 };

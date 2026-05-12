@@ -238,7 +238,7 @@ const SellerProfile = () => {
 
             <View className="mb-4">
               <KYCBanner 
-                isVisible={!isProfileComplete || isPendingApproval} 
+                isVisible={!activeProfileQuery.isLoading && (!isProfileComplete || isPendingApproval)} 
                 role={isVehicleRental ? "vehicle_rental" : "seller"} 
                 isPending={isPendingApproval} 
               />

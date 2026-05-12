@@ -29,10 +29,12 @@ const ResetPassword = () => {
 
     try {
       const response = await userAPI.resetPassword({
-        email,
-        otp: code,
-        new_password: values.password,
-        confirm_new_password: values.confirmPassword
+        requestType: "inbound",
+        data: {
+          token: code,
+          password: values.password,
+          password_confirm: values.confirmPassword
+        }
       });
 
       if (response.status) {

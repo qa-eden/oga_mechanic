@@ -22,7 +22,7 @@ const EnterCode = () => {
   const params = useLocalSearchParams<{ email: string }>();
   const email = params?.email || "";
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(60); // Initial countdown value
+  const [countdown, setCountdown] = useState(10); // Initial countdown value
 
   // Countdown effect
   useEffect(() => {
@@ -38,13 +38,15 @@ const EnterCode = () => {
   const handleOtpComplete = async (otp: string | number) => {
     setLoading(true);
     try {
-      const response = await userAPI.verifyResetOtp(email, otp.toString());
+      // Changed to use verifyEmailCode as requested by the provided endpoint spec
+      const response = await userAPI.verifyEmailCode(email, otp.toString());
       if (response.status) {
         Toast.show({
           type: 'success',
-          text1: 'OTP Verified',
-          text2: 'You can now reset your password.',
+          text1: 'Email Verified',
+          text2: 'Your email has been successfully verified.',
         });
+
         router.push({
           pathname: routes?.resetPassword as any,
           params: { email, code: otp.toString() }
@@ -71,13 +73,13 @@ const EnterCode = () => {
   const handleResendCode = async () => {
     try {
       setLoading(true);
-      const response = await userAPI.forgotPassword(email);
+      const response = await userAPI.resendVerificationCode(email);
       if (response.status) {
         setCountdown(60);
         Toast.show({
           type: 'success',
           text1: 'Code Resent',
-          text2: 'Check your email for the new recovery code.',
+          text2: 'Check your email for the new verification code.',
         });
       } else {
         Toast.show({

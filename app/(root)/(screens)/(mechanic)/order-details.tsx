@@ -21,24 +21,24 @@ import { useCustomAlert } from '@/hooks/useCustomAlert';
 import { useRepairRequestDetail, useAcceptRepairRequest, useDeclineRepairRequest, useUpdateRepairRequestStatus, useCancelRepairRequest, useUpdateRepairRequest, useVerifyRepairRequestOtp } from '@/hooks/useRepairRequests';
 import { useVehicleMakes } from '@/hooks/useVehicleMakes';
 import { getErrorMessage, getApiErrorMessage } from '@/utils/errorMessages';
+import { routes } from '@/constants/routes';
 import {
-  UserIcon,
-  TruckIcon,
   CalendarIcon,
   MapPinIcon,
-  DocumentTextIcon,
-  WrenchScrewdriverIcon,
   ClockIcon,
-  CheckCircleIcon,
   XCircleIcon,
   ClipboardDocumentIcon,
   CalendarDaysIcon,
   ShieldCheckIcon,
+  PhoneIcon,
+  ChatBubbleLeftRightIcon,
 } from 'react-native-heroicons/outline';
-import { CheckCircleIcon as CheckCircleSolidIcon } from 'react-native-heroicons/solid';
-import OgaMapView, { Marker } from '@/components/OgaMapView';
-import { PhoneIcon, ChatBubbleLeftRightIcon } from 'react-native-heroicons/outline';
-import { routes } from '@/constants/routes';
+import StatusBanner from './mechanicRepairPages/StatusBanner';
+import OrderMapView from './mechanicRepairPages/OrderMapView';
+import CustomerInfoCard from './mechanicRepairPages/CustomerInfoCard';
+import VehicleServiceDetails from './mechanicRepairPages/VehicleServiceDetails';
+import BottomActionButtons from './mechanicRepairPages/BottomActionButtons';
+import OrderTimeline from './mechanicRepairPages/OrderTimeline';
 
 const MechanicOrderDetails = () => {
   const params = useLocalSearchParams();
@@ -85,12 +85,12 @@ const MechanicOrderDetails = () => {
   const customer = request?.customer;
   const status = request?.status || 'pending';
 
-  // Auto-show OTP modal when status is arrived and not verified
-  useEffect(() => {
-    if (status === 'arrived' && !request?.is_otp_verified) {
-      setOtpModalVisible(true);
-    }
-  }, [status, request?.is_otp_verified]);
+  // Removed auto-show OTP modal to prevent UI jumps and focus issues
+  // useEffect(() => {
+  //   if (status === 'arrived' && !request?.is_otp_verified) {
+  //     setOtpModalVisible(true);
+  //   }
+  // }, [status, request?.is_otp_verified]);
 
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
@@ -269,11 +269,8 @@ const MechanicOrderDetails = () => {
           requestId: orderId, 
           status: 'in_progress' 
         });
-        await refetch();
       } catch (statusError) {
         console.error('Failed to auto-update status:', statusError);
-        // We don't show an error here because OTP was verified successfully, 
-        // the mechanic can still manually update status if needed.
       }
       
     } catch (error: any) {
@@ -284,7 +281,7 @@ const MechanicOrderDetails = () => {
   };
 
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -295,12 +292,12 @@ const MechanicOrderDetails = () => {
     });
   };
 
-  const formatTime = (timeSlot: string) => {
+  const formatTime = (timeSlot: string | null | undefined) => {
     if (!timeSlot) return 'N/A';
     return timeSlot.charAt(0).toUpperCase() + timeSlot.slice(1);
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -405,15 +402,11 @@ const MechanicOrderDetails = () => {
     try {
       if (actionType === 'accept') {
         await acceptRequestMutation.mutateAsync(orderId);
-        // Await refetch to ensure data is updated before showing success alert
-        await refetch();
         setActionModalVisible(false);
         setActionType(null);
         showSuccess('Success', 'Repair request accepted successfully.');
       } else if (actionType === 'decline') {
         await declineRequestMutation.mutateAsync(orderId);
-        // Await refetch to ensure data is updated before showing success alert
-        await refetch();
         setActionModalVisible(false);
         setActionType(null);
         showSuccess('Success', 'Repair request declined successfully.');
@@ -428,9 +421,6 @@ const MechanicOrderDetails = () => {
 
         // Status updates: in_transit, in_progress, completed
         await updateStatusMutation.mutateAsync({ requestId: orderId, status: actionType });
-
-        // Await refetch to ensure data is updated before showing success alert
-        await refetch();
         setActionModalVisible(false);
         setActionType(null);
         showSuccess('Success', 'Status updated successfully.');
@@ -471,8 +461,6 @@ const MechanicOrderDetails = () => {
       setCancelModalVisible(false);
       setCancelReason('');
       setSelectedCancelReason('');
-      // Await refetch to ensure data is updated before showing success alert
-      await refetch();
       showSuccess(
         'Job Cancelled',
         'The repair request has been cancelled successfully.'
@@ -511,7 +499,6 @@ const MechanicOrderDetails = () => {
       });
       
       setCompletionFormVisible(false);
-      await refetch();
       setJobCompletedModalVisible(true);
     } catch (error: any) {
       const errorMessage = getApiErrorMessage(error);
@@ -592,119 +579,25 @@ const MechanicOrderDetails = () => {
         }
       >
         <View className="px-5 py-4">
-          {/* Status Banner */}
-          <View className={`rounded-2xl p-4 mb-5 ${
-            status === 'pending' ? 'bg-amber-50 border-2 border-amber-200' :
-            status === 'accepted' ? 'bg-blue-50 border-2 border-blue-200' :
-            status === 'in_transit' ? 'bg-indigo-50 border-2 border-indigo-200' :
-            status === 'arrived' ? 'bg-purple-50 border-2 border-purple-200' :
-            status === 'in_progress' ? 'bg-orange-50 border border-orange-200' :
-            (status === 'completed' || status === 'verify_completed') ? 
-                ((status === 'verify_completed' || request?.verify_completed_at) ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') :
-            status === 'cancelled' || status === 'declined' ? 'bg-red-50 border-2 border-red-200' :
-            'bg-gray-50 border-2 border-gray-200'
-          }`}>
-            <View className="flex-row items-center">
-              <View className={`w-12 h-12 rounded-full items-center justify-center mr-3 ${
-                status === 'pending' ? 'bg-amber-100' :
-                status === 'accepted' ? 'bg-blue-100' :
-                status === 'in_transit' ? 'bg-indigo-100' :
-                status === 'arrived' ? 'bg-purple-100' :
-                status === 'in_progress' ? 'bg-orange-100' :
-                (status === 'completed' || status === 'verify_completed') ? 
-                    ((status === 'verify_completed' || request?.verify_completed_at) ? 'bg-green-100' : 'bg-blue-100') :
-                status === 'cancelled' || status === 'declined' ? 'bg-red-100' :
-                'bg-gray-100'
-              }`}>
-                {status === 'pending' && <ClockIcon size={24} color="#D97706" />}
-                {status === 'accepted' && <CheckCircleIcon size={24} color="#2563EB" />}
-                {status === 'in_transit' && <TruckIcon size={24} color="#4F46E5" />}
-                {status === 'arrived' && <MapPinIcon size={24} color="#7C3AED" />}
-                {status === 'in_progress' && <WrenchScrewdriverIcon size={20} color="#EA580C" />}
-              {(status === 'completed' || status === 'verify_completed') && (
-                (status === 'verify_completed' || request?.verify_completed_at) ? 
-                <CheckCircleSolidIcon size={20} color="#16A34A" /> : 
-                <ClockIcon size={20} color="#2563EB" />
-              )}
-  {(status === 'cancelled' || status === 'declined') && <XCircleIcon size={24} color="#DC2626" />}
-              </View>
-              <View className="flex-1">
-                <Text className={`text-lg font-NunitoBold ${
-                  status === 'pending' ? 'text-amber-800' :
-                  status === 'accepted' ? 'text-blue-800' :
-                  status === 'in_transit' ? 'text-indigo-800' :
-                  status === 'arrived' ? 'text-purple-800' :
-                    status === 'in_progress' ? 'text-orange-800' :
-                    (status === 'completed' || status === 'verify_completed') ? 
-                        ((status === 'verify_completed' || request?.verify_completed_at) ? 'text-green-800' : 'text-blue-800') :
-                  status === 'cancelled' || status === 'declined' ? 'text-red-800' :
-                  'text-gray-800'
-                }`}>
-                  {getStatusLabel(status)}
-                </Text>
-                <Text className={`text-sm font-NunitoRegular mt-0.5 ${
-                  status === 'pending' ? 'text-amber-600' :
-                  status === 'accepted' ? 'text-blue-600' :
-                  status === 'in_transit' ? 'text-indigo-600' :
-                  status === 'arrived' ? 'text-purple-600' :
-                  status === 'in_progress' ? 'text-orange-600' :
-                  status === 'completed' ? 'text-green-600' :
-                  status === 'cancelled' || status === 'declined' ? 'text-red-600' :
-                  'text-gray-600'
-                }`}>
-                  {status === 'pending' && 'Waiting for your response'}
-                  {status === 'accepted' && 'Head to customer location'}
-                  {status === 'in_transit' && 'On your way to customer'}
-                  {status === 'arrived' && 'You have reached the customer'}
-                  {status === 'in_progress' && 'Working on the repair'}
-                  {(status === 'completed' || status === 'verify_completed') && 
-                    ((status === 'verify_completed' || request?.verify_completed_at) ? 'The customer has verified this job.' : 'Waiting for the customer to verify completion.')}
-                {status === 'cancelled' && 'This request was cancelled.'}
-                  {status === 'declined' && 'You declined this request'}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <StatusBanner 
+            status={status} 
+            request={request} 
+            getStatusLabel={getStatusLabel} 
+          />
 
-          {/* Live Tracking Map for Mechanic */}
-          {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && request.service_latitude && request.service_longitude && (
-            <View className="rounded-2xl overflow-hidden h-64 mb-5 border-2 border-gray-100 shadow-sm">
-                <OgaMapView
-                    initialRegion={{
-                        latitude: request.service_latitude,
-                        longitude: request.service_longitude,
-                        latitudeDelta: 0.05,
-                        longitudeDelta: 0.05,
-                    }}
-                    style={{ flex: 1 }}
-                >
-                    {/* Destination Marker (User) */}
-                    <Marker 
-                        type="user"
-                        coordinate={{ latitude: request.service_latitude, longitude: request.service_longitude }}
-                    >
-                        <View className="bg-red-500 p-2 rounded-full border-2 border-white shadow-md">
-                            <UserIcon size={20} color="#FFFFFF" />
-                        </View>
-                    </Marker>
+          <OrderMapView 
+            status={status} 
+            request={request} 
+            mechanicLocation={mechanicLocation} 
+          />
 
-                    {/* Current Position Marker (Mechanic) */}
-                    {mechanicLocation && (
-                        <Marker type="van" coordinate={mechanicLocation}>
-                            <View className="bg-gray-900 p-2 rounded-full border-2 border-white shadow-md">
-                                <TruckIcon size={20} color="#FFFFFF" />
-                            </View>
-                        </Marker>
-                    )}
-                </OgaMapView>
-                <View className="absolute bottom-3 left-3 right-3 bg-white/95 p-3 rounded-lg border border-gray-100 flex-row items-center">
-                    <MapPinIcon size={16} color="#6B7280" />
-                    <Text className="text-xs font-NunitoMedium text-gray-600 ml-2 flex-1" numberOfLines={1}>
-                        Destination: {request.service_address || 'Customer Location'}
-                    </Text>
-                </View>
-            </View>
-          )}
+          <CustomerInfoCard customer={customer} />
+
+          <VehicleServiceDetails 
+            request={request} 
+            makeName={makeName} 
+            modelName={modelName} 
+          />
 
           {/* Action Buttons for communication */}
           {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && (
@@ -725,104 +618,6 @@ const MechanicOrderDetails = () => {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Customer Information Card */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-center mb-4">
-              <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <UserIcon size={20} color="#374151" />
-              </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Customer
-              </Text>
-            </View>
-
-            <View className="bg-gray-50 rounded-xl p-3">
-              <Text className="text-base font-NunitoBold text-gray-900">
-                {customer?.first_name && customer?.last_name
-                  ? `${customer.first_name} ${customer.last_name}`
-                  : 'N/A'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Vehicle Information */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-center mb-4">
-              <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <TruckIcon size={20} color="#374151" />
-              </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Vehicle Details
-              </Text>
-            </View>
-
-            <View className="bg-gray-50 rounded-xl p-3">
-              <Text className="text-base font-NunitoBold text-gray-900">
-                {makeName} {modelName}
-              </Text>
-              <View className="flex-row items-center mt-2 flex-wrap gap-2">
-                {request.vehicle_year && (
-                  <View className="bg-gray-200 px-3 py-1 rounded-full">
-                    <Text className="text-xs font-NunitoSemiBold text-gray-700">
-                      {request.vehicle_year}
-                    </Text>
-                  </View>
-                )}
-                {request.vehicle_registration && (
-                  <View className="bg-gray-200 px-3 py-1 rounded-full">
-                    <Text className="text-xs font-NunitoSemiBold text-gray-700">
-                      {request.vehicle_registration}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Service Type & Problem */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-center mb-4">
-              <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <WrenchScrewdriverIcon size={20} color="#374151" />
-              </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Service Required
-              </Text>
-            </View>
-
-            <View className="bg-gray-50 rounded-xl p-3 mb-3">
-              <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider mb-1">
-                Service Type
-              </Text>
-              <Text className="text-base font-NunitoBold text-gray-900">
-                {request.service_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}
-              </Text>
-            </View>
-
-            <View className="bg-gray-50 rounded-xl p-3">
-              <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider mb-1">
-                Problem Description
-              </Text>
-              <Text className="text-sm font-NunitoMedium text-gray-800 leading-5">
-                {request.problem_description || 'No description provided'}
-              </Text>
-            </View>
-
-            {request.notes && (
-              <View className="bg-gray-100 rounded-xl p-3 mt-3">
-                <View className="flex-row items-center mb-1">
-                  <DocumentTextIcon size={14} color="#6B7280" />
-                  <Text className="text-xs font-NunitoMedium text-gray-500 uppercase tracking-wider ml-1">
-                    Additional Notes
-                  </Text>
-                </View>
-                <Text className="text-sm font-NunitoMedium text-gray-800 leading-5">
-                  {request.notes}
-                </Text>
-              </View>
-            )}
-          </View>
 
           {/* Arrival Verification OTP */}
           {(status === 'accepted' || status === 'in_transit' || status === 'arrived') && (
@@ -960,238 +755,11 @@ const MechanicOrderDetails = () => {
             )}
           </View>
 
-          {/* Order Timeline - Visual Tracker */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-            <View className="flex-row items-center mb-5">
-              <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <ClockIcon size={20} color="#374151" />
-              </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">
-                Job Progress
-              </Text>
-            </View>
-
-            {/* Timeline Steps */}
-            <View className="pl-2">
-              {/* Step 1: Request Received */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.requested_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`}>
-                    {request.requested_at ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  <View className={`w-0.5 h-12 ${
-                    request.accepted_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                </View>
-                <View className="flex-1 pb-4">
-                  <Text className={`text-sm font-NunitoBold ${
-                    request.requested_at ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    Request Received
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.requested_at ? formatDateTime(request.requested_at) : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 2: Job Accepted */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.accepted_at ? 'bg-green-500' :
-                    status === 'declined' ? 'bg-red-500' : 'bg-gray-200'
-                  }`}>
-                    {request.accepted_at ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : status === 'declined' ? (
-                      <XCircleIcon size={20} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  <View className={`w-0.5 h-12 ${
-                    request.in_transit_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                </View>
-                <View className="flex-1 pb-4">
-                  <Text className={`text-sm font-NunitoBold ${
-                    request.accepted_at || status === 'declined' ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    {status === 'declined' ? 'Request Declined' : 'Job Accepted'}
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.accepted_at ? formatDateTime(request.accepted_at) :
-                     status === 'declined' ? 'Declined' : 'Waiting'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 3: In Transit */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.in_transit_at ? 'bg-green-500' :
-                    status === 'in_transit' ? 'bg-blue-500' : 'bg-gray-200'
-                  }`}>
-                    {request.in_transit_at ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : status === 'in_transit' ? (
-                      <TruckIcon size={16} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  <View className={`w-0.5 h-12 ${
-                    request.arrived_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                </View>
-                <View className="flex-1 pb-4">
-                  <Text className={`text-sm font-NunitoBold ${
-                    request.in_transit_at || status === 'in_transit' ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    On The Way
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.in_transit_at ? formatDateTime(request.in_transit_at) :
-                     status === 'in_transit' ? 'In Progress' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 4: Arrived */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.arrived_at ? 'bg-green-500' :
-                    status === 'arrived' ? 'bg-purple-500' : 'bg-gray-200'
-                  }`}>
-                    {request.arrived_at ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : status === 'arrived' ? (
-                      <MapPinIcon size={16} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  <View className={`w-0.5 h-12 ${
-                    request.in_progress_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                </View>
-                <View className="flex-1 pb-4">
-                  <Text className={`text-sm font-NunitoBold ${
-                    request.arrived_at || status === 'arrived' ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    Arrived At Location
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.arrived_at ? formatDateTime(request.arrived_at) :
-                     status === 'arrived' ? 'Reached' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 5: Work Started */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    request.in_progress_at ? 'bg-green-500' :
-                    status === 'in_progress' ? 'bg-orange-500' : 'bg-gray-200'
-                  }`}>
-                    {request.in_progress_at && status === 'completed' ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : status === 'in_progress' ? (
-                      <WrenchScrewdriverIcon size={16} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  <View className={`w-0.5 h-12 ${
-                    request.completed_at ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                </View>
-                <View className="flex-1 pb-4">
-                  <Text className={`text-sm font-NunitoBold ${
-                    request.in_progress_at || status === 'in_progress' ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    Repair In Progress
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {request.in_progress_at ? formatDateTime(request.in_progress_at) :
-                     status === 'in_progress' ? 'Working on it' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 5: Completed or Cancelled */}
-              <View className="flex-row">
-                <View className="items-center mr-4">
-                  <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                    (request.completed_at || status === 'verify_completed') ? 'bg-green-500' :
-                    request.cancelled_at ? 'bg-red-500' : 'bg-gray-200'
-                  }`}>
-                    {(request.completed_at || status === 'verify_completed') ? (
-                      <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                    ) : request.cancelled_at ? (
-                      <XCircleIcon size={20} color="#FFFFFF" />
-                    ) : (
-                      <View className="w-3 h-3 rounded-full bg-gray-400" />
-                    )}
-                  </View>
-                  {!request.cancelled_at && (
-                    <View className={`w-0.5 h-12 ${
-                      (request.verify_completed_at || status === 'verify_completed') ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </View>
-                <View className="flex-1">
-                  <Text className={`text-sm font-NunitoBold ${
-                    (request.completed_at || status === 'verify_completed') ? 'text-green-700' :
-                    request.cancelled_at ? 'text-red-700' : 'text-gray-400'
-                  }`}>
-                    {request.cancelled_at ? 'Job Cancelled' : 'Job Completed'}
-                  </Text>
-                  <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                    {(request.completed_at || status === 'verify_completed') ? formatDateTime(request.completed_at || request.verify_completed_at) :
-                     request.cancelled_at ? formatDateTime(request.cancelled_at) : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Step 6: User Verified */}
-              {!request.cancelled_at && (
-                <View className="flex-row">
-                  <View className="items-center mr-4">
-                    <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                      (request.verify_completed_at || status === 'verify_completed') ? 'bg-green-500' : 'bg-gray-200'
-                    }`}>
-                      {(request.verify_completed_at || status === 'verify_completed') ? (
-                        <CheckCircleSolidIcon size={20} color="#FFFFFF" />
-                      ) : (
-                        <View className="w-3 h-3 rounded-full bg-gray-400" />
-                      )}
-                    </View>
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-sm font-NunitoBold ${
-                      (request.verify_completed_at || status === 'verify_completed') ? 'text-green-700' : 'text-gray-400'
-                    }`}>
-                      User Verified Completion
-                    </Text>
-                    <Text className="text-xs font-NunitoRegular text-gray-500 mt-0.5">
-                      {(request.verify_completed_at || status === 'verify_completed') ? formatDateTime(request.verify_completed_at) : 'Awaiting confirmation'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
+          <OrderTimeline 
+            request={request} 
+            status={status} 
+            formatDateTime={formatDateTime} 
+          />
 
           {/* Cost Information */}
           <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
@@ -1253,189 +821,22 @@ const MechanicOrderDetails = () => {
           )}
 
           {/* Bottom spacing */}
-          <View className="h-4" />
+          <View className="h-[80px]" />
         </View>
       </ScrollView>
 
-      {/* Action Buttons - Conditional based on status */}
-      {orderId && (status === 'pending' || status === 'accepted' || status === 'in_transit' || status === 'arrived' || status === 'in_progress') && (
-        <View className="bg-white border-t border-gray-200 px-5 py-4 pb-12">
-          <View className="flex-row space-x-3 gap-3">
-            {/* Pending: Accept and Decline */}
-            {status === 'pending' && (
-              <>
-                <TouchableOpacity
-                  onPress={() => openActionConfirmation('accept')}
-                  disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
-                    acceptRequestMutation.isPending || declineRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <CheckCircleIcon size={18} color="#16A34A" />
-                  <Text className="text-green-700 font-NunitoSemiBold ml-2">
-                    Accept
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => openActionConfirmation('decline')}
-                  disabled={acceptRequestMutation.isPending || declineRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
-                    acceptRequestMutation.isPending || declineRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <XCircleIcon size={18} color="#DC2626" />
-                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
-                    Decline
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Accepted: In Transit and Cancel */}
-            {status === 'accepted' && (
-              <>
-                <TouchableOpacity
-                  onPress={() => openActionConfirmation('in_transit')}
-                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
-                    updateStatusMutation.isPending || cancelRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <TruckIcon size={18} color="#1D4ED8" />
-                  <Text className="text-blue-700 font-NunitoSemiBold ml-2">
-                    Start Transit
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setCancelModalVisible(true)}
-                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
-                    updateStatusMutation.isPending || cancelRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <XCircleIcon size={18} color="#DC2626" />
-                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
-                    Cancel Job
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* In Transit: Confirm Arrival and Cancel */}
-            {status === 'in_transit' && (
-              <>
-                <TouchableOpacity
-                  onPress={() => openActionConfirmation('arrived')}
-                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-purple-100 border border-purple-600 rounded-[.4rem] py-3 ${
-                    updateStatusMutation.isPending || cancelRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <MapPinIcon size={18} color="#7C3AED" />
-                  <Text className="text-purple-700 font-NunitoSemiBold ml-2">
-                    Confirm Arrival
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setCancelModalVisible(true)}
-                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
-                    updateStatusMutation.isPending || cancelRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <XCircleIcon size={18} color="#DC2626" />
-                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
-                    Cancel Job
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Arrived: Verify OTP, then Start Work and Cancel */}
-            {status === 'arrived' && (
-              <>
-                {!request?.is_otp_verified ? (
-                  <TouchableOpacity
-                    onPress={() => setOtpModalVisible(true)}
-                    disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                    className={`flex-1 flex-row items-center justify-center bg-blue-100 border border-blue-600 rounded-[.4rem] py-3 ${
-                      updateStatusMutation.isPending || cancelRequestMutation.isPending
-                        ? 'opacity-50'
-                        : ''
-                    }`}
-                  >
-                    <ShieldCheckIcon size={18} color="#2563EB" />
-                    <Text className="text-blue-700 font-NunitoSemiBold ml-2">
-                      Verify Arrival
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => openActionConfirmation('in_progress')}
-                    disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                    className={`flex-1 flex-row items-center justify-center bg-green-100 border border-green-600 rounded-[.4rem] py-3 ${
-                      updateStatusMutation.isPending || cancelRequestMutation.isPending
-                        ? 'opacity-50'
-                        : ''
-                    }`}
-                  >
-                    <WrenchScrewdriverIcon size={18} color="#16A34A" />
-                    <Text className="text-green-700 font-NunitoSemiBold ml-2">
-                      Start Work
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  onPress={() => setCancelModalVisible(true)}
-                  disabled={updateStatusMutation.isPending || cancelRequestMutation.isPending}
-                  className={`flex-1 flex-row items-center justify-center bg-red-100 border border-[#E10000] rounded-[.4rem] py-3 ${
-                    updateStatusMutation.isPending || cancelRequestMutation.isPending
-                      ? 'opacity-50'
-                      : ''
-                  }`}
-                >
-                  <XCircleIcon size={18} color="#DC2626" />
-                  <Text className="text-[#E10000] font-NunitoSemiBold ml-2">
-                    Cancel Job
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* In Progress: Complete */}
-            {status === 'in_progress' && (
-              <TouchableOpacity
-                onPress={() => openActionConfirmation('completed')}
-                disabled={updateStatusMutation.isPending}
-                className={`flex-1 flex-row items-center justify-center bg-green-100 border border-[#00984C] rounded-[.4rem] py-3 ${
-                  updateStatusMutation.isPending ? 'opacity-50' : ''
-                }`}
-              >
-                <CheckCircleIcon size={18} color="#16A34A" />
-                <Text className="text-green-700 font-NunitoSemiBold ml-2">
-                  Job Completed
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
+      {/* Action Buttons */}
+      <BottomActionButtons
+        status={status}
+        request={request}
+        openActionConfirmation={openActionConfirmation}
+        setCancelModalVisible={setCancelModalVisible}
+        setOtpModalVisible={setOtpModalVisible}
+        acceptRequestMutation={acceptRequestMutation}
+        declineRequestMutation={declineRequestMutation}
+        updateStatusMutation={updateStatusMutation}
+        cancelRequestMutation={cancelRequestMutation}
+      />
 
       {/* OTP Verification Modal */}
       <MechanicOTPVerificationModal

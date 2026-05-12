@@ -1,12 +1,67 @@
 import { OTPInputProps } from "@/types/type";
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { OtpInput } from "react-native-otp-entry";
+import React, { forwardRef, useEffect, useRef, useImperativeHandle } from "react";
+import { View, StyleSheet, AppState } from "react-native";
+import { OtpInput, OtpInputRef } from "react-native-otp-entry";
+import * as Clipboard from 'expo-clipboard';
+import { useIsFocused } from '@react-navigation/native';
 
-const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
+const OTPInput = forwardRef(({ numberOfDigits, onComplete, countdown }: OTPInputProps, ref: React.Ref<OtpInputRef>) => {
+  const internalRef = useRef<OtpInputRef>(null);
+
+  useImperativeHandle(ref, () => ({
+    clear: () => internalRef.current?.clear(),
+    focus: () => internalRef.current?.focus(),
+    setValue: (value: string) => internalRef.current?.setValue(value),
+    blur: () => internalRef.current?.blur(),
+  }));
+
+  const lastPastedCode = useRef<string | null>(null);
+  const isFocused = useIsFocused();
+
+  const checkClipboard = async () => {
+    if (!isFocused) return;
+    try {
+      const text = await Clipboard.getStringAsync();
+      const length = numberOfDigits || 6;
+      // If clipboard has exactly the right length and is alphanumeric, auto-paste it
+      if (text && text.length === length && /^[a-zA-Z0-9]+$/.test(text)) {
+        const upperText = text.toUpperCase();
+        // Prevent infinite loop by not pasting the same code twice automatically
+        if (lastPastedCode.current !== upperText) {
+          lastPastedCode.current = upperText;
+          internalRef.current?.setValue(upperText);
+          
+          // We call onComplete manually because programmatic setValue might not trigger onFilled
+          onComplete?.(upperText);
+        }
+      }
+    } catch (error) {
+      // Ignore clipboard errors
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      // Check clipboard on focus or mount
+      checkClipboard();
+    }
+    
+    // Also check when app comes to foreground (e.g. user went to email app to copy code and came back)
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && isFocused) {
+        checkClipboard();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [numberOfDigits, isFocused]);
+
   return (
     <View style={styles.container}>
       <OtpInput
+        ref={internalRef}
         numberOfDigits={numberOfDigits || 6}
         focusColor="#FFBFC2"
         autoFocus={false}
@@ -14,15 +69,14 @@ const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
         placeholder=""
         blurOnFilled={true}
 
-        type="numeric"
+        type="alphanumeric"
         secureTextEntry={false}
         focusStickBlinkingDuration={500}
-        // onFocus={() => console.log("Focused")}
-        // onBlur={() => console.log("Blurred")}
-        // onTextChange={(text) => console.log(text)}
         onFilled={(text) => onComplete?.(text)}
         textInputProps={{
           accessibilityLabel: "One-Time Password",
+          keyboardType: "default",
+          autoCapitalize: "characters",
         }}
         theme={{
           containerStyle: styles.container,
@@ -37,7 +91,7 @@ const OTPInput = ({ numberOfDigits, onComplete, countdown }: OTPInputProps) => {
       />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

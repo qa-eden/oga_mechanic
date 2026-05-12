@@ -534,7 +534,7 @@ const MechanicHome = () => {
           <Navbar />
 
           <View className="py-4">
-          <KYCBanner isVisible={!isComplete || isPendingApproval} role="mechanic" isPending={isPendingApproval} />
+          <KYCBanner isVisible={!profileLoading && (!isComplete || isPendingApproval)} role="mechanic" isPending={isPendingApproval} />
 
           {/* Add Bidding Carousel */}
           <BiddingCarousel containerPadding={20} />
