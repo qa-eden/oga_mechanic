@@ -39,7 +39,7 @@ const Orders = () => {
     status: order.status,
     quantity: item.quantity || 1,
     image: item.product?.images?.[0]?.image || null,
-    deliveryDate: 'TBD', // API doesn't provide delivery date
+    deliveryDate: order.estimated_delivery_date || null, // Hide if not provided by API
     paymentStatus: ['paid', 'shipped', 'delivered', 'completed'].includes(order.status.toLowerCase()) ? 'Paid' :
                    order.status === 'cancelled' ? 'Cancelled' :
                    order.status === 'refunded' ? 'Refunded' : 'Pending',

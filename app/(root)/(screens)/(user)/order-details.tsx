@@ -1,5 +1,3 @@
-"use client";
-
 import {
   View,
   Text,
@@ -236,8 +234,9 @@ const OrderDetails = () => {
                 </View>
                 <View className="items-end">
                      <Text className="text-[10px] text-gray-400 font-NunitoExtraBold uppercase tracking-[2px] mb-2">Total Paid</Text>
+                     {/* Bug 8 fix: guard against null/undefined total_amount */}
                      <Text className="text-2xl font-NunitoExtraBold text-primary-600">
-                        ₦{parseFloat(order.total_amount)?.toLocaleString()}
+                        ₦{(parseFloat(order.total_amount || '0') || 0).toLocaleString()}
                     </Text>
                 </View>
             </View>
@@ -430,16 +429,19 @@ const OrderDetails = () => {
                 
                 <View className="flex-row justify-between items-center">
                     <Text className="text-base font-NunitoExtraBold text-gray-900">Grand Total</Text>
+                    {/* Bug 7 fix: Grand Total must include shipping_fee */}
                     <Text className="text-2xl font-NunitoExtraBold text-primary-600">
-                        ₦{parseFloat(order.total_amount)?.toLocaleString()}
+                        ₦{((parseFloat(order.total_amount || '0') || 0) + (parseFloat(order.shipping_fee || '0') || 0)).toLocaleString()}
                     </Text>
                 </View>
             </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(700).duration(600)} className="mx-5">
+            {/* Bug 17 fix: wire up support button to the support screen */}
             <TouchableOpacity 
                 activeOpacity={0.8}
+                onPress={() => router.push(routes.supportSuggestions as any)}
                 className="flex-row items-center justify-center py-5 bg-gray-100 rounded-3xl"
             >
                 <ChatBubbleLeftEllipsisIcon size={20} color="#4B5563" />

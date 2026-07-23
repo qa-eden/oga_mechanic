@@ -1,5 +1,3 @@
-"use client";
-
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, BackHandler } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -183,7 +181,9 @@ const Payment = () => {
       '/verify/success',
       'status=success',
       'trxref=',
-      'reference=',
+      // Bug 18 fix: 'reference=' removed — this pattern matches the initial Paystack
+      // payment page URL (which contains ?reference=xxx), triggering a false-positive
+      // success before the user has even completed the transaction.
       '/transaction/verify',
       'paystack.com/close', // Paystack close button URL
       'ogamechanic://', // Our deep link scheme

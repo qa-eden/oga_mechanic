@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";

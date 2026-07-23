@@ -334,6 +334,7 @@ const EditRentCar = () => {
       params: {
         productId: productId,
         productData: JSON.stringify(updatedProductData),
+        productType: 'rental-car',
       }
     });
   };

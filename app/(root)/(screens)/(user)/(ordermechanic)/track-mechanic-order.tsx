@@ -105,7 +105,7 @@ const TrackMechanicOrder = () => {
   // Custom Alert
   const { visible: alertVisible, alertConfig, hideAlert, showError, showSuccess } = useCustomAlert();
 
-  // Mechanic Location State (Simulated for Now)
+  // Mechanic Location State — sourced from API (mechanic broadcasts real GPS)
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number, longitude: number } | null>(null);
 
 
@@ -123,42 +123,22 @@ const TrackMechanicOrder = () => {
   const serviceLat = orderData?.data?.service_latitude;
   const serviceLng = orderData?.data?.service_longitude;
 
-  // Initialize and Simulate Mechanic Movement
+  // Sync mechanic location from real API data whenever the order data updates.
+  // The mechanic device broadcasts its GPS to the backend; we read it here.
   useEffect(() => {
-    if (!serviceLat || !serviceLng) return;
+    const apiLat = orderData?.data?.mechanic_latitude;
+    const apiLng = orderData?.data?.mechanic_longitude;
 
-    // If we have mechanic coordinates from API, use them
-    // Otherwise, generate a placeholder near the service location
-    if (!mechanicLocation) {
-      setMechanicLocation({
-        latitude: serviceLat + 0.012, // Start slightly north
-        longitude: serviceLng + 0.012, // and slightly east
-      });
+    if (apiLat && apiLng) {
+      // Real mechanic coordinates are available from the API
+      setMechanicLocation({ latitude: Number(apiLat), longitude: Number(apiLng) });
+    } else if (serviceLat && serviceLng && !mechanicLocation) {
+      // Fallback: show a static pin at the service address until the mechanic
+      // shares their GPS (e.g. when status is still 'accepted' / 'pending')
+      setMechanicLocation({ latitude: serviceLat, longitude: serviceLng });
     }
-
-    // Simulate movement if in_transit
-    if (orderData?.data?.status === 'in_transit' && mechanicLocation) {
-      const interval = setInterval(() => {
-        setMechanicLocation(prev => {
-          if (!prev) return prev;
-          // Move 5% closer to destination every interval
-          const latDiff = serviceLat - prev.latitude;
-          const lngDiff = serviceLng - prev.longitude;
-
-          // If very close, stop moving
-          if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
-            return prev;
-          }
-
-          return {
-            latitude: prev.latitude + (latDiff * 0.05),
-            longitude: prev.longitude + (lngDiff * 0.05),
-          };
-        });
-      }, 25000); // Sink with polling interval
-      return () => clearInterval(interval);
-    }
-  }, [serviceLat, serviceLng, orderData?.data?.status]);
+    // Note: no interval/simulation — location only updates when the API data refetches
+  }, [orderData?.data?.mechanic_latitude, orderData?.data?.mechanic_longitude, serviceLat, serviceLng]);
 
   // Helper function to get make name from ID
   const getMakeName = (makeId: string | number) => {
@@ -527,19 +507,17 @@ const TrackMechanicOrder = () => {
     setIsContactModalVisible(true);
   };
 
+  const OGA_MECHANIC_PHONE = '+2348000000000'; // Replace with Oga Mechanic support line
+
   const performVoiceCall = () => {
-    const phone = order.mechanic_phone;
-    if (!phone) return;
-    Linking.openURL(`tel:${phone}`).catch(() => {
+    Linking.openURL(`tel:${OGA_MECHANIC_PHONE}`).catch(() => {
       showError('Error', 'Unable to initiate phone call');
     });
   };
 
   const performWhatsAppCall = () => {
-    const phone = order.mechanic_phone;
-    if (!phone) return;
-    const cleanedNumber = phone.replace(/\D/g, '');
-    const message = `Hi, I'm a customer using Oga Mechanic. I have an active repair order assigned to you. Please connect with me.`;
+    const cleanedNumber = OGA_MECHANIC_PHONE.replace(/\D/g, '');
+    const message = `Hi Oga Mechanic, I have an active repair order (ID: ${orderId}). Please help connect me with my mechanic.`;
     const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodeURIComponent(message)}`;
     Linking.canOpenURL(whatsappUrl).then(supported => {
       if (supported) {
@@ -1128,8 +1106,8 @@ const TrackMechanicOrder = () => {
         onClose={() => setIsContactModalVisible(false)}
         onVoiceCall={performVoiceCall}
         onWhatsAppCall={performWhatsAppCall}
-        phoneNumber={order.mechanic_phone || 'N/A'}
-        storeName={order.mechanic_name || 'Mechanic'}
+        phoneNumber={OGA_MECHANIC_PHONE}
+        storeName="Oga Mechanic Support"
       />
     </SafeAreaView>
   );

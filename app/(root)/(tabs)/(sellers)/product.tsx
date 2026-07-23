@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react'
-import { View, Text, TouchableOpacity, Image, ScrollView, Modal, Pressable, FlatList, Dimensions, RefreshControl } from 'react-native'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { View, Text, TouchableOpacity, Image, ScrollView, Modal, Pressable, FlatList, Dimensions, RefreshControl, Animated } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PlusIcon, LockClosedIcon } from 'react-native-heroicons/outline'
@@ -304,13 +304,26 @@ const Product = () => {
     );
   };
 
-  // Live Pulsating Indicator
-  const LiveIndicator = () => (
-    <View className="flex-row items-center bg-red-600 px-2 py-1 rounded-lg absolute top-2 right-2 z-10 shadow-sm border border-red-500/50">
-      <View className="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-pulse" />
-      <Text className="text-[9px] font-NunitoExtraBold text-white uppercase tracking-widest">Live Auction</Text>
-    </View>
-  );
+  // Live Pulsating Indicator using Animated API (animate-pulse is CSS-only, not supported in RN)
+  const LiveIndicator = () => {
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    useEffect(() => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }, []);
+    return (
+      <View className="flex-row items-center bg-red-600 px-2 py-1 rounded-lg absolute top-2 right-2 z-10 shadow-sm border border-red-500/50">
+        <Animated.View style={{ opacity: pulseAnim }} className="w-1.5 h-1.5 rounded-full bg-white mr-1.5" />
+        <Text className="text-[9px] font-NunitoExtraBold text-white uppercase tracking-widest">Live Auction</Text>
+      </View>
+    );
+  };
 
   // FlatList render functions
   const renderSparePartItem = useCallback(({ item }: { item: any }) => {
@@ -520,7 +533,7 @@ const Product = () => {
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-100">
         <View className="w-8" />
         <Text className="text-xl font-NunitoBold text-gray-900">
-          {isVehicleRental ? "My Rental Fleet" : "Uploaded Products"}
+          {isVehicleRental ? "My Rentals" : "Uploaded Products"}
         </Text>
         <TouchableOpacity 
           onPress={() => {
@@ -542,7 +555,8 @@ const Product = () => {
               setShowModal(true);
             }
           }}
-          className="p-2 bg-primary-500 rounded-full items-center justify-center"
+          disabled={isPendingApproval}
+          className={`p-2 rounded-full items-center justify-center ${isPendingApproval ? 'bg-gray-300' : 'bg-primary-500'}`}
         >
           <PlusIcon size={25} color="white" />
         </TouchableOpacity>

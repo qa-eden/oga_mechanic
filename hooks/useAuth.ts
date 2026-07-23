@@ -28,6 +28,8 @@ export const useAuth = () => {
   }, []);
 
   // Handle navigation after auth check is complete
+  // router is intentionally excluded from deps — it's a stable singleton in Expo Router
+  // and including it caused the effect to re-fire on re-renders.
   useEffect(() => {
     if (shouldNavigate && navigationTarget && !isLoading) {
       
@@ -40,7 +42,8 @@ export const useAuth = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [shouldNavigate, navigationTarget, isLoading, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldNavigate, navigationTarget, isLoading]);
 
   const checkAuthStatus = async () => {
     try {
@@ -64,6 +67,34 @@ export const useAuth = () => {
       const storedUserData = await AsyncStorage.getItem('user_data');
 
       if (isLoggedIn === 'true' && accessToken && storedUserData) {
+        // Bug 14 fix: Check JWT expiry before trusting the stored token.
+        // A stored token that has expired would pass the above check but cause
+        // 401 errors on every subsequent API call.
+        const isTokenExpired = (() => {
+          try {
+            const [, payload] = accessToken.split('.');
+            const decoded = JSON.parse(atob(payload));
+            // exp is in seconds; Date.now() is in milliseconds
+            return decoded.exp * 1000 < Date.now();
+          } catch {
+            // If decoding fails, treat token as expired to be safe
+            return true;
+          }
+        })();
+
+        if (isTokenExpired) {
+          // Attempt a token refresh before giving up
+          const refreshed = await refreshToken();
+          if (!refreshed) {
+            // Refresh failed — send user to login
+            setIsAuthenticated(false);
+            setUserData(null);
+            setNavigationTarget(routes?.signIn as any || '/sign-in');
+            setShouldNavigate(true);
+            return;
+          }
+        }
+
         const userData: UserData = JSON.parse(storedUserData);
         setUserData(userData);
         setIsAuthenticated(true);
@@ -72,7 +103,6 @@ export const useAuth = () => {
         try {
           const rolesResponse = await userAPI.getUserRoles();
           const activeRole = rolesResponse.data.active_role;
-          
           
           // Set navigation target for role-specific home page using server role
           if (activeRole && activeRole.name) {
@@ -141,33 +171,28 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       // Get refresh token for API logout
-      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
       
-      if (refreshToken) {
-        // Call logout API (we'll import the userAPI here)
+      if (storedRefreshToken) {
         try {
           const { userAPI } = await import('@/lib/api/user');
-          await userAPI.logout({ refresh: refreshToken });
+          await userAPI.logout({ refresh: storedRefreshToken });
         } catch (apiError) {
+          // Best-effort: server-side logout failure should not block local cleanup
         }
       }
       
-      // Call /users/roles/ endpoint before clearing auth data
-      try {
-        const { userAPI } = await import('@/lib/api/user');
-        const rolesResponse = await userAPI.getUserRoles();
-        
-        // Store roles data in local storage
-        await AsyncStorage.setItem('user_roles_data', JSON.stringify(rolesResponse));
-      } catch (rolesError) {
-      }
-      
-      // Clear all stored auth data (but keep roles data)
+      // Bug 1 & 15 fix: Do NOT call getUserRoles() after logout — the token is
+      // about to be cleared, so the call may use an invalidated token. Persisting
+      // role data also leaks information to any future session on the same device.
+      // Instead, clear role data as part of the multiRemove below.
       await AsyncStorage.multiRemove([
         'auth_token',
         'refresh_token',
         'user_data',
-        'is_logged_in'
+        'is_logged_in',
+        'user_roles_data',   // Bug 15: remove stale role data instead of writing it
+        'current_active_role',
       ]);
       
       setIsAuthenticated(false);
@@ -178,6 +203,9 @@ export const useAuth = () => {
       setShouldNavigate(true);
       
     } catch (error) {
+      // Ensure UI reflects logged-out state even if cleanup partially fails
+      setIsAuthenticated(false);
+      setUserData(null);
     }
   };
 

@@ -58,7 +58,7 @@ export default function Layout() {
       products: {
         icon: <icons.productTab />,
         activeIcon: <icons.activeProductTab />,
-        label: isVehicleRental ? "Fleet" : "Products",
+        label: isVehicleRental ? "Rentals" : "Products",
         component: SellerProduct,
       },
       profile: {

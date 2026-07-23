@@ -4,16 +4,16 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-
   Image,
   RefreshControl,
   Dimensions,
   StatusBar,
+  BackHandler,
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Services as ServicesData } from "@/constants";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { routes } from "@/constants/routes";
 import { LinearGradient } from "expo-linear-gradient";
 import Navbar from "@/components/Navbar";
@@ -143,6 +143,21 @@ const ServiceCard = ({ item, index, onPress }: { item: any; index: number; onPre
 };
 
 const Home = () => {
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back action (ignoring gesture completely)
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const [isSwitchRoleVisible, setIsSwitchRoleVisible] = useState(false);
@@ -165,13 +180,17 @@ const Home = () => {
   const carCategoryId = homeProducts?.data?.best_selling_cars?.[0]?.category?.id;
   const sparePartCategoryId = homeProducts?.data?.best_selling_spare_parts?.[0]?.category?.id;
 
-  // Enhanced services data with additional information
+  // Enhanced services data with stable, deterministic values (avoids re-render flicker)
+  const SERVICE_META: Record<string, { rating: number; reviewCount: number; estimatedTime: number; isPopular: boolean }> = {
+    'Find a Mechanic': { rating: 4.9, reviewCount: 214, estimatedTime: 20, isPopular: true },
+    'Buy spare parts':  { rating: 4.7, reviewCount: 138, estimatedTime: 15, isPopular: true },
+    'Buy a Car':        { rating: 4.8, reviewCount: 95,  estimatedTime: 30, isPopular: false },
+    'Vehicle Rental':   { rating: 4.6, reviewCount: 72,  estimatedTime: 25, isPopular: true },
+    'Service Provider': { rating: 4.5, reviewCount: 50,  estimatedTime: 20, isPopular: false },
+  };
   const enhancedServices = ServicesData.map((service) => ({
     ...service,
-    rating: Math.floor(Math.random() * 2) + 4, // Random rating between 4-5
-    reviewCount: Math.floor(Math.random() * 100) + 20, // Random review count
-    estimatedTime: Math.floor(Math.random() * 30) + 15, // Random time in minutes
-    isPopular: Math.random() > 0.7, // 30% chance of being popular
+    ...(SERVICE_META[service.name] || { rating: 4.5, reviewCount: 40, estimatedTime: 20, isPopular: false }),
   }));
 
   const { SCROLL_PADDING_BOTTOM } = LAYOUT;

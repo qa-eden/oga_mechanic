@@ -364,7 +364,7 @@ const EditSellerProfile = () => {
                     <BuildingStorefrontIcon size={16} color="#EA580C" />
                   </View>
                   <Text className="text-base font-NunitoBold text-gray-900">
-                    {isVehicleRental ? "Fleet Information" : "Business Information"}
+                    {isVehicleRental ? "Rental Information" : "Business Information"}
                   </Text>
                 </View>
 
@@ -381,13 +381,13 @@ const EditSellerProfile = () => {
                 {/* Business Address */}
                 <View className="mb-3">
                   <AddressInput
-                    label={isVehicleRental ? "Fleet Location" : "Business Location"}
+                    label={isVehicleRental ? "Rental Location" : "Business Location"}
                     value={values.location}
                     onChangeText={(text: string) => setFieldValue("location", text)}
                     onLocationSelect={(location: any) => {
                       setFieldValue("location", location?.address || location);
                     }}
-                    placeholder={isVehicleRental ? "Search for your fleet address" : "Search for your shop address"}
+                    placeholder={isVehicleRental ? "Search for your rental address" : "Search for your shop address"}
                     error={errors.location as string}
                     touched={touched.location as boolean}
                   />

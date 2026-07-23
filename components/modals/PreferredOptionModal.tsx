@@ -72,7 +72,7 @@ const PreferredOptionModal = ({ isVisible, onClose, options }: PreferredOptionMo
                       {option.title}
                     </Text>
                     <Text className="text-[12px] font-NunitoMedium text-gray-400 mt-0.5">
-                      {option.id === 1 ? 'Add components or tools' : option.id === 2 ? 'List a vehicle for sale' : 'Add to your rental fleet'}
+                      {option.id === 1 ? 'Add components or tools' : option.id === 2 ? 'List a vehicle for sale' : 'Add to your rentals'}
                     </Text>
                   </View>
                   <View className="w-8 h-8 bg-primary-50 rounded-full items-center justify-center">

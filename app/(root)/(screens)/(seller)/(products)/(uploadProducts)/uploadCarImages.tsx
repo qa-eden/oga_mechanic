@@ -26,12 +26,13 @@ const UploadCarImages = () => {
   const parsedFormData = formData ? JSON.parse(formData) : null;
   const type = productType || 'car'; // Default to 'car' for backward compatibility
   const isSparePart = type === 'spare-part';
+  const isRental = type === 'rental-car';
   
   const { data: vehicleMakes } = useVehicleMakes();
 
   // Dynamic text based on product type
-  const productLabel = isSparePart ? 'Spare Part' : 'Car';
-  const productLabelLower = isSparePart ? 'spare part' : 'car';
+  const productLabel = isSparePart ? 'Spare Part' : (isRental ? 'Rental Car' : 'Car');
+  const productLabelLower = isSparePart ? 'spare part' : (isRental ? 'rental car' : 'car');
 
   // Get make and model names for display
   const getMakeName = (makeId: number) => {
@@ -130,7 +131,9 @@ const UploadCarImages = () => {
 
   const handleBack = () => {
     // Go back to the form page with the form data preserved for editing
-    const backRoute = isSparePart ? sellerRoutes.uploadSpareParts : sellerRoutes.uploadProducts;
+    const backRoute = isSparePart 
+      ? sellerRoutes.uploadSpareParts 
+      : (isRental ? sellerRoutes.uploadCarToRent : sellerRoutes.uploadProducts);
     
     router.push({
       pathname: backRoute as any,

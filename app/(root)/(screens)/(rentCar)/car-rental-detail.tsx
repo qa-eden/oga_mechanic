@@ -1,10 +1,7 @@
-"use client";
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Image,
   Dimensions,
@@ -12,19 +9,19 @@ import {
   StatusBar,
   Linking,
   FlatList,
+  Share,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { 
   ChevronLeftIcon, 
   MapPinIcon, 
-  PhoneIcon,
   ChatBubbleBottomCenterTextIcon,
-  StarIcon as StarIconOutline,
   CalendarIcon,
   UserGroupIcon,
   CheckCircleIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  ShareIcon
 } from "react-native-heroicons/outline";
 import { StarIcon as StarIconSolid } from "react-native-heroicons/solid";
 import { LinearGradient } from "expo-linear-gradient";
@@ -33,16 +30,14 @@ import Animated, {
   useAnimatedStyle, 
   withTiming, 
   FadeInDown, 
-  FadeIn,
   interpolate,
   useAnimatedScrollHandler
 } from "react-native-reanimated";
 import { productsAPI } from "@/lib/api/products";
 import { userAPI } from "@/lib/api/user";
 import { communicationsAPI } from "@/lib/api/communications";
-import { NairaCurrency } from "@/utils/useCurrencyFormatter";
+import { NairaCurrency, formatCurrency } from "@/utils/useCurrencyFormatter";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import BackArrowBtn from "@/components/BackArrowBtn";
 import ContactSelectionModal from "@/components/modals/ContactSelectionModal";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -61,6 +56,7 @@ const SpecItem = ({ icon: Icon, label, value }: { icon: any, label: string, valu
 );
 
 const CarRentalDetail = () => {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const productId = params.carId as string;
   
@@ -121,6 +117,29 @@ const CarRentalDetail = () => {
   const carImages = useMemo(() => {
     if (!productData?.images?.length) return [productData?.image || 'https://via.placeholder.com/800x600?text=No+Image'];
     return productData.images.map((img: any) => img.image);
+  }, [productData]);
+
+  const availabilityBadge = useMemo(() => {
+    const status = productData?.availability?.toLowerCase();
+    if (status === 'in_stock' || !status) {
+      return {
+        text: 'Available',
+        bgClass: 'bg-green-50 border-green-100',
+        textClass: 'text-green-600',
+      };
+    } else if (status === 'reserved') {
+      return {
+        text: 'Reserved',
+        bgClass: 'bg-amber-50 border-amber-100',
+        textClass: 'text-amber-600',
+      };
+    } else {
+      return {
+        text: 'Rented',
+        bgClass: 'bg-red-50 border-red-100',
+        textClass: 'text-red-600',
+      };
+    }
   }, [productData]);
 
   const performVoiceCall = useCallback(() => {
@@ -198,6 +217,45 @@ const CarRentalDetail = () => {
     }
   }, [productData, merchantData]);
 
+  const handleShare = useCallback(async () => {
+    if (!productData) return;
+
+    const specs: string[] = [];
+    if (productData.year)             specs.push(`📅 Year: ${productData.year}`);
+    if (productData.transmission)     specs.push(`⚙️ Transmission: ${productData.transmission}`);
+    if (productData.fuel_type)        specs.push(`⛽ Fuel: ${productData.fuel_type}`);
+    if (productData.engine_size)      specs.push(`🔧 Engine: ${productData.engine_size}L`);
+    if (productData.number_of_seats)  specs.push(`💺 Seats: ${productData.number_of_seats}`);
+    if (productData.number_of_doors)  specs.push(`🚪 Doors: ${productData.number_of_doors}`);
+
+    const ownerName = merchantData?.user?.first_name
+      ? `${merchantData.user.first_name} ${merchantData.user.last_name || ''}`.trim()
+      : null;
+    const ownerPhone = merchantData?.user?.phone_number || productData?.merchant_phone;
+
+    const contactLines: string[] = [];
+    if (ownerName)  contactLines.push(`👤 Owner: ${ownerName}`);
+    if (ownerPhone) contactLines.push(`📞 Contact: ${ownerPhone}`);
+
+    const specsBlock   = specs.length   ? `\n${specs.join('\n')}` : '';
+    const contactBlock = contactLines.length ? `\n\n📬 Contact Details:\n${contactLines.join('\n')}` : '';
+
+    const message =
+      `🚗 *${productData.name}*` +
+      `\n💰 ₦${Number(productData.price).toLocaleString()}/day` +
+      `\n📍 ${productData.location || 'Lagos, Nigeria'}` +
+      specsBlock +
+      (productData.description ? `\n\n📝 ${productData.description.slice(0, 120)}${productData.description.length > 120 ? '...' : ''}` : '') +
+      contactBlock +
+      `\n\n📲 Find more vehicles on the Oga Mechanic app!`;
+
+    try {
+      await Share.share({ title: productData.name, message });
+    } catch (error) {
+      // User dismissed share sheet — no action needed
+    }
+  }, [productData, merchantData]);
+
   if (loading) return (
     <View className="flex-1 bg-white items-center justify-center">
       <LoadingSpinner message="Refining details..." />
@@ -221,8 +279,8 @@ const CarRentalDetail = () => {
       
       {/* Immersive Sticky Header */}
       <Animated.View 
-        style={headerStyle}
-        className="absolute top-0 left-0 right-0 z-50 pt-12 pb-4 px-5 flex-row items-center justify-between"
+        style={[headerStyle, { paddingTop: insets.top + 8 }]}
+        className="absolute top-0 left-0 right-0 z-50 pb-4 px-5 flex-row items-center justify-between"
       >
         <TouchableOpacity 
           onPress={() => router.back()}
@@ -237,9 +295,13 @@ const CarRentalDetail = () => {
           </Text>
         </Animated.View>
         
-        <View className="w-10 h-10 items-center justify-center bg-white/90 rounded-full shadow-sm border border-gray-100">
-           <InformationCircleIcon size={22} color="#1F2937" />
-        </View>
+        <TouchableOpacity
+          onPress={handleShare}
+          className="w-10 h-10 items-center justify-center bg-white/90 rounded-full shadow-sm border border-gray-100"
+          activeOpacity={0.75}
+        >
+          <ShareIcon size={20} color="#1F2937" />
+        </TouchableOpacity>
       </Animated.View>
 
       <Animated.ScrollView
@@ -247,6 +309,7 @@ const CarRentalDetail = () => {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         className="flex-1"
+        nestedScrollEnabled={true}
       >
         {/* Full Screen Carousel */}
         <View style={{ height: HEADER_IMAGE_HEIGHT }}>
@@ -256,7 +319,9 @@ const CarRentalDetail = () => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(e) => {
-              setCurrentImageIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
+              const raw = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              const clamped = Math.max(0, Math.min(raw, carImages.length - 1));
+              setCurrentImageIndex(clamped);
             }}
             renderItem={({ item }) => (
               <View style={{ width: SCREEN_WIDTH, height: HEADER_IMAGE_HEIGHT }} className="bg-gray-100 items-center justify-center">
@@ -271,7 +336,7 @@ const CarRentalDetail = () => {
                 <Image 
                   source={{ uri: item }} 
                   className="w-full h-full" 
-                  resizeMode="contain" // Ensure full visibility as requested
+                  resizeMode="contain"
                 />
               </View>
             )}
@@ -304,18 +369,28 @@ const CarRentalDetail = () => {
                   <Text className="text-sm font-NunitoBold text-gray-500 ml-1">{productData.location || "Lagos, Nigeria"}</Text>
                 </View>
               </View>
-              <View className="bg-green-50 px-3 py-1.5 rounded-xl border border-green-100">
-                <Text className="text-[10px] font-NunitoExtraBold text-green-600 uppercase tracking-tighter">Available</Text>
+              <View className={`px-3 py-1.5 rounded-xl border ${availabilityBadge.bgClass}`}>
+                <Text className={`text-[10px] font-NunitoExtraBold uppercase tracking-tighter ${availabilityBadge.textClass}`}>{availabilityBadge.text}</Text>
               </View>
             </View>
 
             {/* Ratings Summary */}
             <View className="flex-row items-center mt-2 mb-6">
               <View className="flex-row mr-2">
-                {[1,2,3,4,5].map(i => <StarIconSolid key={i} size={14} color={i <= (productData.rating || 5) ? "#F59E0B" : "#D1D5DB"} />)}
+                {[1,2,3,4,5].map(i => (
+                  <StarIconSolid 
+                    key={i} 
+                    size={14} 
+                    color={productData.rating && i <= Number(productData.rating) ? "#F59E0B" : "#D1D5DB"} 
+                  />
+                ))}
               </View>
-              <Text className="text-sm font-NunitoBold text-gray-900">{productData.rating || "5.0"}</Text>
-              <Text className="text-sm font-NunitoMedium text-gray-400 ml-1">({productData.review_count || 0} reviews)</Text>
+              <Text className="text-sm font-NunitoBold text-gray-900">
+                {productData.rating ? Number(productData.rating).toFixed(1) : "New"}
+              </Text>
+              <Text className="text-sm font-NunitoMedium text-gray-400 ml-1">
+                {productData.rating ? `(${productData.review_count || 0} reviews)` : "(No reviews yet)"}
+              </Text>
             </View>
 
             {/* Specifications Grid */}
@@ -370,7 +445,7 @@ const CarRentalDetail = () => {
                   </View>
                   <View className="ml-4 flex-1">
                     <Text className="text-lg font-NunitoExtraBold text-gray-900">
-                      {merchantData?.user?.first_name} {merchantData?.user?.last_name}
+                      {`${merchantData?.user?.first_name || ''} ${merchantData?.user?.last_name || ''}`.trim() || 'Service Provider'}
                     </Text>
                     <Text className="text-xs font-NunitoBold text-primary-500 mt-1">Verified Partner • Response: {'<'}1hr</Text>
                   </View>
@@ -391,10 +466,15 @@ const CarRentalDetail = () => {
          <View className="flex-row items-center justify-between">
             <View>
                <Text className="text-xs font-NunitoBold text-gray-400">Rental Price</Text>
-               <View className="flex-row items-baseline">
-                  <NairaCurrency value={productData.price} className="text-2xl font-NunitoExtraBold text-gray-900" />
-                  <Text className="text-sm font-NunitoBold text-gray-400 ml-1">/day</Text>
-               </View>
+               <Text 
+                 className="text-2xl font-NunitoExtraBold text-gray-900" 
+                 numberOfLines={1} 
+                 adjustsFontSizeToFit 
+                 style={{ maxWidth: SCREEN_WIDTH * 0.45 }}
+               >
+                  {formatCurrency(productData.price).replace('.00', '')}
+                  <Text className="text-sm font-NunitoBold text-gray-500"> / day</Text>
+               </Text>
             </View>
             <TouchableOpacity 
               onPress={() => setIsContactModalVisible(true)}

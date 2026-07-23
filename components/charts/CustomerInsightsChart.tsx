@@ -6,6 +6,7 @@ import {
   BanknotesIcon, 
   ArrowUpIcon 
 } from 'react-native-heroicons/outline';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Fallback icon component
 const FallbackIcon = ({ size, color }: { size: number; color: string }) => (
@@ -84,13 +85,13 @@ const CustomerInsightsChart: React.FC<CustomerInsightsChartProps> = ({ data }) =
             Track your customer engagement
           </Text>
         </View>
-        <View className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl items-center justify-center">
+        <LinearGradient colors={["#6366F1", "#7C3AED"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="w-12 h-12 rounded-2xl items-center justify-center">
           {UsersIcon ? (
             <UsersIcon size={20} color="white" />
           ) : (
             <FallbackIcon size={20} color="white" />
           )}
-        </View>
+        </LinearGradient>
       </View>
 
       {/* Customer Metrics Grid */}

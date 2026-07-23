@@ -240,145 +240,126 @@ const MerchantProfile = () => {
                  </Text>
                </View>
              </View>
+             {/* Merchant Profile Header */}
+              <View className="w-full items-center mt-2">
+                {/* Avatar */}
+                <View className="relative">
+                  <View className="w-24 h-24 rounded-full border-4 border-white shadow-md justify-center items-center overflow-hidden bg-gray-100">
+                    {profilePicture ? (
+                      <Image
+                        source={{ uri: profilePicture }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-3xl font-NunitoExtraBold text-gray-400 uppercase">
+                        {(merchantData?.store_name || userData?.first_name || 'M').charAt(0)}
+                      </Text>
+                    )}
+                  </View>
+                  <View className="absolute bottom-0 right-0 bg-green-500 w-7 h-7 rounded-full items-center justify-center border-2 border-white shadow-sm">
+                    <CheckIcon size={14} color="white" strokeWidth={4} />
+                  </View>
+                </View>
 
-             {/* Merchant Card */}
-             <View className="bg-gray-50 rounded-3xl p-5 border border-gray-100">
-               <View className="flex-row items-center">
-                 {/* Avatar */}
-                 <View className="relative mr-4">
-                    <LinearGradient
-                      colors={['#D30309', '#B91C1C']}
-                      className="w-20 h-20 rounded-2xl items-center justify-center shadow-sm"
-                    >
-                      {profilePicture ? (
-                        <Image
-                          source={{ uri: profilePicture }}
-                          className="w-[76px] h-[76px] rounded-xl bg-white"
-                        />
-                      ) : (
-                        <Text className="text-2xl font-NunitoExtraBold text-white uppercase">
-                          {(merchantData?.store_name || userData?.first_name || 'M').charAt(0)}
-                        </Text>
-                      )}
-                    </LinearGradient>
-                    <View className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full items-center justify-center border-2 border-white shadow-sm">
-                      <CheckIcon size={12} color="white" strokeWidth={4} />
+                {/* Name & Store Info */}
+                <Text className="text-2xl font-NunitoExtraBold text-gray-900 mt-4 text-center leading-tight">
+                  {merchantData?.store_name || `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Merchant Store'}
+                </Text>
+
+                <View className="flex-row items-center mt-2 space-x-3">
+                  <View className="flex-row items-center bg-amber-50 px-2.5 py-0.5 rounded-full">
+                    <StarIcon size={12} color="#D97706" fill="#D97706" />
+                    <Text className="text-xs font-NunitoBold text-amber-800 ml-1">
+                      {merchantProducts[0]?.merchant_rating?.toFixed(1) || '0.0'}
+                    </Text>
+                  </View>
+                  <Text className="text-gray-400 text-xs font-NunitoMedium">
+                    Member since {userData?.date_joined ? new Date(userData.date_joined).getFullYear() : '2024'}
+                  </Text>
+                </View>
+
+                {/* Quick Stats Grid */}
+                <View className="flex-row w-full mt-6 bg-gray-50 py-4 px-6 rounded-2xl border border-gray-100 justify-around">
+                  <View className="flex-1 items-center">
+                    <Text className="text-lg font-NunitoBold text-gray-900">{merchantProducts.length}</Text>
+                    <Text className="text-[10px] text-gray-400 font-NunitoMedium uppercase tracking-wider mt-0.5">Products</Text>
+                  </View>
+                  <View className="flex-1 items-center">
+                    <Text className="text-lg font-NunitoBold text-gray-900">
+                      {merchantProducts.reduce((sum: number, p: any) => sum + (p.purchased_count || 0), 0)}
+                    </Text>
+                    <Text className="text-[10px] text-gray-400 font-NunitoMedium uppercase tracking-wider mt-0.5">Sales</Text>
+                  </View>
+                  {merchantData?.followers_count !== undefined && (
+                    <View className="flex-1 items-center">
+                      <Text className="text-lg font-NunitoBold text-gray-900">
+                        {merchantData.followers_count}
+                      </Text>
+                      <Text className="text-[10px] text-gray-400 font-NunitoMedium uppercase tracking-wider mt-0.5">Followers</Text>
                     </View>
-                 </View>
+                  )}
+                </View>
 
-                 {/* Info */}
-                 <View className="flex-1">
-                   <Text className="text-xl font-NunitoExtraBold text-gray-900 mb-0.5 leading-tight">
-                     {merchantData?.store_name || `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Merchant Store'}
-                   </Text>
-                   <View className="flex-row items-center mb-2">
-                     <StarIcon size={14} color="#FBBF24" fill="#FBBF24" />
-                     <Text className="text-sm font-NunitoBold text-gray-900 ml-1">
-                       {merchantProducts[0]?.merchant_rating?.toFixed(1) || '0.0'}
-                     </Text>
-                     <Text className="text-xs text-gray-500 ml-1">• 0 reviews</Text>
-                   </View>
-                   
-                   <View className="flex-row items-center">
-                     <CalendarIcon size={12} color="#9CA3AF" />
-                     <Text className="text-gray-400 text-[11px] font-NunitoMedium ml-1">
-                       Member since {userData?.date_joined ? new Date(userData.date_joined).getFullYear() : '2024'}
-                     </Text>
-                   </View>
-                 </View>
-               </View>
+                {/* Extended Contact Info */}
+                <View className="w-full mt-4 bg-gray-50 py-4 px-5 rounded-2xl border border-gray-100 space-y-3">
+                  {userData?.phone_number && (
+                    <View className="flex-row items-center">
+                      <PhoneIcon size={16} color="#6B7280" />
+                      <Text className="text-sm font-NunitoMedium text-gray-700 ml-3">{userData.phone_number}</Text>
+                    </View>
+                  )}
+                  {userData?.email && (
+                    <View className="flex-row items-center">
+                      <EnvelopeIcon size={16} color="#6B7280" />
+                      <Text className="text-sm font-NunitoMedium text-gray-600 ml-3" numberOfLines={1}>{userData.email}</Text>
+                    </View>
+                  )}
+                  {merchantData?.location && (
+                    <View className="flex-row items-start">
+                      <MapPinIcon size={16} color="#6B7280" />
+                      <Text className="flex-1 text-sm font-NunitoMedium text-gray-600 ml-3 leading-snug">
+                        {merchantData.location}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
-               {/* Extended Info Section */}
-               <View className="mt-5 space-y-2.5 pt-4 border-t border-gray-200/50">
-                 {userData?.phone_number && (
-                   <View className="flex-row items-center">
-                     <View className="w-7 h-7 rounded-full bg-blue-50 items-center justify-center mr-3">
-                       <PhoneIcon size={14} color="#3B82F6" />
-                     </View>
-                     <Text className="text-sm font-NunitoBold text-gray-700">{userData.phone_number}</Text>
-                   </View>
-                 )}
-                 {userData?.email && (
-                   <View className="flex-row items-center">
-                     <View className="w-7 h-7 rounded-full bg-purple-50 items-center justify-center mr-3">
-                       <EnvelopeIcon size={14} color="#8B5CF6" />
-                     </View>
-                     <Text className="text-sm font-NunitoMedium text-gray-600 italic" numberOfLines={1}>{userData.email}</Text>
-                   </View>
-                 )}
-                 {merchantData?.location && (
-                   <View className="flex-row items-start">
-                     <View className="w-7 h-7 rounded-full bg-orange-50 items-center justify-center mr-3">
-                       <MapPinIcon size={14} color="#F97316" />
-                     </View>
-                     <Text className="flex-1 text-sm font-NunitoMedium text-gray-600 leading-snug">
-                       {merchantData.location}
-                     </Text>
-                   </View>
-                 )}
-               </View>
+                {/* Action Buttons Row */}
+                <View className="flex-row items-center gap-3 mt-5 w-full">
+                  <TouchableOpacity
+                    onPress={handleChat}
+                    className="flex-1 bg-white border border-gray-200 h-11 rounded-xl flex-row items-center justify-center shadow-sm"
+                    activeOpacity={0.7}
+                  >
+                    <ChatBubbleLeftRightIcon size={18} color="#374151" />
+                    <Text className="ml-2 font-NunitoBold text-gray-800 text-sm">Message</Text>
+                  </TouchableOpacity>
 
-               {/* Action Buttons Row */}
-               <View className="flex-row items-center gap-3 mt-6">
-                 <TouchableOpacity
-                   onPress={handleChat}
-                   className="flex-1 bg-white border border-gray-200 h-12 rounded-2xl flex-row items-center justify-center shadow-sm"
-                   activeOpacity={0.7}
-                 >
-                   <ChatBubbleLeftRightIcon size={20} color="#374151" />
-                   <Text className="ml-2 font-NunitoBold text-gray-800">Message</Text>
-                 </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleCall}
+                    className="flex-1 bg-primary-500 h-11 rounded-xl flex-row items-center justify-center shadow-sm"
+                    activeOpacity={0.8}
+                  >
+                    <PhoneIcon size={18} color="white" />
+                    <Text className="ml-2 font-NunitoBold text-white text-sm">Call Seller</Text>
+                  </TouchableOpacity>
 
-                 <TouchableOpacity
-                   onPress={handleCall}
-                   className="flex-1 bg-primary-500 h-12 rounded-2xl flex-row items-center justify-center shadow-md shadow-primary-200"
-                   activeOpacity={0.8}
-                 >
-                   <PhoneIcon size={20} color="white" />
-                   <Text className="ml-2 font-NunitoBold text-white">Call Seller</Text>
-                 </TouchableOpacity>
-
-                 <TouchableOpacity
-                   onPress={handleFollowToggle}
-                   disabled={isPending}
-                   className={`w-12 h-12 rounded-2xl items-center justify-center border ${
-                     merchantData?.is_following 
-                       ? 'bg-gray-100 border-gray-200' 
-                       : 'bg-white border-primary-100'
-                   } shadow-sm`}
-                 >
-                   <Text className={`text-xl ${merchantData?.is_following ? 'text-gray-400' : 'text-primary-500'}`}>
-                     {merchantData?.is_following ? '✓' : '+'}
-                   </Text>
-                 </TouchableOpacity>
-               </View>
-
-               {/* Quick Stats */}
-               <View className="flex-row mt-6 pt-4 border-t border-gray-200/60">
-                 <View className="flex-1 items-center">
-                   <Text className="text-lg font-NunitoBold text-gray-900">{merchantProducts.length}</Text>
-                   <Text className="text-xs text-gray-400 font-NunitoMedium">Products</Text>
-                 </View>
-                 <View className="w-px h-8 bg-gray-200 my-auto" />
-                 <View className="flex-1 items-center">
-                   <Text className="text-lg font-NunitoBold text-gray-900">
-                     {merchantProducts.reduce((sum: number, p: any) => sum + (p.purchased_count || 0), 0)}
-                   </Text>
-                   <Text className="text-xs text-gray-400 font-NunitoMedium">Sales</Text>
-                 </View>
-                 {merchantData?.followers_count !== undefined && (
-                   <>
-                     <View className="w-px h-8 bg-gray-200 my-auto" />
-                     <View className="flex-1 items-center">
-                       <Text className="text-lg font-NunitoBold text-gray-900">
-                         {merchantData.followers_count}
-                       </Text>
-                       <Text className="text-xs text-gray-400 font-NunitoMedium">Followers</Text>
-                     </View>
-                   </>
-                 )}
-               </View>
-             </View>
+                  <TouchableOpacity
+                    onPress={handleFollowToggle}
+                    disabled={isPending}
+                    className={`w-11 h-11 rounded-xl items-center justify-center border ${
+                      merchantData?.is_following 
+                        ? 'bg-gray-100 border-gray-200' 
+                        : 'bg-white border-gray-200'
+                    } shadow-sm`}
+                  >
+                    <Text className={`text-lg font-NunitoBold ${merchantData?.is_following ? 'text-gray-400' : 'text-primary-500'}`}>
+                      {merchantData?.is_following ? '✓' : '+'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
           </View>
         </Animated.View>
 

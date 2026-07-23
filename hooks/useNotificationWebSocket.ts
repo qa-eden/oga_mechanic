@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import useWebSocket, { WebSocketMessage } from './useWebSocket';
 import { scheduleGenericNotification, scheduleSuccessNotification } from '../services/notificationService';
@@ -109,6 +109,42 @@ export const useNotificationWebSocket = ({ onNewOrder, enabled = true, triggerPu
       invalidateRepairCaches(data);
     },
 
+    // ── Customer Cancellation Event ───────────────────────────────────────────
+    // Fires when a customer cancels an active repair request.
+    repair_cancelled: (data: WebSocketMessage) => {
+      invalidateRepairCaches(data);
+      if (triggerPush) {
+        scheduleGenericNotification(
+          'Job Cancelled',
+          'A customer has cancelled their repair request.',
+          data
+        );
+        useNotificationStore.getState().showNotification(
+          'Job Cancelled',
+          'A customer has cancelled their repair request.',
+          'info',
+          data
+        );
+      }
+    },
+    'repair-cancelled': (data: WebSocketMessage) => {
+      invalidateRepairCaches(data);
+      if (triggerPush) {
+        scheduleGenericNotification(
+          'Job Cancelled',
+          'A customer has cancelled their repair request.',
+          data
+        );
+        useNotificationStore.getState().showNotification(
+          'Job Cancelled',
+          'A customer has cancelled their repair request.',
+          'info',
+          data
+        );
+      }
+    },
+
+
     // ── Support/Chat Events ───────────────────────────────────────────────────
     chat_message: (_data: WebSocketMessage) => {
       queryClient.refetchQueries({ queryKey: ['support-conversations'] });
@@ -189,10 +225,6 @@ export const useNotificationWebSocket = ({ onNewOrder, enabled = true, triggerPu
     eventHandlers,
     enabled,
   });
-
-  useEffect(() => {
-    // No-op — isConnected is exposed for consumers that need it
-  }, [isConnected, enabled]);
 
   return { isConnected, reconnect };
 };

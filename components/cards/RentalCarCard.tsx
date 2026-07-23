@@ -12,33 +12,65 @@ const RentalCarCard: React.FC<RentalCarCardProps> = React.memo(({ item, onPress 
   if (!item) return null;
 
   const isVan = item.body_type === 'van' || item.category === 'van';
+  const isTruck = item.body_type === 'truck' || item.category === 'truck';
+  
   const images = (item.images && item.images.length > 0) ? item.images : [item.image || 'https://via.placeholder.com/300x200/f3f4f6/9ca3af?text=No+Image'];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const opacity = useSharedValue(1);
+  const translateX = useSharedValue(0);
 
   const updateIndex = () => {
     if (!images || images.length === 0) return;
     setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    opacity.value = withTiming(1, { duration: 500 });
+    
+    // Position image at the right boundary instantly, then animate sliding in
+    translateX.value = 128;
+    opacity.value = 0;
+    
+    translateX.value = withTiming(0, { duration: 450 });
+    opacity.value = withTiming(1, { duration: 450 });
   };
 
   useEffect(() => {
+    // Reset index, position, and opacity when images change
+    setCurrentImageIndex(0);
+    translateX.value = 0;
+    opacity.value = 1;
+
     if (images.length <= 1) return;
 
-    const timer = setInterval(() => {
-      // Smooth fade out
-      opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-        if (finished) {
-          runOnJS(updateIndex)();
-        }
-      });
-    }, 10000); // 10 seconds as requested
+    // Generate a random initial delay (e.g. between 1000ms and 9000ms)
+    // so card images do not slide/change synchronously, giving a natural, staggered flow.
+    const initialDelay = Math.random() * 8000 + 1000;
+    let timer: NodeJS.Timeout;
 
-    return () => clearInterval(timer);
+    const startSlideshow = () => {
+      timer = setInterval(() => {
+        // Slide out to the left and fade out
+        translateX.value = withTiming(-128, { duration: 450 });
+        opacity.value = withTiming(0, { duration: 450 }, (finished) => {
+          if (finished) {
+            runOnJS(updateIndex)();
+          }
+        });
+      }, 10000); // 10 seconds interval
+    };
+
+    const delayTimeout = setTimeout(startSlideshow, initialDelay);
+
+    return () => {
+      clearTimeout(delayTimeout);
+      if (timer) clearInterval(timer);
+    };
   }, [images]);
 
   const animatedImageStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
     opacity: opacity.value,
+  }));
+
+  const animatedBgStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value * 0.2, // Keep background at max 20% opacity
   }));
 
   return (
@@ -57,10 +89,10 @@ const RentalCarCard: React.FC<RentalCarCardProps> = React.memo(({ item, onPress 
       <View className="flex-row p-4 items-center">
         {/* Car Image Container with Premium Background */}
         <View className="w-32 h-28 bg-gray-100 rounded-2xl overflow-hidden items-center justify-center">
-          {/* Blurred Background Layer for "Fill" effect */}
-          <Image
+          {/* Blurred Background Layer for "Fill" effect - fades along with foreground */}
+          <Animated.Image
             source={{ uri: images[currentImageIndex] }}
-            className="absolute w-full h-full opacity-20"
+            style={[{ position: 'absolute', width: '100%', height: '100%' }, animatedBgStyle]}
             blurRadius={10}
             resizeMode="cover"
           />
@@ -85,9 +117,9 @@ const RentalCarCard: React.FC<RentalCarCardProps> = React.memo(({ item, onPress 
 
           {/* Category Badge */}
           <View className="absolute top-2 left-2 shadow-sm">
-            <View className={`px-2 py-0.5 rounded-lg ${isVan ? 'bg-blue-600' : 'bg-primary-600'}`}>
+            <View className={`px-2 py-0.5 rounded-lg ${isVan ? 'bg-blue-600' : isTruck ? 'bg-amber-600' : 'bg-primary-600'}`}>
                <Text className="text-[8px] font-NunitoExtraBold text-white uppercase tracking-tighter">
-                  {isVan ? 'Towing' : 'Premium'}
+                  {isVan ? 'Towing' : isTruck ? 'Truck' : 'Car'}
                </Text>
             </View>
           </View>
@@ -102,7 +134,7 @@ const RentalCarCard: React.FC<RentalCarCardProps> = React.memo(({ item, onPress 
           </View>
           
           <Text className="text-[13px] font-NunitoSemiBold text-gray-400 mb-3 uppercase tracking-wide">
-             {isVan ? 'Heavy Duty Service' : `${item.transmission} • ${item.make || 'Vehicle'}`}
+             {isVan ? 'Heavy Duty Service' : isTruck ? 'Commercial Cargo' : `${item.transmission} • ${item.make || 'Vehicle'}`}
           </Text>
 
           <View className="flex-row items-end justify-between">

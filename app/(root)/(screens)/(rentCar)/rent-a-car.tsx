@@ -12,7 +12,6 @@ import InputField from "@/components/InputField"
 import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { useQuery } from "@tanstack/react-query"
 import { productsAPI } from "@/lib/api/products"
-import { useVehicleMakes } from "@/hooks/useVehicleMakes"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import AnimatedErrorCard from "@/components/AnimatedErrorCard"
 import PriceRangeSlider from "@/components/PriceRangeSlider"
@@ -46,26 +45,14 @@ const RentACarScreen = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  // Fetch vehicle makes from API
-  const { data: vehicleMakes } = useVehicleMakes();
-
-  // Convert vehicle makes to options
-  const makeOptions = useMemo(() => {
-    return vehicleMakes?.map(make => ({
-      label: make.name,
-      value: make.id.toString(),
-      name: make.name
-    })) || [];
-  }, [vehicleMakes]);
-
-  // Fetch rental cars from API
+  // Fetch rental cars from API (fetching all makes at once to allow dynamic client-side filtering and counts)
   const {
     data: rentalCarsResponse,
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['rental-cars', selectedMake, minPrice, maxPrice, searchQuery],
+    queryKey: ['rental-cars', minPrice, maxPrice, searchQuery],
     queryFn: async () => {
       if (searchQuery.trim()) {
         const searchResults = await productsAPI.searchProducts(
@@ -73,7 +60,7 @@ const RentACarScreen = () => {
           undefined,
           minPrice || undefined,
           maxPrice || undefined,
-          selectedMake !== "All" ? selectedMake : undefined,
+          undefined, // No make filter at API level
           true
         );
         return { data: { results: searchResults } };
@@ -86,7 +73,7 @@ const RentACarScreen = () => {
           undefined,
           undefined,
           true,
-          selectedMake !== "All" ? selectedMake : undefined
+          undefined // No make filter at API level
         );
         return response;
       }
@@ -117,6 +104,54 @@ const RentACarScreen = () => {
 
   const rentalCars: RentalCar[] = rentalCarsData.map(transformRentalCar);
 
+  // Compute counts for categories (All, Cars, Towing Van, Truck)
+  const categoryCounts = useMemo(() => {
+    const counts = { All: 0, car: 0, van: 0, truck: 0 };
+    rentalCars.forEach(car => {
+      counts.All++;
+      if (car.body_type === 'car') counts.car++;
+      else if (car.body_type === 'van') counts.van++;
+      else if (car.body_type === 'truck') counts.truck++;
+    });
+    return counts;
+  }, [rentalCars]);
+
+  // Dynamically extract unique makes with counts for the selected category
+  const makeOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    rentalCars.forEach(car => {
+      if (selectedType === 'All' || car.body_type === selectedType) {
+        if (car.make) {
+          counts[car.make] = (counts[car.make] || 0) + 1;
+        }
+      }
+    });
+
+    const options = Object.entries(counts).map(([name, count]) => ({
+      label: `${name} (${count})`,
+      value: name,
+      name: name,
+      count: count
+    }));
+
+    options.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    return options;
+  }, [rentalCars, selectedType]);
+
+  const totalCarsForSelectedType = useMemo(() => {
+    return rentalCars.filter(car => selectedType === 'All' || car.body_type === selectedType).length;
+  }, [rentalCars, selectedType]);
+
+  // Automatically reset selectedMake if it is no longer available in makeOptions
+  useEffect(() => {
+    if (selectedMake !== "All") {
+      const makeExists = makeOptions.some(option => option.value === selectedMake);
+      if (!makeExists) {
+        setSelectedMake("All");
+      }
+    }
+  }, [selectedType, makeOptions, selectedMake]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -129,15 +164,10 @@ const RentACarScreen = () => {
   const filteredCars = useMemo(() =>
     rentalCars.filter((car) => {
       const matchesType = selectedType === "All" || car.body_type === selectedType;
-      
-      const selectedMakeName = selectedMake === "All" 
-        ? "All" 
-        : makeOptions.find(o => o.value === selectedMake)?.label || "All";
-        
-      const matchesMake = selectedMakeName === "All" || car.make === selectedMakeName;
+      const matchesMake = selectedMake === "All" || car.make === selectedMake;
       return matchesType && matchesMake;
     }),
-    [rentalCars, selectedType, selectedMake, makeOptions]
+    [rentalCars, selectedType, selectedMake]
   )
 
   const sections = useMemo(() => {
@@ -228,16 +258,16 @@ const RentACarScreen = () => {
       </View>
 
       {/* Custom Search & Filter UI */}
-      <View className="mb-2">
+      <View className="mb-2 z-10 bg-white">
         {/* Search Input Row */}
-        <View className="px-5 mb-4">
-          <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100">
+        <View className="px-5 mb-6">
+          <View className="flex-row items-center bg-gray-50 rounded-2xl px-4 py-1 border border-gray-100">
             <MagnifyingGlassIcon size={20} color="#9CA3AF" />
             <TextInput
               placeholder="Search cars, towing service..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              className="flex-1 ml-3 text-sm font-NunitoMedium text-gray-900"
+              className="flex-1 ml-3 text-md font-NunitoMedium text-gray-900"
               placeholderTextColor="#9CA3AF"
             />
             <TouchableOpacity 
@@ -253,10 +283,10 @@ const RentACarScreen = () => {
         <View className="mb-3">
           <FlatList
             data={[
-              { label: "All", value: "All" },
-              { label: "Car Rental", value: "car" },
-              { label: "Towing Van", value: "van" },
-              { label: "Truck", value: "truck" }
+              { label: isLoading ? "All" : `All (${categoryCounts.All})`, value: "All" },
+              { label: isLoading ? "Cars" : `Cars (${categoryCounts.car})`, value: "car" },
+              { label: isLoading ? "Towing Van" : `Towing Van (${categoryCounts.van})`, value: "van" },
+              { label: isLoading ? "Truck" : `Truck (${categoryCounts.truck})`, value: "truck" }
             ]}
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -275,14 +305,15 @@ const RentACarScreen = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 20 }}
+            keyboardShouldPersistTaps="handled"
           />
         </View>
 
         {/* Sub-category Row (Makes) */}
-        {selectedType !== 'van' && selectedType !== 'truck' && (
+        {makeOptions.length > 0 && (
           <View className="bg-blue-50/30 border-y border-blue-100/50 py-2.5">
             <FlatList
-              data={[{ label: "All Makes", value: "All" }, ...makeOptions]}
+              data={[{ label: `All Makes (${totalCarsForSelectedType})`, value: "All" }, ...makeOptions]}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   onPress={() => setSelectedMake(item.value)}
@@ -297,6 +328,7 @@ const RentACarScreen = () => {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 20 }}
+              keyboardShouldPersistTaps="handled"
             />
           </View>
         )}
@@ -405,6 +437,8 @@ const RentACarScreen = () => {
         renderItem={renderSection}
         keyExtractor={(item, index) => `${item.type}-${index}`}
         showsVerticalScrollIndicator={false}
+        className="flex-1"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 60 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#D30309']} tintColor="#D30309" />

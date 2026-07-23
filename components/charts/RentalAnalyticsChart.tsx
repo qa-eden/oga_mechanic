@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { TruckIcon, ClockIcon, CurrencyDollarIcon } from 'react-native-heroicons/outline';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Fallback icon component
 const FallbackIcon = ({ size, color }: { size: number; color: string }) => (
@@ -86,13 +87,13 @@ const RentalAnalyticsChart: React.FC<RentalAnalyticsChartProps> = ({ data }) => 
             Track your Rental Business
           </Text>
         </View>
-        <View className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl items-center justify-center">
+        <LinearGradient colors={["#A855F7", "#DB2777"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="w-12 h-12 rounded-2xl items-center justify-center">
           {TruckIcon ? (
             <TruckIcon size={20} color="white" />
           ) : (
             <FallbackIcon size={20} color="white" />
           )}
-        </View>
+        </LinearGradient>
       </View>
 
       {/* Metrics Grid */}

@@ -24,12 +24,14 @@ const EditImage = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   
-  const { productId, productData: productDataParam } = useLocalSearchParams<{
+  const { productId, productData: productDataParam, productType } = useLocalSearchParams<{
     productId?: string;
     productData?: string;
+    productType?: string;
   }>();
 
   const parsedProductData = productDataParam ? JSON.parse(productDataParam) : null;
+  const isRental = productType === 'rental-car';
   
   // Initialize custom alert hook
   const { visible, alertConfig, hideAlert, showSuccess, showError } = useCustomAlert();
@@ -75,6 +77,10 @@ const EditImage = () => {
     productId: productId || '',
     merchantId: merchantId 
   });
+
+  const isSparePart = productType === 'spare-part' || parsedProductData?.category_id === 24 || fetchedProductData?.category_id === 24;
+  const productLabel = isSparePart ? 'Spare Part' : (isRental ? 'Rental Car' : 'Car');
+  const productLabelLower = isSparePart ? 'spare part' : (isRental ? 'rental car' : 'car');
 
   // Update images state when fetchedProductData changes
   useEffect(() => {
@@ -187,7 +193,7 @@ const EditImage = () => {
           // Show success message
           showSuccess(
             'Image Replaced',
-            'Your car image has been updated successfully!'
+            `Your ${productLabelLower} image has been updated successfully!`
           );
         } catch (error) {
           // Show error alert if replacement fails
@@ -217,7 +223,7 @@ const EditImage = () => {
       // Show success message
       showSuccess(
         'Image Deleted',
-        'Your car image has been removed successfully!'
+        `Your ${productLabelLower} image has been removed successfully!`
       );
     } catch (error) {
       // Show error message
@@ -237,7 +243,7 @@ const EditImage = () => {
 
   const handleSubmit = () => {
     if (images.length === 0) {
-      showError('Images Required', 'Please upload at least one image of your car.')
+      showError('Images Required', `Please upload at least one image of your ${productLabelLower}.`)
       return
     }
 
@@ -246,8 +252,8 @@ const EditImage = () => {
     router.push({
       pathname: sellerRoutes.successfulPage as any,
       params: {
-        title: "Car Images Updated Successfully!",
-        message: `Your ${parsedProductData?.name} images have been updated successfully and are now available in your car listing.`,
+        title: `${productLabel} Images Updated Successfully!`,
+        message: `Your ${parsedProductData?.name || 'vehicle'} images have been updated successfully and are now available in your listing.`,
         route: sellerRoutes.products
       }
     })
@@ -285,10 +291,10 @@ const EditImage = () => {
             </TouchableOpacity>
             <View className="items-center">
               <Text className="text-xl font-NunitoBold text-gray-900">
-                Edit Car Images
+                Edit {productLabel} Images
               </Text>
               <Text className="text-xs text-gray-500 font-NunitoMedium">
-                Update your car images
+                Update your {productLabelLower} images
               </Text>
             </View>
             <View className="w-10" />
@@ -319,10 +325,10 @@ const EditImage = () => {
           </TouchableOpacity>
           <View className="items-center">
             <Text className="text-xl font-NunitoBold text-gray-900">
-              Edit Car Images
+              Edit {productLabel} Images
             </Text>
             <Text className="text-xs text-gray-500 font-NunitoMedium">
-              Update your car images
+              Update your {productLabelLower} images
             </Text>
           </View>
           <View className="w-10" />
@@ -349,7 +355,7 @@ const EditImage = () => {
             <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-2">
               <Text className="text-white font-NunitoBold text-sm">✓</Text>
             </View>
-            <Text className="text-green-600 font-NunitoSemiBold text-sm mr-4">Car Details</Text>
+            <Text className="text-green-600 font-NunitoSemiBold text-sm mr-4">{productLabel} Details</Text>
             
             <View className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center mr-2">
               <Text className="text-white font-NunitoBold text-sm">2</Text>
@@ -365,20 +371,22 @@ const EditImage = () => {
               <View className="w-8 h-8 bg-blue-500 rounded-lg items-center justify-center mr-3">
                 <Text className="text-white font-NunitoBold text-sm">ℹ</Text>
               </View>
-              <Text className="text-lg font-NunitoBold text-gray-900">Car Summary</Text>
+              <Text className="text-lg font-NunitoBold text-gray-900">{productLabel} Summary</Text>
             </View>
             <View className="bg-gray-50 rounded-xl p-4">
               <Text className="text-base font-NunitoSemiBold text-gray-900 mb-2">
-                {parsedProductData?.name} - {getMakeName(parsedProductData?.make)} {getModelName(parsedProductData?.model)}
+                {parsedProductData?.name} {parsedProductData?.make && parsedProductData?.model ? `- ${getMakeName(parsedProductData.make)} ${getModelName(parsedProductData.model)}` : ''}
               </Text>
               <Text className="text-sm text-gray-600 mb-1">
-                Year: {parsedProductData?.year} • {parsedProductData?.condition}
+                Year: {parsedProductData?.year || 'N/A'} • {parsedProductData?.condition || 'New'}
               </Text>
+              {parsedProductData?.mileage !== undefined && (
+                <Text className="text-sm text-gray-600 mb-1">
+                  {parsedProductData?.mileage?.toLocaleString()} {parsedProductData?.mileage_unit} • {parsedProductData?.transmission}
+                </Text>
+              )}
               <Text className="text-sm text-gray-600 mb-1">
-                {parsedProductData?.mileage?.toLocaleString()} {parsedProductData?.mileage_unit} • {parsedProductData?.transmission}
-              </Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {parsedProductData?.fuel_type} • {parsedProductData?.body_type}
+                {parsedProductData?.fuel_type} • {parsedProductData?.body_type || 'Spare Part'}
               </Text>
               <Text className="text-sm font-NunitoSemiBold text-green-600">
                 Price: {parsedProductData?.currency === 'NGN' ? '₦' : '$'}{parseFloat(parsedProductData?.price || '0').toLocaleString()}
@@ -394,9 +402,9 @@ const EditImage = () => {
               <Text className="text-white font-NunitoBold text-sm">1</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-NunitoBold text-gray-900">Car Images</Text>
+              <Text className="text-lg font-NunitoBold text-gray-900">{productLabel} Images</Text>
               <Text className="text-xs text-gray-500 font-NunitoMedium">
-                Edit your car images (tap to delete existing images)
+                Edit your {productLabelLower} images (tap to delete existing images)
               </Text>
             </View>
           </View>

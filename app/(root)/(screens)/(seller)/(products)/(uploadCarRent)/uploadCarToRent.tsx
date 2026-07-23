@@ -343,7 +343,7 @@ const UploadCarToRent = () => {
           hideAlert();
           router.push({
             pathname: sellerRoutes.uploadCarImages as any,
-            params: { formData: JSON.stringify(payload), productId: updatedProductId }
+            params: { formData: JSON.stringify(payload), productId: updatedProductId, productType: 'rental-car' }
           });
         }
       });

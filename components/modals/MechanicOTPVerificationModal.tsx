@@ -18,6 +18,7 @@ interface MechanicOTPVerificationModalProps {
   visible: boolean;
   onClose: () => void;
   onVerify: (otp: string | number) => void;
+  onBypass?: () => void;
   isVerifying: boolean;
   error?: string | null;
 }
@@ -26,6 +27,7 @@ const MechanicOTPVerificationModal = ({
   visible,
   onClose,
   onVerify,
+  onBypass,
   isVerifying,
   error,
 }: MechanicOTPVerificationModalProps) => {
@@ -77,29 +79,40 @@ const MechanicOTPVerificationModal = ({
               )}
 
               {isVerifying ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#16A34A" />
-                  <Text style={styles.loadingText}>Verifying code...</Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => onVerify(localOtp)}
-                  disabled={localOtp.length !== 6 || isVerifying}
-                  style={[
-                    styles.verifyButton,
-                    (localOtp.length !== 6 || isVerifying) && styles.disabledButton,
-                  ]}
-                >
-                  <Text style={styles.verifyButtonText}>Verify & Start Repair</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-};
+                 <View style={styles.loadingContainer}>
+                   <ActivityIndicator size="large" color="#16A34A" />
+                   <Text style={styles.loadingText}>Verifying code...</Text>
+                 </View>
+               ) : (
+                 <>
+                   <TouchableOpacity
+                     onPress={() => onVerify(localOtp)}
+                     disabled={localOtp.length !== 6 || isVerifying}
+                     style={[
+                       styles.verifyButton,
+                       (localOtp.length !== 6 || isVerifying) && styles.disabledButton,
+                     ]}
+                   >
+                     <Text style={styles.verifyButtonText}>Verify & Start Repair</Text>
+                   </TouchableOpacity>
+
+                   {onBypass && (
+                     <TouchableOpacity
+                       onPress={onBypass}
+                       style={styles.bypassButton}
+                     >
+                       <Text style={styles.bypassButtonText}>Customer Offline? Bypass</Text>
+                     </TouchableOpacity>
+                   )}
+                 </>
+               )}
+             </View>
+           </KeyboardAvoidingView>
+         </View>
+       </TouchableWithoutFeedback>
+     </Modal>
+   );
+ };
 
 const styles = StyleSheet.create({
   centeredView: {
@@ -198,6 +211,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Nunito-Medium',
     color: '#6B7280',
+  },
+  bypassButton: {
+    width: '100%',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  bypassButtonText: {
+    color: '#4B5563',
+    fontSize: 14,
+    fontFamily: 'Nunito-SemiBold',
   },
 });
 

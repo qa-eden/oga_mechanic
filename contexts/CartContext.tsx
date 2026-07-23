@@ -140,7 +140,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const cartAnimation = useRef(new Animated.Value(1)).current;
-  const bounceAnimation = useRef(new Animated.Value(1)).current;
+  // bounceAnimation was previously created here but never exposed via context.
   const { data: cartQueryData } = useCartQuery();
   const auth = useAuthContext();
   const queryClient = useQueryClient();
@@ -163,35 +163,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Bounce animation
-    Animated.sequence([
-      Animated.timing(bounceAnimation, {
-        toValue: 1.2,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnimation, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnimation, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   // Add to cart function
   const addToCart = async (item: Omit<CartItem, 'quantity'>) => {
-    console.log('🛒 addToCart called for:', item.id, 'User data:', auth.userData);
-    
-    // Server will handle role-based permissions; client-side check is too restrictive
-    
     const existingItem = state.items.find(cartItem => cartItem.id.toString() === item.id.toString());
-    console.log('🛒 Existing item in cart:', !!existingItem);
     
     if (existingItem && existingItem.quantity >= existingItem.stock) {
       showToast.error(`Stock limit reached! You can only add up to ${existingItem.stock} items of ${item.name}`);
@@ -199,82 +175,62 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      console.log('🛒 Calling productsAPI.addToCart server-side...');
       // Add to server first
       const response = await productsAPI.addToCart(item.id, 1);
-      console.log('🛒 Server response:', response);
       
       if (response.status) {
         // Update local state
         dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
         triggerCartAnimation();
         
-        // Invalidate React Query cache to sync with useCart hook
+        // Invalidate React Query cache — the useEffect on cartQueryData will sync local state
         queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
-        
-        await syncWithServer(); // Get fresh cart data as requested
-        // showToast.success(getSuccessMessage('cart_add'));
       } else {
-        console.log('🛒 Server update failed:', response.message);
         showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
-      console.error('🛒 Add to cart error:', error);
       showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 
   // Remove from cart function
   const removeFromCart = async (id: string) => {
-    const item = state.items.find(item => item.id.toString() === id.toString());
-    
     try {
       const response = await productsAPI.removeFromCart(id);
       
       if (response.status) {
         dispatch({ type: 'REMOVE_ITEM', payload: id });
         
-        // Invalidate React Query cache for both cart and products
+        // Invalidate React Query cache — the useEffect on cartQueryData will sync local state
         queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
         queryClient.invalidateQueries({ queryKey: productKeys.all });
-        
-        // Sync with server to get fresh cart data
-        await syncWithServer();
         
         showToast.success(getSuccessMessage('cart_remove'));
       } else {
         showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
-      console.error('Remove from cart error:', error);
       showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
 
   // Update quantity function
   const updateQuantity = async (id: string, quantity: number) => {
-    const item = state.items.find(item => item.id.toString() === id.toString());
-    const oldQuantity = item?.quantity || 0;
-    
     try {
       const response = await productsAPI.updateCartItem(id, quantity);
       
       if (response.status) {
         dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
         
-        // Invalidate React Query cache for both cart and products
+        // Invalidate React Query cache — the useEffect on cartQueryData will sync local state
         queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
         queryClient.invalidateQueries({ queryKey: productKeys.all });
-        
-        // Sync with server to get fresh cart data
-        await syncWithServer();
         
         showToast.success(getSuccessMessage('cart_update'));
       } else {
         showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
-      console.error('Update quantity error:', error);
       showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
@@ -287,19 +243,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.status) {
         dispatch({ type: 'CLEAR_CART' });
         
-        // Invalidate React Query cache for both cart and products
+        // Invalidate React Query cache — the useEffect on cartQueryData will sync local state
         queryClient.invalidateQueries({ queryKey: cartKeys.cart() });
         queryClient.invalidateQueries({ queryKey: productKeys.all });
-        
-        // Sync with server to get fresh cart data
-        await syncWithServer();
         
         showToast.success(getSuccessMessage('cart_clear'));
       } else {
         showToast.error(getApiErrorMessage({ response }, 'cart'));
       }
     } catch (error: any) {
-      console.error('Clear cart error:', error);
       showToast.error(getApiErrorMessage(error, 'cart'));
     }
   };
@@ -341,21 +293,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await productsAPI.getCart();
       
-      console.log('🛒 Cart sync response:', response);
-      
       if (response.status) {
         // Convert server cart items safely using universal mapper
         const localItems = mapServerItems(response.data);
-        
-        console.log('🛒 Converted cart items:', localItems);
         dispatch({ type: 'SET_CART', payload: localItems });
       } else {
-        console.log('🛒 Cart sync failed - status false');
         dispatch({ type: 'SET_CART', payload: [] });
       }
     } catch (error: any) {
-      console.error('❌ Sync cart error:', error);
-      // Don't clear cart on error, just log it
+      // Don't clear cart on network error — preserve last known state
     }
   }, [isShopRole, mapServerItems]);
 
@@ -393,7 +339,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Force sync with React Query data whenever it's available
     // We remove the isShopRole guard here because if we have cart data, we should show it
     if (cartQueryData?.data) {
-      console.log('🛒 Syncing CartContext with React Query data');
       const localItems = mapServerItems(cartQueryData.data);
       dispatch({ type: 'SET_CART', payload: localItems });
     }

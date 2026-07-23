@@ -1,7 +1,6 @@
-"use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Linking, Platform, Alert } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -63,8 +62,6 @@ const MechanicOrderDetails = () => {
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-
-
   // Location tracking state
   const [mechanicLocation, setMechanicLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -77,20 +74,12 @@ const MechanicOrderDetails = () => {
     refetch 
   } = useRepairRequestDetail(orderId, 0);
 
-
   // Fetch vehicle makes to resolve make/model names
   const { data: vehicleMakes } = useVehicleMakes();
 
   const request = orderData?.data;
   const customer = request?.customer;
   const status = request?.status || 'pending';
-
-  // Removed auto-show OTP modal to prevent UI jumps and focus issues
-  // useEffect(() => {
-  //   if (status === 'arrived' && !request?.is_otp_verified) {
-  //     setOtpModalVisible(true);
-  //   }
-  // }, [status, request?.is_otp_verified]);
 
   // Mutations for accepting/declining requests
   const acceptRequestMutation = useAcceptRepairRequest();
@@ -280,6 +269,38 @@ const MechanicOrderDetails = () => {
     }
   };
 
+  const handleBypassOtp = () => {
+    if (!orderId) return;
+
+    Alert.alert(
+      'Bypass OTP Verification?',
+      "Use this only if the customer's phone is dead, offline, or unavailable. Ensure you have established contact with the client before proceeding.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Proceed',
+          onPress: async () => {
+            setIsVerifyingOtp(true);
+            setOtpError(null);
+            try {
+              // Try to directly transition status to in_progress
+              await updateStatusMutation.mutateAsync({ 
+                requestId: orderId, 
+                status: 'in_progress' 
+              });
+              setOtpModalVisible(false);
+              showSuccess('Started Work', 'Bypassed verification successfully. Repair job started.');
+            } catch (err: any) {
+              const errorMessage = getApiErrorMessage(err);
+              showError('Bypass Failed', errorMessage || 'Direct status update failed. Please call support.');
+            } finally {
+              setIsVerifyingOtp(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
@@ -360,7 +381,6 @@ const MechanicOrderDetails = () => {
         Linking.openURL(webUrl);
       }
     } else {
-      // Android: geo: scheme handles multiple map apps, but we can also try direct google maps intent
       const androidUrl = `geo:0,0?q=${encodedAddress}`;
       Linking.openURL(androidUrl).catch(() => {
         Linking.openURL(webUrl);
@@ -371,25 +391,16 @@ const MechanicOrderDetails = () => {
   // Add to calendar
   const addToCalendar = (date: string, timeSlot: string, address: string, serviceType: string) => {
     const eventDate = new Date(date);
-
-    // Create calendar event URL (works with Google Calendar)
     const title = encodeURIComponent(`Repair Job - ${serviceType}`);
     const location = encodeURIComponent(address || 'Customer Location');
     const details = encodeURIComponent(`Scheduled repair job. Time slot: ${timeSlot}`);
-
-    // Format dates for Google Calendar
     const startDate = eventDate.toISOString().replace(/-|:|\.\d\d\d/g, '');
     const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, '');
-
     const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}&sf=true&output=xml`;
-
     Linking.openURL(calendarUrl).catch(() => {
       showError('Error', 'Unable to open calendar');
     });
   };
-
-  // Helper function to extract error message from API response
-  // Handled by global utility
 
   const openActionConfirmation = (action: MechanicActionType) => {
     setActionType(action);
@@ -448,7 +459,6 @@ const MechanicOrderDetails = () => {
   };
 
   const handleCancelRequest = async () => {
-    // Determine the reason to send
     const reason = selectedCancelReason === 'Other' ? cancelReason.trim() : selectedCancelReason;
 
     if (!orderId || !reason) {
@@ -674,7 +684,6 @@ const MechanicOrderDetails = () => {
                   Schedule
                 </Text>
               </View>
-              {/* Add to Calendar Button */}
               <TouchableOpacity
                 onPress={() => addToCalendar(
                   request.preferred_date || request.requested_at,
@@ -721,7 +730,6 @@ const MechanicOrderDetails = () => {
               </Text>
             </View>
 
-            {/* Action Buttons */}
             {request.service_address && (
               <View className="flex-row gap-3">
                 <TouchableOpacity
@@ -803,7 +811,7 @@ const MechanicOrderDetails = () => {
             </View>
           </View>
 
-          {/* Cancellation Reason - keeping red since it's important status */}
+          {/* Cancellation Reason */}
           {request.cancellation_reason && (
             <View className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
               <View className="flex-row items-center mb-3">
@@ -843,13 +851,13 @@ const MechanicOrderDetails = () => {
         visible={otpModalVisible}
         onClose={() => setOtpModalVisible(false)}
         onVerify={handleVerifyOtp}
+        onBypass={handleBypassOtp}
         isVerifying={isVerifyingOtp}
         error={otpError}
       />
 
       {/* Cancel Modal */}
       <MechanicCancelRequestModal
-
         visible={cancelModalVisible}
         onClose={handleCloseCancelModal}
         onConfirm={handleCancelRequest}

@@ -20,10 +20,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
     [roomId]
   );
 
-  useEffect(() => {
-    console.log("💎 [Chat Hook DEBUG] urlPath:", urlPath);
-  }, [urlPath]);
-
   /**
    * Fetch historical messages from the REST API.
    * Runs whenever the roomId becomes valid and enabled is true.
@@ -39,7 +35,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
       let targetOffset = currentOffset;
       
       if (targetOffset === undefined) {
-        console.log(`📜 [Chat History] Initial fetch to find tail for room: ${roomId}`);
         const initialRes = await supportAPI.getMessages(roomId, 1, 0);
         const totalCount = initialRes?.count || 0;
         
@@ -55,10 +50,15 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         }
       }
 
-      console.log(`📜 [Chat History] Fetching messages (offset: ${targetOffset}) for room: ${roomId}`);
       const response = await supportAPI.getMessages(roomId, limit, targetOffset);
       
       const historicalData = response?.results?.data || response?.data || [];
+      
+      // Bug 13 fix: only set hasMore=false after a page returns fewer results
+      // than requested, not based on offset calculation
+      if (historicalData.length < limit) {
+        setHasMore(false);
+      }
       
       const mappedHistory = historicalData.map((m: any) => {
         let isStaff = false;
@@ -94,7 +94,7 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         );
       });
     } catch (err) {
-      console.error(`❌ [Chat History] Failed to load history:`, err);
+      // History fetch errors are non-fatal — leave existing messages in place
     } finally {
       setIsLoadingHistory(false);
     }
@@ -109,11 +109,9 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
     // In tail-first mode, we move the offset backwards to get older data
     const nextOffset = Math.max(0, offset - 20);
     
-    if (nextOffset === 0) {
-      setHasMore(false);
-    }
-    
     setOffset(nextOffset);
+    // Bug 13 fix: do NOT set hasMore=false here — wait for the response
+    // to come back with 0/fewer results before disabling further loads.
     fetchHistory(nextOffset);
   }, [offset, hasMore, isLoadingHistory, fetchHistory]);
 
@@ -126,12 +124,10 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
    * Memoized to prevent hook instability.
    */
   const eventHandlers = useMemo(() => ({
-    connection_established: (data: any) => {
-      console.log(`📡 [WebSocket] Connection established for room: ${roomId}`);
+    connection_established: (_data: any) => {
+      // Connection ready — nothing to do here
     },
     chat_message: (data: WebSocketMessage) => {
-      console.log('💬 [Chat WS] Received chat_message:', JSON.stringify(data));
-      
       const msgData = data.message && typeof data.message === 'object' ? data.message : data;
       const textContent = msgData.content || msgData.message || "";
 
@@ -139,7 +135,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
         // 1. Strict ID Check
         const existsById = prev.some(m => m.id && m.id?.toString() === msgData.id?.toString());
         if (existsById) {
-          console.log('💬 [Chat WS] Skip: Duplicate ID', msgData.id);
           return prev;
         }
 
@@ -168,7 +163,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
 
         // 3. Optimistic Content Check (for user's own echoes)
         if (mappedMessage.isSent) {
-          // Check if we have a local optimistic message with same content sent recently
           const alreadyExistsIndex = prev.findIndex(m => 
             m.isSent && 
             m.text === textContent &&
@@ -176,7 +170,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
           );
 
           if (alreadyExistsIndex !== -1) {
-            console.log('💬 [Chat WS] Updating optimistic message with real ID');
             const newMessages = [...prev];
             newMessages[alreadyExistsIndex] = {
               ...newMessages[alreadyExistsIndex],
@@ -188,11 +181,7 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
           }
         }
         
-        console.log('💬 [Chat WS] Adding to state. Sender:', mappedMessage.sender, '| Content:', textContent);
-        
         // Push Notification Integration
-        // Only notify if message is from staff and app is potentially not looking at this chat
-        // (In a real app, you might check if the screen is currently focused)
         if (isStaff && textContent) {
           import('@/services/notificationService').then(service => {
             service.scheduleChatMessageNotification({
@@ -210,19 +199,15 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
       });
     },
     typing: (data: WebSocketMessage) => {
-      console.log('⌨️ [Chat WS] Typing event:', data);
       setIsTyping(!!data.is_typing || !!data.typing);
     },
     user_typing: (data: WebSocketMessage) => {
-      console.log('⌨️ [Chat WS] User typing event:', data);
       setIsTyping(!!data.is_typing || !!data.typing);
     },
     typing_status: (data: WebSocketMessage) => {
-      console.log('⌨️ [Chat WS] Typing status event:', data);
       setIsTyping(!!data.is_typing || !!data.typing);
     },
     messages_read: (data: any) => {
-      console.log('👁️ [Chat WS] Received messages_read:', JSON.stringify(data));
       const readIds = data.message_ids || [];
       if (readIds.length === 0) return;
       setMessages((prev) => 
@@ -244,15 +229,8 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
   } = useWebSocket({
     urlPath,
     eventHandlers,
-    enabled: enabled && !!roomId, // Restoring room socket to enable typing and live updates
+    enabled: enabled && !!roomId,
   });
-
-  // Connection Status Logging
-  useEffect(() => {
-    if (enabled && roomId) {
-      console.log(`🔌 [WebSocket Status] ${roomId}: ${isConnected ? '✅ CONNECTED' : '⏳ CONNECTING...'}`);
-    }
-  }, [isConnected, roomId, enabled]);
 
   /**
    * Sends a message with an optimistic UI update.
@@ -281,7 +259,6 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
 
     try {
       // 2. Transmit via REST
-      console.log(`📤 [Chat REST Send] Sending message to room: ${roomId}`);
       const response = await supportAPI.sendMessage(roomId, content, messageType, fileUrl);
 
       // 3. Update optimistic message with real server data
@@ -296,23 +273,24 @@ export const useChatWebSocket = (roomId: string, enabled: boolean = true) => {
               : m
           )
         );
-        
-        // 4. Trigger a full history sync to ensure perfect match
-        console.log(`🔄 [Chat Sync] Post-send history refresh for room: ${roomId}`);
-        await fetchHistory(0);
+        // Bug 5 fix: Do NOT call fetchHistory() after a successful send.
+        // The optimistic update above already reflects the message, and the
+        // WebSocket echo (chat_message event) will confirm it with a real ID.
+        // Calling fetchHistory() here triggers a redundant network round-trip
+        // and causes messages to appear duplicated.
       } else {
-        // Fallback: If POST worked but structure is weird, still refresh
-        console.warn(`⚠️ [Chat Sync] POST successful but ID not found in response structure:`, response);
-        await fetchHistory(0);
+        // POST worked but response structure is unexpected — mark as sent anyway
+        setMessages((prev) =>
+          prev.map((m) => m.id === localId ? { ...m, status: 'sent' as any } : m)
+        );
       }
     } catch (err) {
-      console.error(`❌ [Chat REST Send] Failed:`, err);
       // Mark as failed so user knows it didn't go through
       setMessages((prev) => 
         prev.map((m) => m.id === localId ? { ...m, status: 'failed' as any } : m)
       );
     }
-  }, [roomId, fetchHistory]);
+  }, [roomId]);
 
   /**
    * Reports typing status to the participant.

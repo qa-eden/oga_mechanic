@@ -145,7 +145,7 @@ const ProfileEditModal = ({
           <View className="p-6">
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-xl font-NunitoBold text-gray-900 capitalize">
-                Edit {editingSection === 'personal' ? 'Personal' : editingSection === 'business' ? (isVehicleRental ? 'Fleet' : 'Business') : 'Documentation'} Information
+                Edit {editingSection === 'personal' ? 'Personal' : editingSection === 'business' ? (isVehicleRental ? 'Rental' : 'Business') : 'Documentation'} Information
               </Text>
               <TouchableOpacity
                 onPress={onClose}
@@ -523,7 +523,7 @@ const SellerProfileDetails = () => {
             <ChevronLeftIcon size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text className="text-xl font-NunitoBold text-gray-900">
-            {isVehicleRental ? "Rental Fleet Details" : "Business Details"}
+            {isVehicleRental ? "Rental Details" : "Business Details"}
           </Text>
         </View>
         <TouchableOpacity
@@ -576,7 +576,7 @@ const SellerProfileDetails = () => {
             <View className="mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
               <SectionHeader
                 icon={BriefcaseIcon}
-                title={isVehicleRental ? "Rental Fleet Details" : "Business Details"}
+                title={isVehicleRental ? "Rental Details" : "Business Details"}
                 color="#F59E0B"
                 bgColor="bg-amber-50"
                 onEdit={() => {
@@ -590,7 +590,7 @@ const SellerProfileDetails = () => {
               />
               <ProfileRow label="NIN Number" value={merchantProfile?.nin_number || ""} />
               <ProfileRow 
-                label={isVehicleRental ? "Fleet Address" : "Business Address"} 
+                label={isVehicleRental ? "Rental Address" : "Business Address"} 
                 value={merchantProfile?.location || ""} 
               />
               <View className="flex-row items-center justify-start gap-20">

@@ -28,9 +28,11 @@ export default function Layout() {
   const renderTabBar = ({
     routeName,
     selectedTab,
+    navigate,
   }: {
     routeName: string;
     selectedTab: string;
+    navigate: (routeName: string) => void;
   }) => {
     // console.log(selectedTab);
 
@@ -66,19 +68,7 @@ export default function Layout() {
     return (
       <TouchableOpacity
         onPress={() => {
-          const routeMap: Record<
-            string,
-            | typeof routes.home
-            | typeof routes.cars
-
-            | typeof routes.profile
-          > = {
-            home: routes.home,
-            // cars: routes.cars,
-
-            profile: routes.profile,
-          };
-          router.push(routeMap[routeName] || routes.home);
+          navigate(routeName);
         }}
         style={styles.tabBarItem}
       >
@@ -113,7 +103,7 @@ export default function Layout() {
         // borderTopLeftRight
         initialRouteName={"home"}
         tabBar={renderTabBar}
-        renderCircle={() => (
+        renderCircle={({ navigate }: { navigate: (routeName: string) => void }) => (
           <Animated.View
             style={[
               styles.shopTabContainer,
@@ -122,7 +112,7 @@ export default function Layout() {
           >
             <TouchableOpacity
               style={styles.shopButton}
-              onPress={() => router.push(routes?.shop)}
+              onPress={() => navigate("shop")}
             >
               <icons.shopTab />
             </TouchableOpacity>

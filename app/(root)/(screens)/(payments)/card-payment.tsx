@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * @deprecated This screen is DEPRECATED and should NOT be used.

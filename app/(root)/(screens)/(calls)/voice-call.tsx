@@ -10,6 +10,7 @@ import {
   MicrophoneIcon as MicrophoneIconSolid,
   SpeakerWaveIcon as SpeakerWaveIconSolid,
 } from "react-native-heroicons/solid"
+import { LinearGradient } from "expo-linear-gradient"
 
 const { width, height } = Dimensions.get("window")
 
@@ -73,7 +74,7 @@ const VoiceCall = () => {
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
 
       {/* Background Gradient Effect */}
-      <View className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900" />
+      <LinearGradient colors={["#1F2937", "#111827"]} className="absolute inset-0" />
 
       {/* Main Content */}
       <View className="flex-1 justify-between px-8 py-12">

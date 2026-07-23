@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StarIcon, CubeIcon, EyeIcon } from 'react-native-heroicons/outline';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Fallback icon component
 const FallbackIcon = ({ size, color }: { size: number; color: string }) => (
@@ -85,13 +86,13 @@ const ProductPerformanceChart: React.FC<ProductPerformanceChartProps> = ({ data 
             Monitor your product success
           </Text>
         </View>
-        <View className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl items-center justify-center">
+        <LinearGradient colors={["#F59E0B", "#EA580C"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="w-12 h-12 rounded-2xl items-center justify-center">
           {CubeIcon ? (
             <CubeIcon size={20} color="white" />
           ) : (
             <FallbackIcon size={20} color="white" />
           )}
-        </View>
+        </LinearGradient>
       </View>
 
       {/* Product Metrics Grid */}

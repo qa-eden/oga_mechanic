@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -8,13 +7,14 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LAYOUT } from "@/constants/units";
 import OrderCard, { Order } from "@/components/OrderCard";
 import CustomerReviewCard from "@/components/CustomerReviewCard";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { icons } from "@/constants";
 import { usePrimaryUserProfile, useMechanicProfile } from "@/hooks/useUserProfile";
 import { useProfileStore } from "@/hooks/useProfileStore";
@@ -140,6 +140,22 @@ const OrderCardSkeleton = () => {
 };
 
 const MechanicHome = () => {
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back action (ignoring gesture completely)
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
+
   const primaryProfile = usePrimaryUserProfile();
   const mechanicProfile = useMechanicProfile(true); // Always enabled on mechanic home
 
@@ -230,7 +246,11 @@ const MechanicHome = () => {
 
   const isComplete = Boolean(profileData?.data?.kyc?.is_complete || profileData?.kyc?.is_complete);
   const isApproved = Boolean(profileData?.data?.mechanic_profile?.is_approved || profileData?.mechanic_profile?.is_approved);
-  const isPendingApproval = isComplete && !isApproved;
+  const isRejected = Boolean(
+    isComplete &&
+    profileData?.data?.kyc?.is_rejected === true
+  );
+  const isPendingApproval = isComplete && !isApproved && !isRejected;
 
   // Fetch repair requests from API with status="pending" filter
   const {
@@ -534,7 +554,7 @@ const MechanicHome = () => {
           <Navbar />
 
           <View className="py-4">
-          <KYCBanner isVisible={!profileLoading && (!isComplete || isPendingApproval)} role="mechanic" isPending={isPendingApproval} />
+          <KYCBanner isVisible={!profileLoading && (!isComplete || isPendingApproval || isRejected)} role="mechanic" isPending={isPendingApproval} isRejected={isRejected} />
 
           {/* Add Bidding Carousel */}
           <BiddingCarousel containerPadding={20} />
@@ -552,7 +572,7 @@ const MechanicHome = () => {
           </View>
 
           {/* Metrics */}
-          <View className="flex-row gap-4 space-x-4 mb-4">
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
             {analyticsLoading ? (
               <>
                 <MetricCardSkeleton />
@@ -561,28 +581,147 @@ const MechanicHome = () => {
               </>
             ) : (
               <>
-                <View className="flex-1 gradient-to-t from-[#C9E6E5] to-[#B1E5FB] bg-[#B1E5FB] rounded-[.4rem] p-4">
-                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 16,
+                    paddingVertical: 14,
+                    paddingHorizontal: 8,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    height: 96,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoBold",
+                      letterSpacing: 0.5,
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                    }}
+                  >
                     Total Requests
                   </Text>
-                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                  <Text
+                    style={{
+                      fontSize: 22,
+                      fontFamily: "NunitoExtraBold",
+                      color: "#0F172A",
+                      lineHeight: 26,
+                    }}
+                  >
                     {analyticsData?.data?.summary?.total_repair_requests || 0}
                   </Text>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoMedium",
+                      textAlign: "center",
+                    }}
+                  >
+                    received
+                  </Text>
                 </View>
-                <View className="flex-1 gradient-to-r from-[#D7CFF1] to-[#D3C8E4] bg-[#D3C8E4] rounded-[.4rem] p-4">
-                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 16,
+                    paddingVertical: 14,
+                    paddingHorizontal: 8,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    height: 96,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoBold",
+                      letterSpacing: 0.5,
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                    }}
+                  >
                     Completed
                   </Text>
-                  <Text className="text-2xl font-NunitoBold text-gray-900 text-end">
+                  <Text
+                    style={{
+                      fontSize: 22,
+                      fontFamily: "NunitoExtraBold",
+                      color: "#0F172A",
+                      lineHeight: 26,
+                    }}
+                  >
                     {analyticsData?.data?.summary?.completed_repair_requests || 0}
                   </Text>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoMedium",
+                      textAlign: "center",
+                    }}
+                  >
+                    tasks finished
+                  </Text>
                 </View>
-                <View className="flex-1 gradient-to-r from-[#FED7D7] to-[#FEB2B2] bg-[#FEB2B2] rounded-[.4rem] p-4">
-                  <Text className="text-gray-600 text-sm font-NunitoMedium mb-4">
+
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 16,
+                    paddingVertical: 14,
+                    paddingHorizontal: 8,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    height: 96,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoBold",
+                      letterSpacing: 0.5,
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                    }}
+                  >
                     In Progress
                   </Text>
-                  <Text className="text-2xl font-NunitoBold text-gray-900">
+                  <Text
+                    style={{
+                      fontSize: 22,
+                      fontFamily: "NunitoExtraBold",
+                      color: "#0F172A",
+                      lineHeight: 26,
+                    }}
+                  >
                     {analyticsData?.data?.summary?.in_progress_repair_requests || 0}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#94A3B8",
+                      fontFamily: "NunitoMedium",
+                      textAlign: "center",
+                    }}
+                  >
+                    active work
                   </Text>
                 </View>
               </>

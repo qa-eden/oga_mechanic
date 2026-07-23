@@ -1,4 +1,3 @@
-"use client";
 
 import { View, Text, TouchableOpacity, Platform, Animated, Image, ActivityIndicator } from "react-native";
 import type { SvgProps } from "react-native-svg";

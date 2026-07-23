@@ -309,7 +309,7 @@ const SellerProfile = () => {
                   </Text>
                   <View className="flex-row items-center">
                     <Text className="text-gray-500 text-xs font-NunitoBold mr-1">
-                      {isVehicleRental ? "Fleet" : "Products"}
+                      {isVehicleRental ? "Rentals" : "Products"}
                     </Text>
                     <ChevronRightIcon size={12} color="#9CA3AF" />
                   </View>

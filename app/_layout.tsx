@@ -36,33 +36,55 @@ function AppContent() {
 
   // ── Global Notification Listener ──────────────────────────────────────────
   useEffect(() => {
-    const handleChatNotification = (data: any) => {
-      const relatedId = data.related_object_id || data.related_id || data.id || data.roomId;
-      router.push({ 
-        pathname: "/(root)/(screens)/(user)/chat-specialist", 
-        params: { roomId: data.roomId || relatedId } 
-      } as any);
-    };
+    let staleNotificationId: string | null = null;
 
-    const handleGenericNotification = (data: any) => {
-      const type = data.notification_type || data.type;
-      const relatedId = data.related_object_id || data.related_id || data.id;
-
-      if (relatedId) {
-        router.push({
-          pathname: routes.notificationDetail as any,
-          params: { id: relatedId }
-        });
-      } else {
-        router.push(routes.notifications as any);
+    const bootstrap = async () => {
+      try {
+        // Grab whatever notification response Expo may replay on cold start.
+        // We capture its ID so the listener can silently discard it.
+        const Notifications = require('expo-notifications');
+        const lastResponse = await Notifications.getLastNotificationResponseAsync();
+        if (lastResponse) {
+          staleNotificationId = lastResponse.notification.request.identifier;
+        }
+      } catch (_) {
+        // expo-notifications not available in this build — ignore
       }
+
+      const handleChatNotification = (data: any) => {
+        const relatedId = data.related_object_id || data.related_id || data.id || data.roomId;
+        router.push({
+          pathname: "/(root)/(screens)/(user)/chat-specialist",
+          params: { roomId: data.roomId || relatedId },
+        } as any);
+      };
+
+      const handleGenericNotification = (data: any) => {
+        const relatedId = data.related_object_id || data.related_id || data.id;
+        if (relatedId) {
+          router.push({
+            pathname: routes.notificationDetail as any,
+            params: { id: relatedId },
+          });
+        } else {
+          router.push(routes.notifications as any);
+        }
+      };
+
+      const subscription = setupNotificationListeners(
+        () => router.push("/(root)/(tabs)/(mechanic)/home" as any),
+        handleChatNotification,
+        handleGenericNotification,
+        staleNotificationId,
+      );
+
+      return subscription;
     };
 
-    const subscription = setupNotificationListeners(
-      () => router.push("/(root)/(tabs)/(mechanic)/home" as any),
-      handleChatNotification,
-      handleGenericNotification
-    );
+    let subscription: any = null;
+    bootstrap().then((sub) => {
+      subscription = sub;
+    });
 
     return () => {
       if (subscription && typeof subscription.remove === 'function') {

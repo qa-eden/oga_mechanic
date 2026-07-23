@@ -210,144 +210,145 @@ const SelectField: React.FC<SelectFieldProps> = ({
       <Modal
         visible={showDrawer}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={closeDrawer}
       >
         <Pressable 
-          className="flex-1 justify-end bg-black/60"
+          className="flex-1 justify-end bg-black/50"
           onPress={closeDrawer}
         >
-          <Animated.View 
-            className="bg-white rounded-t-[32px] h-[75vh]"
+          <View 
+            className="bg-white rounded-t-[32px]"
             style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: -10 },
-                shadowOpacity: 0.1,
-                shadowRadius: 20,
-                elevation: 20,
+              height: require('react-native').Dimensions.get('window').height * 0.70,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -10 },
+              shadowOpacity: 0.1,
+              shadowRadius: 20,
+              elevation: 20,
             }}
           >
             <Pressable className="flex-1">
-                {/* Drag Handle */}
-                <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mt-3 mb-2" />
-                
-                <View className="px-6 pt-2 pb-4">
-                  <View className="flex-row items-center justify-between mb-5">
-                    <View>
-                        <Text className="text-2xl font-NunitoExtraBold text-gray-900">
-                        {/^(select|choose)\b/i.test(String(label).trim())
-                            ? label
-                            : `Select ${label}`}
-                        </Text>
-                        <Text className="text-sm font-NunitoMedium text-gray-500 mt-0.5">
-                            {options.length} options available
-                        </Text>
-                    </View>
-                    <TouchableOpacity 
-                        onPress={closeDrawer}
-                        className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
-                    >
-                        <XMarkIcon size={20} color="#374151" strokeWidth={2.5} />
-                    </TouchableOpacity>
+              {/* Drag Handle */}
+              <View className="w-12 h-1.5 bg-gray-200 rounded-full self-center mt-3 mb-2" />
+              
+              <View className="px-6 pt-2 pb-4">
+                <View className="flex-row items-center justify-between mb-5">
+                  <View>
+                    <Text className="text-2xl font-NunitoExtraBold text-gray-900">
+                      {/^(select|choose)\b/i.test(String(label).trim())
+                        ? label
+                        : `Select ${label}`}
+                    </Text>
+                    <Text className="text-sm font-NunitoMedium text-gray-500 mt-0.5">
+                      {options.length} options available
+                    </Text>
                   </View>
-                  
-                  {/* Search Input Container */}
-                  <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
-                    <MagnifyingGlassIcon size={20} color="#9CA3AF" strokeWidth={2} />
-                    <TextInput
-                      placeholder={`Search ${label.toLowerCase()}...`}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      className="flex-1 ml-3 text-[16px] font-NunitoSemiBold text-gray-900"
-                      placeholderTextColor="#9CA3AF"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <View className="bg-gray-200 rounded-full p-1">
-                                <XMarkIcon size={12} color="#4B5563" strokeWidth={3} />
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                  </View>
+                  <TouchableOpacity 
+                    onPress={closeDrawer}
+                    className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
+                  >
+                    <XMarkIcon size={20} color="#374151" strokeWidth={2.5} />
+                  </TouchableOpacity>
                 </View>
                 
-                <ScrollView 
-                  className="flex-1"
-                  contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
-                  showsVerticalScrollIndicator={false}
-                  bounces={true}
-                >
-                  <View className="space-y-3">
-                    {filteredOptions.length > 0 ? (
-                      filteredOptions.map((option, index) => {
-                        const isSelected = value === option.value
-                        return (
-                            <TouchableOpacity
-                                key={option.value}
-                                onPress={() => handleSelect(option.value)}
-                                activeOpacity={0.7}
-                                className={`flex-row items-center justify-between p-4 rounded-2xl border ${
-                                    isSelected 
-                                    ? 'bg-primary-50 border-primary-200' 
-                                    : 'bg-white border-gray-100 shadow-sm'
-                                }`}
-                            >
-                                <View className="flex-row items-center flex-1 pr-3">
-                                    {option.imageUri ? (
-                                        <View className="w-11 h-11 rounded-xl mr-3 bg-gray-100 overflow-hidden border border-gray-50">
-                                            <Image
-                                                source={{ uri: option.imageUri }}
-                                                className="w-full h-full"
-                                                resizeMode="cover"
-                                            />
-                                        </View>
-                                    ) : (
-                                        <View className={`w-10 h-10 rounded-xl mr-3 items-center justify-center ${isSelected ? 'bg-primary-500' : 'bg-gray-100'}`}>
-                                            <Text className={`text-lg font-NunitoBold ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                                                {option.label.charAt(0).toUpperCase()}
-                                            </Text>
-                                        </View>
-                                    )}
-                                    <View className="flex-1">
-                                        <Text
-                                            className={`text-[16px] ${isSelected ? 'font-NunitoBold text-primary-700' : 'font-NunitoSemiBold text-gray-900'}`}
-                                            numberOfLines={1}
-                                        >
-                                            {option.label}
-                                        </Text>
-                                        {isSelected && (
-                                            <Text className="text-[12px] font-NunitoMedium text-primary-500 mt-0.5">Currently Selected</Text>
-                                        )}
-                                    </View>
-                                </View>
-                                {isSelected && (
-                                    <View className="bg-primary-500 rounded-full p-1">
-                                        <CheckIcon size={14} color="#fff" strokeWidth={3} />
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        )
-                      })
-                    ) : (
-                      <View className="py-20 items-center justify-center">
-                        <View className="w-20 h-20 bg-gray-50 rounded-full items-center justify-center mb-4">
-                            <MagnifyingGlassIcon size={40} color="#D1D5DB" strokeWidth={1} />
-                        </View>
-                        <Text className="text-gray-900 font-NunitoBold text-lg">No Results Found</Text>
-                        <Text className="text-gray-500 text-center font-NunitoMedium mt-2 px-10">
-                          We couldn't find any {label.toLowerCase()} matching your search.
-                        </Text>
+                {/* Search Input Container */}
+                <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+                  <MagnifyingGlassIcon size={20} color="#9CA3AF" strokeWidth={2} />
+                  <TextInput
+                    placeholder={`Search ${(label || '').toLowerCase()}...`}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    className="flex-1 ml-3 text-[16px] font-NunitoSemiBold text-gray-900"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <View className="bg-gray-200 rounded-full p-1">
+                        <XMarkIcon size={12} color="#4B5563" strokeWidth={3} />
                       </View>
-                    )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+              
+              <ScrollView 
+                className="flex-1"
+                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+              >
+                <View style={{ gap: 12 }}>
+                  {filteredOptions.length > 0 ? (
+                    filteredOptions.map((option, index) => {
+                      const isSelected = value === option.value
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          onPress={() => handleSelect(option.value)}
+                          activeOpacity={0.75}
+                          className={`flex-row items-center justify-between p-4 rounded-2xl border ${
+                            isSelected 
+                              ? 'bg-primary-50 border-primary-200' 
+                              : 'bg-white border-gray-100 shadow-sm'
+                          }`}
+                        >
+                          <View className="flex-row items-center flex-1 pr-3">
+                            {option.imageUri ? (
+                              <View className="w-11 h-11 rounded-xl mr-3 bg-gray-100 overflow-hidden border border-gray-50">
+                                <Image
+                                  source={{ uri: option.imageUri }}
+                                  className="w-full h-full"
+                                  resizeMode="cover"
+                                />
+                              </View>
+                            ) : (
+                              <View className={`w-10 h-10 rounded-xl mr-3 items-center justify-center ${isSelected ? 'bg-primary-500' : 'bg-gray-100'}`}>
+                                <Text className={`text-lg font-NunitoBold ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                                  {option.label.charAt(0).toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
+                            <View className="flex-1">
+                              <Text
+                                className={`text-[16px] ${isSelected ? 'font-NunitoBold text-primary-700' : 'font-NunitoSemiBold text-gray-900'}`}
+                                numberOfLines={1}
+                              >
+                                {option.label}
+                              </Text>
+                              {isSelected && (
+                                <Text className="text-[12px] font-NunitoMedium text-primary-500 mt-0.5">Currently Selected</Text>
+                              )}
+                            </View>
+                          </View>
+                          {isSelected && (
+                            <View className="bg-primary-500 rounded-full p-1">
+                              <CheckIcon size={14} color="#fff" strokeWidth={3} />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      )
+                    })
+                  ) : (
+                    <View className="py-20 items-center justify-center">
+                      <View className="w-20 h-20 bg-gray-50 rounded-full items-center justify-center mb-4">
+                        <MagnifyingGlassIcon size={40} color="#D1D5DB" strokeWidth={1} />
+                      </View>
+                      <Text className="text-gray-900 font-NunitoBold text-lg">No Results Found</Text>
+                      <Text className="text-gray-500 text-center font-NunitoMedium mt-2 px-10">
+                        We couldn't find any {(label || '').toLowerCase()} matching your search.
+                      </Text>
+                    </View>
+                  )}
 
-                    {/* Android Navigation Bar Spacer */}
-                    <AndroidNavBarSpacer />
-                  </View>
-                </ScrollView>
+                  {/* Android Navigation Bar Spacer */}
+                  <AndroidNavBarSpacer />
+                </View>
+              </ScrollView>
             </Pressable>
-          </Animated.View>
+          </View>
         </Pressable>
       </Modal>
     </View>

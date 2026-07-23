@@ -29,9 +29,11 @@ export default function Layout() {
   const renderTabBar = ({
     routeName,
     selectedTab,
+    navigate,
   }: {
     routeName: string;
     selectedTab: string;
+    navigate: (routeName: string) => void;
   }) => {
     // Define the icon and label for each tab
     const tabInfo: Record<
@@ -69,13 +71,7 @@ export default function Layout() {
     return (
       <TouchableOpacity
         onPress={() => {
-          const routeMap: Record<string, any> = {
-            home: mechanicRoutes.home,
-            order: mechanicRoutes.order,
-            earnings: mechanicRoutes.earnings,
-            profile: mechanicRoutes.profile,
-          };
-          router.push(routeMap[routeName] || mechanicRoutes.home);
+          navigate(routeName);
         }}
         style={styles.tabBarItem}
       >
@@ -90,9 +86,12 @@ export default function Layout() {
   return (
     <View style={{ flex: 1, position: "relative" }}>
       <CurvedBottomBarExpo.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}
+        // The library's type intersects DefaultNavigatorOptions (requires screenOptions +
+        // screenListeners) with its own Props (uses defaultScreenOptions). We supply all
+        // three to satisfy TypeScript — at runtime only screenOptions takes effect.
+        screenOptions={{ headerShown: false }}
+        defaultScreenOptions={{ headerShown: false }}
+        screenListeners={{}}
         type="DOWN"
         style={[styles.bottomBar]}
         height={Platform.OS === "android" ? 75 : 80}
@@ -105,7 +104,7 @@ export default function Layout() {
         borderTopLeftRight={false}
         initialRouteName={"home"}
         tabBar={renderTabBar}
-        renderCircle={() => (
+        renderCircle={({ navigate }: { navigate: (routeName: string) => void }) => (
           <Animated.View
             style={[
               styles.shopTabContainer,
@@ -114,7 +113,7 @@ export default function Layout() {
           >
             <TouchableOpacity
               style={styles.shopButton}
-              onPress={() => router.push(mechanicRoutes?.shop as any)}
+              onPress={() => navigate("shop")}
             >
               <icons.shopTab />
             </TouchableOpacity>

@@ -160,12 +160,16 @@ export default function useWebSocket({
   /**
    * Safe sendMessage function
    */
+  // Bug 6 fix: urlPath is not used inside sendMessage's body (it reads from
+  // ws.current directly). Keeping it in deps caused a new callback reference
+  // every time the URL changed, destabilising downstream memoised hooks.
   const sendMessage = useCallback((type: string, payload: object = {}, isRaw: boolean = false) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       const data = isRaw ? payload : { type, ...payload };
       ws.current.send(JSON.stringify(data));
     }
-  }, [urlPath]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { isConnected, sendMessage, reconnect: connect };
 }

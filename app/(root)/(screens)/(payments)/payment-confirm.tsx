@@ -1,4 +1,3 @@
-"use client";
 
 import { View, Image, ScrollView, Animated, Dimensions } from "react-native";
 import { useEffect, useRef } from "react";

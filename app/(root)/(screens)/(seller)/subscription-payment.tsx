@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { userAPI } from '@/lib/api/user';
 import { sellerRoutes } from '@/constants/routes';
 import { icons } from '@/constants';
+import { useQueryClient } from '@tanstack/react-query';
 
 const SubscriptionPayment = () => {
   const params = useLocalSearchParams();
@@ -20,6 +21,8 @@ const SubscriptionPayment = () => {
   const [error, setError] = useState<string | null>(null);
   const webViewRef = useRef<WebView>(null);
   const hasNavigatedRef = useRef(false);
+  
+  const queryClient = useQueryClient();
 
   // Hardware back button guard
   useEffect(() => {
@@ -49,15 +52,19 @@ const SubscriptionPayment = () => {
         amount,
       });
 
+      // Invalidate profiles cache immediately to sync Pro status
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+
       setIsSuccess(true);
     } catch (err: any) {
       console.error('Subscription confirmation error:', err);
       // Even if the API call fails, the payment was made — show the success screen
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       setIsSuccess(true);
     } finally {
       setIsVerifying(false);
     }
-  }, [paymentReference, paymentUrl, amount]);
+  }, [paymentReference, paymentUrl, amount, queryClient]);
 
   const handleFailure = useCallback(() => {
     if (hasNavigatedRef.current) return;

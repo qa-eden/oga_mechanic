@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState, useCallback } from "react";
 import {
@@ -6,104 +5,378 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  Pressable,
   RefreshControl,
-  ActivityIndicator,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { CalendarIcon, ChevronDownIcon, ChevronRightIcon } from "react-native-heroicons/outline";
-// import { NairaCurrency } from "@/utils/useCurrencyFormatter";
+import {
+  PlusIcon,
+  ChevronRightIcon,
+  QueueListIcon,
+} from "react-native-heroicons/outline";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
-import RentalAnalyticsChart from "@/components/charts/RentalAnalyticsChart";
 import AndroidNavBarSpacer from "@/components/AndroidNavBarSpacer";
-import CustomerInsightsChart from "@/components/charts/CustomerInsightsChart";
-import ProductPerformanceChart from "@/components/charts/ProductPerformanceChart";
 import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import LoadingErrorWrapper from "@/components/LoadingErrorWrapper";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { usePrimaryUserProfile, useMerchantProfile, useVehicleRentalProfile } from "@/hooks/useUserProfile";
+import { productsAPI } from "@/lib/api/products";
+import {
+  usePrimaryUserProfile,
+  useMerchantProfile,
+  useVehicleRentalProfile,
+} from "@/hooks/useUserProfile";
 import { useProfileStore } from "@/hooks/useProfileStore";
-import { useMerchantOrders } from "@/hooks/useOrders";
 import ProfileCompletionModal from "@/components/modals/ProfileCompletionModal";
 import KYCBanner from "@/components/KYCBanner";
 import BiddingCarousel from "@/components/bidding/BiddingCarousel";
 import SpecialistIconBtn from "@/components/SpecialistIconBtn";
 import { sellerRoutes } from "@/constants/routes";
 
+const CAR_CATEGORY_ID = 23;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO CARD  — primary/10 tint background
+// ─────────────────────────────────────────────────────────────────────────────
+const HeroCard = ({
+  isVehicleRental,
+  onCta,
+}: {
+  isVehicleRental: boolean;
+  onCta: () => void;
+}) => (
+  <View
+    style={{
+      marginHorizontal: 20,
+      marginTop: 8,
+      marginBottom: 24,
+      borderRadius: 22,
+      backgroundColor: "rgba(211, 3, 9, 0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(211, 3, 9, 0.15)",
+      overflow: "hidden",
+      minHeight: 158,
+    }}
+  >
+    {/* subtle circle accents */}
+    <View
+      style={{
+        position: "absolute",
+        right: -24,
+        top: -24,
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        backgroundColor: "rgba(211, 3, 9, 0.05)",
+      }}
+    />
+    <View
+      style={{
+        position: "absolute",
+        left: -40,
+        bottom: -40,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: "rgba(211, 3, 9, 0.04)",
+      }}
+    />
+    <View style={{ flexDirection: "row", alignItems: "flex-end", padding: 22 }}>
+      {/* text + CTA */}
+      <View style={{ flex: 1, paddingRight: 10 }}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontFamily: "NunitoExtraBold",
+            color: "#111827",
+            lineHeight: 26,
+            marginBottom: 16,
+          }}
+        >
+          {isVehicleRental
+            ? "List your car.\nEarn on your schedule."
+            : "Manage your store.\nGrow your sales."}
+        </Text>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={onCta}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            alignSelf: "flex-start",
+            backgroundColor: "#D30309",
+            borderRadius: 50,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            gap: 6,
+          }}
+        >
+          <PlusIcon size={13} color="white" strokeWidth={2.5} />
+          <Text style={{ fontSize: 12, fontFamily: "NunitoBold", color: "white" }}>
+            {isVehicleRental ? "Add Vehicle" : "Add Product"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* illustration */}
+      <Image
+        source={
+          isVehicleRental
+            ? require("@/assets/icons/car_rent.png")
+            : require("@/assets/icons/sparePart.png")
+        }
+        style={{ width: 120, height: 100, resizeMode: "contain" }}
+      />
+    </View>
+  </View>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STAT TILE
+// ─────────────────────────────────────────────────────────────────────────────
+const StatTile = ({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: number | string;
+  sub: string;
+}) => (
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      borderWidth: 1,
+      borderColor: "#E2E8F0",
+      alignItems: "center",
+      justifyContent: "space-between",
+      height: 96,
+    }}
+  >
+    <Text
+      style={{
+        fontSize: 9,
+        color: "#94A3B8",
+        fontFamily: "NunitoBold",
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+        textAlign: "center",
+      }}
+    >
+      {label}
+    </Text>
+    <Text
+      style={{
+        fontSize: 22,
+        fontFamily: "NunitoExtraBold",
+        color: "#0F172A",
+        lineHeight: 26,
+      }}
+    >
+      {value}
+    </Text>
+    <Text
+      style={{
+        fontSize: 9,
+        color: "#94A3B8",
+        fontFamily: "NunitoMedium",
+        textAlign: "center",
+      }}
+    >
+      {sub}
+    </Text>
+  </View>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT LISTING CARD (Aesthetic from user reference, clean)
+// ─────────────────────────────────────────────────────────────────────────────
+const ProductListingCard = ({
+  item,
+  isVehicleRental,
+  onPress,
+}: {
+  item: any;
+  isVehicleRental: boolean;
+  onPress: () => void;
+}) => {
+  const productImage = item.images && item.images.length > 0 ? item.images[0].image : null;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onPress}
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: 18,
+        padding: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+      }}
+    >
+      {/* Left content */}
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text
+          style={{
+            fontSize: 15,
+            fontFamily: "NunitoExtraBold",
+            color: "#0F172A",
+            marginBottom: 4,
+          }}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ fontSize: 11, fontFamily: "NunitoMedium", color: "#64748B" }}>
+            {isVehicleRental
+              ? (item.body_type?.replace("_", " ") || "Vehicle")
+              : (item.category_name || "Product")}
+          </Text>
+          {item.rating && (
+            <>
+              <Text style={{ fontSize: 11, color: "#CBD5E1", marginHorizontal: 6 }}>•</Text>
+              <Text style={{ fontSize: 11, fontFamily: "NunitoBold", color: "#EAB308" }}>
+                ★ {parseFloat(item.rating).toFixed(1)}
+              </Text>
+            </>
+          )}
+        </View>
+
+        <Text style={{ fontSize: 14, fontFamily: "NunitoExtraBold", color: "#D30309" }}>
+          ₦{parseFloat(item.price).toLocaleString()}
+          {isVehicleRental && (
+            <Text style={{ fontSize: 10, fontFamily: "NunitoBold", color: "#94A3B8" }}>/day</Text>
+          )}
+        </Text>
+      </View>
+
+      {/* Right thumbnail */}
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 14,
+          backgroundColor: "#F1F5F9",
+          overflow: "hidden",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {productImage ? (
+          <Image
+            source={{ uri: productImage }}
+            style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+          />
+        ) : (
+          <Image
+            source={
+              isVehicleRental
+                ? require("@/assets/icons/car_rent.png")
+                : require("@/assets/icons/sparePart.png")
+            }
+            style={{ width: 48, height: 48, resizeMode: "contain", opacity: 0.5 }}
+          />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 const SellerHome = () => {
-  const [showDrawer, setShowDrawer] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const setIsProfileComplete = useProfileStore((state) => state.setIsProfileComplete);
-  const isNewSwitch = useProfileStore((state) => state.isNewSwitch);
-  const setIsNewSwitch = useProfileStore((state) => state.setIsNewSwitch);
-  const isProfileComplete = useProfileStore((state) => state.isProfileComplete);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Fetch primary profile data
-  const { data: primaryProfileData, isLoading: isProfileLoading, refetch: refetchProfile } = usePrimaryUserProfile();
+  const setIsProfileComplete = useProfileStore((s) => s.setIsProfileComplete);
+  const isNewSwitch = useProfileStore((s) => s.isNewSwitch);
+  const setIsNewSwitch = useProfileStore((s) => s.setIsNewSwitch);
+  const isProfileComplete = useProfileStore((s) => s.isProfileComplete);
 
-  // Extract active role with fallback
-  const activeRoleRaw = primaryProfileData?.active_role || primaryProfileData?.data?.active_role || (primaryProfileData?.data as any)?.current_role;
-  const activeRole = typeof activeRoleRaw === 'object' ? activeRoleRaw?.name : activeRoleRaw;
-  const isVehicleRental = activeRole === 'vehicle_rental';
-  const isSeller = activeRole === 'merchant' || activeRole === 'seller';
+  const {
+    data: primaryProfileData,
+    isLoading: isProfileLoading,
+    refetch: refetchProfile,
+  } = usePrimaryUserProfile();
 
-  // Fetch specific profile to check KYC status
+  const activeRoleRaw =
+    primaryProfileData?.active_role ||
+    primaryProfileData?.data?.active_role ||
+    (primaryProfileData?.data as any)?.current_role;
+
+  const activeRole = typeof activeRoleRaw === "object" ? activeRoleRaw?.name : activeRoleRaw;
+  const isVehicleRental = activeRole === "vehicle_rental";
+  const isSeller = activeRole === "merchant" || activeRole === "seller";
+
   const merchantProfileQuery = useMerchantProfile(isSeller);
   const vehicleRentalProfileQuery = useVehicleRentalProfile(isVehicleRental);
-  
-  const activeProfileQuery = isVehicleRental ? vehicleRentalProfileQuery : merchantProfileQuery;
+  const activeProfileQuery = isVehicleRental
+    ? vehicleRentalProfileQuery
+    : merchantProfileQuery;
 
-  // Extract merchant ID safely from different profile structures
   const profileData = primaryProfileData;
-  const merchantId = (activeRole === 'merchant' || activeRole === 'vehicle_rental')
-    ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
-    : (profileData?.data as any)?.user_id;
+  const merchantId =
+    activeRole === "merchant" || activeRole === "vehicle_rental"
+      ? (profileData?.data as any)?.user?.id || (profileData?.data as any)?.user_id
+      : (profileData?.data as any)?.user_id;
 
-  // Fetch merchant analytics data
-  const { data: analyticsData, isLoading, error, refetch: refetchAnalytics } = useMerchantAnalytics(isSeller || isVehicleRental);
+  // Analytics query
+  const { data: analyticsData, isLoading: isLoadingAnalytics, refetch: refetchAnalytics } =
+    useMerchantAnalytics(isSeller || isVehicleRental);
 
-  // Fetch recent orders
-  const { data: ordersData, isLoading: isLoadingOrders } = useMerchantOrders(merchantId);
-  const recentOrders = ordersData?.data?.slice(0, 3) || [];
-
-
+  // Latest 3 listed items query
+  const { data: latestItems = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
+    queryKey: ["merchant-latest-listed-items", merchantId, isVehicleRental],
+    queryFn: async () => {
+      if (!merchantId) return [];
+      const response = await productsAPI.getProducts(
+        isVehicleRental ? CAR_CATEGORY_ID : undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        merchantId,
+        isVehicleRental ? true : undefined
+      );
+      const data = response.data;
+      const list = Array.isArray(data) ? data : (data?.results || []);
+      return list.slice(0, 3);
+    },
+    enabled: !!merchantId,
+  });
 
   const hasShownModalRef = React.useRef(false);
   const timerIdRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Check profile status using the specific profile endpoint
   React.useEffect(() => {
     if (activeProfileQuery.data && !activeProfileQuery.isLoading) {
       const isComplete = activeProfileQuery.data?.data?.kyc?.is_complete ?? false;
-      const isApproved = (activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved || false;
-      
       setIsProfileComplete(isComplete);
-      
-      // ONLY show automatically if we just switched roles and it's not complete
       if (isNewSwitch && !isComplete && !hasShownModalRef.current) {
-        // Start timer only if not already started
         if (!timerIdRef.current) {
           timerIdRef.current = setTimeout(() => {
             setShowProfileModal(true);
             hasShownModalRef.current = true;
-            setIsNewSwitch(false); // Reset the switch flag
+            setIsNewSwitch(false);
             timerIdRef.current = null;
-          }, 3000); // Reduced to 3 seconds
+          }, 3000);
         }
-      } else if (!isNewSwitch) {
-          // If not a new switch, make sure timer is cleared
-          if (timerIdRef.current) {
-              clearTimeout(timerIdRef.current);
-              timerIdRef.current = null;
-          }
+      } else if (!isNewSwitch && timerIdRef.current) {
+        clearTimeout(timerIdRef.current);
+        timerIdRef.current = null;
       }
     }
-
     return () => {
       if (timerIdRef.current) {
         clearTimeout(timerIdRef.current);
@@ -113,287 +386,239 @@ const SellerHome = () => {
   }, [activeProfileQuery.data, activeProfileQuery.isLoading, setIsProfileComplete, isNewSwitch]);
 
   const isPendingApproval = Boolean(
-    activeProfileQuery.data?.data?.kyc?.is_complete && 
-    !((activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved || (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved)
+    activeProfileQuery.data?.data?.kyc?.is_complete &&
+    !(
+      (activeProfileQuery.data?.data as any)?.merchant_profile?.is_approved ||
+      (activeProfileQuery.data?.data as any)?.vehicle_rental_profile?.is_approved
+    )
   );
 
-  // Debug: Log profile data
-  React.useEffect(() => {
-    if (profileData) {
-      // Profile data loaded
-    }
-    if (isProfileLoading) {
-      // Loading profile
-    }
-  }, [profileData, activeRole, isProfileLoading]);
-
-  // Add error handling for missing user data
-  React.useEffect(() => {
-    if (error) {
-      // If it's a 401 or 403 error, the user might be deleted
-      if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
-        // You can add a logout function here or redirect to login
-      }
-    }
-  }, [error]);
-
-
-  // Extract analytics data with fallbacks
-  const totalProducts = analyticsData?.product_count || 0;
-
-  // Debug: Log analytics data (not rendered)
-  React.useEffect(() => {
-    if (analyticsData) {
-      // Analytics data loaded
-    }
-    if (error) {
-    }
-    if (isLoading) {
-      // Loading analytics
-    }
-  }, [analyticsData, error, isLoading]);
-
-  // Pull-to-refresh functionality
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await Promise.all([
         refetchAnalytics(),
         refetchProfile(),
-        activeProfileQuery.refetch()
+        refetchItems(),
+        activeProfileQuery.refetch(),
       ]);
-    } catch (error) {
     } finally {
       setRefreshing(false);
     }
-  }, [refetchAnalytics, refetchProfile]);
+  }, [refetchAnalytics, refetchProfile, refetchItems]);
+
+  const handleCta = () => {
+    if (!isProfileComplete || isPendingApproval) {
+      setShowProfileModal(true);
+      return;
+    }
+    router.push(
+      isVehicleRental
+        ? (sellerRoutes.uploadCarToRent as any)
+        : (sellerRoutes.uploadProducts as any)
+    );
+  };
+
+  // derived metrics from analytics
+  const totalListings = isVehicleRental
+    ? (analyticsData?.rental_analytics?.total_rentals ?? 0)
+    : (analyticsData?.product_count ?? 0);
+  const avgRating = analyticsData?.product_performance?.avg_rating ?? 5.0;
+  const reviewedCount = analyticsData?.product_performance?.products_with_reviews ?? 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#F8F9FB" }}
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
-      {/* Floating Chat Specialist */}
-      <View style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 1000 }}>
-        <SpecialistIconBtn isFloating={true} />
+      {/* floating chat */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: 100,
+          right: 20,
+          zIndex: 1000,
+        }}
+      >
+        <SpecialistIconBtn isFloating />
       </View>
 
-      <ScrollView 
-        className="flex-1 px-5" 
+      <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#D30309"
-            colors={['#D30309']}
+            colors={["#D30309"]}
             title="Pull to refresh"
-            titleColor="#6B7280"
+            titleColor="#94A3B8"
           />
         }
       >
+        {/* navbar */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <Navbar />
+        </View>
 
-        <Navbar />
-
-        <View className=" py-4">
-          <KYCBanner 
-            isVisible={!activeProfileQuery.isLoading && (!isProfileComplete || isPendingApproval)} 
-            role={isVehicleRental ? "vehicle_rental" : "seller"} 
+        {/* KYC + bidding */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 4 }}>
+          <KYCBanner
+            isVisible={
+              !activeProfileQuery.isLoading &&
+              (!isProfileComplete || isPendingApproval)
+            }
+            role={isVehicleRental ? "vehicle_rental" : "seller"}
             isPending={isPendingApproval}
           />
-          {/* Add Bidding Carousel - Enabled for all roles as requested */}
           <BiddingCarousel containerPadding={20} />
-
-          {!isVehicleRental && (
-            <>
-              {/* Specialty Buttons */}
-              {/* <SpecialistIconBtn /> */}
-            </>
-          )}
-
         </View>
 
-        {/* Key Metrics Cards - Full Width */}
-        <View className="flex-row gap-4 mb-6">
-          <View className="flex-1 bg-[#F0FDF4] rounded-2xl p-5 border border-[#DCFCE7]">
-            <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
-              {isVehicleRental ? "Active Rentals" : "Total Products"}
-            </Text>
-            <View className="flex-row items-baseline">
-              <Text className="text-3xl font-NunitoExtraBold text-gray-900">
-                {isVehicleRental 
-                  ? (analyticsData?.rental_analytics?.active_rentals || 0) 
-                  : (analyticsData?.product_count || 0)}
-              </Text>
-              {isVehicleRental && (
-                <Text className="text-xs font-NunitoSemiBold text-green-600 ml-2">Currently Rented</Text>
-              )}
-            </View>
-          </View>
+        {/* ── HERO ─────────────────────────────────────────────────── */}
+        <HeroCard isVehicleRental={isVehicleRental} onCta={handleCta} />
 
-          {isVehicleRental && (
-            <View className="flex-1 bg-[#EFF6FF] rounded-2xl p-5 border border-[#DBEAFE]">
-              <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
-                Pending Requests
-              </Text>
-              <View className="flex-row items-baseline">
-                <Text className="text-3xl font-NunitoExtraBold text-gray-900">
-                  {analyticsData?.rental_analytics?.pending_rentals || 0}
-                </Text>
-                <Text className="text-xs font-NunitoSemiBold text-blue-600 ml-2">Awaiting Action</Text>
-              </View>
-            </View>
-          )}
+        {/* ── STATS (3 Columns) ────────────────────────────────────── */}
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 10,
+            paddingHorizontal: 20,
+            marginBottom: 28,
+          }}
+        >
+          <StatTile
+            label={isVehicleRental ? "Total Rentals" : "Total Products"}
+            value={totalListings}
+            sub="listed"
+          />
+          <StatTile
+            label="Avg Rating"
+            value={avgRating > 0 ? avgRating.toFixed(1) : "5.0"}
+            sub="out of 5"
+          />
+          <StatTile
+            label="Reviewed"
+            value={reviewedCount}
+            sub="items"
+          />
         </View>
 
-        {isVehicleRental && (
-           <View className="flex-row gap-4 mb-6">
-             <View className="flex-1 bg-[#FFFBEB] rounded-2xl p-5 border border-[#FEF3C7]">
-               <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
-                 Total Fleet
-               </Text>
-               <Text className="text-3xl font-NunitoExtraBold text-gray-900">
-                 {analyticsData?.rental_analytics?.total_rentals || 0}
-               </Text>
-             </View>
-             <View className="flex-1 bg-[#FDF2F2] rounded-2xl p-5 border border-[#FEE2E2]">
-               <Text className="text-gray-600 text-xs font-NunitoBold uppercase tracking-wider mb-2">
-                 Completion Rate
-               </Text>
-               <Text className="text-3xl font-NunitoExtraBold text-gray-900">
-                 {Math.round((analyticsData?.rental_analytics?.completion_rate || 0) * 100)}%
-               </Text>
-             </View>
-           </View>
-        )}
-
-        {/* Analytics Charts with Error Handling */}
-        <LoadingErrorWrapper
-          isLoading={isLoading}
-          error={error}
-          onRetry={refetchAnalytics}
-          loadingMessage="Loading Analytics"
-          loadingSubMessage="Fetching your business insights..."
-          className="mb-6"
-        >
-          <View className="space-y-4">
-            {/* Customer Insights Chart */}
-            {/* Customer Insights Chart */}
-            {/* {analyticsData?.customer_insights && (
-              <CustomerInsightsChart data={analyticsData.customer_insights} />
-            )} */}
-
-            {/* Product Performance Chart - Only for Sellers */}
-            {isSeller && analyticsData?.product_performance && (
-              <ProductPerformanceChart data={analyticsData.product_performance} />
-            )}
-
-            {/* Rental Analytics Chart - Only for Vehicle Rental */}
-            {isVehicleRental && analyticsData?.rental_analytics && (
-              <RentalAnalyticsChart data={analyticsData.rental_analytics} />
-            )}
-
-            {/* Recent Activity Section */}
-            {/* <View className="bg-white rounded-2xl p-5 mb-6 shadow-sm border border-gray-100">
-              <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-NunitoBold text-gray-900">
-                  {isVehicleRental ? "Recent Rental Requests" : "Recent Orders"}
-                </Text>
-                <TouchableOpacity onPress={() => router.push(isVehicleRental ? sellerRoutes.allRentedCars as any : sellerRoutes.products as any)}>
-                  <Text className="text-primary-500 font-NunitoBold text-sm">See All</Text>
-                </TouchableOpacity>
-              </View>
-
-              {recentOrders.length > 0 ? (
-                <View className="space-y-4">
-                  {recentOrders.map((order: any, index: number) => (
-                    <TouchableOpacity
-                      key={order.id || index}
-                      onPress={() => router.push({
-                        pathname: isVehicleRental ? sellerRoutes.rentedCarDetail as any : sellerRoutes.orderDetail as any,
-                        params: { id: order.id }
-                      })}
-                      className={`flex-row items-center p-3 rounded-xl ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white border border-gray-50'}`}
-                    >
-                      <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${isVehicleRental ? 'bg-blue-100' : 'bg-red-100'}`}>
-                        {isVehicleRental ? (
-                          <TruckIcon size={20} color="#3B82F6" />
-                        ) : (
-                          <ShoppingBagIcon size={20} color="#EF4444" />
-                        )}
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-gray-900 font-NunitoBold text-sm" numberOfLines={1}>
-                          {isVehicleRental ? (order.car?.name || "Rental Request") : (order.product?.name || "Product Order")}
-                        </Text>
-                        <Text className="text-gray-500 font-NunitoMedium text-[10px]">
-                          {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Recent'} • {order.customer_name || 'Customer'}
-                        </Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className="text-gray-900 font-NunitoBold text-sm">
-                          ₦{(order.total_amount || order.price || 0).toLocaleString()}
-                        </Text>
-                        <View className={`mt-1 px-2 py-0.5 rounded-full ${order.status === 'completed' ? 'bg-green-100' : 'bg-orange-100'}`}>
-                          <Text className={`text-[8px] font-NunitoBold ${order.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>
-                            {order.status?.toUpperCase() || 'PENDING'}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View className="items-center py-6">
-                  <Text className="text-gray-400 font-NunitoMedium text-center">
-                    No recent {isVehicleRental ? "rentals" : "orders"} found.
-                  </Text>
-                </View>
-              )}
-            </View> */}
-          </View>
-        </LoadingErrorWrapper>
-
-      </ScrollView>
-
-      {/* Bottom Drawer Modal */}
-      <Modal
-        visible={showDrawer}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDrawer(false)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/50"
-          onPress={() => setShowDrawer(false)}
-        >
-          <Pressable className="bg-white rounded-t-3xl p-6 max-h-96">
-            <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
-            <Text className="text-lg font-NunitoBold text-gray-900 mb-4">
-              Select Time Period
+        {/* ── LISTINGS FEED ────────────────────────────────────────── */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: "NunitoExtraBold",
+                color: "#0F172A",
+              }}
+            >
+              {isVehicleRental ? "Latest Rentals" : "Latest Products"}
             </Text>
-
-            {['Last 7 days', 'Last 30 days', 'Last 3 months', 'Last year', 'All time'].map((period, index) => (
-              <TouchableOpacity
-                key={index}
-                className="py-4 border-b border-gray-100 last:border-b-0"
-                onPress={() => {
-                  setShowDrawer(false);
-                  // Handle period selection here
+            <TouchableOpacity
+              onPress={() => router.push(sellerRoutes.products as any)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: "NunitoBold",
+                  color: "#D30309",
                 }}
               >
-                <Text className="text-base font-NunitoMedium text-gray-900">
-                  {period}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                Manage all
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-            {/* Android Navigation Bar Spacer */}
-            <AndroidNavBarSpacer />
-          </Pressable>
-        </Pressable>
-      </Modal>
+          {latestItems.length > 0 ? (
+            latestItems.map((item: any, index: number) => {
+              return (
+                <ProductListingCard
+                  key={item.id || index}
+                  item={item}
+                  isVehicleRental={isVehicleRental}
+                  onPress={() =>
+                    router.push({
+                      pathname: sellerRoutes.productDetails as any,
+                      params: {
+                        productType: isVehicleRental
+                          ? "rentedCar"
+                          : item.category === CAR_CATEGORY_ID
+                            ? "car"
+                            : "sparePart",
+                        productId: item.id,
+                      },
+                    })
+                  }
+                />
+              );
+            })
+          ) : (
+            // empty state
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 18,
+                padding: 36,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#E2E8F0",
+              }}
+            >
+              <Image
+                source={
+                  isVehicleRental
+                    ? require("@/assets/icons/car_rent.png")
+                    : require("@/assets/icons/sparePart.png")
+                }
+                style={{
+                  width: 80,
+                  height: 64,
+                  resizeMode: "contain",
+                  opacity: 0.25,
+                }}
+              />
+              <Text
+                style={{
+                  marginTop: 16,
+                  fontSize: 13,
+                  fontFamily: "NunitoBold",
+                  color: "#94A3B8",
+                }}
+              >
+                No {isVehicleRental ? "rentals" : "products"} listed yet
+              </Text>
+              <Text
+                style={{
+                  marginTop: 4,
+                  fontSize: 11,
+                  fontFamily: "NunitoMedium",
+                  color: "#CBD5E1",
+                  textAlign: "center",
+                }}
+              >
+                {isVehicleRental
+                  ? "Your vehicle listings will appear here"
+                  : "Your product listings will appear here"}
+              </Text>
+            </View>
+          )}
+        </View>
 
-      {/* Profile Completion Modal */}
+        <AndroidNavBarSpacer />
+      </ScrollView>
+
       <ProfileCompletionModal
         isVisible={showProfileModal}
         roleName={isVehicleRental ? "vehicle_rental" : "seller"}
@@ -405,4 +630,4 @@ const SellerHome = () => {
   );
 };
 
-export default SellerHome
+export default SellerHome;

@@ -28,6 +28,7 @@ import {
 } from "react-native-heroicons/outline";
 import { LinearGradient } from "expo-linear-gradient";
 import { routes } from "@/constants/routes";
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { icons, images } from "@/constants";
 import { useQuery } from "@tanstack/react-query";
 import { supportAPI } from "@/lib/api/support";
@@ -291,7 +292,9 @@ const LiveChatTab = ({ isConnected }: { isConnected: boolean }) => {
 const SupportSuggestions = () => {
   const params = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState<'support' | 'live-chat'>(params.activeTab === 'chat' ? 'live-chat' : 'support');
-  const isConnected = true; // Managed globally in _layout.tsx
+  // Bug 10 fix: use the actual WebSocket connection state instead of hardcoded true.
+  // Previously, the status badge always showed "Connected" regardless of network.
+  const { isConnected } = useNotificationWebSocket({});
 
   const handleSuggestionPress = (text: string) => {
     router.push({

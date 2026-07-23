@@ -225,7 +225,6 @@ const CompleteKYC = () => {
           const geocoded = await Location.geocodeAsync(initialFormValues.location);
           if (geocoded.length > 0) {
             const { latitude, longitude } = geocoded[0];
-            // Trigger the existing logic to fill state/lga
             await handleLocationSelect({
               address: initialFormValues.location,
               latitude,
@@ -370,13 +369,32 @@ const CompleteKYC = () => {
     }
 
     try {
+      let finalLat = values.latitude;
+      let finalLng = values.longitude;
+
+      if (!finalLat || !finalLng) {
+        try {
+          const geocoded = await Location.geocodeAsync(values.location);
+          if (geocoded.length > 0) {
+            finalLat = String(geocoded[0].latitude);
+            finalLng = String(geocoded[0].longitude);
+          } else {
+            finalLat = "6.5244";
+            finalLng = "3.3792";
+          }
+        } catch (err) {
+          finalLat = "6.5244";
+          finalLng = "3.3792";
+        }
+      }
+
       const formData = new FormData();
       formData.append('requestType', 'inbound');
       formData.append('location', values.location);
       if (values.state) formData.append('state', values.state);
       if (values.lga) formData.append('lga', values.lga);
-      if (values.latitude) formData.append('latitude', values.latitude);
-      if (values.longitude) formData.append('longitude', values.longitude);
+      if (finalLat) formData.append('latitude', finalLat);
+      if (finalLng) formData.append('longitude', finalLng);
       formData.append('bio', values.bio);
       formData.append('nin_number', values.nin_number);
       formData.append('specializations', JSON.stringify(values.specializations));
@@ -430,7 +448,6 @@ const CompleteKYC = () => {
       return;
     }
 
-    // Validate records
     const isValid = expertiseRecords.every(r => r.vehicle_make_id && r.years_of_experience && r.certification_level);
     if (!isValid) {
       showWarning("Incomplete", "Please fill in all details for each vehicle expertise.");
@@ -588,7 +605,7 @@ const CompleteKYC = () => {
                           value={values.state}
                           onValueChange={(val) => {
                             setFieldValue("state", val);
-                            setFieldValue("lga", ""); // Reset LGA when state changes
+                            setFieldValue("lga", "");
                           }}
                           error={errors.state as string}
                           touched={touched.state}

@@ -240,7 +240,7 @@ const ProductDetails = () => {
               {error || "We couldn't find the vehicle you're looking for. It might have been removed."}
             </Text>
             <TouchableOpacity onPress={() => router.back()} className="bg-primary-500 px-8 py-4 rounded-2xl shadow-lg shadow-primary-200">
-              <Text className="text-white font-NunitoExtraBold">Back to Fleet</Text>
+              <Text className="text-white font-NunitoExtraBold">Back to Rentals</Text>
             </TouchableOpacity>
           </View>
         </View>

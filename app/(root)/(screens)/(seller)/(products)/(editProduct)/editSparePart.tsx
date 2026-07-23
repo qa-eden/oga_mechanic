@@ -26,8 +26,8 @@ interface VehicleCompatibility {
 const PRIMARY = '#D30309';
 
 const SectionCard = ({ children, title, subtitle, icon, accentColor }: any) => (
-  <View 
-    className="bg-white rounded-[16px] p-5 mb-5 border border-gray-100" 
+  <View
+    className="bg-white rounded-[16px] p-5 mb-5 border border-gray-100"
     style={{ borderTopWidth: 3, borderTopColor: accentColor, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}
   >
     <View className="flex-row items-center mb-5 gap-3">
@@ -48,7 +48,7 @@ const SectionCard = ({ children, title, subtitle, icon, accentColor }: any) => (
 const EditSparePart = () => {
   const [vehicleCompatibility, setVehicleCompatibility] = useState<VehicleCompatibility[]>([])
   const [showOtherCategory, setShowOtherCategory] = useState(false)
- 
+
   const { productId, productData } = useLocalSearchParams<{
     productId?: string;
     productData?: string;
@@ -58,7 +58,7 @@ const EditSparePart = () => {
 
   // Fetch categories from API
   const { data: categories, isLoading: categoriesLoading } = useCategories();
- 
+
   // Fetch vehicle makes and models
   const { data: vehicleMakes, loading: makesLoading } = useVehicleMakes();
 
@@ -99,25 +99,25 @@ const EditSparePart = () => {
   // Determine if category is "other" and get initial values
   const getCategoryValue = () => {
     if (!parsedProductData) return '';
- 
+
     const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
     if (!categoryId) return '';
- 
+
     const categoryExists = categories?.some(cat =>
       cat.id === categoryId && !cat.name.toLowerCase().includes('car')
     );
- 
+
     return categoryExists ? categoryId.toString() : 'other';
   };
 
   const getCustomCategoryName = () => {
     if (!parsedProductData) return '';
- 
+
     const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
     const categoryExists = categories?.some(cat =>
       cat.id === categoryId && !cat.name.toLowerCase().includes('car')
     );
- 
+
     return !categoryExists ? parsedProductData.name || '' : '';
   };
 
@@ -136,9 +136,9 @@ const EditSparePart = () => {
   // Initialize vehicle compatibility from parsed data
   useEffect(() => {
     if (!parsedProductData?.vehicle_compatibility) return;
-    
+
     const vehicleCompat = parsedProductData.vehicle_compatibility;
-    
+
     if (Array.isArray(vehicleCompat)) {
       const mapped = vehicleCompat.map((vc: any) => ({
         make: vc.make,
@@ -151,14 +151,14 @@ const EditSparePart = () => {
   // Check if initial category is "other" and show custom input
   useEffect(() => {
     if (!parsedProductData || !categories) return;
- 
+
     const categoryId = parsedProductData.category_id || parsedProductData.category?.id;
     if (!categoryId) return;
- 
+
     const isOtherCategory = !categories.some(cat =>
       cat.id === categoryId && !cat.name.toLowerCase().includes('car')
     );
- 
+
     setShowOtherCategory(isOtherCategory);
   }, [categories, parsedProductData])
 
@@ -224,6 +224,7 @@ const EditSparePart = () => {
             params: {
               productId: productId,
               productData: JSON.stringify(responseData.data || parsedProductData),
+              productType: 'spare-part',
             }
           })
         },
@@ -263,12 +264,12 @@ const EditSparePart = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
- 
+
       {/* Header */}
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-5 py-4">
           <TouchableOpacity
-             onPress={() => router.push(sellerRoutes?.products)}
+            onPress={() => router.push(sellerRoutes?.products)}
             className="w-10 h-10 items-center justify-center rounded-xl bg-gray-100"
           >
             <ArrowLeftIcon size={20} color="#374151" />
@@ -300,7 +301,7 @@ const EditSparePart = () => {
             flexGrow: 1
           }}
         >
-         
+
 
           <Formik
             initialValues={initialValues}
@@ -309,213 +310,213 @@ const EditSparePart = () => {
             enableReinitialize={true}
           >
             {({ values, errors, touched, handleSubmit: formikHandleSubmit, isValid, isSubmitting, setFieldValue }) => {
-             
-              
+
+
               return (
-              <View className="space-y-6">
-              
+                <View className="space-y-6">
 
-                {/* Basic Information */}
-                <SectionCard accentColor={PRIMARY} icon="📋" title="Basic Information" subtitle="Update Product Details">
- 
-                  {/* Category */}
-                  <SelectField
-                    name="category"
-                    label="Category"
-                    placeholder={categoriesLoading ? "Loading..." : "Select category"}
-                    options={categoryOptions}
-                    value={values.category}
-                    onValueChange={(value) => {
-                      setFieldValue('category', value);
-                      setShowOtherCategory(value === 'other');
-                      if (value !== 'other') {
-                        setFieldValue('custom_category_name', '');
-                      }
-                    }}
-                    error={errors.category as string}
-                    touched={touched.category as boolean}
-                  />
 
-                  {/* Custom Category Name */}
-                  {showOtherCategory && (
-                    <FormikInput
-                      name="custom_category_name"
-                      label="Specify Category Name"
-                      placeholder="e.g., Custom Exhaust System, Special Engine Component"
-                      type="text"
+                  {/* Basic Information */}
+                  <SectionCard accentColor={PRIMARY} icon="📋" title="Basic Information" subtitle="Update Product Details">
+
+                    {/* Category */}
+                    <SelectField
+                      name="category"
+                      label="Category"
+                      placeholder={categoriesLoading ? "Loading..." : "Select category"}
+                      options={categoryOptions}
+                      value={values.category}
+                      onValueChange={(value) => {
+                        setFieldValue('category', value);
+                        setShowOtherCategory(value === 'other');
+                        if (value !== 'other') {
+                          setFieldValue('custom_category_name', '');
+                        }
+                      }}
+                      error={errors.category as string}
+                      touched={touched.category as boolean}
                     />
-                  )}
 
-                  {/* Condition */}
-                  <SelectField
-                    name="condition"
-                    label="Condition"
-                    placeholder="Select condition"
-                    options={conditionOptions}
-                    value={values.condition}
-                    onValueChange={(value) => setFieldValue('condition', value)}
-                    error={errors.condition as string}
-                    touched={touched.condition as boolean}
-                  />
+                    {/* Custom Category Name */}
+                    {showOtherCategory && (
+                      <FormikInput
+                        name="custom_category_name"
+                        label="Specify Category Name"
+                        placeholder="e.g., Custom Exhaust System, Special Engine Component"
+                        type="text"
+                      />
+                    )}
+
+                    {/* Condition */}
+                    <SelectField
+                      name="condition"
+                      label="Condition"
+                      placeholder="Select condition"
+                      options={conditionOptions}
+                      value={values.condition}
+                      onValueChange={(value) => setFieldValue('condition', value)}
+                      error={errors.condition as string}
+                      touched={touched.condition as boolean}
+                    />
                   </SectionCard>
 
-                {/* Vehicle Compatibility */}
-                <SectionCard accentColor={PRIMARY} icon="🚗" title="Compatible Vehicles" subtitle="Select Makes and Models">
-                  <View className="flex-row items-center justify-end mb-4">
-                    <TouchableOpacity
-                      onPress={addVehicleCompatibility}
-                      disabled={makesLoading}
-                      className="bg-primary-500 px-4 py-2 rounded-[.4rem]"
-                      style={{ opacity: makesLoading ? 0.5 : 1 }}
-                    >
-                      <Text className="text-white text-sm font-NunitoBold">+ Add</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {makesLoading ? (
-                    <View className="py-8 items-center">
-                      <ActivityIndicator size="large" color="#D30309" />
-                      <Text className="text-sm text-gray-500 mt-2">Loading...</Text>
-                    </View>
-                  ) : vehicleCompatibility.length === 0 ? (
-                    <View className="py-6 items-center bg-gray-50 rounded-xl">
-                      <Text className="text-sm text-gray-600 mb-2">No Vehicles Added</Text>
-                      <Text className="text-xs text-gray-400 text-center px-4">
-                        Tap "Add" to select Compatible Vehicles
-                      </Text>
-                    </View>
-                  ) : (
-                    <View className="space-y-3">
-                      {vehicleCompatibility.map((vc, index) => {
-                        const selectedMake = getSelectedMake(index);
-
-                        return (
-                          <View key={index} className="border border-gray-200 rounded-xl p-4 mb-4 bg-white">
-                            <View className="mb-3">
-                              <View className="flex-row items-center justify-between mb-2">
-                                <Text className="text-sm font-NunitoMedium text-gray-700">Make</Text>
-                                <TouchableOpacity onPress={() => removeVehicleCompatibility(index)}>
-                                  <Text className="text-red-500 text-sm font-NunitoMedium">Remove</Text>
-                                </TouchableOpacity>
-                              </View>
-
-                              <SelectField
-                                name={`vehicle_make_${index}`}
-                                label=""
-                                placeholder="Select make"
-                                options={vehicleMakes.map(make => ({
-                                  label: make.name,
-                                  value: make.id.toString()
-                                }))}
-                                value={vc.make.toString()}
-                                onValueChange={(value) => updateVehicleMake(index, parseInt(value))}
-                                error=""
-                                touched={false}
-                              />
-                            </View>
-
-                            {selectedMake && selectedMake.models && selectedMake.models.length > 0 && (
-                              <MultiSelectBottomSheet
-                                label={`Select Models for ${selectedMake.name}`}
-                                placeholder="Select models..."
-                                options={selectedMake.models.map(model => ({
-                                  label: model.name,
-                                  value: model.id
-                                }))}
-                                selectedValues={vc.models || []}
-                                onValuesChange={(values) => updateVehicleModels(index, values)}
-                              />
-                            )}
-                          </View>
-                        );
-                      })}
-
+                  {/* Vehicle Compatibility */}
+                  <SectionCard accentColor={PRIMARY} icon="🚗" title="Compatible Vehicles" subtitle="Select Makes and Models">
+                    <View className="flex-row items-center justify-end mb-4">
                       <TouchableOpacity
                         onPress={addVehicleCompatibility}
-                        className="border border-dashed border-gray-500 rounded-xl p-3 bg-white"
+                        disabled={makesLoading}
+                        className="bg-primary-500 px-4 py-2 rounded-[.4rem]"
+                        style={{ opacity: makesLoading ? 0.5 : 1 }}
                       >
-                        <Text className="text-md text-primary-500 font-NunitoMedium text-center">
-                          + Add Another Make
-                        </Text>
+                        <Text className="text-white text-sm font-NunitoBold">+ Add</Text>
                       </TouchableOpacity>
                     </View>
-                  )}
-                </SectionCard>
 
-                {/* Description */}
-                <SectionCard accentColor={PRIMARY} icon="📝" title="Description" subtitle="Provide Details About the Product">
+                    {makesLoading ? (
+                      <View className="py-8 items-center">
+                        <ActivityIndicator size="large" color="#D30309" />
+                        <Text className="text-sm text-gray-500 mt-2">Loading...</Text>
+                      </View>
+                    ) : vehicleCompatibility.length === 0 ? (
+                      <View className="py-6 items-center bg-gray-50 rounded-xl">
+                        <Text className="text-sm text-gray-600 mb-2">No Vehicles Added</Text>
+                        <Text className="text-xs text-gray-400 text-center px-4">
+                          Tap "Add" to select Compatible Vehicles
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="space-y-3">
+                        {vehicleCompatibility.map((vc, index) => {
+                          const selectedMake = getSelectedMake(index);
 
-                  <FormikTextArea
-                    name="description"
-                    label="Description"
-                    placeholder="e.g., High-quality brake pads compatible with multiple Toyota and Honda models."
-                    numberOfLines={4}
-                    maxLength={500}
-                    helperText="Describe the spare part's features, compatibility, and condition"
-                  />
-                </SectionCard>
+                          return (
+                            <View key={index} className="border border-gray-200 rounded-xl p-4 mb-4 bg-white">
+                              <View className="mb-3">
+                                <View className="flex-row items-center justify-between mb-2">
+                                  <Text className="text-sm font-NunitoMedium text-gray-700">Make</Text>
+                                  <TouchableOpacity onPress={() => removeVehicleCompatibility(index)}>
+                                    <Text className="text-red-500 text-sm font-NunitoMedium">Remove</Text>
+                                  </TouchableOpacity>
+                                </View>
 
-                {/* Pricing & Availability */}
-                <SectionCard accentColor={PRIMARY} icon="💰" title="Pricing & Availability" subtitle="Set your Price and Stock">
-                  {/* Price */}
-                  <FormikInput
-                    name="price"
-                    label="Price (₦)"
-                    placeholder="e.g., 25000.00"
-                    keyboardType="numeric"
-                    type="text"
-                  />
+                                <SelectField
+                                  name={`vehicle_make_${index}`}
+                                  label=""
+                                  placeholder="Select make"
+                                  options={vehicleMakes.map(make => ({
+                                    label: make.name,
+                                    value: make.id.toString()
+                                  }))}
+                                  value={vc.make.toString()}
+                                  onValueChange={(value) => updateVehicleMake(index, parseInt(value))}
+                                  error=""
+                                  touched={false}
+                                />
+                              </View>
 
-                  {/* Stock */}
-                  <FormikInput
-                    name="stock"
-                    label="Stock Quantity"
-                    placeholder="e.g., 100"
-                    keyboardType="numeric"
-                    type="text"
-                  />
+                              {selectedMake && selectedMake.models && selectedMake.models.length > 0 && (
+                                <MultiSelectBottomSheet
+                                  label={`Select Models for ${selectedMake.name}`}
+                                  placeholder="Select models..."
+                                  options={selectedMake.models.map(model => ({
+                                    label: model.name,
+                                    value: model.id
+                                  }))}
+                                  selectedValues={vc.models || []}
+                                  onValuesChange={(values) => updateVehicleModels(index, values)}
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
 
-                  {/* Availability */}
-                  <SelectField
-                    name="availability"
-                    label="Availability"
-                    placeholder="Select availability"
-                    options={availabilityOptions}
-                    value={values.availability}
-                    onValueChange={(value) => setFieldValue('availability', value)}
-                    error={errors.availability as string}
-                    touched={touched.availability as boolean}
-                  />
+                        <TouchableOpacity
+                          onPress={addVehicleCompatibility}
+                          className="border border-dashed border-gray-500 rounded-xl p-3 bg-white"
+                        >
+                          <Text className="text-md text-primary-500 font-NunitoMedium text-center">
+                            + Add Another Make
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </SectionCard>
 
-                  {/* Delivery option */}
-                  <SelectField
-                    name="delivery_option"
-                    label="Delivery Option"
-                    placeholder="Select delivery option"
-                    options={deliveryOptions}
-                    value={values.delivery_option}
-                    onValueChange={(value) => setFieldValue('delivery_option', value)}
-                    error={errors.delivery_option as string}
-                    touched={touched.delivery_option as boolean}
-                  />
-                </SectionCard>
+                  {/* Description */}
+                  <SectionCard accentColor={PRIMARY} icon="📝" title="Description" subtitle="Provide Details About the Product">
 
-                {/* Submit Button */}
-                <View className="bg-white rounded-[16px] p-5 mb-2 border border-gray-100 shadow-sm">
-                  <FormikButton
-                    title="Update Product Details"
-                    type="submit"
-                    onPress={formikHandleSubmit}
-                    disabled={!isValid || isSubmitting}
-                    loading={isSubmitting}
-                    loadingText="Updating"
-                    className="mb-3"
-                  />
-                  <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
-                    Your Product Details will be Updated
-                  </Text>
+                    <FormikTextArea
+                      name="description"
+                      label="Description"
+                      placeholder="e.g., High-quality brake pads compatible with multiple Toyota and Honda models."
+                      numberOfLines={4}
+                      maxLength={500}
+                      helperText="Describe the spare part's features, compatibility, and condition"
+                    />
+                  </SectionCard>
+
+                  {/* Pricing & Availability */}
+                  <SectionCard accentColor={PRIMARY} icon="💰" title="Pricing & Availability" subtitle="Set your Price and Stock">
+                    {/* Price */}
+                    <FormikInput
+                      name="price"
+                      label="Price (₦)"
+                      placeholder="e.g., 25000.00"
+                      keyboardType="numeric"
+                      type="text"
+                    />
+
+                    {/* Stock */}
+                    <FormikInput
+                      name="stock"
+                      label="Stock Quantity"
+                      placeholder="e.g., 100"
+                      keyboardType="numeric"
+                      type="text"
+                    />
+
+                    {/* Availability */}
+                    <SelectField
+                      name="availability"
+                      label="Availability"
+                      placeholder="Select availability"
+                      options={availabilityOptions}
+                      value={values.availability}
+                      onValueChange={(value) => setFieldValue('availability', value)}
+                      error={errors.availability as string}
+                      touched={touched.availability as boolean}
+                    />
+
+                    {/* Delivery option */}
+                    <SelectField
+                      name="delivery_option"
+                      label="Delivery Option"
+                      placeholder="Select delivery option"
+                      options={deliveryOptions}
+                      value={values.delivery_option}
+                      onValueChange={(value) => setFieldValue('delivery_option', value)}
+                      error={errors.delivery_option as string}
+                      touched={touched.delivery_option as boolean}
+                    />
+                  </SectionCard>
+
+                  {/* Submit Button */}
+                  <View className="bg-white rounded-[16px] p-5 mb-2 border border-gray-100 shadow-sm">
+                    <FormikButton
+                      title="Update Product Details"
+                      type="submit"
+                      onPress={formikHandleSubmit}
+                      disabled={!isValid || isSubmitting}
+                      loading={isSubmitting}
+                      loadingText="Updating"
+                      className="mb-3"
+                    />
+                    <Text className="text-xs text-gray-500 text-center font-NunitoMedium">
+                      Your Product Details will be Updated
+                    </Text>
+                  </View>
                 </View>
-    </View>
               );
             }}
           </Formik>

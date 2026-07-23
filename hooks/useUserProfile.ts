@@ -28,7 +28,7 @@ export const usePrimaryUserProfile = (enabled: boolean = true) => {
   return useQuery<PrimaryUserProfileResponse>({
     queryKey: userProfileKeys.primary(),
     queryFn: userAPI.getPrimaryProfile,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1, // Reduce retries
     enabled: enabled, // Only fetch when enabled
@@ -42,7 +42,7 @@ export const useMerchantProfile = (enabled: boolean = true) => {
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchant(),
     queryFn: userAPI.getMerchantProfile,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 1,
     enabled: enabled,
     refetchOnMount: "always",
@@ -55,7 +55,7 @@ export const useVehicleRentalProfile = (enabled: boolean = true) => {
   return useQuery<VehicleRentalProfileResponse>({
     queryKey: userProfileKeys.vehicleRental(),
     queryFn: userAPI.getVehicleRentalProfile,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 1,
     enabled: enabled,
     refetchOnMount: "always",
@@ -68,7 +68,7 @@ export const useMechanicProfile = (enabled: boolean = true) => {
   return useQuery<MechanicProfileResponse>({
     queryKey: userProfileKeys.mechanic(),
     queryFn: () => userAPI.getMechanicProfile(),
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: enabled, // Only fetch when enabled
     retry: 1, // Reduce retries
@@ -84,7 +84,7 @@ export const useMerchantProfileByUuid = (merchantUuid: string, enabled: boolean 
   return useQuery<MerchantProfileResponse>({
     queryKey: userProfileKeys.merchantByUuid(merchantUuid),
     queryFn: () => userAPI.getMerchantProfileByUuid(merchantUuid),
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     enabled: enabled && !!merchantUuid,
   });
@@ -175,7 +175,7 @@ export const useUserProfile = () => {
   return useQuery({
     queryKey: userProfileKeys.profile(),
     queryFn: userAPI.getProfile,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
   });
 };
@@ -185,7 +185,7 @@ export const useRoleUserProfile = (role?: string) => {
   return useQuery<UserProfile | MerchantProfileResponse>({
     queryKey: [...userProfileKeys.profile(), 'primary'], // Use 'primary' instead of role
     queryFn: () => userAPI.getRoleProfile(role),
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     // Remove enabled condition since we always want to fetch profile
   });
@@ -196,7 +196,7 @@ export const useUserRoles = () => {
   return useQuery<UserRolesResponse>({
     queryKey: userProfileKeys.roles(),
     queryFn: userAPI.getUserRoles,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
     refetchOnMount: false,
@@ -423,7 +423,7 @@ export const useFollowedMerchants = () => {
   return useQuery({
     queryKey: ['followedMerchants'],
     queryFn: userAPI.getFollowedMerchants,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
   });
 };
@@ -444,7 +444,7 @@ export const useBankAccounts = (enabled: boolean = true) => {
   return useQuery({
     queryKey: userProfileKeys.bankAccounts(),
     queryFn: userAPI.getBankAccounts,
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     enabled: enabled,
   });
@@ -455,7 +455,7 @@ export const useBankAccount = (id: number | string, enabled: boolean = true) => 
   return useQuery<UserBankAccountResponse>({
     queryKey: [...userProfileKeys.bankAccounts(), id],
     queryFn: () => userAPI.getBankAccountById(id),
-    staleTime: 30 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     enabled: enabled && !!id,
   });
