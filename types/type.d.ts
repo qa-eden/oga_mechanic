@@ -31,6 +31,8 @@ declare interface AuthNavigateLinkProps {
   text?: string
   textLink?: string
   containerClassName?: string
+  textClassName?: string
+  linkClassName?: string
   onPress?: () => void
 }
 

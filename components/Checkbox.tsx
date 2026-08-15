@@ -76,7 +76,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
             opacity: disabled ? 0.5 : 1,
           }}
           disabled={disabled}
-          useBuiltInState={controlledChecked !== undefined}
+          useBuiltInState={controlledChecked === undefined}
         />
       </View>
 

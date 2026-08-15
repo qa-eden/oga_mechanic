@@ -1,17 +1,16 @@
 import {
   View,
   Text,
-  ScrollView,
   Dimensions,
   Image,
   Animated,
   type ImageSourcePropType,
   type ImageResizeMode,
-  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { routes } from "@/constants/routes";
 import CustomButton from "@/components/CustomButton";
 import { images, icons } from "@/constants";
@@ -20,7 +19,6 @@ import React from "react";
 import type { ComponentType } from "react";
 import { useRoles } from "@/hooks/useRoles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator } from "react-native";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 type RenderImageProps = {
@@ -34,7 +32,7 @@ const RenderImage = ({
   source,
   width,
   height,
-  resizeMode = "contain",
+  resizeMode = "cover",
 }: RenderImageProps) =>
   typeof source === "function" ? (
     React.createElement(source, { width, height })
@@ -48,56 +46,51 @@ const RenderImage = ({
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
-const bgWidth = Math.round(screenWidth * 0.92); // 92% of screen width for padding
-const overlayImgWidth = Math.round(screenWidth * 0.85); // 85% of screen width for overlay
-const overlayImgHeight = Math.round(screenHeight * 0.32); // 32% of screen height for overlay
-
 // Slides for overlays and text
 const slides = [
   {
     key: "1",
-    header: "KEEP YOUR CAR RUNNING",
-    text: "Our Trusted Mechanics are just a tap away offering Reliable Diagnostics, Quick Repairs.",
+    header: "EXPERT CAR CARE",
+    text: "Book trusted mechanics for reliable diagnostics and quick repairs, anytime, anywhere.",
+    source: images.welcomeImg1,
   },
   {
     key: "2",
-    header: "BUY AND SELL CARS",
-    text: "Either you’re Buying or Selling, our Platform Connects you with Verified Transparent Prices,",
+    header: "GROW YOUR BUSINESS",
+    text: "Join our network of verified mechanics. Connect with more clients and boost your earnings.",
+    source: images.welcomeImg2,
   },
-];
-
-// Background slides - duplicate the background image 4 times
-const backgroundSlides = [
-  { key: "bg1", source: images.welcomeImg1 },
-  { key: "bg2", source: images.welcomeImg2 },
-  { key: "bg3", source: images.welcomeImg3 },
-  { key: "bg4", source: images.welcomeImg4 },
+  {
+    key: "3",
+    header: "BUY & SELL CARS",
+    text: "Discover verified vehicles or list your own. Transparent pricing with no hidden surprises.",
+    source: images.welcomeImg3,
+  },
+  {
+    key: "4",
+    header: "ALL-IN-ONE AUTO",
+    text: "From spare parts to towing services, everything your car needs is just a tap away.",
+    source: images.welcomeImg4,
+  },
 ];
 
 const Welcome = () => {
   // Animation refs
   const logoAnim = useRef(new Animated.Value(0)).current;
-  const imageAnim = useRef(new Animated.Value(0)).current;
-  const textAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
-  const bgFlatListRef = useRef<FlatList>(null);
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
-  const overlayFadeAnim = useRef(new Animated.Value(1)).current;
-  const overlayScaleAnim = useRef(new Animated.Value(0.98)).current;
+  const flatListRef = useRef<Animated.FlatList<any>>(null);
 
-  const { 
-    refetch: refetchRoles
-  } = useRoles();
-  // Navigation handlers with debouncing
+  const { refetch: refetchRoles } = useRoles();
+
   const handleSignUp = async () => {
     if (isSigningUp || isSigningIn) return;
     try {
       setIsSigningUp(true);
-      // Mark that user has seen welcome screen
       await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.register as any);
     } catch (error) {
@@ -109,7 +102,6 @@ const Welcome = () => {
     if (isSigningUp || isSigningIn) return;
     try {
       setIsSigningIn(true);
-      // Mark that user has seen welcome screen
       await AsyncStorage.setItem('has_seen_welcome', 'true');
       router.replace(routes?.signIn as any);
     } catch (error) {
@@ -117,306 +109,289 @@ const Welcome = () => {
     }
   };
 
-  // Reset navigation state after timeout
   useEffect(() => {
     if (isSigningUp) {
-      const timer = setTimeout(() => {
-        setIsSigningUp(false);
-      }, 2000);
+      const timer = setTimeout(() => setIsSigningUp(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [isSigningUp]);
 
   useEffect(() => {
     if (isSigningIn) {
-      const timer = setTimeout(() => {
-        setIsSigningIn(false);
-      }, 2000);
+      const timer = setTimeout(() => setIsSigningIn(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [isSigningIn]);
 
-  // Infinite auto-slide animation
   useEffect(() => {
-    if (!flatListRef.current || !bgFlatListRef.current) return;
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => {
-        const nextIndex = (prev + 1) % slides.length;
-        
-        // Scroll both FlatLists simultaneously
-        flatListRef.current?.scrollToOffset({
-          offset: nextIndex * bgWidth,
-          animated: true,
-        });
-        
-        bgFlatListRef.current?.scrollToOffset({
-          offset: nextIndex * bgWidth,
-          animated: true,
-        });
-        
-        return nextIndex;
-      });
-    }, 7000); // slower slide (7 seconds)
-    return () => clearInterval(interval);
-  }, [slides.length, bgWidth]);
-
-  // Fade-in animation for overlay image
-  useEffect(() => {
-    overlayFadeAnim.setValue(0.5); // Start from 0.5 instead of 0
-    Animated.timing(overlayFadeAnim, {
-      toValue: 1,
-      duration: 800, // Faster, less ghostly
-      useNativeDriver: true,
-    }).start();
-  }, [activeIndex]);
-
-  useEffect(() => {
-    // Animate all elements in parallel for faster button appearance
+    // Initial load animations
     Animated.parallel([
       Animated.timing(logoAnim, {
         toValue: 1,
-        duration: 1200,
+        duration: 1000,
         useNativeDriver: true,
       }),
-      Animated.timing(imageAnim, {
+      Animated.timing(contentAnim, {
         toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(textAnim, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonAnim, {
-        toValue: 1,
-        duration: 1200,
+        duration: 1000,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
+  useEffect(() => {
+    // Premium, slow auto-slide every 5 seconds
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => {
+        const nextIndex = (prev + 1) % slides.length;
+        if (flatListRef.current) {
+          flatListRef.current.scrollToOffset({
+            offset: nextIndex * screenWidth,
+            animated: true,
+          });
+        }
+        return nextIndex;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <View className="flex-1 bg-white">
-      <StatusBar style="dark" />
-      <SafeAreaView className="flex-1">
-        <View style={{ flex: 1, flexDirection: "column" }}>
-          {/* Header with Logo */}
-          <Animated.View
-            style={{
-              alignItems: "flex-start",
-              opacity: logoAnim,
-              transform: [
-                {
-                  translateY: logoAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-30, 0],
-                  }),
-                },
-              ],
-              marginTop: 24,
-              marginLeft: 16,
-            }}
-          >
-            <icons.logoBlack width={150} height={60} />
-          </Animated.View>
+    <View className="flex-1 bg-[#0F1014]">
+      <StatusBar style="light" />
 
-          {/* Main Content - flex: 1 for vertical centering */}
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-            }}
-          >
-            {/* Headline - swipes with overlay */}
-            <View style={{ marginBottom: 16, width: "90%" }}>
-              <Text
-                style={{
-                  fontSize: 23,
-                  fontFamily: "Nunito-ExtraBold",
-                  color: "#000",
-                  marginBottom: 8,
-                }}
-                className="line-clamp-1"
-              >
-                {slides[activeIndex]?.header}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontFamily: "Nunito-Medium",
-                  color: "#666",
-                }}
-                className="clamp-2 line-clamp-2"
-              >
-                {slides[activeIndex]?.text}
-              </Text>
-            </View>
+      {/* FULL SCREEN BACKGROUND SLIDER */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        <Animated.FlatList
+          ref={flatListRef}
+          data={slides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          keyExtractor={(item) => item.key}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: false } // Required false for width/color interpolation
+          )}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(e) => {
+            const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+            setActiveIndex(index);
+          }}
+          renderItem={({ item, index }) => {
+            // Parallax Animation
+            const inputRange = [
+              (index - 1) * screenWidth,
+              index * screenWidth,
+              (index + 1) * screenWidth,
+            ];
+            const translateX = scrollX.interpolate({
+              inputRange,
+              outputRange: [-screenWidth * 0.5, 0, screenWidth * 0.5],
+            });
+            const scale = scrollX.interpolate({
+              inputRange,
+              outputRange: [1.3, 1.45, 1.3],
+            });
 
-            {/* Main Image Section with Overlay */}
-            <View
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-              }}
-            >
-              <View
-                style={{
-                  width: bgWidth,
-                  height: Math.round(screenHeight * 0.45),
-                  position: "relative",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {/* Sliding background - 4 duplicated images */}
-                <FlatList
-                  ref={bgFlatListRef}
-                  data={backgroundSlides}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  keyExtractor={(item) => item.key}
-                  scrollEnabled={false} // Disable direct scrolling, controlled by overlay FlatList
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: bgWidth,
-                    height: Math.round(screenHeight * 0.47),
-                  }}
-                  contentContainerStyle={{
-                    alignItems: "center",
-                  }}
-                  renderItem={({ item }) => (
-                    <View
-                      style={{
-                        width: bgWidth,
-                        height: Math.round(screenHeight * 0.47),
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <RenderImage
-                        source={item.source}
-                        width={bgWidth}
-                        height={Math.round(screenHeight )}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  )}
-                />
-
-                {/* Swiping overlays */}
-                <FlatList
-                  ref={flatListRef}
-                  data={slides}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  keyExtractor={(item) => item.key}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: bgWidth,
-                    height: Math.round(screenHeight * 0.47),
-                  }}
-                  contentContainerStyle={{
-                    alignItems: "center",
-                  }}
-                  onMomentumScrollEnd={(e) => {
-                    const index = Math.round(
-                      e.nativeEvent.contentOffset.x / bgWidth
-                    );
-                    setActiveIndex(index);
-                    
-                    // Sync background FlatList with overlay FlatList
-                    bgFlatListRef.current?.scrollToOffset({
-                      offset: index * bgWidth,
-                      animated: true,
-                    });
-                  }}
-                  renderItem={({ item, index }) => (
-                    <View
-                      style={{
-                        width: bgWidth,
-                        height: Math.round(screenHeight * 0.45),
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {/* No overlay images - just background slides */}
-                    </View>
-                  )}
-                />
-              </View>
-
-              {/* Pagination dots below the image section */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  marginBottom: 6,
-                  marginTop: 20,
-                }}
-              >
-                {slides.map((_, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      margin: 2,
-                      backgroundColor:
-                        i === activeIndex ? "#D30309" : "#E5E7EB",
-                    }}
+            return (
+              <View style={{ width: screenWidth, height: screenHeight, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <Animated.View style={{ transform: [{ translateX }, { scale }, { translateY: -70 }] }}>
+                  <RenderImage
+                    source={item.source}
+                    width={screenWidth}
+                    height={screenHeight}
+                    resizeMode="cover"
                   />
-                ))}
+                </Animated.View>
               </View>
-            </View>
+            );
+          }}
+        />
+        {/* Cinematic Vignette/Gradient Overlay */}
+        <LinearGradient
+          colors={['transparent', 'rgba(15, 16, 20, 0.2)', 'rgba(15, 16, 20, 0.9)', '#0F1014', '#0F1014']}
+          locations={[0, 0.4, 0.65, 0.85, 1]}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }}
+          pointerEvents="none"
+        />
+      </View>
+
+      <SafeAreaView className="flex-1">
+        {/* LOGO TOP CENTER */}
+        <Animated.View
+          style={{
+            opacity: logoAnim,
+            alignItems: 'center',
+            marginTop: 20,
+            transform: [
+              {
+                translateY: logoAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <icons.logo width={160} height={60} />
+        </Animated.View>
+
+        {/* BOTTOM CONTENT: TEXT & BUTTONS */}
+        <Animated.View
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            opacity: contentAnim,
+            paddingBottom: 10,
+            transform: [
+              {
+                translateY: contentAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [40, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          {/* ANIMATED TEXT OVERLAY */}
+          <View style={{ height: 120, justifyContent: 'flex-end', marginBottom: 24 }}>
+            {slides.map((item, index) => {
+              const inputRange = [
+                (index - 1) * screenWidth,
+                index * screenWidth,
+                (index + 1) * screenWidth,
+              ];
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0, 1, 0],
+              });
+              const translateY = scrollX.interpolate({
+                inputRange,
+                outputRange: [20, 0, -20],
+              });
+
+              return (
+                <Animated.View
+                  key={item.key}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    opacity,
+                    transform: [{ translateY }],
+                    paddingHorizontal: 30,
+                    justifyContent: 'flex-end'
+                  }}
+                  pointerEvents={index === activeIndex ? "auto" : "none"}
+                >
+                  <Text
+                    style={{
+                      fontSize: 34,
+                      fontFamily: "Nunito-ExtraBold",
+                      color: "#FFFFFF",
+                      marginBottom: 12,
+                      textAlign: "center",
+                      lineHeight: 40,
+                      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+                      textShadowOffset: { width: 0, height: 2 },
+                      textShadowRadius: 4,
+                    }}
+                  >
+                    {item.header}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontFamily: "Nunito-Medium",
+                      color: "#D1D5DB",
+                      textAlign: "center",
+                      lineHeight: 24,
+                    }}
+                  >
+                    {item.text}
+                  </Text>
+                </Animated.View>
+              );
+            })}
           </View>
 
-          {/* Bottom Buttons - pinned to bottom */}
-          <Animated.View
+          {/* ANIMATED PAGINATION DOTS */}
+          <View
             style={{
-              opacity: buttonAnim,
-              transform: [
-                {
-                  translateY: buttonAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [40, 0],
-                  }),
-                },
-              ],
-              width: "100%",
-              paddingHorizontal: 30,
-              paddingBottom: 30,
+              flexDirection: "row",
+              justifyContent: "center",
+              marginBottom: 32,
             }}
-            className={"bg-[#fafafa] pt-4"}
           >
+            {slides.map((_, i) => {
+              const inputRange = [
+                (i - 1) * screenWidth,
+                i * screenWidth,
+                (i + 1) * screenWidth,
+              ];
+              const dotWidth = scrollX.interpolate({
+                inputRange,
+                outputRange: [8, 24, 8],
+                extrapolate: 'clamp',
+              });
+              const dotOpacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.5, 1, 0.5],
+                extrapolate: 'clamp',
+              });
+              const dotColor = scrollX.interpolate({
+                inputRange,
+                outputRange: ['#4B5563', '#D30309', '#4B5563'],
+                extrapolate: 'clamp',
+              });
+
+              return (
+                <Animated.View
+                  key={i}
+                  style={{
+                    width: dotWidth,
+                    height: 8,
+                    borderRadius: 4,
+                    marginHorizontal: 4,
+                    backgroundColor: dotColor,
+                    opacity: dotOpacity,
+                  }}
+                />
+              );
+            })}
+          </View>
+
+          {/* BUTTONS */}
+          <View style={{ paddingHorizontal: 30 }}>
             <CustomButton
-              title={isSigningUp ? "Loading..." : "Sign up"}
-              className="py-5 mb-3 mt-2 shadow-lg"
+              title={isSigningUp ? "Loading..." : "Get Started"}
+              bgVariant="primary"
+              textVariant="default"
+              className="py-4 mb-3 shadow-lg"
               onPress={handleSignUp}
               disabled={isSigningUp || isSigningIn}
             />
             <CustomButton
               onPress={handleSignIn}
-              title={isSigningIn ? "Loading..." : "Sign in"}
-              bgVariant="dangerborder"
-              textVariant="dangerborder"
-              className="py-5 my-2 shadow-sm"
+              title={isSigningIn ? "Loading..." : "Log in"}
+              bgVariant="outline"
+              textVariant="default"
+              className="py-4"
               disabled={isSigningUp || isSigningIn}
             />
-          </Animated.View>
-        </View>
+          </View>
+        </Animated.View>
         
-        {/* Loading Overlay */}
         <LoadingOverlay
           visible={isSigningUp || isSigningIn}
           title="Loading..."

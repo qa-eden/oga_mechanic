@@ -58,8 +58,13 @@ class SecureStorageManager implements SecureStorageInterface {
         await SecureStore.setItemAsync(key, value);
       }
     } catch (error) {
-      console.error(`Failed to set secure item ${key}:`, error);
-      throw new Error('Failed to store secure data');
+      console.warn(`[SecureStorage] SecureStore failed for ${key}, falling back to AsyncStorage:`, error);
+      try {
+        await AsyncStorage.setItem(key, value);
+      } catch (innerError) {
+        console.error(`[SecureStorage] Fallback AsyncStorage failed for ${key}:`, innerError);
+        throw new Error('Failed to store secure data');
+      }
     }
   }
 
@@ -68,11 +73,19 @@ class SecureStorageManager implements SecureStorageInterface {
       if (Platform.OS === 'web') {
         return await AsyncStorage.getItem(key);
       } else {
-        return await SecureStore.getItemAsync(key);
+        const val = await SecureStore.getItemAsync(key);
+        if (val !== null) return val;
+        // Try fallback in case it was written to AsyncStorage
+        return await AsyncStorage.getItem(key);
       }
     } catch (error) {
-      console.error(`Failed to get secure item ${key}:`, error);
-      return null;
+      console.warn(`[SecureStorage] SecureStore.getItemAsync failed for ${key}, trying AsyncStorage:`, error);
+      try {
+        return await AsyncStorage.getItem(key);
+      } catch (innerError) {
+        console.error(`[SecureStorage] Fallback AsyncStorage.getItem failed for ${key}:`, innerError);
+        return null;
+      }
     }
   }
 
@@ -82,9 +95,15 @@ class SecureStorageManager implements SecureStorageInterface {
         await AsyncStorage.removeItem(key);
       } else {
         await SecureStore.deleteItemAsync(key);
+        await AsyncStorage.removeItem(key); // Clear fallback
       }
     } catch (error) {
-      console.error(`Failed to remove secure item ${key}:`, error);
+      console.warn(`[SecureStorage] removeSecureItem failed for ${key}, trying AsyncStorage:`, error);
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch (innerError) {
+        console.error(`[SecureStorage] Fallback AsyncStorage.removeItem failed for ${key}:`, innerError);
+      }
     }
   }
 

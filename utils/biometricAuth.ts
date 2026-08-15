@@ -1,6 +1,8 @@
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { ENV_CONFIG } from '../config/env';
 import { secureStorage } from './secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Biometric authentication types
 export enum BiometricType {
@@ -67,21 +69,27 @@ class BiometricAuthManager {
     }
 
     try {
-      // Simulate biometric availability check
-      // In production, use libraries like expo-local-authentication
-      
-      if (Platform.OS === 'ios') {
-        // Check Touch ID / Face ID availability
-        this.isAvailable = BiometricAvailability.AVAILABLE;
-        this.supportedTypes = [BiometricType.FINGERPRINT, BiometricType.FACIAL];
-      } else if (Platform.OS === 'android') {
-        // Check fingerprint availability
-        this.isAvailable = BiometricAvailability.AVAILABLE;
-        this.supportedTypes = [BiometricType.FINGERPRINT];
-      } else {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      if (!hasHardware) {
         this.isAvailable = BiometricAvailability.NOT_SUPPORTED;
-        this.supportedTypes = [];
+        return this.isAvailable;
       }
+
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!isEnrolled) {
+        this.isAvailable = BiometricAvailability.NOT_ENROLLED;
+        return this.isAvailable;
+      }
+
+      this.isAvailable = BiometricAvailability.AVAILABLE;
+
+      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      this.supportedTypes = types.map(t => {
+        if (t === LocalAuthentication.AuthenticationType.FINGERPRINT) return BiometricType.FINGERPRINT;
+        if (t === LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) return BiometricType.FACIAL;
+        if (t === LocalAuthentication.AuthenticationType.IRIS) return BiometricType.IRIS;
+        return BiometricType.FINGERPRINT; // fallback
+      });
 
       return this.isAvailable;
     } catch (error) {
@@ -99,6 +107,11 @@ class BiometricAuthManager {
       return { success: false, error: 'Biometric authentication is disabled' };
     }
 
+    // Force an availability check if not already performed
+    if (this.isAvailable === null) {
+      await this.checkAvailability();
+    }
+
     if (this.isAvailable !== BiometricAvailability.AVAILABLE) {
       return { success: false, error: 'Biometric authentication is not available' };
     }
@@ -114,8 +127,6 @@ class BiometricAuthManager {
         ...config,
       };
 
-      // Simulate biometric authentication
-      // In production, use expo-local-authentication
       const result = await this.performBiometricAuth(defaultConfig);
       
       if (result.success) {
@@ -137,28 +148,31 @@ class BiometricAuthManager {
    * Perform the actual biometric authentication
    */
   private async performBiometricAuth(config: BiometricConfig): Promise<BiometricResult> {
-    // This is a simulated implementation
-    // In production, use expo-local-authentication or similar library
-    
-    return new Promise((resolve) => {
-      // Simulate authentication process
-      setTimeout(() => {
-        // Simulate 90% success rate
-        const success = Math.random() > 0.1;
-        
-        if (success) {
-          resolve({
-            success: true,
-            biometricType: this.supportedTypes[0],
-          });
-        } else {
-          resolve({
-            success: false,
-            error: 'Authentication failed. Please try again.',
-          });
-        }
-      }, 1000);
-    });
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: config.promptMessage || config.title || 'Authenticate to continue',
+        fallbackLabel: config.fallbackLabel || 'Use Passcode',
+        cancelLabel: config.cancelLabel,
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        return {
+          success: true,
+          biometricType: this.supportedTypes[0] || BiometricType.FINGERPRINT,
+        };
+      } else {
+        return {
+          success: false,
+          error: ('error' in result ? result.error : undefined) || 'Authentication failed',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Authentication failed',
+      };
+    }
   }
 
   /**
@@ -191,25 +205,11 @@ class BiometricAuthManager {
    */
   async enableBiometric(): Promise<boolean> {
     try {
-      const availability = await this.checkAvailability();
-      if (availability !== BiometricAvailability.AVAILABLE) {
-        return false;
-      }
-
-      // Test authentication before enabling
-      const testResult = await this.authenticate({
-        title: 'Enable Biometric Authentication',
-        subtitle: 'Test your biometric to enable this feature',
-      });
-
-      if (testResult.success) {
-        await secureStorage.setSecureItem('biometric_enabled', 'true');
-        return true;
-      }
-
-      return false;
+      await AsyncStorage.setItem('biometric_enabled', 'true');
+      console.log('[BiometricAuth] Biometric enabled flag set to true');
+      return true;
     } catch (error) {
-      console.error('Failed to enable biometric authentication:', error);
+      console.error('[BiometricAuth] Failed to enable biometric:', error);
       return false;
     }
   }
@@ -219,9 +219,10 @@ class BiometricAuthManager {
    */
   async disableBiometric(): Promise<void> {
     try {
-      await secureStorage.removeSecureItem('biometric_enabled');
+      await AsyncStorage.removeItem('biometric_enabled');
+      console.log('[BiometricAuth] Biometric enabled flag removed');
     } catch (error) {
-      console.error('Failed to disable biometric authentication:', error);
+      console.error('[BiometricAuth] Failed to disable biometric:', error);
     }
   }
 
@@ -230,10 +231,11 @@ class BiometricAuthManager {
    */
   async isBiometricEnabled(): Promise<boolean> {
     try {
-      const enabled = await secureStorage.getSecureItem('biometric_enabled');
+      const enabled = await AsyncStorage.getItem('biometric_enabled');
+      console.log('[BiometricAuth] Biometric enabled check:', enabled);
       return enabled === 'true';
     } catch (error) {
-      console.error('Failed to check biometric status:', error);
+      console.error('[BiometricAuth] Failed to check biometric status:', error);
       return false;
     }
   }
@@ -280,6 +282,19 @@ class BiometricAuthManager {
   }
 
   /**
+   * Get preferred biometric type (FACIAL or FINGERPRINT)
+   */
+  async getPreferredBiometricType(): Promise<BiometricType> {
+    if (this.isAvailable === null) {
+      await this.checkAvailability();
+    }
+    if (this.supportedTypes.includes(BiometricType.FACIAL)) {
+      return BiometricType.FACIAL;
+    }
+    return BiometricType.FINGERPRINT;
+  }
+
+  /**
    * Get supported biometric types
    */
   getSupportedTypes(): BiometricType[] {
@@ -298,6 +313,46 @@ class BiometricAuthManager {
    */
   setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
+  }
+
+  /**
+   * Save biometric credentials using AsyncStorage directly
+   * (SecureStore can silently fail on dev builds without keychain entitlements)
+   */
+  async saveCredentials(credentials: any): Promise<void> {
+    try {
+      const json = JSON.stringify(credentials);
+      await AsyncStorage.setItem('biometric_credentials', json);
+      console.log('[BiometricAuth] Credentials saved successfully. Keys:', Object.keys(credentials));
+    } catch (error) {
+      console.error('[BiometricAuth] Failed to save credentials:', error);
+    }
+  }
+
+  /**
+   * Retrieve biometric credentials from AsyncStorage directly
+   */
+  async getCredentials(): Promise<any | null> {
+    try {
+      const creds = await AsyncStorage.getItem('biometric_credentials');
+      console.log('[BiometricAuth] Raw credentials from storage:', creds ? 'found (' + creds.length + ' chars)' : 'null');
+      return creds ? JSON.parse(creds) : null;
+    } catch (error) {
+      console.error('[BiometricAuth] Failed to get credentials:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear biometric credentials from AsyncStorage
+   */
+  async clearCredentials(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem('biometric_credentials');
+      console.log('[BiometricAuth] Credentials cleared');
+    } catch (error) {
+      console.error('[BiometricAuth] Failed to clear credentials:', error);
+    }
   }
 }
 

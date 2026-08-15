@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, forwardRef } from "react";
 import {
   TextInput,
   View,
@@ -13,7 +13,12 @@ import {
 import type { InputFieldProps } from "@/types/type";
 import { icons } from "@/constants";
 
-const InputFieldPassword = ({
+const InputFieldPassword = forwardRef<TextInput, InputFieldProps & {
+  error?: any;
+  touched?: any;
+  required?: boolean;
+  helperText?: string;
+}>(({
   label,
   icon,
   secureTextEntry = false,
@@ -31,12 +36,7 @@ const InputFieldPassword = ({
   onBlur,
   onFocus,
   ...props
-}: InputFieldProps & {
-  error?: any;
-  touched?: any;
-  required?: boolean;
-  helperText?: string;
-}) => {
+}, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const animatedValue = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -153,6 +153,7 @@ const InputFieldPassword = ({
             }}
           >
             <TextInput
+              ref={ref}
               className={`rounded-[.8rem] p-4 font-JakartaSemiBold text-[15px] flex-1 ${inputStyle} text-left`}
               secureTextEntry={secureTextEntry}
               placeholder={placeholder}
@@ -194,6 +195,6 @@ const InputFieldPassword = ({
       )}
     </View>
   );
-};
+});
 
 export default InputFieldPassword;

@@ -79,7 +79,13 @@
         }
       ],
       "expo-font",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Oga Mechanic to use Face ID for quick and secure sign-in."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

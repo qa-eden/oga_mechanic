@@ -8,11 +8,8 @@ export const routes = {
   resetPassword: "/(auth)/(login)/resetPassword",
   enterCode: "/(auth)/(login)/enterCode",
   verifyEmail: "/(auth)/(register)/verify-email",
-
-
-
-
-  // Success pages
+  terms: "/(auth)/terms",
+  privacy: "/(auth)/privacy",  // Success pages
   accountCreated: "/(auth)/accountCreatedSucessful",
   resetPasswordSuccess: "/(auth)/resetPasswordSucessful",
 

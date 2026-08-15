@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, forwardRef } from "react"
 import { useFormikContext } from "formik"
 import InputField from "@/components/InputField"
 import InputFieldPassword from "@/components/InputFieldPassword"
+import { TextInput } from "react-native"
 import type { InputFieldProps } from "@/types/type"
 
 interface FormikInputProps extends InputFieldProps {
@@ -13,7 +14,7 @@ interface FormikInputProps extends InputFieldProps {
   containerStyle1?: string
 }
 
-function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikInputProps) {
+const FormikInput = forwardRef<TextInput, FormikInputProps>(({ name, type, secureTextEntry, ...props }, ref) => {
   const { values, handleChange, handleBlur, errors, touched, setFieldTouched, setFieldValue } = useFormikContext<{
     [key: string]: any
   }>()
@@ -122,6 +123,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
   if (isPassword) {
     return (
       <InputFieldPassword
+        ref={ref}
         value={getDisplayValue()}
         onChangeText={handleFieldChange}
         onBlur={handleFieldBlur}
@@ -140,6 +142,7 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
 
   return (
     <InputField
+      ref={ref}
       value={getDisplayValue()}
       onChangeText={handleFieldChange}
       onBlur={handleFieldBlur}
@@ -153,6 +156,6 @@ function FormikInput<T = any>({ name, type, secureTextEntry, ...props }: FormikI
       {...props}
     />
   )
-}
+})
 
 export default FormikInput
