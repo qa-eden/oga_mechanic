@@ -1,17 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { View, FlatList, Animated, Dimensions } from "react-native";
+import { View, FlatList, Animated, Dimensions, Text, TouchableOpacity, Image } from "react-native";
 import { router } from "expo-router";
 import AdsComponents from "@/components/AdsComponents";
 import { routes } from "@/constants/routes";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useActiveBiddingProducts } from "@/hooks/useProducts";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 interface BiddingCarouselProps {
   containerPadding?: number;
+  onFallbackChange?: (isFallbackShowing: boolean) => void;
 }
 
-const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 }) => {
+const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0, onFallbackChange }) => {
   const { data: activeBiddingRes, isLoading, error } = useActiveBiddingProducts();
 
   const [activeAdIndex, setActiveAdIndex] = useState(0);
@@ -27,13 +29,22 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
     id: p.id,
     title: p.name,
     description: p.description?.slice(0, 60) + (p.description?.length > 60 ? '...' : ''),
+    images: p.images?.map((img: any) => ({ uri: img.image })) || [],
     image: p.images?.[0]?.image ? { uri: p.images[0].image } : null,
     price: p.price,
     currency: p.currency,
     year: p.year,
     repairHistoryCount: p.repair_history?.length || 0,
     isBidding: true
-  })).filter((ad: any) => ad.image !== null);
+  })).filter((ad: any) => ad.images.length > 0 || ad.image !== null);
+
+  const isFallbackShowing = displayAds.length === 0 || isLoading || !!error;
+
+  useEffect(() => {
+    if (onFallbackChange) {
+      onFallbackChange(isFallbackShowing);
+    }
+  }, [isFallbackShowing, onFallbackChange]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -69,7 +80,8 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
   const renderAdItem = useCallback(({ item }: { item: any }) => (
     <View style={{ width: screenWidth, alignItems: 'center' }}>
       <View style={{ width: screenWidth - 18 }}>
-        <AdsComponents
+          <AdsComponents
+          images={item.images}
           image={item.image}
           title={item.title}
           description={item.description}
@@ -91,9 +103,61 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
     </View>
   ), []);
 
-  // If there are absolutely no bids to show, render nothing at all so we don't clutter dashboards.
-  if (displayAds.length === 0 || isLoading || error) {
-    return null;
+  // If there are absolutely no bids to show, render a persistent promotional banner instead of an empty state.
+  // This ensures the layout stays stable and provides value to the user.
+  if (isFallbackShowing) {
+    return (
+      <View style={{ width: screenWidth, alignItems: 'center', marginVertical: 4 }}>
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          style={{
+            width: screenWidth - 18,
+            height: 155, 
+            backgroundColor: '#D30309', 
+            borderRadius: 20,
+            padding: 20,
+            flexDirection: 'row',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Left Side Content */}
+          <View style={{ flex: 1, justifyContent: 'center', zIndex: 10 }}>
+            <Text style={{ fontSize: 24, color: '#FFFFFF', marginBottom: 20, letterSpacing: -0.3 }} className="font-NunitoExtraBold">
+              Find a mechanic
+            </Text>
+            
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 30,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              alignSelf: 'flex-start'
+            }}>
+              <Text style={{ color: '#D30309', fontSize: 13, marginRight: 8, marginLeft: 4 }} className="font-NunitoExtraBold">
+                Book Service
+              </Text>
+              <View style={{
+                backgroundColor: '#D30309',
+                borderRadius: 14,
+                width: 28,
+                height: 28,
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" />
+              </View>
+            </View>
+          </View>
+          
+          {/* Right Side Icon */}
+          <View style={{ position: 'absolute', right: -15, bottom: -15, zIndex: 1 }}>
+            <MaterialCommunityIcons name="car-wrench" size={140} color="rgba(255,255,255,0.15)" />
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   const renderAdDotIndicator = () => {
@@ -101,12 +165,11 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
     return (
       <View
         style={{
-          position: "absolute",
-          bottom: 8,
           flexDirection: "row",
           width: "100%",
           justifyContent: "center",
           alignItems: "center",
+          marginTop: 6,
         }}
       >
         {displayAds.map((_: any, index: number) => {
@@ -114,11 +177,11 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
             <Animated.View
               key={index.toString()}
               style={{
-                width: activeAdIndex === index ? 15 : 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: activeAdIndex === index ? "#fff" : "rgba(255, 255, 255, 0.5)",
-                marginHorizontal: 4,
+                width: activeAdIndex === index ? 16 : 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: activeAdIndex === index ? "#E11D48" : "#E2E8F0",
+                marginHorizontal: 3,
               }}
             />
           );
@@ -129,7 +192,7 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0 
 
   return (
     <Animated.View 
-      className="rounded-2xl mt-4 mb-4" 
+      className="rounded-2xl mt-4" 
       style={{
         marginHorizontal: -containerPadding,
       }}
