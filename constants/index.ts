@@ -195,8 +195,8 @@ export const Services: ServicesProps[] = [
   },
   {
     id: 9,
-    name: "Service Partner",
-    description: "Switch to workshop or parts partner mode",
+    name: "Service Provider",
+    description: "Switch to workshop",
     image: round,
     bgColor: "#F0F9FF",
     border: "#7DD3FC",
@@ -268,12 +268,12 @@ export const MechanicProfileSettings = {
       image: addBank,
       route: generalRoutes.bankInfo,
     },
-    // {
-    //   id: 3,
-    //   name: "Savings wallet",
-    //   image: savingWallet,
-    //   route: "notifications",
-    // },
+    {
+      id: 3,
+      name: "My Reviews",
+      image: filledStar,
+      route: mechanicRoutes.reviews,
+    },
     {
       id: 4,
       name: "Change Password",

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { View, FlatList, Animated, Dimensions, Text, TouchableOpacity, Image } from "react-native";
 import { router } from "expo-router";
 import AdsComponents from "@/components/AdsComponents";
-import { routes } from "@/constants/routes";
+import { routes, mechanicRoutes, sellerRoutes } from "@/constants/routes";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useActiveBiddingProducts } from "@/hooks/useProducts";
 
@@ -11,9 +11,12 @@ const { width: screenWidth } = Dimensions.get("window");
 interface BiddingCarouselProps {
   containerPadding?: number;
   onFallbackChange?: (isFallbackShowing: boolean) => void;
+  /** 'user' shows "Find a mechanic" fallback (default). 'mechanic' shows "Spare Parts" & "Buy a Car" fallback. 'seller' shows "Upload Spare parts". 'vehicle_rental' shows "Upload Cars". 'kyc_incomplete' shows "Complete Profile" */
+  fallbackVariant?: 'user' | 'mechanic' | 'seller' | 'vehicle_rental' | 'kyc_incomplete';
+  onSellerAction?: (action: 'uploadSpareParts' | 'uploadCars' | 'kyc') => void;
 }
 
-const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0, onFallbackChange }) => {
+const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0, onFallbackChange, fallbackVariant = 'user', onSellerAction }) => {
   const { data: activeBiddingRes, isLoading, error } = useActiveBiddingProducts();
 
   const [activeAdIndex, setActiveAdIndex] = useState(0);
@@ -106,6 +109,204 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0,
   // If there are absolutely no bids to show, render a persistent promotional banner instead of an empty state.
   // This ensures the layout stays stable and provides value to the user.
   if (isFallbackShowing) {
+    // ── Mechanic variant: Spare Parts + Buy a Car ─────────────────────────────
+    if (fallbackVariant === 'mechanic') {
+      const cardWidth = (screenWidth - 40 - 8) / 2;
+      return (
+        <View className="flex-row gap-2 mb-1 mt-1">
+
+          {/* Buy Spare Parts */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => router.push({
+              pathname: mechanicRoutes.shop as any,
+              params: { categoryId: '24', category: 'Spare Part' },
+            })}
+            className="h-[140px] rounded-[18px] p-3.5 overflow-hidden justify-between bg-[#1E293B]"
+            style={{ width: cardWidth }}
+          >
+            <MaterialCommunityIcons
+              name="car-cog"
+              size={90}
+              color="rgba(255,255,255,0.07)"
+              style={{ position: 'absolute', right: -12, bottom: -10 }}
+            />
+            <View className="w-[34px] h-[34px] rounded-[10px] items-center justify-center bg-white/10">
+              <MaterialCommunityIcons name="car-cog" size={18} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[13px] text-white font-NunitoExtraBold leading-[17px] tracking-tight">
+                {'Buy Spare Parts'}
+              </Text>
+              <View className="mt-[7px] bg-primary-500 rounded-full py-1 px-[9px] flex-row items-center self-start gap-1">
+                <Text className="text-white text-[11px] font-NunitoBold">Browse</Text>
+                <MaterialCommunityIcons name="arrow-right" size={11} color="#fff" />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Buy a Car */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => router.push({
+              pathname: mechanicRoutes.shop as any,
+              params: { categoryId: '23', category: 'Car' },
+            })}
+            className="h-[140px] rounded-[18px] p-3.5 overflow-hidden justify-between bg-primary-500"
+            style={{ width: cardWidth }}
+          >
+            <MaterialCommunityIcons
+              name="car"
+              size={90}
+              color="rgba(255,255,255,0.12)"
+              style={{ position: 'absolute', right: -12, bottom: -10 }}
+            />
+            <View className="w-[34px] h-[34px] rounded-[10px] items-center justify-center bg-white/20">
+              <MaterialCommunityIcons name="car" size={18} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[13px] text-white font-NunitoExtraBold leading-[17px] tracking-tight">
+                {'Buy a Car'}
+              </Text>
+              <View className="mt-[7px] bg-white rounded-full py-1 px-[9px] flex-row items-center self-start gap-1">
+                <Text className="text-primary-500 text-[11px] font-NunitoBold">Explore</Text>
+                <MaterialCommunityIcons name="arrow-right" size={11} color="#D30309" />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+        </View>
+      );
+    }
+
+    // ── Seller variant: Upload Spare Parts & Upload Cars ─────────────────────────────
+    if (fallbackVariant === 'seller') {
+      const cardWidth = (screenWidth - 40 - 8) / 2;
+      return (
+        <View className="flex-row gap-2 mb-1 mt-1">
+          {/* Upload Spare Parts */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => onSellerAction ? onSellerAction('uploadSpareParts') : router.push(sellerRoutes.uploadSpareParts as any)}
+            className="h-[140px] rounded-[18px] p-3.5 overflow-hidden justify-between bg-[#1E293B]"
+            style={{ width: cardWidth }}
+          >
+            <MaterialCommunityIcons
+              name="car-cog"
+              size={90}
+              color="rgba(255,255,255,0.07)"
+              style={{ position: 'absolute', right: -12, bottom: -10 }}
+            />
+            <View className="w-[34px] h-[34px] rounded-[10px] items-center justify-center bg-white/10">
+              <MaterialCommunityIcons name="cloud-upload" size={18} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[13px] text-white font-NunitoExtraBold leading-[17px] tracking-tight">
+                {'Upload Spare Parts'}
+              </Text>
+              <View className="mt-[7px] bg-primary-500 rounded-full py-1 px-[9px] flex-row items-center self-start gap-1">
+                <Text className="text-white text-[11px] font-NunitoBold">Add New</Text>
+                <MaterialCommunityIcons name="arrow-right" size={11} color="#fff" />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Upload Cars */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => onSellerAction ? onSellerAction('uploadCars') : router.push(sellerRoutes.uploadCarToRent as any)}
+            className="h-[140px] rounded-[18px] p-3.5 overflow-hidden justify-between bg-primary-500"
+            style={{ width: cardWidth }}
+          >
+            <MaterialCommunityIcons
+              name="car"
+              size={90}
+              color="rgba(255,255,255,0.12)"
+              style={{ position: 'absolute', right: -12, bottom: -10 }}
+            />
+            <View className="w-[34px] h-[34px] rounded-[10px] items-center justify-center bg-white/20">
+              <MaterialCommunityIcons name="cloud-upload" size={18} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[13px] text-white font-NunitoExtraBold leading-[17px] tracking-tight">
+                {'Upload Cars for Rent'}
+              </Text>
+              <View className="mt-[7px] bg-white rounded-full py-1 px-[9px] flex-row items-center self-start gap-1">
+                <Text className="text-primary-500 text-[11px] font-NunitoBold">Add New</Text>
+                <MaterialCommunityIcons name="arrow-right" size={11} color="#D30309" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Vehicle Rental variant: Upload Cars ─────────────────────────────
+    if (fallbackVariant === 'vehicle_rental') {
+      return (
+        <View className="mb-1 mt-1">
+          {/* Upload Cars */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => onSellerAction ? onSellerAction('uploadCars') : router.push(sellerRoutes.uploadCarToRent as any)}
+            className="h-[140px] rounded-[18px] p-4 overflow-hidden justify-between bg-primary-500 w-full"
+          >
+            <MaterialCommunityIcons
+              name="car"
+              size={110}
+              color="rgba(255,255,255,0.12)"
+              style={{ position: 'absolute', right: -15, bottom: -15 }}
+            />
+            <View className="w-[38px] h-[38px] rounded-[12px] items-center justify-center bg-white/20">
+              <MaterialCommunityIcons name="cloud-upload" size={20} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[15px] text-white font-NunitoExtraBold leading-[20px] tracking-tight">
+                {'Upload Cars for Rent'}
+              </Text>
+              <View className="mt-[8px] bg-white rounded-full py-1.5 px-[12px] flex-row items-center self-start gap-1">
+                <Text className="text-primary-500 text-[12px] font-NunitoBold">Add New</Text>
+                <MaterialCommunityIcons name="arrow-right" size={12} color="#D30309" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── KYC Incomplete variant: Complete Profile ─────────────────────────────
+    if (fallbackVariant === 'kyc_incomplete') {
+      return (
+        <View className="mb-1 mt-1">
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => onSellerAction && onSellerAction('kyc')}
+            className="h-[140px] rounded-[18px] p-4 overflow-hidden justify-between bg-amber-500 w-full"
+          >
+            <MaterialCommunityIcons
+              name="shield-alert"
+              size={110}
+              color="rgba(255,255,255,0.12)"
+              style={{ position: 'absolute', right: -15, bottom: -15 }}
+            />
+            <View className="w-[38px] h-[38px] rounded-[12px] items-center justify-center bg-white/20">
+              <MaterialCommunityIcons name="shield-account" size={20} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text className="text-[15px] text-white font-NunitoExtraBold leading-[20px] tracking-tight">
+                {'Complete Your Profile\nto Start Earning'}
+              </Text>
+              <View className="mt-[8px] bg-white rounded-full py-1.5 px-[12px] flex-row items-center self-start gap-1">
+                <Text className="text-amber-600 text-[12px] font-NunitoBold">Verify Now</Text>
+                <MaterialCommunityIcons name="arrow-right" size={12} color="#D97706" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Default (user) variant: Find a mechanic ───────────────────────────────
     return (
       <View style={{ width: screenWidth, alignItems: 'center', marginVertical: 4 }}>
         <TouchableOpacity 
@@ -216,6 +417,114 @@ const BiddingCarousel: React.FC<BiddingCarouselProps> = ({ containerPadding = 0,
           snapToAlignment="center"
         />
         {renderAdDotIndicator()}
+
+        {/* Mechanic shortcut pills — shown below the carousel when ads exist */}
+        {fallbackVariant === 'mechanic' && (
+          <View
+            className="flex-row gap-2 mt-3"
+            style={{ paddingHorizontal: containerPadding }}
+          >
+            {/* Buy Spare Parts pill */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push({
+                pathname: mechanicRoutes.shop as any,
+                params: { categoryId: '24', category: 'Spare Part' },
+              })}
+              className="flex-1 flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[13px] font-NunitoBold text-gray-800">Buy Spare Parts</Text>
+              <View className="w-9 h-9 rounded-xl bg-[#1E293B] items-center justify-center">
+                <MaterialCommunityIcons name="car-cog" size={18} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Buy a Car pill */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push({
+                pathname: mechanicRoutes.shop as any,
+                params: { categoryId: '23', category: 'Car' },
+              })}
+              className="flex-1 flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[13px] font-NunitoBold text-gray-800">Buy a Car</Text>
+              <View className="w-9 h-9 rounded-xl bg-primary-200 items-center justify-center">
+                <MaterialCommunityIcons name="car" size={18} color="#D30309" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Seller shortcut pill */}
+        {fallbackVariant === 'seller' && (
+          <View
+            className="flex-row gap-2 mt-3"
+            style={{ paddingHorizontal: containerPadding }}
+          >
+            {/* Upload Spare Parts pill */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onSellerAction ? onSellerAction('uploadSpareParts') : router.push(sellerRoutes.uploadSpareParts as any)}
+              className="flex-1 flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[13px] font-NunitoBold text-gray-800">Upload Spare Parts</Text>
+              <View className="w-9 h-9 rounded-xl bg-[#1E293B] items-center justify-center">
+                <MaterialCommunityIcons name="cloud-upload" size={18} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Upload Cars pill */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onSellerAction ? onSellerAction('uploadCars') : router.push(sellerRoutes.uploadCarToRent as any)}
+              className="flex-1 flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[13px] font-NunitoBold text-gray-800">Upload Cars</Text>
+              <View className="w-9 h-9 rounded-xl bg-primary-200 items-center justify-center">
+                <MaterialCommunityIcons name="car" size={18} color="#D30309" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Vehicle Rental shortcut pill */}
+        {fallbackVariant === 'vehicle_rental' && (
+          <View
+            className="mt-3"
+            style={{ paddingHorizontal: containerPadding }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onSellerAction ? onSellerAction('uploadCars') : router.push(sellerRoutes.uploadCarToRent as any)}
+              className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[14px] font-NunitoBold text-gray-800">Upload Cars for Rent</Text>
+              <View className="w-9 h-9 rounded-xl bg-primary-200 items-center justify-center">
+                <MaterialCommunityIcons name="cloud-upload" size={18} color="#D30309" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* KYC Incomplete shortcut pill */}
+        {fallbackVariant === 'kyc_incomplete' && (
+          <View
+            className="mt-3"
+            style={{ paddingHorizontal: containerPadding }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onSellerAction && onSellerAction('kyc')}
+              className="flex-row items-center justify-between bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
+            >
+              <Text className="text-[14px] font-NunitoBold text-amber-800">Complete Profile to Sell</Text>
+              <View className="w-9 h-9 rounded-xl bg-amber-100 items-center justify-center">
+                <MaterialCommunityIcons name="shield-account" size={18} color="#D97706" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
